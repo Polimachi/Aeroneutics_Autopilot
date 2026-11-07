@@ -1,18 +1,24 @@
 # Alignment (격납고 상주형 기체 동역학 식별 및 정밀 추력기 프로파일러) 상세 규격서
 > **Alignment: Hangar Facility Station Precision Actuator Profiler & System Identification Engine**  
 > **프로젝트**: Universal Autonomous Flight Stack (UAFS Ecosystem)  
-> **문서 버전**: v2.4.0 (11대 과제 및 21대 마이크로슬라이스 IS-01.1~IS-11.1 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v2.3.4 및 빌드 해시 4c7e15bdf467... 반영, 배포 번들 생성 완료, ASA 공력 조종면 디스커버리 및 AERO_ASSISTED_PASS 평가 통합, 엔벨로프 domainId 기체 도메인 통일 규약 반영, Master ICD v1.20.0, SYSTEM v2.6.0, VAS v1.11.0, TCA v1.8.0, ASA v1.2.1, SAS v1.9.0, GPS v2.0.3 전역 동기화)  
+> **문서 버전**: v2.5.0 (11대 과제 및 21대 마이크로슬라이스 IS-01.1~IS-11.1 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v2.3.4 및 빌드 해시 4c7e15bdf467... 반영, 배포 번들 생성 완료, ASA 공력 조종면 디스커버리 및 AERO_ASSISTED_PASS 평가 통합, 엔벨로프 domainId 기체 도메인 통일 규약 반영, Master ICD v1.20.0, SYSTEM v2.6.0, VAS v1.11.0, TCA v1.8.0, ASA v1.2.1, SAS v1.9.0, GPS v2.0.3 전역 동기화)  
 > **최종 수정일**: 2026-11-07  
 > **대상 환경**: Minecraft CC:Tweaked (Ender Modem), Create: Aeronautics, Create: Avionics  
 > **연관 문서**: 
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.6.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
 > - [SAS_PROGRAM_SPECIFICATION.md](../../2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md) (SAS 자율 항법 규격서 v1.9.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.8.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../../approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.2.1)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.3)
 > - [GEMINI.md](../../../../../GEMINI.md) (전역 규칙 및 가이드라인)
+
+### Revision History
+
+| 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
+| :---: | :---: | :--- | :--- |
+| `v2.5.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$) 반영, 01호기 직결 바인딩 채널 `Base+0` (`10000`, 구 1000 [DEPRECATED]) 동기화, TCA/ASA 동적 바인딩 `Base+10/11` 반영, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
 
@@ -427,7 +433,7 @@ local align_master = {}
 function align_master.init_bay_session(cfg, aircraftNumber) -> sessionContext
     local bayId = cfg.station.bayId or 1
     local baseHangarCh = cfg.station.baseHangarChannel or (101 + (bayId - 1) * 10)
-    local craftBase = 10000 + (aircraftNumber - 1) * 20
+    local craftBase = 10000 + (aircraftNumber - 1) * 40 -- 40채널 기준 (구 20채널 [DEPRECATED])
     local craftC2Ch = craftBase + 0
     
     local modem = peripheral.wrap(cfg.station.modemSide)

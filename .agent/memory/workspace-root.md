@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-11-07 — 기체 통신 40채널 전면 확장 및 12대 핵심 사양서 전수 리팩토링·검증 완료
+
+- **결정 배경**: 과거 20채널 협소 대역폭($BW=20$) 및 구동계 채널(`Base+6`, `Base+7`) 밀집 한계를 극복하고, 구동계/탑재체/편대 데이터링크를 10채널 단위 4대 Zone으로 체계화하기 위해 기체 채널 대역폭을 $BW=40$으로 전면 확장함.
+- **반영 내역**:
+  1. **대역폭 및 4대 Zone 확립**: $Base = 10000 + (N-1) \times 40$ ($N=1\sim 1000$).
+     - Zone 1 (0~9): 코어 C2/센서/유도/텔레메트리
+     - Zone 2 (10~19): 구동계 전용 — TCA 추진기 `Base+10` (구 `Base+6` [DEPRECATED]), ASA 조종면 `Base+11` (구 `Base+7` [DEPRECATED])
+     - Zone 3 (20~29): 탑재체 전용 버스
+     - Zone 4 (30~39): 편대 데이터링크
+  2. **12대 사양서 전수 리팩토링**:
+     - Tier 1 마스터 ICD, Tier 2 관계도/패킷도, Tier 3 10종 사양서 전역에 40채널 수식 및 Zone 할당 동기화.
+     - 런타임 코드 수정 대상 5대 사양서(VAS, TCA, SAS, Alignment, GPS)를 `implemented/`에서 `approved/`로 승격 이동.
+     - 8대 주요 사양서에 SemVer 판올림 및 `Revision History` 테이블 신규 작성·누적.
+     - Zero-Fallback & `Sender-Immediate-Patch` 원칙 적용: 사양서 내 구버전 명칭은 `[DEPRECATED]` 배지로 보존.
+  3. **무결성 전수 검증 (`scratch/verify_all_specs.py`)**:
+     - 12개 사양서 상대 링크(0 Broken), Stale `implemented/` 링크(0건), Revision History 존재성, 폐기 문자열 중첩 여부, 미폐기 Base+6/7 여부, 40채널 수식 정합성, Mermaid 구문 유효성을 자동 검사하여 **0 Errors, 0 Warnings** 전수 통과 확인.
+
+
+## 2026-11-07 — 사양서·문서·완료 스킬군 적용 범위 분리 및 전역 기획 스킬 오발동 차단
+
+- **결정 배경**: 12종 사양서 및 `specification-lifecycle-manager` 이식 직후, 일반 Q&A·`/plan` 아티팩트·`reports/` 보고서·`drafts/` 초안 편집 및 코드 검증 완료 후 `approved/`→`implemented/` 승격 시 스킬 오발동이나 Mixed-Scope Hard Stop 충돌이 발생할 수 있어 관할 경계를 재정립함.
+- **반영 내역**:
+  1. **`specification-lifecycle-manager` 경로 × 행위 이중 게이트**: `docs/system/*.md` 및 `docs/specs/{approved,implemented}/**/*.md`(`README.md`·`drafts/`·`archived/`·`reports/` 제외)의 생성·수정·폐기·명시적 감사 시에만 발동하며, 읽기 전용 참조·Q&A·`/grill-me`·`/plan` 아티팩트에서는 비발동으로 고정.
+  2. **양방향 동기화 디렉토리 판정 및 메타데이터 규칙**: `src/` 런타임 코드 수정이 필요한 Tier 3 사양서만 `approved/`로 이동하고 단순 상대 링크·버전 배지만 갱신된 사양서는 `implemented/` 유지; 상단 SemVer 인용구를 기본 유지하되 실질 스펙 변경(`approved/` 이동 대상) 시에만 `Revision History` 테이블 신설·누적.
+  3. **코드 완료 승격 경량 예외 (`verification-before-completion`)**: 검증 통과 직후 `approved/`→`implemented/` 파일 이동 및 `docs/` 내 상대 링크 치환은 Mixed-Scope 중단에서 면제하고 `specification-lifecycle-manager` 호출 없이 완료 게이트에서 직접 처리.
+  4. **인접 로컬 스킬 분리 및 전역 플러그인 차단**: `md-management`(`AGENTS.md`·`GEMINI.md`·`.agent/memory/`), `writing-changelogs`(`CHANGELOG.md`)의 배타적 관할을 명시하고, `skill-workflows.md`에서 전역 `superpowers`의 `using-superpowers`·`brainstorming`·`writing-plans`·`executing-plans` 자동 호출을 차단함.
+
 ## 2026-11-07 — Git 형상 관리 시작 및 Worktree 격리 환경 구축
 
 - **결정 배경**: 프로젝트의 지속적인 변경 추적, 다중 브랜치 병렬 작업(Worktree), 안전한 원격 협업을 위해 Git 버전 관리 체계를 정식 도입함.

@@ -1,14 +1,14 @@
 # SAS (자율 항법 및 외루프 임무 제어 컴퓨터) 상세 규격서
 > **SAS: Universal Autopilot & Mission Guidance Computer Program Specification**  
 > **프로젝트**: Universal Autonomous Flight Stack (UAFS Ecosystem)  
-> **문서 버전**: v1.9.0 (13대 과제 및 31대 마이크로슬라이스 IS-01.1~IS-13.5 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v1.2.2 및 빌드 해시 f669ee83... 반영, 배포 번들 생성 완료, 온보드 3계층 위계 재정의, ASA 조종면 제어권 VAS 이관, 순수 외루프 유도 목표치 및 플랩 지령 출력 경량화, 중복 Stall Guard 제거, MFD/GCS C2 Base+0 단일 진입 게이트웨이 정립, MFD 5Hz 통합 텔레메트리 다운링크 단일 송출, 조종석 ACRO 직결 시 PASSIVE_TRACKING 전환 및 무충격 인계, 계단식 동적 채널 재바인딩 트랜잭션 개시자, Master ICD v1.20.0, SYSTEM v2.6.0, VAS v1.11.0, TCA v1.8.0, ASA v1.2.1, Alignment v2.4.0, GPS v2.0.3 전역 동기화)  
+> **문서 버전**: v1.10.0 (13대 과제 및 31대 마이크로슬라이스 IS-01.1~IS-13.5 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v1.2.2 및 빌드 해시 f669ee83... 반영, 배포 번들 생성 완료, 온보드 3계층 위계 재정의, ASA 조종면 제어권 VAS 이관, 순수 외루프 유도 목표치 및 플랩 지령 출력 경량화, 중복 Stall Guard 제거, MFD/GCS C2 Base+0 단일 진입 게이트웨이 정립, MFD 5Hz 통합 텔레메트리 다운링크 단일 송출, 조종석 ACRO 직결 시 PASSIVE_TRACKING 전환 및 무충격 인계, 계단식 동적 채널 재바인딩 트랜잭션 개시자, Master ICD v1.20.0, SYSTEM v2.6.0, VAS v1.11.0, TCA v1.8.0, ASA v1.2.1, Alignment v2.4.0, GPS v2.0.3 전역 동기화)  
 > **최종 수정일**: 2026-11-07  
 > **운영 환경**: Minecraft CC:Tweaked, Create: Aeronautics, Create: Avionics  
 > **참조 문서**: 
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.6.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../../approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.2.1)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.2.1)
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.8.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.4.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../../approved/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.1.3)
@@ -17,6 +17,12 @@
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../../approved/0_ground/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.2.3)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../../approved/0_ground/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.10.3)
 > - [GEMINI.md](../../../../../GEMINI.md) (전역 규칙 및 가이드라인)
+
+### Revision History
+
+| 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
+| :---: | :---: | :--- | :--- |
+| `v1.10.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 01호기 기준선(Base 10000, MFD 10003, 회신 10005) 동기화, GCS 부트스트랩 채널 50000 고정, 구버전 Base+6/+7 [DEPRECATED] Zone 2 이관 반영, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
 
@@ -38,7 +44,7 @@
    - 고도 및 속도 제어: VTOL 모드에서는 수직 스로틀 PI 및 목표 승강률(`targetClimbRate`) 도출, 고정익 모드에서는 총 에너지 제어 시스템(TECS) 기반 에너지 분배.
    - 순수 운동학 유도 목표(자세 각도, 목표 승강률, 주 추진 스로틀, 플랩 전개 요구율 `flapTarget`, 2단계 시동 플래그 `flightActive`)를 20Hz 주기로 VAS-Core에 하달(`MSG_ATTITUDE_CMD`, `Base + 1`).
 2. **구동계 분리 및 간접 유도 (Actuator Decoupling)**:
-   - 공력 조종면 구동계 ASA(Node 06-xx)은 VAS Layer 3(`actuator_adapter_asa`, `Base+7`)으로 완전 편입되었으며, UAP는 조종면 타각 직접 산출 및 `Base+7` 소켓을 보유하지 않음. (구버전 직접 제어 모듈 `aerodynamic_controller.lua` 및 `MSG_SURFACE_CMD` [DEPRECATED]).
+   - 공력 조종면 구동계 ASA(Node 06-xx)은 VAS Layer 3(`actuator_adapter_asa`, `Base+11 (구 Base+7 [DEPRECATED])`)으로 완전 편입되었으며, UAP는 조종면 타각 직접 산출 및 `Base+11 (구 Base+7 [DEPRECATED])` 소켓을 보유하지 않음. (구버전 직접 제어 모듈 `aerodynamic_controller.lua` 및 `MSG_SURFACE_CMD` [DEPRECATED]).
    - UAP는 중복 연산(실속 방지 가드 등)을 배제하고 순수 유도 목표와 비행 단계별 플랩 목표(`flapTarget`)만을 인가하며, 동적압($V^2$) 역비례 게인 스케일링, 실속 방어 및 조종면 배분은 VAS-Core가 일괄 전담.
 3. **외루프 비행 모드 FSM 및 2단계 시동 주도권 총괄**:
    - 13대 상태 머신(`BOOT_INIT`, `BOOTSTRAP`, `PROBE_CHANNEL`, `ARMING_LOCKED`, `DISARMED`, `ARMING`, `IDLE_ARMED`, `TAKEOFF`, `CRUISE`, `LOITER`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `FAILSAFE_RTH`, `EMERGENCY_LAND`, `PASSIVE_TRACKING`) 운용.
@@ -93,8 +99,8 @@ flowchart TD
 
     subgraph ACTUATION_SUBSYSTEM["[비행체 분산 구동계 및 내루프 제어]"]
         CORE["비행 제어 코어 VAS (Node 01)<br/>* 20Hz 센서 계측 & 전 구동계 통합 믹싱"]
-        TCA["추력 어댑터 TCA 클러스터 (Node 02-xx)<br/>* 추진기 분산 구동 (Base+6)"]
-        ASA["공력 어댑터 ASA 클러스터 (Node 06-xx)<br/>* 조종면 분산 구동 (Base+7)"]
+        TCA["추력 어댑터 TCA 클러스터 (Node 02-xx)<br/>* 추진기 분산 구동 (Base+10 (구 Base+6 [DEPRECATED]))"]
+        ASA["공력 어댑터 ASA 클러스터 (Node 06-xx)<br/>* 조종면 분산 구동 (Base+11 (구 Base+7 [DEPRECATED]))"]
     end
 
     %% Network links
@@ -117,8 +123,8 @@ flowchart TD
     MFD -.->|"Base+1 [I-2] (선점 직결 예외)<br/>ACRO 20Hz 직결 / E_STOP 킬스위치"| CORE
     CORE -.->|"Base+1 [I-2] (비상 이벤트)<br/>MSG_EMERGENCY_ALERT (비행중 셧다운 경보)"| NET_MGR
     CORE ==>|"Base+2 [I-1] (20Hz)<br/>MSG_FLIGHT_TELEMETRY"| NET_MGR
-    CORE ==>|"Base+6 [I-3] (20Hz)<br/>MSG_THRUST_CMD"| TCA
-    CORE ==>|"Base+7 [I-10] (20Hz)<br/>MSG_AERO_CMD"| ASA
+    CORE ==>|"Base+10 (구 Base+6 [DEPRECATED]) [I-3] (20Hz)<br/>MSG_THRUST_CMD"| TCA
+    CORE ==>|"Base+11 (구 Base+7 [DEPRECATED]) [I-10] (20Hz)<br/>MSG_AERO_CMD"| ASA
 ```
 
 ### 1.4 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
@@ -354,7 +360,7 @@ flowchart TD
     end
 
     subgraph ACTUATOR_CORE["[VAS 전 구동계 통합 믹싱 (Layer 3)]"]
-        CORE_L3["VAS Layer 3 Dual Adapters<br/>* Base+6: TCA 추진기 할당 (MSG_THRUST_CMD)<br/>* Base+7: ASA 조종면 할당 (MSG_AERO_CMD, V² 스케일링)"]
+        CORE_L3["VAS Layer 3 Dual Adapters<br/>* Base+10 (구 Base+6 [DEPRECATED]): TCA 추진기 할당 (MSG_THRUST_CMD)<br/>* Base+11 (구 Base+7 [DEPRECATED]): ASA 조종면 할당 (MSG_AERO_CMD, V² 스케일링)"]
     end
 
     POS --> L1
@@ -1176,7 +1182,7 @@ UAP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
    - **점유 거절 및 대기 지시 (`status = "DENIED"`)**:
      ```lua
      {
-         ver = "1.9.5", domainId = "ATC_CENTRAL", seq = 541, type = "MSG_ATC_APPROACH_CLEARANCE", time = 1729845010060,
+         ver = "1.9.5", domainId = "ATC_CENTRAL", seq = 541, type = "MSG_ATC_APPROACH_CLEARANCE", time = 1729845010000,
          payload = {
              aircraftId = "AIRCRAFT_01",
              targetFacilityId = "RUNWAY_01",
@@ -1321,14 +1327,14 @@ UAP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
    ```lua
    {
        ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_CHANNEL_PROBE", time = 1729845000100,
-       payload = { hardwareUuid = "SAS-NODE-04-UUID", candidateBase = 10060, bandwidth = 20 }
+       payload = { hardwareUuid = "SAS-NODE-04-UUID", candidateBase = 10000, bandwidth = 20 }
    }
    ```
 2. **충돌 응답 (`MSG_CHANNEL_PROBE_ACK`, 선점 기체 $\rightarrow$ SAS, Base + 0)**:
    ```lua
    {
        ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 991, type = "MSG_CHANNEL_PROBE_ACK", time = 1729845000120,
-       payload = { existingDomain = "AIRCRAFT_02", occupiedBase = 10060, status = "CONFLICT_DETECTED" }
+       payload = { existingDomain = "AIRCRAFT_02", occupiedBase = 10000, status = "CONFLICT_DETECTED" }
    }
    ```
 
@@ -1339,7 +1345,7 @@ UAP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 > [!IMPORTANT]
 > **ASA 액추에이터 계층의 VAS 산하 완전 편입 (ICD 개정)**
 > 종래 UAP와 ASA 클러스터(Node 06-L, 06-R, 06-T) 간 직접 교신하던 `MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, `MSG_SURFACE_DISCOVER_REQ/ACK` 인터페이스는 **`[DEPRECATED]`** 처리되었습니다.
-> WAP는 [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) 산하 제3계층(Layer 3) 분산 액추에이터 노드로 공식 이관되었으며, `Base + 7` 채널을 통해 VAS-Core의 `actuator_adapter_asa` 모듈과 전담 통신(`MSG_AERO_CMD` / `MSG_AERO_STATUS`)합니다.
+> WAP는 [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) 산하 제3계층(Layer 3) 분산 액추에이터 노드로 공식 이관되었으며, `Base + 11` 채널(구 `Base + 7` [DEPRECATED])을 통해 VAS-Core의 `actuator_adapter_asa` 모듈과 전담 통신(`MSG_AERO_CMD` / `MSG_AERO_STATUS`)합니다.
 > 
 > UAP는 공력 조종면의 물리적 편향각을 직접 계산하지 않으며, 외루프 유도 연산 결과 도출된 플랩 전개 요구율 **`flapTarget` ($0.0 \sim 1.0$)**을 `Base + 1`의 `MSG_ATTITUDE_CMD` 페이로드에 실어 VAS-Core에 하달합니다. 동압 스케일링($\frac{1}{2}\rho V^2$), 타면 포화(`satCombined`), 고착 격리 및 실속 방어는 하위 VAS-Core가 통합 집행합니다.
 
@@ -1355,7 +1361,7 @@ UAP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 - **통신 채널**: `CH_FLIGHT_GUIDANCE` (`oldBase + 1`)
 - **전송 주기**: GCS로부터 기체 Base 채널 재할당(`MSG_BLOCK_ASSIGN`) 수신 시 트랜잭션 집행
 - **캐스케이드 전파 규약**:
-  1. **Phase 1 (PREPARE)**: UAP가 `action = "PREPARE"`, `newBaseChannel`을 VAS-Core에 송출. VAS-Core는 이를 수신하여 하위 TCA(`oldBase + 6`) 및 ASA(`oldBase + 7`)으로 동시 중계 전파.
+  1. **Phase 1 (PREPARE)**: UAP가 `action = "PREPARE"`, `newBaseChannel`을 VAS-Core에 송출. VAS-Core는 이를 수신하여 하위 TCA(`oldBase + 10`) 및 ASA(`oldBase + 11`) (구 oldBase+6/7 [DEPRECATED])으로 동시 중계 전파.
   2. **ACK 수집**: TCA/WAP이 새 채널 수신 대기를 완료하고 ACK를 회신하면, VAS-Core는 종합 판단 후 UAP로 ACK 회신.
   3. **Phase 2 (COMMIT)**: UAP가 최종 `action = "COMMIT"`을 송출하고 자신의 모뎀 채널(`newBase + 0 ~ 5`)을 재바인딩. VAS 및 TCA/WAP도 일제히 소켓을 절체하여 통신 연속성을 유지.
   4. **타임아웃 롤백**: 500ms 이내에 응답이 누락될 경우 UAP는 `action = "ROLLBACK"`을 송출하여 이전 채널로 원복.
@@ -1369,9 +1375,9 @@ UAP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
     type = "MSG_CHANNEL_REBIND",
     time = 1729845010000,
     payload = {
-        transactionId = "REBIND-TX-10060-10080",
+        transactionId = "REBIND-TX-10000-10080",
         action = "PREPARE", -- PREPARE, COMMIT, ROLLBACK
-        oldBaseChannel = 10060,
+        oldBaseChannel = 10000,
         newBaseChannel = 10080,
         bandwidth = 20
     }
@@ -1395,9 +1401,9 @@ UAP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
   },
   "channels": {
     "bootstrapChannel": 50000,
-    "baseChannel": 10060,
+    "baseChannel": 10000,
     "bandwidth": 20,
-    "mfdInstrumentChannel": 10063,
+    "mfdInstrumentChannel": 10003,
     "facilityBeaconChannel": 50003,
     "atcCommChannel": 50001,
     "gpsServiceChannel": 60002
@@ -2038,7 +2044,7 @@ end
 | **IS-11.3 ~ 11.4** | TS-11 | 20Hz 병렬 메인 런타임 루프 및 상주형 데몬 엔트리포인트 | `main.lua` / `test_main_loop.lua` | **PASS** |
 | **IS-12.1** | TS-12 | SAS 및 VAS HIL 클러스터 노드 엔트리포인트 | `node_uap.lua`, `node_vac_core.lua` | **PASS** |
 | **IS-12.2** | TS-12 | ASA 및 외부 인프라(GAC/GPS) HIL 클러스터 노드 엔트리포인트 | `node_wap.lua`, `node_infra.lua` | **PASS** |
-| **IS-13.1 ~ 13.2** | TS-13 | ASA 디커플링 & `Base+7` 소켓 완전 배제 및 채널 바인딩 | `network_manager.lua` / `test_wap_decoupling.lua` | **PASS** |
+| **IS-13.1 ~ 13.2** | TS-13 | ASA 디커플링 & `Base+11 (구 Base+7 [DEPRECATED])` 소켓 완전 배제 및 채널 바인딩 | `network_manager.lua` / `test_wap_decoupling.lua` | **PASS** |
 | **IS-13.3 ~ 13.4** | TS-13 | 가용(FREE) 착륙 시설물 동적 선정 및 RTH FSM 전이 로직 | `facility_client.lua`, `flight_fsm.lua` | **PASS** |
 | **IS-13.5** | TS-13 | 런타임 이벤트 라우팅 및 버전 메타데이터 전역 동기화 | `main.lua`, `version.lua` | **PASS** |
 
@@ -2074,4 +2080,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack 내 모든 외루프 항법 소프트웨어의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.11.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.8.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../../approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.4.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../../approved/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.1.3) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.0.3)와 100% 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack 내 모든 외루프 항법 소프트웨어의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.11.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.8.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.4.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../../approved/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.1.3) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.0.3)와 100% 정합성을 유지합니다.*

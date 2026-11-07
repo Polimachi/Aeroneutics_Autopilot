@@ -5,14 +5,16 @@ description: >-
   (<= 80 lines living snapshot), and .agent/memory/<dir>.md (per-directory
   historical archive). USE ONLY WHEN (1) a milestone completes that changes
   architecture, directories, standard commands, or project phase, or (2) the
-  user explicitly asks to update, audit, or sync project .md memory files. NEVER
-  invoke during general chat, Q&A, mid-planning (/plan, /grill-me), or trivial
-  edits that do not alter project structure or workflow.
+  user explicitly asks to update, audit, or sync project context memory files.
+  NEVER invoke during general chat, Q&A, mid-planning (/plan, /grill-me),
+  specification/ICD edits (docs/system/**, docs/specs/** — owned by
+  specification-lifecycle-manager), report edits (reports/**), CHANGELOG.md
+  edits, or trivial changes that do not alter project structure or workflow.
 ---
 
 # Project Markdown & Context Management (`md-management`)
 
-Adapted from Anthropic's `claude-md-management` (`claude-md-improver` + `/revise-claude-md`) for Antigravity's 3-tier memory architecture.
+Adapted from Anthropic's `claude-md-management` (`claude-md-improver` + `/revise-claude-md`) for Antigravity's 3-tier memory architecture. Owns **only** `AGENTS.md`, `GEMINI.md`, and `.agent/memory/*.md` (never `docs/system/`, `docs/specs/`, `reports/`, or `CHANGELOG.md`).
 
 ## 1. Three-Tier Architecture & Asymmetric Governance
 

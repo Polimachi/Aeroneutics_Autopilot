@@ -1,12 +1,19 @@
 # VAS (비행 제어 및 고정밀 계측 코어) 상세 규격서
 > **VAS: Realtime Flight Control & Precision Dynamics/Energy Acquisition Engine**  
 > **프로젝트**: Universal Autonomous Flight Stack (UAFS Ecosystem)  
-> **문서 버전**: v1.11.0 (7대 과제 및 16대 마이크로슬라이스 IS-00.1~IS-05.6 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v1.1.5 및 빌드 해시 948bcbb3f2da... 반영, 온보드 3계층 위계, ASA Node 06-xx 산하 편입, Layer 3 듀얼 어댑터 체계, 단일 Stall Guard 10m/s 및 플랩 Vfe 가드 내장, 9-State FSM 및 2단계 시동, Base+1 직접 진입 선점 중재, MFD 20Hz Acro 직결 다운링크 인계, 동적 채널 재바인딩 계단식 전파, Master ICD v1.20.0, SYSTEM v2.6.0, SAS v1.9.0, TCA v1.8.0, ASA v1.2.1, Alignment v2.4.0, GPS v2.0.3 전역 동기화)  
+> **문서 버전**: v1.12.0 (7대 과제 및 16대 마이크로슬라이스 IS-00.1~IS-05.6 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v1.1.5 및 빌드 해시 948bcbb3f2da... 반영, 온보드 3계층 위계, ASA Node 06-xx 산하 편입, Layer 3 듀얼 어댑터 체계, 단일 Stall Guard 10m/s 및 플랩 Vfe 가드 내장, 9-State FSM 및 2단계 시동, Base+1 직접 진입 선점 중재, MFD 20Hz Acro 직결 다운링크 인계, 동적 채널 재바인딩 계단식 전파, Master ICD v1.20.0, SYSTEM v2.6.0, SAS v1.9.0, TCA v1.8.0, ASA v1.2.1, Alignment v2.4.0, GPS v2.0.3 전역 동기화)  
 > **최종 수정일**: 2026-11-07  
 > **대상 환경**: Minecraft CC:Tweaked, Create: Aeronautics, Create: Avionics  
+
+### Revision History
+
+| 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
+| :---: | :---: | :--- | :--- |
+| `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
+
 > **연관 문서**: 
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.6.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../../approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.2.1)
 > - [SAS_PROGRAM_SPECIFICATION.md](../../2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md) (SAS 자율 항법 규격서 v1.9.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.8.0)
@@ -35,8 +42,8 @@
    - **Layer 1 (Flight Dynamics Core)**: 순수 수학적 단위 쿼터니언($SO(3)$) 자세 오차 조절기(짐벌락 원천 배제), 승강률($v_y$) 수직 추력 Heave PI 제어, 추진기(TCA) 및 공력면(ASA) 구동계 역방향 포화 피드백(`satStatus`)에 연동된 방향성 안티 와인드업.
    - **Layer 2B (Post-Mixer)**: 피치 트림 및 반토크 피드포워드($yaw = yaw + heave \cdot coeff$) 주입, VTOL/순항 렌치 천이 블렌더(`transition_blend`).
    - **Layer 3 (Platform Actuator Adapters - Dual Adapter Architecture)**: 
-     - **`actuator_adapter_tca`**: TCA 클러스터 제어 할당 행렬($0 \sim 15$ 이산 정수 스케일링, 불감대 확장), dynamicLoad 실시간 산출, 채널 `Base+6` 20Hz `MSG_THRUST_CMD` 송출.
-     - **`actuator_adapter_asa`**: ASA 공력 조종면(Aileron, Elevator, Rudder, Flap) 제어 할당, 동적압($V^2$) 역비례 게인 스케일링($\eta_q$), 채널 `Base+7` 20Hz `MSG_AERO_CMD` 송출.
+     - **`actuator_adapter_tca`**: TCA 클러스터 제어 할당 행렬($0 \sim 15$ 이산 정수 스케일링, 불감대 확장), dynamicLoad 실시간 산출, 채널 `Base+10` (구 `Base+6` [DEPRECATED]) 20Hz `MSG_THRUST_CMD` 송출.
+     - **`actuator_adapter_asa`**: ASA 공력 조종면(Aileron, Elevator, Rudder, Flap) 제어 할당, 동적압($V^2$) 역비례 게인 스케일링($\eta_q$), 채널 `Base+11` (구 `Base+7` [DEPRECATED]) 20Hz `MSG_AERO_CMD` 송출.
      - 양 구동계의 역방향 포화 상태(`axisSaturatedPos`, `axisSaturatedNeg`)를 Layer 1으로 통합 피드백하여 방향성 적분 동결 집행.
 6. **51x19 HUD 대시보드 (`ui_renderer`)**: 오일러 각도 변환은 제어 루프 내부가 아닌 디스플레이 경계에서만 한정 수행되며, `term.blit` 무깜빡임 고속 TUI 게이지 표출. (일반 비행 시 MFD는 SAS 5Hz 통합 패킷을 수신하며, 조종석 수동 급기동 ACRO 진입 시에만 VAS-Core가 `Base+3`으로 20Hz 직접 저지연 송출을 인계)
 
@@ -81,10 +88,10 @@ flowchart TD
     SENSORS ==>|"하단 유선 포트 (bottom)"| SENS_PIPE
     SAS ==>|"Base+1 [CH_FLIGHT_GUIDANCE] (20Hz MSG_ATTITUDE_CMD)"| COMMS
     MFD ==>|"Base+1 [CH_FLIGHT_GUIDANCE] (수동 ACRO 직결 / E-STOP 킬스위치 선점)"| COMMS
-    COMMS ==>|"Base+6 [CH_THRUST_ACTUATION] (20Hz MSG_THRUST_CMD)"| TCA
-    TCA -.->|"Base+6 [CH_THRUST_ACTUATION] (추력 상태 피드백 / 포화 보고)"| COMMS
-    COMMS ==>|"Base+7 [CH_AERO_ACTUATION] (20Hz MSG_AERO_CMD)"| ASA
-    ASA -.->|"Base+7 [CH_AERO_ACTUATION] (조종면 각도 피드백 / 포화 보고)"| COMMS
+    COMMS ==>|"Base+10 [CH_THRUST_ACTUATION, 구 Base+6 DEPRECATED] (20Hz MSG_THRUST_CMD)"| TCA
+    TCA -.->|"Base+10 [CH_THRUST_ACTUATION, 구 Base+6 DEPRECATED] (추력 상태 피드백 / 포화 보고)"| COMMS
+    COMMS ==>|"Base+11 [CH_AERO_ACTUATION, 구 Base+7 DEPRECATED] (20Hz MSG_AERO_CMD)"| ASA
+    ASA -.->|"Base+11 [CH_AERO_ACTUATION, 구 Base+7 DEPRECATED] (조종면 각도 피드백 / 포화 보고)"| COMMS
     TELEM ==>|"Base+2 [CH_TELEMETRY] (20Hz MSG_FLIGHT_TELEMETRY)"| SAS
     TELEM -.->|"Base+3 [CH_MFD_STATE] (ACRO 모드 시 20Hz 직접 고속 인계)"| MFD
     ALIGN <==>|"기체 Base+0 바인딩 후 동적 개방<br/>Base_hangar+0 (Cmd Rx) / +1 (Telem Tx)"| COMMS
@@ -101,7 +108,7 @@ flowchart TD
 
 ### 2.0 물리 포트 배치 규격 (Physical Hardware Interfaces)
 VAS 컴퓨터는 상하 듀얼 모뎀 구성을 표준으로 채택하여 유무선 트래픽을 물리적으로 엄격히 격리합니다:
-- **`top` (상단 포트)**: **무선 모뎀 (Wireless Ender Modem)** — 기체 외부 통신, GCS, 지상 시설물, SAS/MFD/TCA/ASA 무선 패킷 송수신 담당 (`Base+0` C2/교정, `Base+1` 유도/ACRO/E-STOP, `Base+2` 텔레메트리, `Base+3` ACRO MFD, `Base+6` TCA 추력, `Base+7` ASA 조종면).
+- **`top` (상단 포트)**: **무선 모뎀 (Wireless Ender Modem)** — 기체 외부 통신, GCS, 지상 시설물, SAS/MFD/TCA/ASA 무선 패킷 송수신 담당 (`Base+0` C2/교정, `Base+1` 유도/ACRO/E-STOP, `Base+2` 텔레메트리, `Base+3` ACRO MFD, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면).
 - **`bottom` (하단 포트)**: **유선 모뎀 (Wired Modem)** — 기체 내부 폐쇄형 센서 네트워크 버스 연결 (`avionics:*`, `create:fluid_tank`, `battery`).
 - **`left`, `right`, `front`, `back`**: 센서 및 액추에이터 직결 금지 (신호 간섭 차단 및 배선 단순화).
 
@@ -239,8 +246,8 @@ sequenceDiagram
     A_WAP->>F: rawOutputsWap 전달
     Note over F: 9. 상태별 출력 마스킹 (apply_output_safety_rule) (0.2ms)
     F->>COM: 최종 안전 출력 safeOutputsTap, safeOutputsWap & 상태 전달 (t = 4.7ms)
-    COM->>COM: 10. TAP으로 MSG_THRUST_CMD 브로드캐스트 (Base+6, 20Hz)
-    COM->>COM: 11. WAP으로 MSG_AERO_CMD 브로드캐스트 (Base+7, 20Hz)
+    COM->>COM: 10. TAP으로 MSG_THRUST_CMD 브로드캐스트 (Base+10, 20Hz, 구 Base+6 [DEPRECATED])
+    COM->>COM: 11. WAP으로 MSG_AERO_CMD 브로드캐스트 (Base+11, 20Hz, 구 Base+7 [DEPRECATED])
     COM->>COM: 12. UAP로 MSG_FLIGHT_TELEMETRY 송출 (Base+2, 20Hz)
     opt ACRO 활성화 시 (acroActive == true)
         COM->>COM: 13. MFD로 MSG_MFD_STATE 고속 직접 송출 (Base+3, 20Hz 인계)
@@ -259,7 +266,7 @@ sequenceDiagram
 | **Layer 2B: Post-Mixer** | `vehicle_policy` | 피치 트림 및 반토크 피드포워드 주입, 천이 블렌딩 | $\le 0.2 \text{ ms}$ |
 | **Layer 3: TCA Adapter** | `actuator_adapter_tca` | 추진기 할당 행렬곱, 불감대 확장, 0~15 이산 정수화, SatTap 역피드백 | $\le 0.5 \text{ ms}$ |
 | **Layer 3: ASA Adapter** | `actuator_adapter_asa` | $V^2$ 동적압 역비례 스케일링, 조종면 타각 할당, SatWap 역피드백 | $\le 0.4 \text{ ms}$ |
-| **출력/안전/통신** | `core_daemon`<br>`network_manager`<br>`telemetry_feeder` | 출력 마스킹, `MSG_THRUST_CMD` (`Base+6`), `MSG_AERO_CMD` (`Base+7`), `MSG_FLIGHT_TELEMETRY` (`Base+2`), ACRO MFD (`Base+3`) | $\le 1.8 \text{ ms}$ |
+| **출력/안전/통신** | `core_daemon`<br>`network_manager`<br>`telemetry_feeder` | 출력 마스킹, `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])), `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])), `MSG_FLIGHT_TELEMETRY` (`Base+2`), ACRO MFD (`Base+3`) | $\le 1.8 \text{ ms}$ |
 | **총 연산 시간** | **전체 파이프라인** | **전체 50ms 주기 중 실제 CPU 점유 시간** | **$\le 5.6 \text{ ms}$ (여유율 $> 88\%$)** |
 
 ---
@@ -378,14 +385,14 @@ flowchart TD
       local comState, healthMap, sensorOk = step_kinematics(state, dt, nowMs)
       local safeOutputsTap, safeOutputsWap, dynLoad = step_actuation(state, comState, dt)
 
-      -- 1. Base+6 TCA 추진기 지령 브로드캐스트 (20Hz)
+      -- 1. Base+10 TCA 추진기 지령 브로드캐스트 (20Hz)
       network_manager.send_packet(state.net, state.net.channels.actuation, "MSG_THRUST_CMD", {
           watchdogSeq = state.tickCount,
           controlState = state.fsm.currentState,
           outputs = safeOutputsTap
       })
       
-      -- 2. Base+7 ASA 공력 조종면 지령 브로드캐스트 (20Hz)
+      -- 2. Base+11 ASA 공력 조종면 지령 브로드캐스트 (20Hz)
       network_manager.send_packet(state.net, state.net.channels.wapActuation, "MSG_AERO_CMD", {
           watchdogSeq = state.tickCount,
           controlState = state.fsm.currentState,
@@ -504,7 +511,7 @@ flowchart TD
   ```
 
 ### 5.10 모듈 10: `network_manager` (듀얼 모뎀 라우터, 프로토콜 파서 및 동적 채널 관리자)
-- **역할**: 상단 무선 모뎀 온보드 채널(`Base+0` C2 지령, `Base+1` 유도 명령/ACRO/E-STOP, `Base+6` TCA 추력, `Base+7` ASA 조종면, `Base+2` 텔레메트리, `Base+3` ACRO HUD)과 하단 유선 모뎀을 바인딩하며, 격납고 바인딩(`MSG_CALIBRATION_INIT`) 수신 시 베이 채널을 동적 개방하고 하위 노드(TCA, ASA)로 `MSG_CALIB_BAY_BIND`를 중계 전파하며, 동적 채널 재바인딩(`MSG_CHANNEL_REBIND`) 2단계 트랜잭션(Prepare $\to$ Ack $\to$ Commit)을 처리하고 TCA/WAP으로 계단식 포워딩합니다.
+- **역할**: 상단 무선 모뎀 온보드 채널(`Base+0` C2 지령, `Base+1` 유도 명령/ACRO/E-STOP, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면, `Base+2` 텔레메트리, `Base+3` ACRO HUD)과 하단 유선 모뎀을 바인딩하며, 격납고 바인딩(`MSG_CALIBRATION_INIT`) 수신 시 베이 채널을 동적 개방하고 하위 노드(TCA, ASA)로 `MSG_CALIB_BAY_BIND`를 중계 전파하며, 동적 채널 재바인딩(`MSG_CHANNEL_REBIND`) 2단계 트랜잭션(Prepare $\to$ Ack $\to$ Commit)을 처리하고 TCA/WAP으로 계단식 포워딩합니다.
 - **핵심 시그니처**:
   ```lua
   function network_manager.init(systemConfig) -> netState
@@ -634,7 +641,7 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 ### 7.1 9대 제어 상태 정의
 > [!IMPORTANT]
 > **전 상태 20Hz `MSG_THRUST_CMD` 및 `MSG_AERO_CMD` 상시 브로드캐스트 및 출력 마스킹 규칙**  
-> VAS-Core는 아래 9개 전 상태에서 매 50ms마다 `MSG_THRUST_CMD` (`Base+6`) 및 `MSG_AERO_CMD` (`Base+7`) 패킷을 중단 없이 송출합니다.
+> VAS-Core는 아래 9개 전 상태에서 매 50ms마다 `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])) 및 `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])) 패킷을 중단 없이 송출합니다.
 > - **비행 가능 상태 (`isFlight = true`)**: `NORMAL`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `AIRBORNE_EMERGENCY`에서는 계산된 제어 출력이 인가됩니다.
 > - **비비행 안전 차단 상태**: `DISARMED`, `ARMING`, `IDLE_ARMED`, `CALIBRATION`에서는 모든 액추에이터 출력이 `0`으로 강제 마스킹됩니다.
 > - **비상 정지 (`E_STOP`) 쿠션 스로틀**: 기체가 공중(`isAirborne == true`)에 있을 때 `E_STOP`이 발동되면, 자유낙하 추락 충격을 완화하기 위해 바닥 접지 전까지 쿠션 스로틀($\lfloor \text{hoverBaseThrottle} \times 0.6 + 0.5 \rfloor$, 기본값 $5$)을 인가한 뒤 접지 시 0으로 차단합니다.
@@ -823,7 +830,7 @@ stateDiagram-v2
 ```
 
 ### 8.3 [Interface I-3] 구동계 지령 및 피드백 (`VAS` $\leftrightarrow$ `TCA 클러스터`)
-- **채널**: `CH_THRUST_ACTUATION` (`Base + 6`)
+- **채널**: `CH_THRUST_ACTUATION` (`Base + 10`, 구버전 `Base + 6` [DEPRECATED])
 - **실시간 지령 (`MSG_THRUST_CMD`, 20Hz)**: VAS $\rightarrow$ TCA 클러스터
 - **상태 피드백 (`MSG_ACTUATOR_STATUS`, 이벤트 즉시)**: TCA 클러스터 $\rightarrow$ VAS
 
@@ -871,7 +878,7 @@ stateDiagram-v2
 ```
 
 ### 8.4 [Interface I-10] 공력 제어면 지령 및 피드백 (`VAS` $\leftrightarrow$ `ASA 클러스터`)
-- **채널**: `CH_AERO_ACTUATION` (`Base + 7`)
+- **채널**: `CH_AERO_ACTUATION` (`Base + 11`, 구버전 `Base + 7` [DEPRECATED])
 - **실시간 지령 (`MSG_AERO_CMD`, 20Hz)**: VAS $\rightarrow$ ASA 클러스터
 - **상태 피드백 (`MSG_AERO_STATUS`, 이벤트 즉시)**: ASA 클러스터 $\rightarrow$ VAS
 
@@ -920,7 +927,7 @@ stateDiagram-v2
 - **교정 명령 채널**: $Base_{\text{hangar}} + 0$ (`CH_CALIBRATION_CMD`, 교정 모드 시 동적 개방, 구버전 `1001` 및 `Base + 4` [DEPRECATED])
 - **교정 텔레메트리 채널**: $Base_{\text{hangar}} + 1$ (`CH_CALIBRATION_TELEM`, 교정 모드 시 동적 개방, 구버전 `1002` 및 `Base + 2` [DEPRECATED])
 - **교정 세션 수명주기 (기체 Base+0 직결 바인딩 및 하위 노드 전파)**:
-  1. **바인딩 개시**: Alignment 콘솔이 기체 고유 포트 `Base + 0`으로 `MSG_CALIBRATION_INIT` 발송 $\rightarrow$ VAS 수신 즉시 FSM `CALIBRATION` 전이 및 베이 채널($Base_{\text{hangar}}+0, +1, +3$) 동적 개방, 하위 구동계 TCA(`Base+6`) 및 ASA(`Base+7`)으로 `MSG_CALIB_BAY_BIND` 중계 전파 후 $Base_{\text{hangar}}+1$로 `MSG_CALIBRATION_INIT_ACK` 회신.
+  1. **바인딩 개시**: Alignment 콘솔이 기체 고유 포트 `Base + 0`으로 `MSG_CALIBRATION_INIT` 발송 $\rightarrow$ VAS 수신 즉시 FSM `CALIBRATION` 전이 및 베이 채널($Base_{\text{hangar}}+0, +1, +3$) 동적 개방, 하위 구동계 TCA(`Base+10` (구 `Base+6` [DEPRECATED])) 및 ASA(`Base+11` (구 `Base+7` [DEPRECATED]))으로 `MSG_CALIB_BAY_BIND` 중계 전파 후 $Base_{\text{hangar}}+1$로 `MSG_CALIBRATION_INIT_ACK` 회신.
   2. **교정 제어/프로파일 동기화**: 콘솔이 $Base_{\text{hangar}}+0$으로 `MSG_CALIB_START`, `MSG_PROFILE_SYNC` 송출 $\rightarrow$ VAS-Core가 $Base_{\text{hangar}}+1$로 20Hz `MSG_FLIGHT_TELEMETRY` 및 반영 완료 `MSG_CALIB_ACK` 회신.
   3. **바인딩 종료**: 콘솔이 $Base_{\text{hangar}}+0$으로 `MSG_CALIBRATION_CLOSE` 발송 $\rightarrow$ VAS-Core가 베이 채널 즉시 해제(`modem.close()`) 및 지상 대기(`IDLE_ARMED`) 복귀 후 $Base_{\text{hangar}}+1$로 `MSG_CALIBRATION_CLOSE_ACK` 회신.
 
@@ -941,7 +948,7 @@ stateDiagram-v2
     }
 }
 
--- 1-1. 베이 채널 바인딩 하위 전파 (MSG_CALIB_BAY_BIND, VAS -> TCA Base+6 & ASA Base+7)
+-- 1-1. 베이 채널 바인딩 하위 전파 (MSG_CALIB_BAY_BIND, VAS -> TCA Base+10 & ASA Base+11, 구 Base+6/7 [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1066,11 +1073,11 @@ stateDiagram-v2
 ```
 
 ### 8.6 [Interface I-5] 추진기 및 공력면 디스커버리 핸드셰이크 (`VAS` $\leftrightarrow$ `TCA` & `ASA`)
-- **채널**: `CH_THRUST_ACTUATION` (`Base + 6`) 및 `CH_AERO_ACTUATION` (`Base + 7`)
+- **채널**: `CH_THRUST_ACTUATION` (`Base + 10`, 구버전 `Base + 6` [DEPRECATED]) 및 `CH_AERO_ACTUATION` (`Base + 7`)
 - **시동(Arming 1단계) 시 1회 집행**: 전체 필수 TCA 및 ASA 노드의 온라인 생존 및 헬스 검증.
 
 ```lua
--- 1. VAS -> TCA 브로드캐스트 요청 (MSG_ACTUATOR_DISCOVER_REQ, Base+6)
+-- 1. VAS -> TCA 브로드캐스트 요청 (MSG_ACTUATOR_DISCOVER_REQ, Base+10, 구 Base+6 [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1082,7 +1089,7 @@ stateDiagram-v2
     }
 }
 
--- 2. 개별 TCA -> VAS 유니캐스트 응답 (MSG_ACTUATOR_DISCOVER_ACK, Base+6)
+-- 2. 개별 TCA -> VAS 유니캐스트 응답 (MSG_ACTUATOR_DISCOVER_ACK, Base+10, 구 Base+6 [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1099,7 +1106,7 @@ stateDiagram-v2
     }
 }
 
--- 3. VAS -> ASA 브로드캐스트 요청 (MSG_AERO_DISCOVER_REQ, Base+7)
+-- 3. VAS -> ASA 브로드캐스트 요청 (MSG_AERO_DISCOVER_REQ, Base+11, 구 Base+7 [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1111,7 +1118,7 @@ stateDiagram-v2
     }
 }
 
--- 4. 개별 ASA -> VAS 유니캐스트 응답 (MSG_AERO_DISCOVER_ACK, Base+7)
+-- 4. 개별 ASA -> VAS 유니캐스트 응답 (MSG_AERO_DISCOVER_ACK, Base+11, 구 Base+7 [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1218,7 +1225,7 @@ stateDiagram-v2
 
 ### 8.10 [Interface I-9] 계단식 동적 채널 재바인딩 프로토콜 (`SAS` $\rightarrow$ `VAS` $\rightarrow$ `TCA/ASA`)
 - **수신 채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`) (SAS 발신)
-- **전파 채널**: `CH_THRUST_ACTUATION` (`Base + 6`), `CH_AERO_ACTUATION` (`Base + 7`) (TCA/ASA 전파)
+- **전파 채널**: `CH_THRUST_ACTUATION` (`Base + 10`), `CH_AERO_ACTUATION` (`Base + 11`) (TCA/ASA 전파, 구 `Base+6/7` [DEPRECATED])
 - **트랜잭션 절차**: 2단계 커밋(Prepare $\to$ Ack $\to$ Commit). UAP로부터 PREPARE 수신 시 하위 TCA/WAP으로 계단식 전파 후 응답 취합, UAP로 ACK 회신, COMMIT 수신 시 일제히 새 베이스 채널로 스위칭.
 
 ```lua

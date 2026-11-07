@@ -1,18 +1,24 @@
 # TCA (추력기 어댑터 및 분산 클러스터) 상세 규격서
 > **TCA: Thruster Control Adapter & Distributed Cluster Program Specification**  
 > **프로젝트**: Universal Autonomous Flight Stack (UAFS Ecosystem)  
-> **문서 버전**: v1.8.0 (11대 과제 및 24대 마이크로슬라이스 IS-01.1~IS-11.2 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v1.2.20 및 빌드 해시 edc8bd267264 반영, VAS 산하 3계층 통합 인터페이스 동기화: VAS 중계형 MSG_CALIB_BAY_BIND 동적 격납고 바인딩, 정적 bayCalibrationTap 폐지 [DEPRECATED], 계층적 Base 채널 재바인딩 캐스케이드 MSG_CHANNEL_REBIND 명세, Master ICD v1.20.0, SYSTEM v2.6.0, VAS v1.11.0, SAS v1.9.0, ASA v1.2.1, Alignment v2.4.0, GPS v2.0.3 전역 동기화)  
+> **문서 버전**: v1.9.0 (11대 과제 및 24대 마이크로슬라이스 IS-01.1~IS-11.2 전수 구현 완료, 최신 하네스 Gate 0~6 검증 실측 v1.2.20 및 빌드 해시 edc8bd267264 반영, VAS 산하 3계층 통합 인터페이스 동기화: VAS 중계형 MSG_CALIB_BAY_BIND 동적 격납고 바인딩, 정적 bayCalibrationTap 폐지 [DEPRECATED], 계층적 Base 채널 재바인딩 캐스케이드 MSG_CHANNEL_REBIND 명세, Master ICD v1.20.0, SYSTEM v2.6.0, VAS v1.11.0, SAS v1.9.0, ASA v1.2.1, Alignment v2.4.0, GPS v2.0.3 전역 동기화)  
 > **최종 수정일**: 2026-11-07  
 > **대상 환경**: Minecraft CC:Tweaked, Create: Aeronautics, Create: Avionics  
 > **연관 문서**: 
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.6.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
 > - [SAS_PROGRAM_SPECIFICATION.md](../../2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md) (SAS 자율 항법 규격서 v1.9.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../../approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.2.1)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.4.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.3)
 > - [GEMINI.md](../../../../../GEMINI.md) (전역 규칙 및 가이드라인)
+
+### Revision History
+
+| 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
+| :---: | :---: | :--- | :--- |
+| `v1.9.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 추진기 버스 Zone 2 이관(`Base+10`: `CH_THRUST_ACTUATION`, 구 `Base+10` [DEPRECATED]), `Base+4` 상시 청취 제거 확정, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
 
@@ -25,7 +31,7 @@
 > **구현 및 배포 현황 요약 (Status: IMPLEMENTED & CLOUD DEPLOYED)**
 > TCA 소프트웨어는 `projects/tap` 환경에서 11대 과제 및 24개 마이크로슬라이스(IS-01.1 ~ IS-11.2) 전수가 구현 완료되어 최신 버전 **v1.2.20** (빌드 해시 `edc8bd267264`)으로 공식 빌드되었습니다.
 > 하네스 Gate 0 ~ Gate 6 전 게이트 검증을 100% PASS(2,473.95 ms)하였으며, 단일 번들(`tap_bundle.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/tap/tap_bundle.lua`)로 공식 동기화되었습니다.
-> 또한 VAS-Core와의 실환경 폐루프 시뮬레이션 및 `discovery_handler.lua` 모듈을 통한 `Base+6` 실시간 구동 및 지상 교정 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 바인딩(구버전 `1001` 및 `Base+4` 상시 개방 폐지 [DEPRECATED]), 2-Phase 채널 재바인딩 트랜잭션, 20Hz 실시간 구동, 단선 시 $N_{total}/N_{active}$ 비례 손실 보상, 동적 타이머 기반 300ms 워치독 차단 및 핫플러그 감지가 완벽히 검증되었습니다. (상세 내역은 [제7장](#7-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
+> 또한 VAS-Core와의 실환경 폐루프 시뮬레이션 및 `discovery_handler.lua` 모듈을 통한 `Base+10` (구 `Base+10` [DEPRECATED]) 실시간 구동 및 지상 교정 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 바인딩(구버전 `1001` 및 `Base+4` 상시 개방 폐지 [DEPRECATED]), 2-Phase 채널 재바인딩 트랜잭션, 20Hz 실시간 구동, 단선 시 $N_{total}/N_{active}$ 비례 손실 보상, 동적 타이머 기반 300ms 워치독 차단 및 핫플러그 감지가 완벽히 검증되었습니다. (상세 내역은 [제7장](#7-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
 
 TAP은 상위 비행 컴퓨터인 **VAS (Node 01)**로부터 20Hz(50ms) 주기로 브로드캐스트되는 디지털 추력 지령(`MSG_THRUST_CMD`)을 수신하여, 개별 추진기 상호작용 모드(`API` 또는 `REDSTONE`)에 부합하는 하드웨어 제어 신호로 변환·인가하며 다음과 같은 핵심 역할을 완결합니다:
 
@@ -58,7 +64,7 @@ TCA 컴퓨터는 담당 추진기 기구 바로 위에 설치되며, 6개 면(Fa
 ```mermaid
 flowchart TD
     subgraph TAP_NODE["[TCA 노드 물리 포트 매핑 (Node 02-xx)]"]
-        TOP["상단 (top / ports.modemSide): 유/무선 모뎀 (modem)<br/>* Base+6 (CH_THRUST_ACTUATION)<br/>* Base_hangar+3 (CH_CALIBRATION_TAP, 교정 시 동적 개방)"]
+        TOP["상단 (top / ports.modemSide): 유/무선 모뎀 (modem)<br/>* Base+10 (CH_THRUST_ACTUATION, 구 Base+6 [DEPRECATED])<br/>* Base_hangar+3 (CH_CALIBRATION_TAP, 교정 시 동적 개방)"]
         CORE["CC:Tweaked Advanced Computer<br/>(Headless Background Daemon)"]
         BOTTOM["하단 (bottom / ports.redstoneSide): Create 아날로그 변속기 직결<br/>* REDSTONE 상호작용 모드 전용 (0~15 RS 출력)"]
         SIDES["외곽 4면 (left, right, front, back / ports.apiSides)<br/>* API 상호작용 모드 전용 추진기 페리페럴 인터페이스<br/>* (0.0~1.0 호출, REDSTONE 모드 시 0 강제 차단)"]
@@ -72,7 +78,7 @@ flowchart TD
 ### 2.1 포트별 물리 역할 명세
 | 포트 위치 | 물리 장치 | 지원 통신/신호 | 상호작용 모드 (`interactionMode`) | 상세 설명 |
 | :---: | :---: | :---: | :---: | :--- |
-| **`top`** | 무선/유선 모뎀 (`modem`) | CC Rednet / Raw Modem | 공통 | VAS 및 VAS-Align과의 무선 통신 전용 포트. `Base + 6` 상시 개방, 지상 교정 모드 진입 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 개방 (구버전 `1001` 및 `Base + 4` [DEPRECATED]) |
+| **`top`** | 무선/유선 모뎀 (`modem`) | CC Rednet / Raw Modem | 공통 | VAS 및 VAS-Align과의 무선 통신 전용 포트. `Base + 10` (구 `Base + 6` [DEPRECATED]) 상시 개방, 지상 교정 모드 진입 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 개방 (구버전 `1001` 및 `Base + 4` [DEPRECATED]) |
 | **`bottom`** | Create 변속기 / 레드스톤 링크 | 아날로그 레드스톤 ($0 \sim 15$) | `REDSTONE` | 컴퓨터 바로 아래 블록에 직결된 Create Rotation Speed Controller 또는 Clutch 구동 (`ports.redstoneSide`) |
 | **`left`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | Create: Aeronautics 등 외부 추진기 블록 API 호출 포트 (`ports.apiSides`) |
 | **`right`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | 추진기 페리페럴 제어 포트 (`ports.apiSides`) |
@@ -120,7 +126,7 @@ flowchart TD
 | `interactionMode` | string | `"REDSTONE"` | `"REDSTONE"`, `"API"` | 초기 추진기 상호작용 모드 (표준) |
 | `mode` `[DEPRECATED]` | string | `"REDSTONE"` | `"REDSTONE"`, `"API"` | 구버전 모드 필드 (`interactionMode` 대체됨. 코드베이스는 무폴백 원칙에 따라 interactionMode만 단일 채택) |
 | `nominalActuatorCount` | integer | `4` | $1 \sim 16$ | 해당 그룹 내에 설치된 총 공칭 추진기 기구 수 |
-| `channels.thrustActuation` | uint16 | `Base + 6` | $10006 \sim 49986$ | 실시간 20Hz 추력 지령 및 상태 채널 |
+| `channels.thrustActuation` | uint16 | `Base + 10` (구 `Base + 6` [DEPRECATED]) | $10006 \sim 49986$ | 실시간 20Hz 추력 지령 및 상태 채널 |
 | `channels.bayCalibrationTap` `[DEPRECATED]` | uint16 | `Base_hangar + 3` | $104 \sim 194$ | 구버전 정적 격납고 교정 채널 (`MSG_CALIB_BAY_BIND` 동적 바인딩으로 대체됨: Core로부터 지령 수신 시 $Base_{\text{hangar}}+0$ 및 $+3$ 동적 개방) |
 | `ports.modemSide` | string | `"top"` | CC 6개 면 | 무선/유선 모뎀 장착 포트 면 |
 | `ports.redstoneSide` | string | `"bottom"` | CC 6개 면 | REDSTONE 상호작용 모드 아날로그 변속기 직결 포트 (구 `actuatorSide` `[DEPRECATED]`) |
@@ -335,7 +341,7 @@ function packet_protocol.verify_packet(pkt, expectedDomain) -> isValid, errStrin
 ### 4.5 모듈 5: `status_reporter` (온-체인지 예외 텔레메트리 리포터)
 
 #### 1) 모듈 역할
-평시 20Hz 비행 중에는 무선 대역폭을 0으로 보존하다가, 추진기 단선/파손(`activeCount`), 상호작용 모드 전환(`interactionMode`), 포화 진입·해제(`isSaturated`), 또는 헬스 상태(`healthStatus`) 변동 시에만 `Base + 6` 채널로 `MSG_ACTUATOR_STATUS`를 즉시 송출합니다.
+평시 20Hz 비행 중에는 무선 대역폭을 0으로 보존하다가, 추진기 단선/파손(`activeCount`), 상호작용 모드 전환(`interactionMode`), 포화 진입·해제(`isSaturated`), 또는 헬스 상태(`healthStatus`) 변동 시에만 `Base + 10` (구 `Base + 6` [DEPRECATED]) 채널로 `MSG_ACTUATOR_STATUS`를 즉시 송출합니다.
 
 #### 2) 핵심 인터페이스 시그니처
 ```lua
@@ -349,7 +355,7 @@ function status_reporter.check_and_send(reporter, currentStatus) -> sentBoolean
 
 #### 1) 모듈 역할 및 듀얼 바인딩 (Dual-Channel Binding)
 기체 시동(Arming) 시 비행 제어 코어(VAS) 또는 지상 캘리브레이션 시 프로파일러(Alignment)로부터 유입되는 `MSG_ACTUATOR_DISCOVER_REQ`를 수신하고, 담당 추진기 그룹 제원 및 액추에이터 상태를 `MSG_ACTUATOR_DISCOVER_ACK`로 즉각 회신합니다.
-- **수신 바인딩 채널 1 (`Base + 6`, `CH_THRUST_ACTUATION`)**: VAS 시동 및 암링 시퀀스 탐색 요청 수신
+- **수신 바인딩 채널 1 (`Base + 10` (구 `Base + 6` [DEPRECATED]), `CH_THRUST_ACTUATION`)**: VAS 시동 및 암링 시퀀스 탐색 요청 수신
 - **수신 바인딩 채널 2 ($Base_{\text{hangar}}+3$, `CH_CALIBRATION_TAP`)**: Alignment 지상 6-DoF 프로파일링 및 펄스 시험 수신 (교정 모드 시 동적 개방, 구버전 `1001` 및 `Base + 4` [DEPRECATED])
 - **회신 원칙**: 요청이 수신된 채널(또는 `replyChannel`)로 동일하게 응답 패킷을 발송하여 요청 주체와의 세션을 격리 보장합니다.
 - **타겟 필터링**: `payload.targetGroupId == "ALL"` 또는 자선의 `groupId`와 일치할 때만 응답하며, 지상 프로파일러의 `targetThrusterId` 필드 역시 지원합니다.
@@ -375,7 +381,7 @@ function discovery_handler.handle_request(modem, recvChannel, replyChannel, pkt,
 ### 4.7 모듈 7: `config_manager` (JSON 설정 로더 및 채널 바인딩)
 
 #### 1) 모듈 역할
-`config.json` 파일을 역직렬화하고 기체 인덱스 $N$에 따른 무선 모뎀 채널(`Base + 6` 상시, 지상 교정 시 $Base_{\text{hangar}}+3$ 동적 바인딩) 및 런타임 영속화를 전담합니다.
+`config.json` 파일을 역직렬화하고 기체 인덱스 $N$에 따른 무선 모뎀 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]) 상시, 지상 교정 시 $Base_{\text{hangar}}+3$ 동적 바인딩) 및 런타임 영속화를 전담합니다.
 
 ```lua
 function config_manager.load(path) -> configTable, err
@@ -393,21 +399,21 @@ function config_manager.save(path, cfg) -> boolean, err
 
 ### 4.9 모듈 9: `channel_rebind_handler` (격납고 동적 바인딩 및 Base 채널 캐스케이드)
 
-#### 1) 격납고 베이 동적 바인딩 (`MSG_CALIB_BAY_BIND`, Core $\rightarrow$ TCA, Base + 6)
-- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 6`)
+#### 1) 격납고 베이 동적 바인딩 (`MSG_CALIB_BAY_BIND`, Core $\rightarrow$ TCA, Base + 10, 구 Base + 6 [DEPRECATED])
+- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10` (구 `Base + 6` [DEPRECATED]))
 - **전송 조건**: 기체가 정비 격납고에 입고되어 VAS-Core가 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이 바인딩 명령을 중계 전파할 때 수신.
 - **수신 동작**:
   1. `bayBaseChannel` ($101 \sim 200$)을 파싱하여 $Base_{\text{hangar}} + 0$ (Hangar C2) 및 $Base_{\text{hangar}} + 3$ (Hangar Telemetry / 펄스 시험) 채널을 동적 개방.
   2. VAS-Align으로부터 직접 수신되는 `MSG_ACTUATOR_DISCOVER_REQ` 및 `MSG_CALIB_PULSE`에 응답.
-  3. 교정 완료 시 해당 격납고 채널을 닫고 비행 채널(`Base + 6`)로 복귀.
+  3. 교정 완료 시 해당 격납고 채널을 닫고 비행 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]))로 복귀.
 
-#### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ TCA, oldBase + 6)
-- **통신 채널**: `CH_THRUST_ACTUATION` (`oldBase + 6`)
+#### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
+- **통신 채널**: `CH_THRUST_ACTUATION` (`oldBase + 10`, 구 `oldBase + 6` [DEPRECATED])
 - **전송 조건**: GCS 발령에 따라 SAS $\to$ VAS-Core를 거쳐 하달되는 채널 재바인딩 트랜잭션.
 - **2단계 트랜잭션 수신 시퀀스**:
-  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 6` 채널을 백그라운드 수신 대기 개방하고 `oldBase + 6`으로 ACK 회신.
-  2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 6` 채널을 닫고 `newBase + 6`을 주 통신 채널로 영속 확정.
-  3. **타임아웃 및 ROLLBACK**: 500ms 이내 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 6`을 파기하고 `oldBase + 6` 유지.
+  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 6`으로 ACK 회신.
+  2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 10` 채널을 닫고 `newBase + 10`을 (구 oldBase/newBase + 6 [DEPRECATED]) 주 통신 채널로 영속 확정.
+  3. **타임아웃 및 ROLLBACK**: 500ms 이내 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 10`을 파기하고 `oldBase + 10` 유지 (구 oldBase+6 [DEPRECATED]).
 
 ---
 
@@ -422,8 +428,8 @@ sequenceDiagram
     participant TP as TCA 메인 데몬 (main.lua)
     participant HW as 하드웨어 / 페리페럴
 
-    Note over TP: 1. config.json 로드 (부재 시 tap_setup.lua 자동 호출)<br/>2. 모뎀 Base+6 개방 (교정 시 Base_hangar+3 개방)<br/>3. sentinel:start_timer(0.3) 가동
-    VC->>TP: MSG_ACTUATOR_DISCOVER_REQ (Base+6)
+    Note over TP: 1. config.json 로드 (부재 시 tap_setup.lua 자동 호출)<br/>2. 모뎀 Base+10 개방 (교정 시 Base_hangar+3 개방)<br/>3. sentinel:start_timer(0.3) 가동
+    VC->>TP: MSG_ACTUATOR_DISCOVER_REQ (Base+10)
     TP->>VC: MSG_ACTUATOR_DISCOVER_ACK (groupId, interactionMode, healthStatus)
     
     loop 20Hz 실시간 제어 루프 (매 50ms)
@@ -547,7 +553,7 @@ end
 | **IS-06.1** | TS-06 | JSON 설정 로더 (`config.json`) 및 $Base = 10000 + N \cdot 20$ 검증 | `config_manager.lua` / `test_config_manager.lua` | **PASS** |
 | **IS-06.2** | TS-06 | Raw Modem 기반 최신 ICD v1.9.5 엔벨로프 인코더/검증기 | `packet_protocol.lua` / `test_packet_protocol.lua` | **PASS** |
 | **IS-06.3** | TS-06 | 300ms 고정밀 워치독 및 지상 교정 펄스 타이머 컷오프 | `watchdog_sentinel.lua` / `test_watchdog_sentinel.lua` | **PASS** |
-| **IS-06.4** | TS-06 | 온-체인지 `MSG_ACTUATOR_STATUS` 필터 및 `Base+6` 발신 엔진 | `status_reporter.lua` / `test_status_reporter.lua` | **PASS** |
+| **IS-06.4** | TS-06 | 온-체인지 `MSG_ACTUATOR_STATUS` 필터 및 `Base+10` (구 `Base+10` [DEPRECATED]) 발신 엔진 | `status_reporter.lua` / `test_status_reporter.lua` | **PASS** |
 | **IS-07.1** | TS-07 | 비차단(Non-blocking) 헤드리스 이벤트 데몬 코어 | `main.lua` / `test_tap_daemon.lua` | **PASS** |
 | **IS-07.2** | TS-07 | 대화형 독립 CLI 포트/모드 셋업 및 스캐너 도구 | `tools/tap_setup.lua` | **PASS** |
 | **IS-08.1** | TS-08 | 클러스터 통합 시뮬레이션 및 SourceMap 번들링 배포 | `node_core_sim.lua`, `dist_gdrive/tap/` | **PASS** |

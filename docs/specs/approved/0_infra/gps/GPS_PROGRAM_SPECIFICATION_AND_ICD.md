@@ -1,9 +1,16 @@
 # 중앙 연산형 고정밀 GPS 체계 아키텍처 및 통신 규격서 (ICD)
 > **Centralized High-Precision GPS System Architecture & Interface Control Document (ICD)**  
 > **프로젝트**: Universal Autonomous Flight Stack (SAS · VAS · Central GPS Server · GPS Swarm Nodes · GCS)  
-> **문서 버전**: v2.0.4 (4대 비행 프로그램 최신 실측 구현 데이터 반영 양방향 동기화: Master ICD v1.20.0, SYSTEM v2.6.0, SAS v1.9.0, VAS v1.11.0, TCA v1.8.0, Alignment v2.4.0, GAC v1.1.3, LANDING_PAD v2.2.3, RUNWAY v1.10.3, DOCKING_ARM v1.10.3 전역 동기화)  
+> **문서 버전**: v2.1.0 (4대 비행 프로그램 최신 실측 구현 데이터 반영 양방향 동기화: Master ICD v1.20.0, SYSTEM v2.6.0, SAS v1.9.0, VAS v1.11.0, TCA v1.8.0, Alignment v2.4.0, GAC v1.1.3, LANDING_PAD v2.2.3, RUNWAY v1.10.3, DOCKING_ARM v1.10.3 전역 동기화)  
 > **최종 수정일**: 2026-11-07  
-> **대상 환경**: Minecraft CC:Tweaked (Ender Modem, Advanced Monitor), Create: Aeronautics, Create: Avionics  
+> **대상 환경**: Minecraft CC:Tweaked (Ender Modem, Advanced Monitor), Create: Aeronautics, Create: Avionics
+
+### Revision History
+
+| 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
+| :---: | :---: | :--- | :--- |
+| `v2.1.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 반영, 01호기 회신 채널 `Base+5` (`10005`, 구 10045 [DEPRECATED]) 동기화, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
+  
 > **연계 규격**: 
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.20.0 동기화)  
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../../approved/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.1.3 동기화)  
@@ -167,7 +174,7 @@ flowchart TD
     type = "MSG_GPS_REQUEST",
     time = 1729900000050,
     payload = {
-        replyChannel = 10045,              -- 비행체 01 전용 수신 채널 (Base+5)
+        replyChannel = 10005,              -- 비행체 01 전용 수신 채널 (Base+5)
         altitudeY = 125.40,                -- 온보드 실측 고도 (VAS)
         clientType = "AIRCRAFT",
         clientSeq = 8412
@@ -206,7 +213,7 @@ flowchart TD
         nodePos = { x = 1200.0, y = 140.0, z = -350.0 },
         measuredDistance = 64.25,
         clientAltitudeY = 125.40,
-        replyChannel = 10045
+        replyChannel = 10005
     }
 }
 ```

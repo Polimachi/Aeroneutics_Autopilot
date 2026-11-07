@@ -8,9 +8,9 @@
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.1.4)
 > - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.6.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../../implemented/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.4)
-> - [SAS_PROGRAM_SPECIFICATION.md](../../../implemented/2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md) (SAS 자율 항법 규격서 v1.9.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../../implemented/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.4)
+> - [SAS_PROGRAM_SPECIFICATION.md](../../2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md) (SAS 자율 항법 규격서 v1.9.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.2.4)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.4)
 
@@ -409,7 +409,7 @@ sequenceDiagram
 - **자세각 정렬 오차 및 접근 속도 한계**:
   $$|\Delta \psi| \le 2.0^\circ, \quad v_{axial} \le 0.4\text{ m/s}$$
 
-기체 SAS([SAS_PROGRAM_SPECIFICATION.md](../../../implemented/2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md))는 축 방향 진입 속도를 $v_{axial} = -0.30 \cdot \tanh(d_{axial} / 2.0)\text{ m/s}$로 제어하여, 도킹 포트 접촉 시 충격을 $0.2\text{ m/s}$ 이하로 제한합니다.
+기체 SAS([SAS_PROGRAM_SPECIFICATION.md](../../2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md))는 축 방향 진입 속도를 $v_{axial} = -0.30 \cdot \tanh(d_{axial} / 2.0)\text{ m/s}$로 제어하여, 도킹 포트 접촉 시 충격을 $0.2\text{ m/s}$ 이하로 제한합니다.
 
 ### 5.2 안전 인터록 및 페일세이프 매트릭스
 | 이상 상황 | 감지 조건 | 대상 시스템 | 조치 사항 및 페일세이프 |

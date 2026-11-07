@@ -4,13 +4,15 @@ description: >-
   Write formal CHANGELOG.md entries, version release notes, or operator handover
   summaries. USE ONLY WHEN shipping a versioned release or when the user
   explicitly asks to write/update CHANGELOG.md or release notes. NEVER invoke
-  for routine milestone context updates (use md-management instead), general
-  chat summaries, or trivial edits across 1-3 files.
+  for routine milestone context updates (use md-management instead),
+  specification SemVer/Revision History updates in docs/system/** or
+  docs/specs/** (use specification-lifecycle-manager instead), reports/**
+  analysis documents, general chat summaries, or trivial edits across 1-3 files.
 ---
 
 # Writing Changelogs (`writing-changelogs`)
 
-Adapted from `riekelt/technical-writer@writing-changelogs`. Distinct from `md-management`: `CHANGELOG.md` is for external/release-level change tracking, whereas `GEMINI.md` and `.agent/memory/` handle session-to-session developer context.
+Adapted from `riekelt/technical-writer@writing-changelogs`. Distinct from `md-management` (`GEMINI.md` / `.agent/memory/`) and `specification-lifecycle-manager` (`docs/system/` & `docs/specs/` SemVer / `Revision History`): `CHANGELOG.md` is exclusively for external/release-level change tracking.
 
 ## Core Rules
 

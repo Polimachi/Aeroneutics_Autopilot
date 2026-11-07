@@ -1,9 +1,16 @@
 # 비행체 자율 제어 및 통신 데이터 교환 통합 규격서 (ICD)
 > **Autonomous Flight System Interface Control Document (ICD / IDD)**  
 > **프로젝트**: Universal Autonomous Flight Stack (SAS · VAS · Alignment · TCA · ASA · GPS · ATC & GAC & Facility Swarm · GCS)  
-> **문서 버전**: v1.20.0 (4대 핵심 비행 프로그램 최신 실측 구현 데이터 전면 반영: TCA v1.2.20 24개 슬라이스, VAS v1.1.5 16개 슬라이스, SAS v1.2.2 31개 슬라이스, Alignment v2.3.4 21개 슬라이스 전원 Gate 0~6 검증 통과 및 Google Drive 클라우드 배포 번들 동기화, 온보드 4대 비행 프로그램 SAS · VAS · TCA · ASA 위계, C2 단일 진입로 Base+0 및 MFD/GCS Base+1 직결 예외 E_STOP/ACRO 한정, Base+3 MFD 다운링크 단일화 SAS 5Hz/Core Acro 20Hz, WAP의 VAS 산하 Base+7 편입 및 Layer 3 드라이버 체계화, Alignment 격납고 동적 바인딩 MSG_CALIB_BAY_BIND 및 AERO_ASSISTED_PASS, MSG_CHANNEL_REBIND 연쇄 전파 규격화, SYSTEM v2.6.0, VAS v1.11.0, SAS v1.9.0, TCA v1.8.0, ASA v1.2.1, ALIGNMENT v2.4.0, GAC v1.1.3, GPS v2.0.3, LANDING_PAD v2.2.3, RUNWAY v1.10.3, DOCKING_ARM v1.10.3 전역 동기화)  
+> **문서 버전**: v1.20.0 (4대 핵심 비행 프로그램 최신 실측 구현 데이터 전면 반영: TCA v1.2.20 24개 슬라이스, VAS v1.1.5 16개 슬라이스, SAS v1.2.2 31개 슬라이스, Alignment v2.3.4 21개 슬라이스 전원 Gate 0~6 검증 통과 및 Google Drive 클라우드 배포 번들 동기화, 온보드 4대 비행 프로그램 SAS · VAS · TCA · ASA 위계, C2 단일 진입로 Base+0 및 MFD/GCS Base+1 직결 예외 E_STOP/ACRO 한정, Base+3 MFD 다운링크 단일화 SAS 5Hz/Core Acro 20Hz, WAP의 VAS 산하 Base+11 편입 (구 Base+7 [DEPRECATED]) 및 Layer 3 드라이버 체계화, Alignment 격납고 동적 바인딩 MSG_CALIB_BAY_BIND 및 AERO_ASSISTED_PASS, MSG_CHANNEL_REBIND 연쇄 전파 규격화, SYSTEM v2.6.0, VAS v1.11.0, SAS v1.9.0, TCA v1.8.0, ASA v1.2.1, ALIGNMENT v2.4.0, GAC v1.1.3, GPS v2.0.3, LANDING_PAD v2.2.3, RUNWAY v1.10.3, DOCKING_ARM v1.10.3 전역 동기화)  
 > **최종 수정일**: 2026-11-07  
 > **대상 환경**: Minecraft CC:Tweaked, Create: Aeronautics, Create: Avionics  
+
+### Revision History
+
+| 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
+| :---: | :---: | :--- | :--- |
+| `v1.20.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$, $N=1\sim 1000$), 4대 Zone(Zone 1: 코어, Zone 2: 구동계, Zone 3: 탑재체, Zone 4: 편대/확장) 전면 재편, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 20채널 및 `Base+6`, `Base+7`에 `[DEPRECATED]` 배지 부여, 하위 사양서 5종 `approved/` 승격 전이 상대 링크 동기화 | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
+
 
 ---
 
@@ -14,12 +21,12 @@
 > [!TIP]
 > - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.6.0)에 완전 시각화되어 있습니다.
 > - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/approved/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.1.3)에 상세 기술되어 있습니다.
-> - 자율 항법 컴퓨터(SAS, Node 04)의 5대 기체 타입별 외루프 유도 제어(L1/TECS/Tilt-to-Accelerate/Zero-Tilt 6-DoF/Tilt-Assisted), C2 단일 진입로(Base+0) 총괄, 평시 5Hz MFD 계기 다운링크(Base+3), 15-State FSM, GPS/추측항법 융합, GAC 섹터 관제 연동, 도킹암 4단계 랑데부 FSM 및 20Hz 외루프 지령(Base+1) 명세는 **[SAS_PROGRAM_SPECIFICATION.md](../specs/implemented/2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md)** (v1.9.0)에 상세 기술되어 있습니다.
-> - 공력 날개 및 조종면(에일러론/승강타/방향타/플랩) 분산 구동기, VAS 산하 3구역 노드(Node 06-xx, Base+7), `peripheral.find` 동적 탐색 및 300ms 안전 활공 트림(Safe Glide Trim) 규격은 **[ASA_PROGRAM_SPECIFICATION.md](../specs/approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md)** (v1.2.1)에 상세 기술되어 있습니다.
-> - 센서 정적 매핑(config/sensors.json), 3D 레버암 기하 동역학 보정, VICD-Spec 3계층 드라이버(추진기 `actuator_adapter_tca` + 조종면 `actuator_adapter_asa`), 단위 쿼터니언 $SO(3)$ 동역학 제어, $V^2$ 동압 스케줄링, 단일 실속 방지(Stall Guard), 플랩 $V_{fe}$ 가드, Base+1 선점 중재(`E_STOP` > `MFD_ACRO` > `SAS`), 역방향 포화 피드백, `ui_renderer` 대시보드 및 20Hz 실행 생명주기는 **[VAS_PROGRAM_SPECIFICATION.md](../specs/implemented/1_control/vas/VAS_PROGRAM_SPECIFICATION.md)** (v1.11.0)에 상세 기술되어 있습니다.
-> - 추진기 개별 하드웨어 구동, REDSTONE 모드/API 모드 듀얼 모드, 자체 비례 손실 보상, 핫플러그 감지, `discovery_handler` 세션 격리, 동적 베이 바인딩(`MSG_CALIB_BAY_BIND`) 및 동적 타이머 300ms 워치독 데몬 명세는 **[TCA_PROGRAM_SPECIFICATION.md](../specs/implemented/1_control/tca/TCA_PROGRAM_SPECIFICATION.md)** (v1.8.0)에 상세 기술되어 있습니다.
-> - 격납고 상주 시설 콘솔로서 베이별 10채널 블록(`101 ~ 200`, $Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$) 및 기체 `Base+0` 직결 바인딩을 기반으로 입고된 임의의 기체와 지상 교정 세션을 맺고 6-DoF 추력기/공력 보조 프로파일(`AERO_ASSISTED_PASS`)을 생성하는 `Alignment` 프로그램의 세부 수치해석, 주 작용축 OLS 회귀, 대형 모니터 HUD 및 14단계 FSM 명세는 **[ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/implemented/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md)** (v2.4.0)에 상세 기술되어 있습니다.
-> - 지상 분산 노드 군(Swarm), 노드 간이 셋업 마법사 및 커미셔닝, 0ms 세션 버킷 스케줄러, 계층형 2D 가우스-뉴턴 연산, 순수 진단 로깅 및 대형 모니터 자동 피팅 레이더 명세는 **[GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/implemented/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md)** (v2.0.3)에 상세 기술되어 있습니다.
+> - 자율 항법 컴퓨터(SAS, Node 04)의 5대 기체 타입별 외루프 유도 제어(L1/TECS/Tilt-to-Accelerate/Zero-Tilt 6-DoF/Tilt-Assisted), C2 단일 진입로(Base+0) 총괄, 평시 5Hz MFD 계기 다운링크(Base+3), 15-State FSM, GPS/추측항법 융합, GAC 섹터 관제 연동, 도킹암 4단계 랑데부 FSM 및 20Hz 외루프 지령(Base+1) 명세는 **[SAS_PROGRAM_SPECIFICATION.md](../specs/approved/2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md)** (v1.9.0)에 상세 기술되어 있습니다.
+> - 공력 날개 및 조종면(에일러론/승강타/방향타/플랩) 분산 구동기, VAS 산하 3구역 노드(Node 06-xx, Base+11, 구 Base+7 [DEPRECATED]), `peripheral.find` 동적 탐색 및 300ms 안전 활공 트림(Safe Glide Trim) 규격은 **[ASA_PROGRAM_SPECIFICATION.md](../specs/approved/1_control/asa/ASA_PROGRAM_SPECIFICATION.md)** (v1.2.1)에 상세 기술되어 있습니다.
+> - 센서 정적 매핑(config/sensors.json), 3D 레버암 기하 동역학 보정, VICD-Spec 3계층 드라이버(추진기 `actuator_adapter_tca` + 조종면 `actuator_adapter_asa`), 단위 쿼터니언 $SO(3)$ 동역학 제어, $V^2$ 동압 스케줄링, 단일 실속 방지(Stall Guard), 플랩 $V_{fe}$ 가드, Base+1 선점 중재(`E_STOP` > `MFD_ACRO` > `SAS`), 역방향 포화 피드백, `ui_renderer` 대시보드 및 20Hz 실행 생명주기는 **[VAS_PROGRAM_SPECIFICATION.md](../specs/approved/1_control/vas/VAS_PROGRAM_SPECIFICATION.md)** (v1.11.0)에 상세 기술되어 있습니다.
+> - 추진기 개별 하드웨어 구동, REDSTONE 모드/API 모드 듀얼 모드, 자체 비례 손실 보상, 핫플러그 감지, `discovery_handler` 세션 격리, 동적 베이 바인딩(`MSG_CALIB_BAY_BIND`) 및 동적 타이머 300ms 워치독 데몬 명세는 **[TCA_PROGRAM_SPECIFICATION.md](../specs/approved/1_control/tca/TCA_PROGRAM_SPECIFICATION.md)** (v1.8.0)에 상세 기술되어 있습니다.
+> - 격납고 상주 시설 콘솔로서 베이별 10채널 블록(`101 ~ 200`, $Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$) 및 기체 `Base+0` 직결 바인딩을 기반으로 입고된 임의의 기체와 지상 교정 세션을 맺고 6-DoF 추력기/공력 보조 프로파일(`AERO_ASSISTED_PASS`)을 생성하는 `Alignment` 프로그램의 세부 수치해석, 주 작용축 OLS 회귀, 대형 모니터 HUD 및 14단계 FSM 명세는 **[ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/approved/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md)** (v2.4.0)에 상세 기술되어 있습니다.
+> - 지상 분산 노드 군(Swarm), 노드 간이 셋업 마법사 및 커미셔닝, 0ms 세션 버킷 스케줄러, 계층형 2D 가우스-뉴턴 연산, 순수 진단 로깅 및 대형 모니터 자동 피팅 레이더 명세는 **[GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/approved/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md)** (v2.0.3)에 상세 기술되어 있습니다.
 > - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/approved/0_ground/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.2.3)에 상세 기술되어 있습니다.
 > - 고정익 활주로 및 항모 비행갑판의 가상 ILS, 유선 모뎀 조명망(PAPI/RWSL) 제어, 무선 상태 추적 및 유도로 GAC 연동 관제 명세는 **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/approved/0_ground/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.3)에 상세 기술되어 있습니다.
 > - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/approved/0_ground/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.10.3)에 상세 기술되어 있습니다.
@@ -72,7 +79,7 @@ flowchart TD
     FAC["Tier 3: 스마트 시설물 군 (착륙패드/활주로/도킹암)<br/>[Base_sec+1 로컬백본 / Base_sec+10+Idx 전술유도]"]
     ALIGN["격납고/정비 시험소 콘솔군 Alignment (Node 05)<br/>* Bay 1~10 10채널 블록 (Base_hangar = 101+(BayID-1)*10)<br/>* 기체 Base+0 직접 바인딩 & 3x2 대형 HUD"]
     
-    subgraph AIRCRAFT_BLOCK["비행체 20채널 전용 블록 (Base: 10000 + (N-1)*20, N = 1 ~ 2000 연속 수납)"]
+    subgraph AIRCRAFT_BLOCK["비행체 40채널 전용 블록 (Base: 10000 + (N-1)*40, BW=40, N = 1 ~ 1000 연속 수납)"]
         MFD["조종석 MFD (Node 03)"]
         SAS["자율 항법 SAS (Node 04)<br/>* L1/TECS 외루프 유도 & C2 단일 진입로 (Base+0)<br/>* 평시 5Hz MFD 계기 다운링크 (Base+3)"]
         CORE["비행 제어 VAS (Node 01)<br/>* SO(3) 내루프 & 전 구동계(TCA/ASA) 통합 믹싱<br/>* V² 동압 스케줄링 & 단일 스톨 가드"]
@@ -105,14 +112,14 @@ flowchart TD
     %% Core Flight Loop (3-Tier Hierarchy)
     CORE -->|"[I-1] MSG_FLIGHT_TELEMETRY (Base+2, 20Hz 텔레메트리/헬스)"| SAS
     SAS -->|"[I-2] MSG_ATTITUDE_CMD (Base+1, 20Hz 외루프 유도)"| CORE
-    CORE <==>|"[I-3] MSG_THRUST_CMD (20Hz) / MSG_ACTUATOR_STATUS (이벤트) (Base+6)"| TCA
-    CORE <==>|"[I-10] MSG_SURFACE_CMD (20Hz) / MSG_SURFACE_STATUS (이벤트) (Base+7)"| ASA
+    CORE <==>|"[I-3] MSG_THRUST_CMD (20Hz) / MSG_ACTUATOR_STATUS (이벤트) (Base+10, 구 Base+6 [DEPRECATED])"| TCA
+    CORE <==>|"[I-10] MSG_SURFACE_CMD (20Hz) / MSG_SURFACE_STATUS (이벤트) (Base+11, 구 Base+7 [DEPRECATED])"| ASA
 
     %% Calibration Interface (Hangar Bay 101~200 <-> Aircraft Base+0 Direct Binding & Dynamic Cascade)
     ALIGN ==>|"[I-4] MSG_CALIBRATION_INIT (기체 Base+0, domainId=AIRCRAFT_01)"| CORE
     CORE -.->|"[I-4] MSG_CALIBRATION_INIT_ACK (Base_hangar+1)"| ALIGN
-    CORE ==>|"[I-4] MSG_CALIB_BAY_BIND (Base+6/Base+7, 베이 동적 바인딩)"| TCA
-    CORE ==>|"[I-4] MSG_CALIB_BAY_BIND (Base+6/Base+7, 베이 동적 바인딩)"| ASA
+    CORE ==>|"[I-4] MSG_CALIB_BAY_BIND (Base+10/Base+11, 베이 동적 바인딩)"| TCA
+    CORE ==>|"[I-4] MSG_CALIB_BAY_BIND (Base+10/Base+11, 베이 동적 바인딩)"| ASA
     ALIGN -.->|"[I-4] MSG_CALIB_PULSE (Base_hangar+0) / TAP진단 (Base_hangar+3)"| TCA
     ALIGN -.->|"[I-4] ASA 공력면 탐색/진단 (Base_hangar+3)"| ASA
     CORE -.->|"[I-4] 펄스 반응 텔레메트리 (Base_hangar+1)"| ALIGN
@@ -406,11 +413,11 @@ flowchart TD
 
 ### [Interface I-3] 내루프 추력 인가 및 액추에이터 헬스 피드백 (`VAS` $\leftrightarrow$ `TCA 클러스터`)
 > **검증 상태**: **VERIFIED_IN_CLUSTER (PASS)** — CraftOS-PC 멀티 컴퓨터 폐루프 시뮬레이션(`VAC_TAP_Integration`) 단언문 100% 검증 완료  
-- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 6`)
+- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10`, 구버전 `Base + 6` [DEPRECATED])
 - **수신/발신자**: `VAS` (Node 01) $\leftrightarrow$ `TCA 클러스터` (Node 02-xx)
 - **구조 특징**: **1그룹 1컴퓨터 완전 분산 클러스터 및 추진기 상호작용 모드(API/REDSTONE) 완전 분리 체계**
   - 기체 내 추진기 그룹(`THR_MAIN_L`, `THR_MAIN_R` 등)마다 독립된 TCA 컴퓨터가 1:1 분산 배치되어 전용 `groupId`를 관할.
-  - 채널 `Base + 6` 전용 액추에이터 버스를 사용하여 상위 유도 명령(`Base + 1`)과의 트래픽 간섭 및 패킷 폐기 오버헤드를 원천 배제.
+  - 채널 `Base + 10` (구 `Base + 6` [DEPRECATED]) 전용 액추에이터 버스를 사용하여 상위 유도 명령(`Base + 1`)과의 트래픽 간섭 및 패킷 폐기 오버헤드를 원천 배제.
   - 평시에는 20Hz 단방향 지령(`MSG_THRUST_CMD`)으로 무선 채널 트래픽을 최소화하고, 상태 변경(파손, 모드 토글, 포화) 발생 시에만 이벤트 기반 예외 패킷(`MSG_ACTUATOR_STATUS`)을 회신.
   - 부팅 및 시동(Arming) 시에는 `MSG_ACTUATOR_DISCOVER_REQ/ACK` 핸드셰이크를 통해 전체 추진기 클러스터의 물리 연결 상태를 검증.
 
@@ -483,7 +490,7 @@ flowchart TD
 ```
 
 #### 3. 부팅 및 시동 검증 핸드셰이크 (`MSG_ACTUATOR_DISCOVER_REQ/ACK`)
-- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 6`, 지상 교정 시 $Base_{\text{hangar}} + 3$, 구버전 `1001` [DEPRECATED])
+- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10`, 지상 교정 시 $Base_{\text{hangar}} + 3$, 구버전 `Base + 6` [DEPRECATED], 구버전 `1001` [DEPRECATED])
 - **질의 (`MSG_ACTUATOR_DISCOVER_REQ`)**: 부팅 시점 또는 Arming 직전 VAS(또는 지상 교정 시 Alignment)가 브로드캐스트 (`payload = { targetGroup = "ALL" }` 또는 특정 그룹).
 - **응답 (`MSG_ACTUATOR_DISCOVER_ACK`)**: 온라인 상태인 각 TCA 노드가 자선의 설정 및 헬스 상태를 1:1 회신.
 
@@ -521,12 +528,12 @@ flowchart TD
   - 엔지니어가 콘솔에서 기체 번호 $N$ 입력 후 [교정 바인딩]을 실행하면, 콘솔이 기체 고유 상시 개방 채널인 **기체 `Base + 0` (`CH_OPERATOR_C2`)**으로 직접 **`MSG_CALIBRATION_INIT`**를 발송합니다.
   - 입고된 기체(VAS)는 `Base + 0` 수신 즉시 `controlState = "CALIBRATION"` 상태로 전이하여 정상 비행 출력을 동결하고, 지정된 베이 채널($Base_{\text{hangar}} + 0, +1, +3$)을 동적으로 개방(`modem.open`)한 뒤 $Base_{\text{hangar}}+1$ 채널을 통해 콘솔로 **`MSG_CALIBRATION_INIT_ACK`**를 회신합니다.
   - 교정 정상 완료 또는 엔지니어 종료 지령 시 콘솔이 $Base_{\text{hangar}}+0$으로 **`MSG_CALIBRATION_CLOSE`**를 발송하면, 기체는 베이 채널들을 즉각 완전히 닫고(`modem.close()`) 지상 안전 대기 상태(`IDLE_ARMED` 또는 `STANDBY`)로 복귀하며 **`MSG_CALIBRATION_CLOSE_ACK`**를 회신합니다.
-  - 기체 내부 `Base + 4` 채널은 `CH_RESERVED_04`로 전환되어 온보드 확장 예비 대역으로 영구 보존됩니다.
+  - 기체 내부 `Base + 4` 채널은 `CH_NAV_SENSOR`(온보드 항법 센서 버스)로 재편되었으며(구 교정채널 [DEPRECATED]), 온보드 확장 예비 대역으로 영구 보존됩니다.
 - **전역 인터록**: 교정 개시 시 VAS-Align이 `MSG_CALIB_START`를 전송하면 VAS-Core가 `controlState = "CALIBRATION"`을 브로드캐스트하여 정상 비행 출력을 동결·차단한 상태에서만 TCA 클러스터가 시험 펄스를 수락하며, 교정 정상 완료(`MSG_PROFILE_SYNC` $\rightarrow$ `MSG_CALIB_ACK`) 시 프로파일을 저장하고 `calibrated = true`로 설정한 뒤 지상 안전 대기 상태(`IDLE_ARMED`, 출력 0, 이륙 잠금 해제)로 복귀하며, 타임아웃(120초) 또는 비상 중단 시에는 `calibrated = false`를 유지한 채 `IDLE_ARMED`(출력 0, 이륙 잠금 유지)로 복귀.
 - **패킷 타입 목록**:
   1. `MSG_CALIBRATION_INIT`: Alignment (Node 05) $\rightarrow$ VAS (기체 Base+0, 격납고 바인딩 개시 지령)
   2. `MSG_CALIBRATION_INIT_ACK`: VAS (Node 01) $\rightarrow$ Alignment (Base_hangar+1, 바인딩 수락 및 준비 완료)
-  3. `MSG_CALIB_BAY_BIND`: VAS (Node 01) $\rightarrow$ TCA & ASA (Base+6 / Base+7, 베이 채널 동적 개폐 지령)
+  3. `MSG_CALIB_BAY_BIND`: VAS (Node 01) $\rightarrow$ TCA & ASA (Base+10 / Base+11, 구 Base+6/7 [DEPRECATED], 베이 채널 동적 개폐 지령)
   4. `MSG_CALIB_START`: Alignment (Node 05) $\rightarrow$ VAS (Node 01) (교정 진입/정상출력 차단 인터록 요구 및 비상 중단, Base_hangar+0)
   5. `MSG_ACTUATOR_DISCOVER_REQ / ACK`: 교정 전 대상 추진기/조종면 노드 온라인 상태 확인 (Base_hangar+3)
   6. `MSG_CALIB_PULSE`: Alignment (Node 05) $\rightarrow$ TCA 클러스터 (Node 02-xx) (3단계 다단 미세 펄스 인가: Signal 4, 8, 12, 300ms, Base_hangar+0)
@@ -588,7 +595,7 @@ flowchart TD
 ```
 
 #### 3. 격납고 베이 채널 동적 개폐 지령 (`MSG_CALIB_BAY_BIND`, VAS $\rightarrow$ TCA & ASA)
-- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 6`), `CH_SURFACE_ACTUATION` (`Base + 7`)
+- **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10`, 구버전 `Base + 6` [DEPRECATED]), `CH_SURFACE_ACTUATION` (`Base + 7`)
 - **수신 반응**: TAP과 ASA 노드는 `action = "OPEN"` 수신 시 해당 격납고 베이 채널($Base_{\text{hangar}} + 3, +0$)을 동적으로 개방하고, `"CLOSE"` 수신 시 즉시 닫습니다.
 
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
@@ -800,7 +807,7 @@ flowchart TD
 
 | 기체 식별자 (`airframeType`) | 착륙패드 (`LANDING_PAD`) | 활주로 (`RUNWAY`) | 정밀 도킹암 (`DOCKING_ARM`) | 주요 비행 특성 및 구동계 분담 메커니즘 |
 | :--- | :---: | :---: | :---: | :--- |
-| **`FIXED_WING`** | **불가** (양력 실속) | **기본 (CTOL)** | **불가** | 가상 ILS 3° 글라이드슬로프 정렬 $\to$ 플레어 접지 $\to$ 롤아웃.<br/>**[구동 분담]** 추진계(전진 추력/차동 요): VAS $\to$ TCA(Base+6) / 공력 3축 자세(Ail/Elev/Rudd) 및 플랩: VAS Layer 3 `actuator_adapter_asa` $\to$ ASA(Base+7) 분배. UAP는 Base+1 외루프 목표각/타겟 플랩만 Core로 하달. |
+| **`FIXED_WING`** | **불가** (양력 실속) | **기본 (CTOL)** | **불가** | 가상 ILS 3° 글라이드슬로프 정렬 $\to$ 플레어 접지 $\to$ 롤아웃.<br/>**[구동 분담]** 추진계(전진 추력/차동 요): VAS $\to$ TCA(Base+10, 구 Base+6 [DEPRECATED]) / 공력 3축 자세(Ail/Elev/Rudd) 및 플랩: VAS Layer 3 `actuator_adapter_asa` $\to$ ASA(Base+11, 구 Base+7 [DEPRECATED]) 분배. UAP는 Base+1 외루프 목표각/타겟 플랩만 Core로 하달. |
 | **`WINGED_VTOL`** | **기본 (VTOL)** | **지원 (CTOL 듀얼)** | 비상/특수 지원 | 패드 수직 이착륙 또는 활주로 CTOL 선택 운용.<br/>**[구동 분담]** 호버: 100% TCA(VAS) $\leftrightarrow$ 천이(8~18m/s): TCA 추진+ASA 공력면 통합 가중 블렌딩(VAS) $\leftrightarrow$ 순항(>18m/s): ASA 공력 자세 제어(VAS) + TCA 전진 순항추력(VAS). UAP는 Base+1 외루프 목표각/타겟 플랩만 Core로 하달. |
 | **`VECTORED_VTOL`** | **지원 (VTOL)** | 비권장 (비상 전용) | **특화 (랑데부 포획)** | 무경사 6-DoF 병진 바이어스(Surge/Sway)로 공중 도킹암 포획 최적화 (100% TCA 추진기 제어, ASA 미탑재). |
 | **`QUADROTOR`** | **기본 (VTOL)** | 비권장 (단순 평지) | **불가** | Tilt-to-Accelerate 틸트 감속 후 패드 연직 하강 접지 (100% TCA 추진기 제어, ASA 미탑재). |
@@ -1037,7 +1044,7 @@ flowchart TD
 
 ### [Interface I-7] 외부 고정밀 GPS 측위 질의/응답 (`SAS` $\leftrightarrow$ `GPS Swarm & Server`)
 > [!NOTE]
-> GPS 스웜 노드 거리 보고(`NODE_REPORT`), 노드 간이 셋업 마법사 및 커미셔닝(`MSG_GPS_NODE_*`), 중앙 WLS/가우스-뉴턴 수평 투영 수치해석, 0ms 조기 연산(Early-Solve $\le 50\text{ms}$), 1024-슬롯 LRU 지연보고 툼스톤 캐시 및 하이워터마크 필터, 하이브리드 클라이언트 라이브러리(`gps/client.lua`) 및 대형 모니터 관제 레이더 명세는 **[GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/implemented/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md)**에 완전 규격화(v2.0.0)되어 있습니다.
+> GPS 스웜 노드 거리 보고(`NODE_REPORT`), 노드 간이 셋업 마법사 및 커미셔닝(`MSG_GPS_NODE_*`), 중앙 WLS/가우스-뉴턴 수평 투영 수치해석, 0ms 조기 연산(Early-Solve $\le 50\text{ms}$), 1024-슬롯 LRU 지연보고 툼스톤 캐시 및 하이워터마크 필터, 하이브리드 클라이언트 라이브러리(`gps/client.lua`) 및 대형 모니터 관제 레이더 명세는 **[GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/approved/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md)**에 완전 규격화(v2.0.0)되어 있습니다.
 
 - **측위 핑 채널**: `CH_GPS_PING` (`60001`) (노드 군 청취 거리측정 브로드캐스트 전용)
 - **서비스/상태 채널**: `CH_GPS_SERVICE` (`60002`) (중앙 서버 상태 조회 및 제어 전용 포트)
@@ -1055,7 +1062,7 @@ flowchart TD
     type = "MSG_GPS_REQUEST",
     time = 1729845000050,
     payload = {
-        replyChannel = 10045,              -- 비행체 01 전용 Base+5 채널
+        replyChannel = 10005,              -- 비행체 01 전용 Base+5 채널 (구 10045 [DEPRECATED])
         altitudeY = 125.40,                -- 센서 어댑터 실측 Y고도 필수 전달
         clientType = "AIRCRAFT",
         clientSeq = 8412
@@ -1113,7 +1120,7 @@ flowchart TD
     time = 1729845000040,
     payload = {
         blockId = 3,
-        baseChannel = 10040,                     -- Base = 10000 + (3 - 1)*20
+        baseChannel = 10080,                     -- Base = 10000 + (3 - 1)*40 (구버전 10040 [DEPRECATED])
         bandwidth = 20,
         status = "ASSIGNED",
         channelRange = { start = 10040, end = 10059 }
@@ -1138,7 +1145,7 @@ flowchart TD
 | :--- | :---: | :---: | :---: | :--- |
 | `payload.hardwareUuid` | string | UUID 식별자 | 필수 | 프로브를 발신하는 기체의 고유 하드웨어 식별자 |
 | `payload.candidateBase` | uint16 | $10000 \sim 49980$ | 필수 | 선점 시도 중인 후보 기체 베이스 채널 ($N = 1 \sim 2000$) |
-| `payload.bandwidth` | uint8 | 20 | 필수 | 점유 요구 대역폭 (기본 20채널) |
+| `payload.bandwidth` | uint8 | 40 | 필수 | 점유 요구 대역폭 (기본 40채널, 구버전 20채널 [DEPRECATED]) |
 
 ```lua
 -- UAP가 독립 기동 시 송출하는 채널 충돌 탐색 프로브 예시
@@ -1150,7 +1157,7 @@ flowchart TD
     time = 1729845000000,
     payload = {
         hardwareUuid = "BOX-CRAFT-4402",
-        candidateBase = 10040,
+        candidateBase = 10080,                   -- N=3 후보 Base (구 10040 [DEPRECATED])
         bandwidth = 20
     }
 }
@@ -1173,14 +1180,14 @@ flowchart TD
     time = 1729845000050,
     payload = {
         existingDomain = "AIRCRAFT_02",
-        occupiedBase = 10040,
+        occupiedBase = 10080,                    -- 선점 중인 Base (구 10040 [DEPRECATED])
         status = "CONFLICT_DETECTED"
     }
 }
 ```
 
 #### 3. 기체 내부 계층형 채널 전파 핸드셰이크 (`MSG_CHANNEL_REBIND`, SAS $\rightarrow$ 온보드 서브시스템)
-- **통신 채널**: 상위 계층 `Base + 0` / `Base + 1` $\rightarrow$ 하위 계층 `Base + 6` / `Base + 7`
+- **통신 채널**: 상위 계층 `Base + 0` / `Base + 1` $\rightarrow$ 하위 계층 `Base + 10` / `Base + 11` (구 `Base+6/7` [DEPRECATED])
 - **목적**: 기체 운용 중 GCS 명령이나 충돌 해결로 `baseChannel`이 동적 변경될 때, 2단계 Prepare $\to$ Ack $\to$ Commit 트랜잭션으로 온보드 전 서브시스템의 통신 주파수를 원자적으로 동기화하여 통신 두절(Split-Brain)을 방지.
 - **계층 전파 순서**:
   1. `SAS` $\rightarrow$ `MFD` (`Base_old + 0`) & `VAS` (`Base_old + 1`): Phase `"PREPARE"` 브로드캐스트.
@@ -1198,8 +1205,8 @@ flowchart TD
     time = 1729845000100,
     payload = {
         phase = "PREPARE",               -- "PREPARE" -> "COMMIT" -> "ROLLBACK"
-        oldBase = 10040,
-        newBase = 10060,
+        oldBase = 10080,
+        newBase = 10120,                   -- 40채널 기준 재바인딩 (구 10040/10060 [DEPRECATED])
         bandwidth = 20,
         switchTimeoutMs = 1000
     }
@@ -1209,12 +1216,12 @@ flowchart TD
 ---
 
 ### [Interface I-10] 공력 날개 및 조종면 구동계 (`VAS` $\leftrightarrow$ `ASA 클러스터`)
-- **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 7`)
+- **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 11`, 구버전 `Base + 7` [DEPRECATED])
 - **수신/발신자**: `VAS (Node 01, Layer 3 actuator_adapter_asa)` $\leftrightarrow$ `ASA 클러스터 (Node 06-L, Node 06-R, Node 06-T)`
 - **설계 구조 및 3계층 체계**:
-  - **계층 통합**: WAP은 SAS 직결에서 **`VAS` 산하 3계층 분산 액추에이터 버스(`Base + 7`)로 완전 편입**되었습니다.
+  - **계층 통합**: WAP은 SAS 직결에서 **`VAS` 산하 3계층 분산 액추에이터 버스(`Base + 11`, 구 `Base+7` [DEPRECATED])로 완전 편입**되었습니다.
   - **기능 분담**: UAP는 외루프 목표 자세/각속도 및 플랩 목표치(`flapTarget`)만 Core로 하달하며, 실제 20Hz 공력 타각 분배, $V^2$ 동압 스케줄링($\delta = \delta_{ref} \cdot \frac{V_{ref}^2}{V^2}$), 단일 실속 가드(Stall Guard), 플랩 $V_{fe}$ 한계 속도 가드는 `VAS`가 전담합니다.
-  - **무간섭 원칙**: 채널 `Base + 7` 독립 버스를 사용하여 추진기 버스(`Base + 6`) 및 유도 명령 버스(`Base + 1`)와의 트래픽 간섭을 원천 배제합니다.
+  - **무간섭 원칙**: 채널 `Base + 11` 독립 버스를 사용하여 추진기 버스(`Base + 10`) 및 유도 명령 버스(`Base + 1`)와의 트래픽 간섭을 원천 배제합니다.
 
 #### 1. 실시간 20Hz 조종면 지령 (`MSG_SURFACE_CMD`, VAS $\rightarrow$ ASA)
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
@@ -1274,7 +1281,7 @@ flowchart TD
 ```
 
 #### 3. 부팅 및 시동 검증 핸드셰이크 (`MSG_SURFACE_DISCOVER_REQ/ACK`)
-- **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 7`, 지상 교정 시 $Base_{\text{hangar}} + 3$)
+- **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 11`, 지상 교정 시 $Base_{\text{hangar}} + 3$, 구버전 `Base + 7` [DEPRECATED])
 - **가드 조건**: `FIXED_WING` 및 `WINGED_VTOL` 기종에서만 VAS 시동 전 3개 ASA 노드(`WAP_L`, `WAP_R`, `WAP_T`)의 정상 ACK 수신이 필수 조건이며, 회전익 기종은 자동 바이패스합니다.
 
 ```lua
@@ -1303,8 +1310,8 @@ flowchart TD
 
 | 감시 인터페이스 | 타임아웃 임계치 | 감지 주체 | 자동 페일세이프 트리거 |
 | :--- | :---: | :---: | :--- |
-| **I-10: ASA 조종면 명령 / 헬스 (Base+7)** | **300ms** | `ASA (Node 06-xx)`<br>`VAS (Node 01)` | **1. 안전 활공 트림(Safe Glide Trim)**: 300ms 무통신 시 전 타각 중립(0.0), 승강타 +0.1(약 +3°), 플랩 0.0 강제 클램프<br/>**2. 안티 와인드업**: `isSaturated=true` 역피드백 감지 시 VAS Layer 1 방향성 적분기 즉시 동결<br/>**3. 비상 차동 보조**: `isJammed=true` 또는 `TOTAL_LOSS` 발생 시 TCA 차동추력으로 비상 자세 제어 인계 및 UAP에 즉각 전파 |
-| **I-3: TCA 추력 명령 / 헬스 (Base+6)** | **300ms** | `TCA (Node 02-xx)`<br>`VAS (Node 01)` | **1. 워치독 차단**: 300ms 무통신 시 TCA 노드 자체 추력 0 즉시 차단<br/>**2. 안티 와인드업**: `isSaturated=true` 및 `SaturationStatus` 역피드백 감지 시 VAS Layer 1 방향성 적분항 즉시 동결<br/>**3. 손실 인터록**: `TOTAL_LOSS` 발생 시 액추에이터 어댑터 재할당 시도 및 주추진 상실 시 비상착륙 트리거 |
+| **I-10: ASA 조종면 명령 / 헬스 (Base+11)** | **300ms** | `ASA (Node 06-xx)`<br>`VAS (Node 01)` | **1. 안전 활공 트림(Safe Glide Trim)**: 300ms 무통신 시 전 타각 중립(0.0), 승강타 +0.1(약 +3°), 플랩 0.0 강제 클램프<br/>**2. 안티 와인드업**: `isSaturated=true` 역피드백 감지 시 VAS Layer 1 방향성 적분기 즉시 동결<br/>**3. 비상 차동 보조**: `isJammed=true` 또는 `TOTAL_LOSS` 발생 시 TCA 차동추력으로 비상 자세 제어 인계 및 UAP에 즉각 전파 |
+| **I-3: TCA 추력 명령 / 헬스 (Base+10)** | **300ms** | `TCA (Node 02-xx)`<br>`VAS (Node 01)` | **1. 워치독 차단**: 300ms 무통신 시 TCA 노드 자체 추력 0 즉시 차단<br/>**2. 안티 와인드업**: `isSaturated=true` 및 `SaturationStatus` 역피드백 감지 시 VAS Layer 1 방향성 적분항 즉시 동결<br/>**3. 손실 인터록**: `TOTAL_LOSS` 발생 시 액추에이터 어댑터 재할당 시도 및 주추진 상실 시 비상착륙 트리거 |
 | **I-1: 비행 텔레메트리 (Base+2)** | **500ms** | `SAS (Node 04)` | **유도 비상 정지**: VAS 텔레메트리 단절 시 긴급 모드 전환, 센서 이상 시 PID I-Gain 동결 |
 | **I-2: SAS 유도 명령 (Base+1)** | **1,500ms** | `VAS (Node 01)` | **FAILSAFE_HOLD (10초 호버링/선회 대기)**: 회전익 10초 정지 체공 / 고정익 18° 뱅크 선회 체공 $\to$ 미복구 시 `EMERGENCY_LAND`(회전익 수직 강하 / 고정익 얕은 활공) 자동 에스컬레이션 |
 | **I-5: 시설물 접근 핑/접지** | **60,000ms**| `Facility Node` | **고스트 락 방지**: 예약 자동 회수 및 `FREE` 상태 복귀 |
@@ -1321,7 +1328,7 @@ flowchart TD
 | :--- | :---: | :---: | :---: | :--- | :---: |
 | **VAS** | Node 01 | `v1.1.5` (사양: `v1.11.0`) | G0 ~ G6 **PASS** | `dist_gdrive/vac_core/vac_core_bundle.lua` (16개 슬라이스, 66개 단위 테스트 전원 통과, 해시 948bcbb3...) | **완료 (VERIFIED)** |
 | **TCA 클러스터** | Node 02-xx | `v1.2.20` (사양: `v1.8.0`) | G0 ~ G6 **PASS** | `dist_gdrive/tap/tap_bundle.lua` (24개 슬라이스, 해시 edc8bd26..., GDrive 싱크) | **완료 (DEPLOYED)** |
-| **ASA 클러스터** | Node 06-xx | `v1.0.0` (사양: `v1.2.1`) | 규격 확정 | VAS 산하 3구역 노드(06-L/R/T), Base+7 전용 버스, 동적 탐색 및 활공 트림 확정 | **설계 확정** |
+| **ASA 클러스터** | Node 06-xx | `v1.0.0` (사양: `v1.2.1`) | 규격 확정 | VAS 산하 3구역 노드(06-L/R/T), Base+11 전용 버스(구 Base+7 [DEPRECATED]), 동적 탐색 및 활공 트림 확정 | **설계 확정** |
 | **SAS** | Node 04 | `v1.2.2` (사양: `v1.9.0`) | G0 ~ G6 **PASS** | `dist_gdrive/uap/uap_bundle.lua` (13개 과제, 31개 슬라이스 전수 통과, 해시 f669ee83...) | **완료 (DEPLOYED)** |
 | **Alignment** | Node 05 | `v2.3.4` (사양: `v2.4.0`) | G0 ~ G6 **PASS (G4 SKIP)** | `dist_gdrive/vac_align/vac_align_bundle.lua` (11개 과제, 21개 슬라이스 전수 통과, 해시 4c7e15bd...) | **완료 (DEPLOYED)** |
 | **GAC (지상구역관제)** | Node 07 | 미배포 (사양: `v1.1.3`) | 규격 확정 | 3-Tier 계층 관제, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 확정 | **설계 확정** |
@@ -1329,7 +1336,7 @@ flowchart TD
 ### 5.2 VAS & TCA 폐루프 클러스터 통합 시험 결과 (`VAC_TAP_Integration`)
 - **수행 환경**: CraftOS-PC 네이티브 가상머신 3-노드 클러스터 (Node 0: VAS, Node 1: TCA REDSTONE, Node 2: TCA API)
 - **통합 검증 결과**: **100% 단언문 통과 (PASS)**, 소요 시간: 3,076.86 ms
-- **채널 검증**: `Base+6` (`10026`, `CH_THRUST_ACTUATION`) 단일 버스 실시간 검증 완료
+- **채널 검증**: `Base+10` (구 `Base+6` [DEPRECATED], `CH_THRUST_ACTUATION`) 단일 버스 실시간 검증 완료
 
 | 단계 (Phase) | 검증 기능 | 규격 요구 동작 | 실제 측정 결과 | 결과 |
 | :---: | :--- | :--- | :--- | :---: |
