@@ -206,7 +206,7 @@ function align_master.step_fsm(self, event, now_ms)
     elseif inst.state == "SYNC_APPROVAL" or inst.state == "SYNCING" then
         handle_approval_and_sync(inst, event)
     elseif event.type == "ABORT" or inst.state == "ABORTING" then
-        align_master.release_channels(inst)
+        align_master.release_channels(inst, "ABORT")
     end
 end
 
