@@ -191,9 +191,9 @@ function channel_sentinel.step_rebind_transaction(state, now_ms)
     local now = now_ms or 0
 
     if tx.status == "ACKED" then
-        tx.status = "COMMITTED"
         state.baseChannel = tx.newBase
         state.candidateBase = tx.newBase
+        state.rebindTx = nil
         return {
             type = "MSG_CHANNEL_REBIND",
             payload = {
@@ -206,8 +206,8 @@ function channel_sentinel.step_rebind_transaction(state, now_ms)
         }, "COMMITTED"
     end
 
-    if (now - tx.startMs) > 500 then
-        tx.status = "ROLLED_BACK"
+    if tx.status == "PREPARE" and (now - tx.startMs) > 500 then
+        state.rebindTx = nil
         return {
             type = "MSG_CHANNEL_REBIND",
             payload = {

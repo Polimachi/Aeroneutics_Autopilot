@@ -96,12 +96,16 @@ local function process_inbox(ctx, polled, now_ms)
         channel_sentinel.on_rebind_ack(ctx.channel, polled.rebindAck, now_ms)
     end
     if ctx.channel and ctx.channel.rebindTx then
-        local commit_pkt, status = channel_sentinel.step_rebind_transaction(ctx.channel, now_ms)
-        if commit_pkt and status == "COMMITTED" then
+        local rebind_pkt, status = channel_sentinel.step_rebind_transaction(ctx.channel, now_ms)
+        if rebind_pkt and status == "COMMITTED" then
             if network_manager.send_channel_rebind then
-                network_manager.send_channel_rebind(ctx.net, commit_pkt.payload)
+                network_manager.send_channel_rebind(ctx.net, rebind_pkt.payload)
             end
             network_manager.rebind_aircraft_channels(ctx.net, ctx.channel.baseChannel)
+        elseif rebind_pkt and status == "ROLLED_BACK" then
+            if network_manager.send_channel_rebind then
+                network_manager.send_channel_rebind(ctx.net, rebind_pkt.payload)
+            end
         end
     end
 end

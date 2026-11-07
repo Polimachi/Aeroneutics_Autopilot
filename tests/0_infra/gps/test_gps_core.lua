@@ -193,6 +193,7 @@ describe("gps installer node configuration", function()
         assert_eq(cfg.channels.mgmt, 60004)
         assert_eq(cfg.role, "NODE")
         assert_eq(cfg.networkKey, "GPS_BASE_NET")
+        _G.harness_is_testing = nil
     end)
 end)
 

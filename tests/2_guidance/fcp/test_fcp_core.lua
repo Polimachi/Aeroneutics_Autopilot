@@ -87,6 +87,21 @@ describe("channel_sentinel 40-channel validation, bootstrap and rebind", functio
         assert_eq(commit_msg.payload.newBaseChannel, 10080)
         assert_eq(commit_msg.payload.bandwidth, 40, "rebind COMMIT bandwidth must be 40")
         assert_eq(state.baseChannel, 10080, "state.baseChannel must be updated to 10080")
+        assert_nil(state.rebindTx, "rebindTx must be cleared upon COMMIT")
+
+        -- Calling step_rebind_transaction again after timeout (>500ms) should NOT trigger spurious ROLLBACK
+        local sp_msg, sp_st = channel_sentinel.step_rebind_transaction(state, 1000)
+        assert_nil(sp_msg)
+        assert_eq(sp_st, "NO_TRANSACTION")
+
+        -- Test timeout on unacked PREPARE
+        local rebind_msg2 = channel_sentinel.initiate_rebind(state, 10120, 2000)
+        assert_not_nil(rebind_msg2)
+        local rb_msg, rb_st = channel_sentinel.step_rebind_transaction(state, 2600)
+        assert_eq(rb_st, "ROLLED_BACK")
+        assert_not_nil(rb_msg)
+        assert_eq(rb_msg.payload.action, "ROLLBACK")
+        assert_nil(state.rebindTx, "rebindTx must be cleared upon ROLLBACK")
     end)
 end)
 
