@@ -1,15 +1,45 @@
 -- src/modules/channel_sentinel.lua
 local channel_sentinel = {}
 
+channel_sentinel.CRAFT_BASE_MIN = 10000
+channel_sentinel.CRAFT_BASE_MAX = 49960
+channel_sentinel.CRAFT_BANDWIDTH = 40
+channel_sentinel.DEFAULT_BOOTSTRAP_CH = 50000
+
+local CRAFT_BASE_MIN = channel_sentinel.CRAFT_BASE_MIN
+local CRAFT_BASE_MAX = channel_sentinel.CRAFT_BASE_MAX
+local CRAFT_BANDWIDTH = channel_sentinel.CRAFT_BANDWIDTH
+local DEFAULT_BOOTSTRAP_CH = channel_sentinel.DEFAULT_BOOTSTRAP_CH
+
+function channel_sentinel.compute_base(n)
+    if not n or n < 1 then return nil end
+    local base = CRAFT_BASE_MIN + (n - 1) * CRAFT_BANDWIDTH
+    if base > CRAFT_BASE_MAX then return nil end
+    return base
+end
+
+function channel_sentinel.is_valid_base(baseCh)
+    if type(baseCh) ~= "number" then return false end
+    if baseCh < CRAFT_BASE_MIN or baseCh > CRAFT_BASE_MAX then return false end
+    if (baseCh - CRAFT_BASE_MIN) % CRAFT_BANDWIDTH ~= 0 then return false end
+    return true
+end
+
 function channel_sentinel.init(config)
     local cfg = config or {}
     local chs = cfg.channels or {}
     local safe = cfg.safety or {}
+    local sys = cfg.system or {}
+    local rawBase = chs.baseChannel
+    local validBase = channel_sentinel.is_valid_base(rawBase) and rawBase or CRAFT_BASE_MIN
+    local bootCh = chs.bootstrapChannel or DEFAULT_BOOTSTRAP_CH
     return {
         status = "INIT",
-        baseChannel = chs.baseChannel or 10060,
-        bootstrapChannel = chs.bootstrapChannel or 10000,
-        candidateBase = chs.baseChannel or 10060,
+        domainId = sys.domainId or "AIRCRAFT_01",
+        baseChannel = validBase,
+        bootstrapChannel = bootCh,
+        candidateBase = validBase,
+        bandwidth = CRAFT_BANDWIDTH,
         gcsBootstrapTimeoutMs = safe.gcsBootstrapTimeoutMs or 1000,
         channelProbeWaitMs = safe.channelProbeWaitMs or 200,
         bootstrapStartMs = 0,
@@ -25,13 +55,14 @@ function channel_sentinel.start_bootstrap(state, now_ms)
     return {
         type = "MSG_BLOCK_REQUEST",
         candidateBaseChannel = state.baseChannel,
-        preferredBandwidth = 20,
+        requestedBandwidth = CRAFT_BANDWIDTH,
     }
 end
 
 function channel_sentinel.on_block_assign(state, payload, now_ms)
-    if payload and payload.assignedBaseChannel then
-        state.candidateBase = payload.assignedBaseChannel
+    local candidate = payload and (payload.baseChannel or payload.assignedBaseChannel)
+    if candidate and channel_sentinel.is_valid_base(candidate) then
+        state.candidateBase = candidate
     else
         state.candidateBase = state.baseChannel
     end
@@ -46,6 +77,7 @@ function channel_sentinel.probe_channel(state, candidate_base, now_ms)
     return {
         type = "MSG_CHANNEL_PROBE",
         candidateBaseChannel = c,
+        bandwidth = CRAFT_BANDWIDTH,
     }
 end
 
@@ -102,8 +134,9 @@ function channel_sentinel.handle_incoming_probe(state, packet)
                 type = "MSG_CHANNEL_PROBE_ACK",
                 payload = {
                     conflict = true,
-                    baseChannel = state.baseChannel,
-                    occupantId = "FCP",
+                    status = "CONFLICT_DETECTED",
+                    occupiedBase = state.baseChannel,
+                    existingDomain = state.domainId or "FCP",
                 },
             }
         end
@@ -120,6 +153,9 @@ function channel_sentinel.is_acquired(state)
 end
 
 function channel_sentinel.initiate_rebind(state, new_base, now_ms)
+    if not channel_sentinel.is_valid_base(new_base) then
+        return nil, "INVALID_BASE_CHANNEL"
+    end
     local tx_id = "REBIND-TX-" .. tostring(state.baseChannel) .. "-" .. tostring(new_base)
     state.rebindTx = {
         txId = tx_id,
@@ -135,7 +171,7 @@ function channel_sentinel.initiate_rebind(state, new_base, now_ms)
             action = "PREPARE",
             oldBaseChannel = state.baseChannel,
             newBaseChannel = new_base,
-            bandwidth = 20,
+            bandwidth = CRAFT_BANDWIDTH,
         },
     }
 end
@@ -165,7 +201,7 @@ function channel_sentinel.step_rebind_transaction(state, now_ms)
                 action = "COMMIT",
                 oldBaseChannel = tx.oldBase,
                 newBaseChannel = tx.newBase,
-                bandwidth = 20,
+                bandwidth = CRAFT_BANDWIDTH,
             },
         }, "COMMITTED"
     end
@@ -179,7 +215,7 @@ function channel_sentinel.step_rebind_transaction(state, now_ms)
                 action = "ROLLBACK",
                 oldBaseChannel = tx.oldBase,
                 newBaseChannel = tx.newBase,
-                bandwidth = 20,
+                bandwidth = CRAFT_BANDWIDTH,
             },
         }, "ROLLED_BACK"
     end

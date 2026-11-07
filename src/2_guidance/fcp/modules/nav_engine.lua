@@ -71,9 +71,11 @@ local function apply_fix_fusion(state, fix, now_ms)
     if (fix.hdop and fix.hdop > state.maxHdop) or (fix.accuracy and fix.accuracy > 2.0) then
         a = 0.05
     end
-    state.pos.x = (1.0 - a) * state.pos.x + a * fix.x
-    state.pos.y = (1.0 - a) * state.pos.y + a * (fix.altitudeY or fix.y or state.pos.y)
-    state.pos.z = (1.0 - a) * state.pos.z + a * fix.z
+    local pos = fix.position or fix
+    local gx = (pos and pos.x) or fix.x or state.pos.x
+    local gz = (pos and pos.z) or fix.z or state.pos.z
+    state.pos.x = (1.0 - a) * state.pos.x + a * gx
+    state.pos.z = (1.0 - a) * state.pos.z + a * gz
     state.hdop = fix.hdop or state.hdop
     state.lastGpsFixMs = now_ms or 0
     state.validStreak = state.validStreak + 1
@@ -82,11 +84,17 @@ end
 
 function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
     if not state or not fix_payload then return false end
-    if fix_payload.altitudeY == nil and fix_payload.y == nil then return false end
-    local gx = fix_payload.x or state.pos.x
-    local gz = fix_payload.z or state.pos.z
+    if fix_payload.status and fix_payload.status ~= "FIX_OK" and fix_payload.status ~= "FIX_DEGRADED" then
+        return false
+    end
+    local pos = fix_payload.position or fix_payload
+    local gx = (pos and pos.x) or fix_payload.x
+    local gz = (pos and pos.z) or fix_payload.z
+    if gx == nil or gz == nil then return false end
+
     local acc = fix_payload.accuracy or 1.0
-    local max_allowed = math.max(state.kinematicLimitM, state.groundSpeed * dt * 1.5 + 3.0 * acc)
+    local delta_t = dt or 0.05
+    local max_allowed = math.max(state.kinematicLimitM, state.groundSpeed * delta_t * 1.5 + 3.0 * acc)
     local dx = gx - state.pos.x
     local dz = gz - state.pos.z
     local dist = math.sqrt(dx * dx + dz * dz)
@@ -96,9 +104,9 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
         state.validStreak = 0
         if state.spikeStreak >= 3 then
             state.pos.x = gx
-            state.pos.y = fix_payload.altitudeY or fix_payload.y or state.pos.y
             state.pos.z = gz
             state.lastGpsFixMs = now_ms or 0
+            state.hdop = fix_payload.hdop or state.hdop
             state.spikeStreak = 0
             state.validStreak = 1
             return true

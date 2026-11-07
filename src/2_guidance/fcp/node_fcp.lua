@@ -14,9 +14,9 @@ function node_fcp.run()
     local top_modem = peripheral.wrap("top")
     local back_modem = peripheral.wrap("back")
     if top_modem then
-        top_modem.open(10061)
-        top_modem.open(10062)
-        top_modem.open(10063)
+        top_modem.open(10001)
+        top_modem.open(10002)
+        top_modem.open(10003)
         sleep(0.05)
         local cmd_pkt = network_manager.encode_envelope(net, "MSG_ATTITUDE_CMD", {
             source = "FCP",
@@ -31,7 +31,7 @@ function node_fcp.run()
             translationBias = { surge = 0.5, sway = 0.0, heave = 0.0 },
             acroActive = false,
         })
-        top_modem.transmit(10061, 10061, cmd_pkt)
+        top_modem.transmit(10001, 10001, cmd_pkt)
         if harness_set_state then
             harness_set_state("attitude_cmd_sent", true)
         end

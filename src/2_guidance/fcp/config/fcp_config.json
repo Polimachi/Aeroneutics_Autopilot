@@ -10,12 +10,13 @@
   },
   "channels": {
     "bootstrapChannel": 50000,
-    "baseChannel": 10060,
-    "bandwidth": 20,
-    "mfdInstrumentChannel": 10063,
+    "baseChannel": 10000,
+    "bandwidth": 40,
+    "mfdInstrumentChannel": 10003,
     "facilityBeaconChannel": 50003,
     "atcCommChannel": 50001,
-    "gpsServiceChannel": 60001
+    "gpsPingChannel": 60001,
+    "gpsServiceChannel": 60002
   },
   "guidance": {
     "l1": {

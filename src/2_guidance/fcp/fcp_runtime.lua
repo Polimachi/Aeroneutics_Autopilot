@@ -92,6 +92,16 @@ local function process_inbox(ctx, polled, now_ms)
     if polled.facility and polled.facility.type == "MSG_FACILITY_BEACON" then
         facility_client.update_beacons(ctx.facility, polled.facility.payload, now_ms)
     end
+    if polled.rebindAck then
+        channel_sentinel.on_rebind_ack(ctx.channel, polled.rebindAck, now_ms)
+        local commit_pkt, status = channel_sentinel.step_rebind_transaction(ctx.channel, now_ms)
+        if commit_pkt and status == "COMMITTED" then
+            if network_manager.send_channel_rebind then
+                network_manager.send_channel_rebind(ctx.net, commit_pkt.payload)
+            end
+            network_manager.rebind_aircraft_channels(ctx.net, ctx.channel.baseChannel)
+        end
+    end
 end
 
 local function build_fsm_context(ctx, nav_summary)
@@ -121,7 +131,12 @@ function fcp_runtime.step_tick(ctx, dt, now_ms)
 
     local need_gps, req_id = nav_engine.should_query_gps(ctx.nav, now)
     if need_gps then
-        network_manager.send_gps_request(ctx.net, { requestId = req_id })
+        network_manager.send_gps_request(ctx.net, {
+            replyChannel = ctx.net.baseChannel + 5,
+            altitudeY = ctx.nav.pos.y,
+            clientType = "AIRCRAFT",
+            clientSeq = req_id,
+        })
     end
 
     local nav_summary = nav_engine.update(ctx.nav, dt or 0.05, now)
@@ -206,6 +221,7 @@ function fcp_runtime.run(ctx, opts)
         ctx.channel.baseChannel = options.baseChannel
         ctx.channel.candidateBase = options.baseChannel
         ctx.net.baseChannel = options.baseChannel
+        ctx.net.mfdInstrumentChannel = options.baseChannel + 3
     end
     network_manager.bind_bootstrap_channels(ctx.net)
     network_manager.bind_aircraft_channels(ctx.net, ctx.channel.baseChannel)

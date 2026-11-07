@@ -1,10 +1,10 @@
 -- src/main.lua
-local sas_runtime = require("sas_runtime")
+local fcp_runtime = require("fcp_runtime")
 local ui_renderer = require("ui_renderer")
 
-local sas_main = {}
+local fcp_main = {}
 
-function sas_main.parse_args(args)
+function fcp_main.parse_args(args)
     local opts = { daemon = false, baseChannel = nil }
     if not args then return opts end
     local i = 1
@@ -23,10 +23,10 @@ function sas_main.parse_args(args)
     return opts
 end
 
-function sas_main.load_config(path)
-    local targetPath = path or "config/sas_config.json"
+function fcp_main.load_config(path)
+    local targetPath = path or "config/fcp_config.json"
     if not fs.exists(targetPath) then
-        targetPath = "src/config/sas_config.json"
+        targetPath = "src/2_guidance/fcp/config/fcp_config.json"
     end
     if not fs.exists(targetPath) then
         return {}
@@ -38,37 +38,37 @@ function sas_main.load_config(path)
     return textutils.unserializeJSON(content) or {}
 end
 
-function sas_main.create_context(config)
-    return sas_runtime.create_context(config)
+function fcp_main.create_context(config)
+    return fcp_runtime.create_context(config)
 end
 
-function sas_main.step_tick(context)
-    return sas_runtime.step_tick(context, 0.05, os.epoch and os.epoch("utc") or 0)
+function fcp_main.step_tick(context)
+    return fcp_runtime.step_tick(context, 0.05, os.epoch and os.epoch("utc") or 0)
 end
 
-function sas_main.run(opts)
+function fcp_main.run(opts)
     local options = opts or {}
-    local config = sas_main.load_config("config/sas_config.json")
+    local config = fcp_main.load_config("config/fcp_config.json")
     if options.baseChannel then
         config.channels = config.channels or {}
         config.channels.baseChannel = options.baseChannel
     end
-    local ctx = sas_main.create_context(config)
+    local ctx = fcp_main.create_context(config)
     if term and term.blit then
         ui_renderer.render(term, ctx)
     end
     if options.daemon then
-        return sas_runtime.run(ctx, options)
+        return fcp_runtime.run(ctx, options)
     end
-    sas_runtime.step_tick(ctx, 0.05, os.epoch and os.epoch("utc") or 0)
+    fcp_runtime.step_tick(ctx, 0.05, os.epoch and os.epoch("utc") or 0)
     return ctx
 end
 
 local args = { ... }
 local is_required = (select("#", ...) > 0 and args[1] == "main")
 if not is_required then
-    local parsed = sas_main.parse_args(args)
-    sas_main.run(parsed)
+    local parsed = fcp_main.parse_args(args)
+    fcp_main.run(parsed)
 end
 
-return sas_main
+return fcp_main
