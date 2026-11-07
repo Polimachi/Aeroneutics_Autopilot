@@ -61,6 +61,17 @@ class TestStaticGuard(unittest.TestCase):
         )
         self.assertEqual(scan_lua_source(allowed_code, "modules/aero.lua", self.checker), [])
 
+    def test_word_boundary_avoids_false_positives_for_short_tokens(self) -> None:
+        safe_code = (
+            'local devmode = true\n'
+            'local navmode = "auto"\n'
+            'local prevs2 = 42\n'
+            'local msg = "switching to devmode now"\n'
+            'return devmode, navmode, prevs2, msg\n'
+        )
+        issues = scan_lua_source(safe_code, "modules/safe_mode.lua", self.checker)
+        self.assertEqual(issues, [])
+
 
 if __name__ == "__main__":
     unittest.main()

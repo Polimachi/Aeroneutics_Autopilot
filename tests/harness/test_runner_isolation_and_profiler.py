@@ -42,6 +42,7 @@ class TestRunnerIsolationAndProfiler(unittest.TestCase):
                         'describe("polluter", function()\n'
                         '    it("mutates _G.term and package.loaded then crashes", function()\n'
                         '        _G.term = { broken = true }\n'
+                        '        package.loaded["direct_pollute"] = { dirty = true }\n'
                         '        sdk.mock_module("dep", { kind = "STUB" })\n'
                         '        error("boom")\n'
                         '    end)\n'
@@ -52,6 +53,7 @@ class TestRunnerIsolationAndProfiler(unittest.TestCase):
                         '    it("sees restored _G.term and real dep module", function()\n'
                         '        assert_true(type(_G.term.getSize) == "function")\n'
                         '        assert_eq(_G.term.broken, nil)\n'
+                        '        assert_eq(package.loaded["direct_pollute"], nil)\n'
                         '        local dep = require("dep")\n'
                         '        assert_eq(dep.kind, "REAL")\n'
                         '    end)\n'
@@ -60,9 +62,9 @@ class TestRunnerIsolationAndProfiler(unittest.TestCase):
                 },
             )
             rep = run_target_unit_tests(target, self.paths, root / "sessions")
+            self.assertEqual(rep.tests[1].status, "PASS", rep.tests[1].error)
             self.assertEqual(rep.passed_tests, 1)
             self.assertEqual(rep.failed_tests, 1)
-            self.assertEqual(rep.tests[1].status, "PASS", rep.tests[1].error)
 
     def test_instruction_budget_and_event_swallow_guards(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -88,6 +90,11 @@ class TestRunnerIsolationAndProfiler(unittest.TestCase):
                         '            assert_eq(val, 42)\n'
                         '        end)\n'
                         '    end)\n'
+                        '    it("enforces instruction budget even after with_events_allowed completes", function()\n'
+                        '        sdk.with_events_allowed(function() end)\n'
+                        '        local s = 0\n'
+                        '        for i = 1, 20000 do s = s + i end\n'
+                        '    end)\n'
                         'end)\n'
                     )
                 },
@@ -99,6 +106,8 @@ class TestRunnerIsolationAndProfiler(unittest.TestCase):
             self.assertEqual(rep.tests[1].status, "FAIL")
             self.assertIn("EVENT_SWALLOW_VIOLATION", rep.tests[1].error)
             self.assertEqual(rep.tests[2].status, "PASS", rep.tests[2].error)
+            self.assertEqual(rep.tests[3].status, "FAIL")
+            self.assertIn("YIELD_BUDGET_EXCEEDED", rep.tests[3].error)
 
     def test_filter_executes_matching_cases_only(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

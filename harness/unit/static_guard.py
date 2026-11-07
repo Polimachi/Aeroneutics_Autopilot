@@ -259,6 +259,13 @@ CC_VS_SHIP_METHODS = (
 )
 
 
+def _matches_prohibited_token(text: str, token: str) -> bool:
+    if token.endswith(":"):
+        return token in text
+    pattern = r"(?<![a-zA-Z0-9_])" + re.escape(token) + r"(?![a-zA-Z0-9_])"
+    return bool(re.search(pattern, text))
+
+
 def scan_lua_source(
     source: str, rel_path: str, syntax_checker: Lua52SyntaxChecker | None = None
 ) -> list[StaticViolation]:
@@ -371,7 +378,7 @@ def scan_lua_source(
 
         # Prohibited token in stripped code identifiers (e.g. require("vs2.ship"))
         for tok in PROHIBITED_MOD_TOKENS:
-            if tok in l.lower():
+            if _matches_prohibited_token(l.lower(), tok):
                 violations.append(
                     StaticViolation(
                         file_path=rel_path,
@@ -395,7 +402,7 @@ def scan_lua_source(
                 )
             )
         for tok in PROHIBITED_MOD_TOKENS:
-            if tok in lit_lower:
+            if _matches_prohibited_token(lit_lower, tok):
                 violations.append(
                     StaticViolation(
                         file_path=rel_path,

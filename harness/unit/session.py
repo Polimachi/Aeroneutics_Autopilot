@@ -76,10 +76,10 @@ def clean_workspace_orphans(
 
     enumerator = process_enumerator or _enumerate_windows_processes
     procs = enumerator()
-    sessions_root_str = str(sessions_root).lower()
+    sessions_root_str = str(sessions_root).lower().replace("\\", "/")
 
     for p in procs:
-        cmdline = str(p.get("CommandLine") or "").lower()
+        cmdline = str(p.get("CommandLine") or "").lower().replace("\\", "/")
         if sessions_root_str in cmdline:
             pid = int(p.get("ProcessId") or 0)
             if pid > 0:

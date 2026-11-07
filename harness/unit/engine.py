@@ -163,8 +163,11 @@ if cfg.has_sdk and fs.exists("/_harness/test_sdk.lua") then
     dofile("/_harness/test_sdk.lua")
 end
 
-if package and package.path then
-    package.path = "/?.lua;/?/init.lua;/modules/?.lua;/modules/?/init.lua;/hal/?.lua;/tools/?.lua;/lib/?.lua;" .. package.path
+if package then
+    _G.package = package
+    if package.path then
+        package.path = "/?.lua;/?/init.lua;/modules/?.lua;/modules/?/init.lua;/hal/?.lua;/tools/?.lua;/lib/?.lua;" .. package.path
+    end
 end
 
 local attached = R.setup_peripherals(cfg.peripherals)

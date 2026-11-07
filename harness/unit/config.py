@@ -73,8 +73,8 @@ def resolve_craftos_paths(env: Mapping[str, str] | None = None) -> CraftOSPaths:
     if override_rom:
         rom_dir = Path(override_rom).resolve()
     else:
-        rom_candidate = exe_path.parent / "rom"
-        rom_dir = exe_path.parent if rom_candidate.exists() else exe_path.parent
+        # CraftOS-PC --rom expects the directory containing the 'rom' folder
+        rom_dir = exe_path.parent
 
     lua52_dll = exe_path.parent / "lua52.dll"
     if not lua52_dll.exists():

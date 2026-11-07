@@ -39,7 +39,10 @@ function _G.assert_near(actual, expected, eps, msg)
     if not is_finite_number(actual) or not is_finite_number(expected) then
         error((msg and (msg .. ": ") or "") .. "assert_near received non-finite number: actual=" .. tostring(actual) .. ", expected=" .. tostring(expected), 2)
     end
-    local tolerance = tonumber(eps) or 1e-6
+    local tolerance = (eps == nil) and 1e-6 or tonumber(eps)
+    if not is_finite_number(tolerance) or tolerance < 0 then
+        error((msg and (msg .. ": ") or "") .. "assert_near received invalid tolerance: " .. tostring(eps), 2)
+    end
     if math.abs(actual - expected) > tolerance then
         error(
             string.format(
@@ -66,11 +69,13 @@ local function deep_compare(a, b, path, visited)
     end
 
     visited = visited or {}
-    local pair_key = tostring(a) .. "::" .. tostring(b)
-    if visited[pair_key] then
+    if visited[a] and visited[a][b] then
         return true
     end
-    visited[pair_key] = true
+    if not visited[a] then
+        visited[a] = {}
+    end
+    visited[a][b] = true
 
     for k, v in pairs(a) do
         local sub_path = path .. "." .. tostring(k)

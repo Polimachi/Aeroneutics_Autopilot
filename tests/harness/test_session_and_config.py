@@ -39,12 +39,13 @@ class TestSessionAndConfig(unittest.TestCase):
             fake_procs = [
                 {"ProcessId": 1111, "CommandLine": r'"C:\Program Files\CraftOS-PC\CraftOS-PC_console.exe"'},
                 {"ProcessId": 2222, "CommandLine": f'CraftOS-PC_console.exe --headless -d "{sessions_root}\\unit_1"'},
+                {"ProcessId": 3333, "CommandLine": f'CraftOS-PC_console.exe --headless -d "{str(sessions_root).replace(chr(92), "/")}/unit_2"'},
             ]
             killed: list[int] = []
             with patch("harness.unit.session._kill_pid_tree", side_effect=lambda pid: killed.append(pid)):
                 res = clean_workspace_orphans(sessions_root, process_enumerator=lambda: fake_procs)
-            self.assertEqual(killed, [2222])
-            self.assertEqual(res["killed_pids"], [2222])
+            self.assertEqual(sorted(killed), [2222, 3333])
+            self.assertEqual(sorted(res["killed_pids"]), [2222, 3333])
 
     def test_ephemeral_session_executes_and_cleans_up(self) -> None:
         paths = resolve_craftos_paths()

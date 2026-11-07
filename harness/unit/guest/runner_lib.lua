@@ -141,6 +141,11 @@ function R.profile_execution(fn, budget_limit, forbid_event_swallow)
         os.sleep = _G.sleep
     end
 
+    local prev_hook, prev_mask, prev_count
+    if debug and type(debug.gethook) == "function" then
+        prev_hook, prev_mask, prev_count = debug.gethook()
+    end
+
     if debug and type(debug.sethook) == "function" then
         debug.sethook(count_hook, "", step_quantum)
     end
@@ -148,7 +153,11 @@ function R.profile_execution(fn, budget_limit, forbid_event_swallow)
     local ok, err = xpcall(fn, debug.traceback)
 
     if debug and type(debug.sethook) == "function" then
-        debug.sethook()
+        if prev_hook then
+            debug.sethook(prev_hook, prev_mask, prev_count)
+        else
+            debug.sethook()
+        end
     end
 
     if forbid_event_swallow then
@@ -274,8 +283,8 @@ function R.install_dsl()
             tests = {},
             passed = 0,
             failed = 0,
-            before_each = nil,
-            after_each = nil,
+            before_each = {},
+            after_each = {},
         }
         R.suites[#R.suites + 1] = suite
         local prev = R._current_suite
@@ -293,21 +302,27 @@ function R.install_dsl()
     end
 
     _G.before_each = function(fn)
-        if R._current_suite then
-            R._current_suite.before_each = fn
+        if R._current_suite and type(fn) == "function" then
+            if type(R._current_suite.before_each) ~= "table" then
+                R._current_suite.before_each = {}
+            end
+            table.insert(R._current_suite.before_each, fn)
         end
     end
 
     _G.after_each = function(fn)
-        if R._current_suite then
-            R._current_suite.after_each = fn
+        if R._current_suite and type(fn) == "function" then
+            if type(R._current_suite.after_each) ~= "table" then
+                R._current_suite.after_each = {}
+            end
+            table.insert(R._current_suite.after_each, fn)
         end
     end
 
     _G.it = function(name, fn)
         local suite = R._current_suite
         if not suite then
-            suite = { name = "default", tests = {}, passed = 0, failed = 0 }
+            suite = { name = "default", tests = {}, passed = 0, failed = 0, before_each = {}, after_each = {} }
             R.suites[#R.suites + 1] = suite
             R._current_suite = suite
         end
@@ -328,6 +343,7 @@ function R.install_dsl()
         local snap_read = _G.read
         local snap_sleep = _G.sleep
         local snap_os = copy_table_shallow(_G.os)
+        local snap_loaded = (package and type(package.loaded) == "table") and copy_table_shallow(package.loaded) or nil
 
         undo_stack = {}
         temp_files = {}
@@ -336,11 +352,19 @@ function R.install_dsl()
         local ok, err, insns = false, nil, 0
 
         local runner = function()
-            if type(suite.before_each) == "function" then
+            if type(suite.before_each) == "table" then
+                for _, hook in ipairs(suite.before_each) do
+                    hook()
+                end
+            elseif type(suite.before_each) == "function" then
                 suite.before_each()
             end
             fn()
-            if type(suite.after_each) == "function" then
+            if type(suite.after_each) == "table" then
+                for _, hook in ipairs(suite.after_each) do
+                    hook()
+                end
+            elseif type(suite.after_each) == "function" then
                 suite.after_each()
             end
         end
@@ -362,7 +386,7 @@ function R.install_dsl()
         end
         temp_files = {}
 
-        -- Restore top-level globals
+        -- Restore top-level globals and package.loaded
         _G.term = snap_term
         _G.peripheral = snap_periph
         _G.rednet = snap_rednet
@@ -373,6 +397,16 @@ function R.install_dsl()
         if type(snap_os) == "table" then
             for k, v in pairs(snap_os) do
                 _G.os[k] = v
+            end
+        end
+        if package and type(package.loaded) == "table" and type(snap_loaded) == "table" then
+            for k in pairs(package.loaded) do
+                if snap_loaded[k] == nil then
+                    package.loaded[k] = nil
+                end
+            end
+            for k, v in pairs(snap_loaded) do
+                package.loaded[k] = v
             end
         end
 
