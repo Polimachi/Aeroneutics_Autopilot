@@ -8,6 +8,11 @@ from .config import (
     discover_codebase_targets,
     resolve_craftos_paths,
 )
+from .engine import (
+    TargetRunReport,
+    UnitCaseResult,
+    run_target_unit_tests,
+)
 from .session import (
     CraftOSSessionResult,
     EphemeralCraftOSSession,
@@ -35,4 +40,7 @@ __all__ = [
     "scan_lua_source",
     "scan_target_files",
     "strip_lua_comments_and_strings",
+    "TargetRunReport",
+    "UnitCaseResult",
+    "run_target_unit_tests",
 ]

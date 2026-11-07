@@ -14,7 +14,9 @@
       "src/*/*/?/init.lua",
       "src/*/*/?/?.lua",
       "lib/?.lua",
-      "lib/?/init.lua"
+      "lib/?/init.lua",
+      "tests/?.lua",
+      "tests/*/*/?.lua"
     ]
   },
   "diagnostics": {
@@ -39,7 +41,25 @@
       "write",
       "printError",
       "read",
-      "bit32"
+      "bit32",
+      "describe",
+      "it",
+      "before_each",
+      "after_each",
+      "assert_eq",
+      "assert_ne",
+      "assert_true",
+      "assert_false",
+      "assert_nil",
+      "assert_not_nil",
+      "assert_near",
+      "assert_deep_eq",
+      "assert_contains",
+      "assert_error",
+      "assert_throws",
+      "sdk",
+      "mock",
+      "harness_set_state"
     ],
     "disable": [
       "lowercase-global"
