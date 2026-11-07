@@ -1,0 +1,32 @@
+<!-- living-context: Snapshot managed by md-management skill. In-place replace only (strictly <= 80 lines). Append historical logs to .agent/memory/<dir>.md instead. -->
+# Create_Aeroneutics — Living Project Context
+
+## 1. Current Phase & Active Handover
+- **현재 단계**: **Phase 0** — Diagram 12대 핵심 사양서 전수 이식, 전역 명칭 리팩토링(VAS, TCA, SAS, ASA, Alignment, GPS, GAC 등), GPS 소스(18종) 이식 및 계층 트리(`0_infra/`, `0_ground/`) 확장 완료.
+- **직전 완료**: `rnd_alignment` 전역 명칭 및 디렉토리 변경(`rnd_alignment` -> `alignment`) 완료 및 소스/사양서 일괄 동기화.
+- **다음 착수 후보**:
+  1. CC:Tweaked 하네스 검증 파이프라인(정적 검사·단위 모킹·CraftOS-PC 헤드리스 연동) 1단계 설계.
+  2. Git 저장소(`git init`) 초기화 여부 결정.
+
+## 2. Confirmed Architecture & Paths
+- `AGENTS.md`: 불변 행동 헌장 (`attention-span` × `caveman` 하이브리드 + `no-overclaim`). **사전 diff 승인 없이 수정 금지**.
+- `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
+- `docs/system/`: 마스터 ICD 및 시스템 전역 구조도 보관.
+- `docs/specs/`: 프로그램 사양서 생명주기 관리 (`drafts/` 기획 → `approved/` 5종 → `implemented/` 5종 → `archived/`).
+- `src/`: 독립 멀티 Lua 코드베이스 (`0_development/alignment`, `0_infra/{gps,gac}`, `0_ground/{landing_pad,runway,docking_arm}`, `1_control/{vas,tca,asa}`, `2_guidance/sas`, `3_planning/`, `4_mission/`).
+- `.agent/memory/`: 디렉토리별 과거 의사결정·변경 이력 온디맨드 보관소 (`workspace-root.md` 등).
+- `.agent/rules/`:
+  - `skill-workflows.md` (`always_on`): 단계별 스킬 발동·오발동 차단 게이트 및 파괴적 Git 명령 금지.
+  - `domain-aeronautics.md` (`model_decision`): Valkyrien Skies 차단 및 Create/Avionics/Radars/Propulsion/Advanced Peripherals 허용 명세.
+  - `cc-tweaked-runtime.md` (`model_decision`): CC:Tweaked Lua 5.2 Cobalt 런타임 제약.
+- `.agent/skills/`: 온디맨드 전문 스킬 12종.
+
+## 3. Standard Commands
+- **하네스/테스트 러너**: 미구축 (Phase 1 하네스 설계 시 등록 예정).
+- **검증 도구**: `scratch/verify_all.py` (Lua 구문 및 마크다운 링크 유효성 검증기).
+
+## 4. Gotchas & Invariants
+- **루트 문서 이중 로드 주의**: Antigravity는 `AGENTS.md`와 `GEMINI.md`를 매 턴 모두 로드하므로 두 파일 간 중복 문구를 두지 않는다.
+- **`ion_thruster` 충돌 조정**: `Create Propulsion: Simulated`의 `ion_thruster` 페리페럴은 허용하며, 금지 규칙은 `kontraption:` 네임스페이스만 차단한다.
+- **상대 링크 정합성**: `docs/system/`과 `docs/specs/` 간 상호 참조는 반드시 상대 마크다운 링크를 유지한다.
+- **레거시 격리**: `Antigravity_Workspace`의 구 하네스(`cli.py` 등)를 직접 호출하거나 결합하지 않고 본 워크스페이스 내에 독립 구축한다.

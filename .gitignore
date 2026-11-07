@@ -1,0 +1,21 @@
+# Antigravity & LLM local caches
+.runtime/
+__pycache__/
+*.pyc
+
+# CraftOS-PC temporary runtime sessions
+.craftos/
+*.log
+recordings/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*~
+
+# Git Worktrees isolation directory
+.worktrees/
+.worktrees
+worktrees/
+worktrees

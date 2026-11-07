@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "Lua 5.2",
+    "path": [
+      "?.lua",
+      "?/init.lua",
+      "src/?.lua",
+      "src/?/init.lua",
+      "src/*/?.lua",
+      "src/*/?/init.lua",
+      "src/*/?/?.lua",
+      "src/*/*/?.lua",
+      "src/*/*/?/init.lua",
+      "src/*/*/?/?.lua",
+      "lib/?.lua",
+      "lib/?/init.lua"
+    ]
+  },
+  "diagnostics": {
+    "enable": true,
+    "globals": [
+      "peripheral",
+      "rednet",
+      "redstone",
+      "fs",
+      "os",
+      "shell",
+      "term",
+      "textutils",
+      "colors",
+      "colours",
+      "paintutils",
+      "parallel",
+      "turtle",
+      "window",
+      "keys",
+      "sleep",
+      "write",
+      "printError",
+      "read",
+      "bit32"
+    ],
+    "disable": [
+      "lowercase-global"
+    ]
+  },
+  "workspace": {
+    "checkThirdParty": false,
+    "library": []
+  }
+}
