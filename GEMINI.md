@@ -2,12 +2,12 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 0** — 기체 40채널 전면 확장, 지상 설비(`0_infra`) 통합 및 SAS → FCP 명칭 전면 개정 완료.
-- **직전 완료**: SAS를 FCP(Flight Control Program)로 전면 개정(`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`), 런타임 식별자(`source`/`activeSource`=`FCP`) 동기화, 사양서 12종 및 마스터 ICD 개정 이력/링크 동기화, `scratch/verify_all_specs.py`(0 Errors, 0 Warnings) 및 단위 테스트(6/6 PASS).
+- **현재 단계**: **Phase 0** — 기체 5대 핵심 모듈 40채널·Zone 런타임 코드 동기화 및 전 단위 테스트(42/42 PASS) 완료.
+- **직전 완료**: `TASK-001` 완료 (VAS, TCA, FCP, Alignment, GPS 40채널 동기화, 커밋 `16b8390`~`7ae6f2b`, 단위 테스트 42/42 PASS, 문법 정적 검사 7/7 PASS, 사양서 12종 전수 무결성 검증 0 Errors/0 Warnings).
 - **다음 착수 후보**:
-  1. 기체 5대 핵심 모듈(`src/` — VAS, TCA, FCP, Alignment, GPS) 통신 채널·Zone 런타임 코드 동기화 구현.
-  2. 원격 푸시(`git push -u origin main`) 사용자 인증 완료 확인.
-  3. CC:Tweaked 하네스 검증 파이프라인(정적 검사·단위 모킹·CraftOS-PC 헤드리스 연동) 설계.
+  1. `TASK-003`: 런타임 코드 검증 및 구현 완료 5대 사양서 상태 전이 (`Approved` → `Implemented`).
+  2. `TASK-004`: 원격 푸시 (`git push -u origin main`) 사용자 인증 완료 확인.
+  3. `TASK-005`: 통합 코드베이스 설치 프로그램(Unified Installer) 구축.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 유저-에이전트 장기 작업 추적 및 로드맵 SSOT (계획 수립·작업 완료 시 후속 태스크 필수 갱신).
@@ -30,7 +30,7 @@
 
 ## 3. Standard Commands
 - **버전 관리**: Git (`git status`, `git branch`, `git worktree add .worktrees/<branch> -b <branch>`).
-- **하네스/테스트 러너**: `python tools/run_unit_tests.py` (멀티 코드베이스 단위 테스트 러너, 16/16 PASS).
+- **하네스/테스트 러너**: `python tools/run_unit_tests.py` (멀티 코드베이스 단위 테스트 러너, 42/42 PASS).
 - **검증 도구**: `python scratch/verify_all_specs.py` (사양서 12종 전수 무결성 검증기), `python scratch/validate_lua_syntax.py` (문법 정적 분석).
 
 ## 4. Gotchas & Invariants
