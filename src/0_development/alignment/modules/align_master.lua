@@ -12,6 +12,44 @@ local align_master = {}
 align_master.__index = align_master
 local active_session = nil
 
+local CRAFT_BASE_MIN = 10000
+local CRAFT_BASE_MAX = 49960
+local CRAFT_BANDWIDTH = 40
+local HANGAR_BASE_MIN = 101
+local HANGAR_BANDWIDTH = 10
+
+align_master.CRAFT_BASE_MIN = CRAFT_BASE_MIN
+align_master.CRAFT_BASE_MAX = CRAFT_BASE_MAX
+align_master.CRAFT_BANDWIDTH = CRAFT_BANDWIDTH
+align_master.HANGAR_BASE_MIN = HANGAR_BASE_MIN
+align_master.HANGAR_BANDWIDTH = HANGAR_BANDWIDTH
+
+function align_master.compute_craft_base(aircraft_number)
+    local n = tonumber(aircraft_number)
+    if n and math.floor(n) == n and n >= 1 and n <= 1000 then
+        return CRAFT_BASE_MIN + (n - 1) * CRAFT_BANDWIDTH
+    end
+    return nil
+end
+
+function align_master.compute_hangar_base(bay_id)
+    local b = tonumber(bay_id) or 1
+    if b and math.floor(b) == b and b >= 1 and b <= 10 then
+        return HANGAR_BASE_MIN + (b - 1) * HANGAR_BANDWIDTH
+    end
+    return nil
+end
+
+local function parse_domain_craft_base(domain_id)
+    if type(domain_id) == "string" then
+        local num_str = domain_id:match("AIRCRAFT_(%d+)")
+        if num_str then
+            return align_master.compute_craft_base(tonumber(num_str))
+        end
+    end
+    return nil
+end
+
 local function modem_open(m, ch)
     if not m or not m.open then return end
     local ok = pcall(m.open, ch)
@@ -46,9 +84,9 @@ function align_master.init_bay_session(cfg, domain_id, craft_base_ch, modem)
     local self = setmetatable({}, align_master)
     self.cfg = cfg or {}
     self.domain_id = domain_id or "AIRCRAFT_01"
-    self.craft_base_ch = craft_base_ch or 1000
+    self.craft_base_ch = craft_base_ch or parse_domain_craft_base(self.domain_id) or CRAFT_BASE_MIN
     self.modem = modem
-    local base = cfg.baseHangarChannel or 101
+    local base = cfg.baseHangarChannel or (cfg.bayId and align_master.compute_hangar_base(cfg.bayId)) or HANGAR_BASE_MIN
     self.cmd_ch = base + 0
     self.telem_ch = base + 1
     self.tap_ch = base + 3
@@ -84,9 +122,16 @@ function align_master.get_state(self)
     return inst and inst.state or "STANDBY"
 end
 
-function align_master.release_channels(self)
+function align_master.release_channels(self, reason)
     local inst = (type(self) == "table" and self.state) and self or active_session
     if not inst then return end
+    local close_reason = (type(self) == "string" and self) or reason or "COMPLETE"
+    send_pkt(inst, inst.cmd_ch, "MSG_CALIBRATION_CLOSE", {
+        stationId = (inst.cfg and inst.cfg.stationId) or "HANGAR_BAY_01",
+        bayId = (inst.cfg and inst.cfg.bayId) or 1,
+        action = "CLOSE_SESSION",
+        reason = close_reason
+    })
     modem_close(inst.modem, inst.cmd_ch)
     modem_close(inst.modem, inst.telem_ch)
     modem_close(inst.modem, inst.tap_ch)
@@ -96,9 +141,15 @@ end
 local function handle_handshake(self, event)
     if event.type == "PACKET" and event.packet and event.packet.type == "MSG_CALIBRATION_INIT_ACK" then
         self.state = "DISCOVERY"
-        local reqs = self.discovery:build_requests(self.seq)
+        send_pkt(self, self.cmd_ch, "MSG_CALIB_START", {
+            action = "ENTER_CALIBRATION",
+            stationId = (self.cfg and self.cfg.stationId) or "HANGAR_BAY_01",
+            targetThruster = "ALL",
+            timeoutSec = 120
+        })
+        local reqs = self.discovery:build_requests(self.seq + 1)
         for _, req in ipairs(reqs) do
-            self.seq = self.seq + 1
+            self.seq = req.seq or (self.seq + 1)
             modem_transmit(self.modem, self.tap_ch, self.telem_ch, req)
         end
     end

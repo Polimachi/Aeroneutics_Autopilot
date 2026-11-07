@@ -14,7 +14,7 @@ local function load_config()
                 calibrationCmd = 101,
                 calibrationTelem = 102,
                 facilityInterlock = 103,
-                tcaDirect = 104
+                tapDirect = 104
             }
         },
         safety = {
@@ -63,7 +63,7 @@ function main.run()
     
     local master = nil
     if modem then
-        master = align_master.init_bay_session(cfg.station, "AIRCRAFT_01", 1000, modem)
+        master = align_master.init_bay_session(cfg.station, "AIRCRAFT_01", align_master.compute_craft_base(1), modem)
     end
     
     hud:render_dashboard("STANDBY", { pitch = 0, roll = 0 }, "THR_MAIN_L", {})
