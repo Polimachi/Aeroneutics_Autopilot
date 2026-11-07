@@ -157,6 +157,12 @@ local function handle_calibration_init(state, fsm, payload)
     local telemCh = baseHangar + 1
     local tapCh = baseHangar + 3
 
+    if state.hangarChannels and state.wirelessModem and state.wirelessModem.close then
+        state.wirelessModem.close(state.hangarChannels.cmd)
+        state.wirelessModem.close(state.hangarChannels.telem)
+        state.wirelessModem.close(state.hangarChannels.tap)
+    end
+
     if state.wirelessModem and state.wirelessModem.open then
         state.wirelessModem.open(cmdCh)
         state.wirelessModem.open(telemCh)
@@ -292,6 +298,9 @@ local function handle_channel_rebind(state, rawPacket)
     elseif act == "COMMIT" then
         local oldBase = (state.pendingRebind and state.pendingRebind.oldBase) or tonumber(p.oldBaseChannel) or state.baseChannel
         local targetNewBase = (state.pendingRebind and state.pendingRebind.newBase) or newBase
+        if not network_manager.is_valid_base(targetNewBase) then
+            return false, "ERR_INVALID_NEW_BASE"
+        end
         if state.channels and state.channels.actuation then
             network_manager.send_packet(state, state.channels.actuation, "MSG_CHANNEL_REBIND", p)
         end

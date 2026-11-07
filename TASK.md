@@ -72,13 +72,13 @@
   - [ ] **TASK-004-1**: 사용자 인증(PAT/SSH) 상태 확인 및 푸시 승인 후 실행
 
 - [ ] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합**
-  - **목표**: 전 도메인 코드베이스 TUI 원격 다운로더 구축, `/.version.json` 메타데이터 및 설정 보존 마이그레이션 연동, 구버전 개별 인스톨러(`gps/installer.lua` 등) Zero-Fallback 폐기
+  - **목표**: 3대 배포(화면 직접 업로드 `/installer.lua`, 플로피 디스크 `/disk/`, HTTP `wget run`) 지원, GitHub/Google Drive 듀얼 다운로드 원천, `/.version.json` 메타데이터 및 설정 보존 마이그레이션 연동, 구버전 개별 인스톨러(`gps/installer.lua` 등) Zero-Fallback 폐기
   - **계획서**: `docs/superpowers/plans/2026-11-07-unified-codebase-installer.md`
-  - [ ] **TASK-005-1**: 선언적 매니페스트(`manifest.lua`) 및 버전 레지스트리(`version_registry.lua`) 구축
-  - [ ] **TASK-005-2**: 설정 보존 마이그레이션(`migration_engine.lua`) 및 멀티부트 후크(`startup_generator.lua`) 구축
-  - [ ] **TASK-005-3**: HTTP 원자적 다운로더(`downloader.lua`) 구축 및 네트워크 장애 격리
-  - [ ] **TASK-005-4**: 터미널 TUI(`tui_view.lua`) 및 메인 앱(`installer_app.lua`) 구축
-  - [ ] **TASK-005-5**: 루트 경량 부트스트래퍼(`installer.lua`) 구축
+  - [ ] **TASK-005-1**: 선언적 매니페스트(`manifest.lua`, 듀얼 원천) 및 버전 레지스트리(`version_registry.lua`) 구축
+  - [ ] **TASK-005-2**: 설정 보존 마이그레이션(`migration_engine.lua`) 및 본체 루트 멀티부트 후크(`startup_generator.lua`) 구축
+  - [ ] **TASK-005-3**: HTTP 원자적 다운로더(`downloader.lua`, GitHub & Google Drive 302 리다이렉트 지원) 구축
+  - [ ] **TASK-005-4**: 터미널 TUI(`tui_view.lua`, 소스 전환 `[S]`) 및 메인 앱(`installer_app.lua`) 구축
+  - [ ] **TASK-005-5**: 3대 배포(화면 직접 업로드·플로피·원격) 지원 루트 부트스트래퍼(`installer.lua`) 구축
   - [ ] **TASK-005-6**: 구버전 개별 인스톨러(`gps/installer.lua` 등) Zero-Fallback 삭제 및 사양서 개정
   - [ ] **TASK-005-7**: 단위 테스트 하네스 전수 실행(`tools/run_unit_tests.py`) 및 회귀 검증
 
