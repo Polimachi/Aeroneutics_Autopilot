@@ -21,7 +21,7 @@ local default_cfg = {
     interactionMode = "REDSTONE",
     aircraftIndexN = 1,
     baseChannel = 10000,
-    channels = { thrustActuation = 10006, calibration = 10004 },
+    channels = { thrustActuation = 10010 },
     watchdogTimeoutMs = 300,
     nominalActuatorCount = 4,
     aircraftDomainId = "AIRCRAFT_01",
@@ -55,9 +55,8 @@ local function handle_key_event(daemon, key, activeCfg, modemDev)
         local newCfg = config_manager.load("config.json")
         if newCfg then
             activeCfg = newCfg
-            if modemDev then
+            if modemDev and newCfg.channels and newCfg.channels.thrustActuation then
                 pcall(modemDev.open, newCfg.channels.thrustActuation)
-                pcall(modemDev.open, newCfg.channels.calibration)
             end
             daemon:resume(newCfg)
         end
@@ -84,9 +83,8 @@ cfg.migratedLegacyBase = nil
 if migrated then pcall(config_manager.save, "config.json", cfg) end
 
 local modem = select_modem(cfg.ports)
-if modem then
+if modem and cfg.channels and cfg.channels.thrustActuation then
     pcall(modem.open, cfg.channels.thrustActuation)
-    pcall(modem.open, cfg.channels.calibration)
 end
 
 local daemon = tca_daemon.init(cfg, modem)

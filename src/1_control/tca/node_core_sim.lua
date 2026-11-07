@@ -4,10 +4,8 @@ local packet_protocol = require("packet_protocol")
 local modem = peripheral and peripheral.wrap and peripheral.wrap("top")
 if not modem then error("Top modem not found on core_sim") end
 
-local CH_ACTUATION = 10006
-local CH_CALIBRATION = 10004
+local CH_ACTUATION = 10010
 modem.open(CH_ACTUATION)
-modem.open(CH_CALIBRATION)
 
 sleep(0.15)
 

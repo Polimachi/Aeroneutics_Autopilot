@@ -6,14 +6,20 @@ local discovery_handler = {}
 --- Check if the discovery request targets this node's group or wildcard ALL
 function discovery_handler.is_target_matched(payload, myGroupId)
     if not payload or type(payload) ~= "table" then return true end
-    local target = payload.targetThrusterId
-    if not target or target == "ALL" or target == myGroupId then return true end
-    return false
+    local targetId = payload.targetThrusterId
+    local targetGrp = payload.targetGroup
+    if targetGrp and targetGrp ~= "ALL" and targetGrp ~= myGroupId then
+        return false
+    end
+    if targetId and targetId ~= "ALL" and targetId ~= myGroupId then
+        return false
+    end
+    return true
 end
 
 --- Resolve active count, total nominal count, and interaction mode
 function discovery_handler.resolve_counts(cfg, adapterState, dispatchedCount)
-    local mode = (adapterState and adapterState.interactionMode) or (cfg and (cfg.interactionMode or cfg.mode)) or "REDSTONE"
+    local mode = (adapterState and adapterState.interactionMode) or (cfg and cfg.interactionMode) or "REDSTONE"
     if mode == "REDSTONE" then
         return 1, 1, "REDSTONE"
     end
@@ -64,8 +70,8 @@ function discovery_handler.handle_request(modem, recvChannel, replyChannel, pkt,
     if not discovery_handler.is_target_matched(pkt.payload, cfg.groupId) then return false end
 
     local ackPkt = discovery_handler.create_ack(pkt, cfg, adapterState)
-    local txChan = replyChannel or recvChannel or cfg.channels.thrustActuation
-    if modem and modem.transmit then
+    local txChan = replyChannel or recvChannel or (cfg.channels and cfg.channels.thrustActuation)
+    if modem and modem.transmit and txChan then
         pcall(modem.transmit, txChan, txChan, ackPkt)
     end
     return true, ackPkt

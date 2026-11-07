@@ -75,8 +75,8 @@ function tui_dashboard.render_full_screen(cfg, daemon, w, h)
     local domain = cfg and cfg.aircraftDomainId or "AIRCRAFT_01"
     local airN = cfg and cfg.aircraftIndexN or 1
     local baseCh = cfg and cfg.baseChannel or 10000
-    local mode = cfg and (cfg.interactionMode or cfg.mode) or "REDSTONE"
-    local actChan = cfg and cfg.channels and cfg.channels.thrustActuation or (baseCh + 6)
+    local mode = cfg and cfg.interactionMode or "REDSTONE"
+    local actChan = cfg and cfg.channels and cfg.channels.thrustActuation or (baseCh + 10)
     local isOk = daemon and daemon.sentinel and not daemon.sentinel.isExpired
     local link = daemon and daemon.linkStatus or "IDLE"
     local sig = daemon and daemon.adapterState and daemon.adapterState.lastSignal or 0

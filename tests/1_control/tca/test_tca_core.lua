@@ -1,4 +1,4 @@
--- Unit test suite for 1_control/tca
+-- Unit test suite for 1_control/tca (40-Channel Layout & Zero-Fallback)
 local config_manager = require("config_manager")
 local group_allocator = require("group_allocator")
 local tca_daemon = require("tca_daemon")
@@ -7,14 +7,14 @@ describe("tca config and channel allocation", function()
     it("computes ICD base channels and saves configuration", function()
         local test_path = sdk.temp_path("test_tca_cfg.json")
         local base = config_manager.compute_base(2)
-        assert_eq(base, 10020)
+        assert_eq(base, 10040)
 
         local sample_cfg = {
             groupId = "THR_MAIN_L",
             aircraftIndexN = 2,
             baseChannel = base,
             interactionMode = "API",
-            channels = { thrustActuation = base + 6, calibration = base + 4 },
+            channels = { thrustActuation = base + 10 },
             watchdogTimeoutMs = 300,
             nominalActuatorCount = 4,
             ports = { modemSide = "top", redstoneSide = "bottom", apiSides = { "left", "right" } }
@@ -28,8 +28,42 @@ describe("tca config and channel allocation", function()
         assert_eq(err, "OK")
         assert_eq(loaded.groupId, "THR_MAIN_L")
         assert_eq(loaded.aircraftIndexN, 2)
-        assert_eq(loaded.baseChannel, 10020)
-        assert_eq(loaded.channels.thrustActuation, 10026)
+        assert_eq(loaded.baseChannel, 10040)
+        assert_eq(loaded.channels.thrustActuation, 10050)
+        assert_nil(loaded.channels.calibration)
+    end)
+
+    it("validates compute_base bounds and migrates legacy 20-channel configs", function()
+        assert_eq(config_manager.compute_base(1), 10000)
+        assert_eq(config_manager.compute_base(1000), 49960)
+
+        local b0, err0 = config_manager.compute_base(0)
+        assert_nil(b0)
+        assert_eq(err0, "ERR_INDEX_OUT_OF_RANGE")
+
+        local b1001, err1001 = config_manager.compute_base(1001)
+        assert_nil(b1001)
+        assert_eq(err1001, "ERR_INDEX_OUT_OF_RANGE")
+
+        -- Legacy 20-channel configuration migration
+        local legacyPath = sdk.temp_path("test_legacy_20ch.json")
+        local legacyCfg = {
+            groupId = "THR_MAIN_L",
+            aircraftIndexN = 2,
+            baseChannel = 10020,
+            channels = { thrustActuation = 10026, calibration = 10024 },
+            mode = "REDSTONE"
+        }
+        config_manager.save(legacyPath, legacyCfg)
+
+        local migrated, errLoad = config_manager.load(legacyPath)
+        assert_not_nil(migrated)
+        assert_eq(errLoad, "OK")
+        assert_eq(migrated.baseChannel, 10040)
+        assert_eq(migrated.channels.thrustActuation, 10050)
+        assert_nil(migrated.channels.calibration)
+        assert_nil(migrated.mode)
+        assert_eq(migrated.interactionMode, "REDSTONE")
     end)
 
     it("calculates API boosted signals with proportional compensation", function()
@@ -52,7 +86,7 @@ describe("tca daemon state machine and safing", function()
             aircraftDomainId = "AIRCRAFT_01",
             aircraftIndexN = 1,
             baseChannel = 10000,
-            channels = { thrustActuation = 10006, calibration = 10004 },
+            channels = { thrustActuation = 10010 },
             watchdogTimeoutMs = 300,
             nominalActuatorCount = 4,
             interactionMode = "REDSTONE",
@@ -90,6 +124,148 @@ describe("tca daemon state machine and safing", function()
         }
         daemon:handle_thrust_cmd(estopPkt)
         assert_eq(daemon.adapterState.lastSignal, 5)
+    end)
+
+    it("handles dynamic hangar bay binding and discovery wildcard ALL", function()
+        local mockModem = mock.modem()
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            watchdogTimeoutMs = 300,
+            nominalActuatorCount = 4,
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} }
+        }
+
+        local daemon = tca_daemon.init(cfg, mockModem)
+
+        -- Dynamic Hangar Bay Bind OPEN
+        local bindPkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 1,
+            type = "MSG_CALIB_BAY_BIND",
+            payload = { action = "OPEN", baseHangarChannel = 101 }
+        }
+        daemon:dispatch_modem_message(10010, 10010, bindPkt)
+        assert_true(mockModem:isOpen(101))
+        assert_true(mockModem:isOpen(104))
+
+        -- Actuator Discovery with targetGroup = "ALL"
+        local discReq = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 2,
+            type = "MSG_ACTUATOR_DISCOVER_REQ",
+            payload = { targetGroup = "ALL" }
+        }
+        daemon:dispatch_modem_message(104, 104, discReq)
+        local ackRecord = mockModem._transmitted[#mockModem._transmitted]
+        assert_not_nil(ackRecord)
+        assert_eq(ackRecord.tx, 104)
+        assert_eq(ackRecord.pkt.type, "MSG_ACTUATOR_DISCOVER_ACK")
+        assert_eq(ackRecord.pkt.payload.interactionMode, "REDSTONE")
+        assert_nil(ackRecord.pkt.payload.mode)
+
+        -- Dynamic Hangar Bay Bind CLOSE
+        local closePkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 3,
+            type = "MSG_CALIB_BAY_BIND",
+            payload = { action = "CLOSE", baseHangarChannel = 101 }
+        }
+        daemon:dispatch_modem_message(10010, 10010, closePkt)
+        assert_false(mockModem:isOpen(101))
+        assert_false(mockModem:isOpen(104))
+    end)
+
+    it("executes single-packet MSG_CHANNEL_REBIND 2-phase lifecycle and rollback", function()
+        local mockModem = mock.modem()
+        local tempCfgPath = sdk.temp_path("rebind_test_cfg.json")
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            watchdogTimeoutMs = 300,
+            nominalActuatorCount = 4,
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} },
+            configPath = tempCfgPath
+        }
+        config_manager.save(tempCfgPath, cfg)
+        mockModem:open(10010)
+
+        local daemon = tca_daemon.init(cfg, mockModem)
+
+        -- Phase 1: PREPARE
+        local prepPkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 10,
+            type = "MSG_CHANNEL_REBIND",
+            payload = {
+                action = "PREPARE",
+                transactionId = "REBIND-TX-10000-10080",
+                newBaseChannel = 10080
+            }
+        }
+        daemon:dispatch_modem_message(10010, 10010, prepPkt)
+        assert_true(mockModem:isOpen(10090))
+
+        local ackRecord = mockModem._transmitted[#mockModem._transmitted]
+        assert_not_nil(ackRecord)
+        assert_eq(ackRecord.pkt.type, "MSG_CHANNEL_REBIND_ACK")
+        assert_eq(ackRecord.pkt.payload.transactionId, "REBIND-TX-10000-10080")
+        assert_eq(ackRecord.pkt.payload.status, "READY")
+
+        -- ROLLBACK test
+        local rollPkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 11,
+            type = "MSG_CHANNEL_REBIND",
+            payload = {
+                action = "ROLLBACK",
+                transactionId = "REBIND-TX-10000-10080",
+                newBaseChannel = 10080
+            }
+        }
+        daemon:dispatch_modem_message(10010, 10010, rollPkt)
+        assert_false(mockModem:isOpen(10090))
+
+        -- Prepare again for commit
+        daemon:dispatch_modem_message(10010, 10010, prepPkt)
+        assert_true(mockModem:isOpen(10090))
+
+        -- Phase 2: COMMIT
+        local commitPkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 12,
+            type = "MSG_CHANNEL_REBIND",
+            payload = {
+                action = "COMMIT",
+                transactionId = "REBIND-TX-10000-10080",
+                newBaseChannel = 10080
+            }
+        }
+        daemon:dispatch_modem_message(10010, 10010, commitPkt)
+        assert_false(mockModem:isOpen(10010))
+        assert_eq(daemon.cfg.baseChannel, 10080)
+        assert_eq(daemon.cfg.channels.thrustActuation, 10090)
+        assert_eq(daemon.cfg.aircraftIndexN, 3)
+
+        local reloaded = config_manager.load(tempCfgPath)
+        assert_not_nil(reloaded)
+        assert_eq(reloaded.baseChannel, 10080)
+        assert_eq(reloaded.channels.thrustActuation, 10090)
+        assert_eq(reloaded.aircraftIndexN, 3)
     end)
 end)
 

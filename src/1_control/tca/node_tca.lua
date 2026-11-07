@@ -9,7 +9,7 @@ local discovery_handler = require("discovery_handler")
 local cfg = config_manager.load("config.json") or {
     groupId = "THR_MAIN_L",
     interactionMode = "REDSTONE",
-    channels = { thrustActuation = 10006, calibration = 10004 },
+    channels = { thrustActuation = 10010 },
     aircraftDomainId = "AIRCRAFT_01"
 }
 
@@ -17,7 +17,6 @@ local modem = peripheral and peripheral.wrap and peripheral.wrap("top")
 if not modem then error("Top modem not found on tca_node") end
 
 modem.open(cfg.channels.thrustActuation)
-modem.open(cfg.channels.calibration)
 
 local adapterState = actuator_adapter.init(cfg.interactionMode or "REDSTONE", nil, cfg.ports)
 local sentinel = watchdog_sentinel.init(300, function()

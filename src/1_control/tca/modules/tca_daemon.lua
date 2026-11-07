@@ -18,9 +18,10 @@ function tca_daemon.push_log(inst, msg)
 end
 
 function tca_daemon.init(cfg, modem, adapterState)
-    local mode = cfg.interactionMode or cfg.mode or "REDSTONE"
+    local mode = cfg.interactionMode or "REDSTONE"
     local state = adapterState or actuator_adapter.init(mode, nil, cfg.ports)
-    local rep = status_reporter.init(cfg.groupId, modem, cfg.channels.thrustActuation, cfg.aircraftDomainId)
+    local actChan = cfg.channels and cfg.channels.thrustActuation or (cfg.baseChannel + 10)
+    local rep = status_reporter.init(cfg.groupId, modem, actChan, cfg.aircraftDomainId)
     local inst = setmetatable({
         cfg = cfg, modem = modem, adapterState = state, reporter = rep,
         lastControlState = "DISARMED", linkStatus = "IDLE", isDirty = true,
@@ -135,7 +136,8 @@ end
 function tca_daemon.resume(inst, newCfg)
     if newCfg then
         inst.cfg = newCfg
-        inst.reporter = status_reporter.init(newCfg.groupId, inst.modem, newCfg.channels.thrustActuation, newCfg.aircraftDomainId)
+        local actChan = newCfg.channels and newCfg.channels.thrustActuation or (newCfg.baseChannel + 10)
+        inst.reporter = status_reporter.init(newCfg.groupId, inst.modem, actChan, newCfg.aircraftDomainId)
     end
     inst.sentinel:start_timer((inst.cfg.watchdogTimeoutMs or 300) / 1000.0)
     inst:push_log("[RESUME] Config reloaded")
@@ -165,9 +167,8 @@ function tca_daemon.dispatch_modem_message(inst, channel, replyChannel, rawMsg)
     elseif t == "MSG_CALIB_BAY_BIND" then
         return channel_rebind_handler.handle_bay_bind(inst.modem, pkt, inst.adapterState)
     elseif t == "MSG_CHANNEL_REBIND" then
-        return channel_rebind_handler.handle_channel_rebind(inst.modem, replyChannel, pkt, inst.cfg, inst.adapterState)
-    elseif t == "MSG_CHANNEL_REBIND_COMMIT" then
-        return channel_rebind_handler.handle_rebind_commit(inst.modem, pkt, inst.cfg, inst.adapterState)
+        local cfgPath = inst.configPath or (inst.cfg and inst.cfg.configPath) or "config.json"
+        return channel_rebind_handler.handle_channel_rebind(inst.modem, replyChannel, pkt, inst.cfg, inst.adapterState, cfgPath)
     end
     return false
 end
@@ -175,8 +176,8 @@ end
 function tca_daemon.step_event(inst, ev, p1, p2, p3, p4)
     if ev == "modem_message" then
         local bay, pulse = inst.adapterState and inst.adapterState.hangarBayChannel, inst.adapterState and inst.adapterState.hangarPulseChannel
-        local act = inst.cfg.channels.thrustActuation
-        if p2 == act or p2 == bay or p2 == pulse or p2 == inst.cfg.channels.calibration then
+        local act = inst.cfg and inst.cfg.channels and inst.cfg.channels.thrustActuation
+        if p2 == act or p2 == bay or p2 == pulse then
             inst:dispatch_modem_message(p2, p3, p4)
         end
     elseif ev == "timer" then inst.sentinel:handle_timer(p1)

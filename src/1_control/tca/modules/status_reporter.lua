@@ -9,7 +9,7 @@ function status_reporter.init(groupId, modem, channel, domainId)
     local inst = {
         groupId = tostring(groupId or "THR_MAIN_L"),
         modem = modem,
-        channel = tonumber(channel) or 10006,
+        channel = tonumber(channel) or 10010,
         domainId = tostring(domainId or "AIRCRAFT_01"),
         seq = 0,
         lastReport = {}

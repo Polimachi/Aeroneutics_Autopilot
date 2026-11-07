@@ -9,7 +9,7 @@ local function load_active_config()
         schemaVersion = "1.2.0", groupId = "THR_MAIN_L", interactionMode = "REDSTONE",
         baseChannel = 10000, aircraftIndexN = 1, watchdogTimeoutMs = 300,
         aircraftDomainId = "AIRCRAFT_01", nominalActuatorCount = 4,
-        channels = { thrustActuation = 10006, calibration = 10004 },
+        channels = { thrustActuation = 10010 },
         ports = { modemSide = "top", redstoneSide = "bottom", apiSides = { "left", "right", "front", "back" } },
         deadband = 0
     }
@@ -88,12 +88,12 @@ local function handle_key(key, cfg, currentMode, devs)
         currentMode = (currentMode == "REDSTONE") and "API" or "REDSTONE"
     elseif key == ((keys and keys.n) or 49) then
         local val = tonumber(prompt_input("Aircraft Index N", cfg.aircraftIndexN))
-        if val and val >= 1 then
+        if val and val >= 1 and val <= 1000 and math.floor(val) == val then
             cfg.aircraftIndexN = val
             cfg.baseChannel = config_manager.compute_base(val)
             if not cfg.channels then cfg.channels = {} end
-            cfg.channels.thrustActuation = cfg.baseChannel + 6
-            cfg.channels.calibration = cfg.baseChannel + 4
+            cfg.channels.thrustActuation = cfg.baseChannel + 10
+            cfg.channels.calibration = nil
         end
     elseif key == ((keys and keys.c) or 46) then
         local cnt = tonumber(prompt_input("Nominal Count", cfg.nominalActuatorCount or 4))
@@ -104,7 +104,7 @@ end
 
 local function run_setup()
     local cfg = load_active_config()
-    local currentMode = cfg.interactionMode or cfg.mode or "REDSTONE"
+    local currentMode = cfg.interactionMode or "REDSTONE"
     local devs = scan_hardware()
     if #devs > 0 and not cfg.nominalActuatorCount then cfg.nominalActuatorCount = #devs end
     render_ui(cfg, currentMode, devs)
