@@ -15,8 +15,13 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
   - 코딩·TDD·검증·리뷰·VCS·`md-management` 스킬 **호출 금지** (`AGENTS.md` 및 `GEMINI.md`만으로 즉시 응답).
 - **아키텍처·기능 설계 (`/plan`, `/grill-me`)**:
   - `domain-aeronautics.md`(금지 모드 체크)만 참조. 구현 승인 전까지 `test-driven-development`, `lua`, `computercraft-lua`, `code-simplifier`, `pr-review-toolkit`, `verification-before-completion`, `md-management` **호출 금지**.
-- **문서·규칙·설정 단독 편집 (`.md`, `.json`, `.gitignore`)**:
+- **문서·규칙·설정 일반 편집 (설정 파일, 비사양서 `.md`, `.json`, `.gitignore`)**:
   - `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
+- **사양서·ICD·프로토콜 단독 편집 및 정합성 감사 (`docs/system/*.md`, `docs/specs/**/*.md`)**:
+  - `specification-lifecycle-manager` **필수 호출**. SSOT 위계 준수, 6대 영역 동기화, Zero-Fallback 명세, Spec-to-Code Impact Report 생성.
+  - 사양서 파일 내 실행 코드 작성 금지(의사코드·스키마만 허용). `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
+- **사양서와 코드베이스 동시 수정 요청 인입 시 (Mixed-Scope)**:
+  - `specification-lifecycle-manager` **Mixed-Scope Safety Interlock** 즉시 발동. 파일 수정 전 **즉시 중단(Hard Stop)**하고 경고 및 유저에게 진행 방향(Option 1: Spec-First, Option 2: Sequential, Option 3: Codebase-Only) 질의.
 - **버전 관리 및 릴리스**:
   - `.git`이 존재하고 격리 브랜치/워크트리 작업에 착수할 때만 `using-git-worktrees` 호출.
   - 버전 배포용 `CHANGELOG.md`·릴리스 노트 작성 요청 시에만 `writing-changelogs` 호출 (일상 컨텍스트 유지는 `md-management`가 담당).
