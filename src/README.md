@@ -18,19 +18,18 @@ Create: Aeronautics 및 CC:Tweaked 환경에서 구동되는 비행선 제어·�
 
 - **`0_development/`**: 개발 계층 (Development Layer)
   - `alignment/`: **Alignment** - 지상 기지 추진기 캘리브레이션 및 횡측 정렬 엔진
-- **`0_infra/`**: 인프라 계층 (Infrastructure Layer)
+- **`0_infra/`**: 인프라 및 지상 시설물 계층 (Infrastructure & Ground Facility Layer)
   - `gps/`: **GPS** - 중앙 연산형 고정밀 GPS 측위 서버 및 노드 클러스터
   - `gac/`: **GAC** - 지상 구역 관제사 (Ground Area Controller)
-- **`0_ground/`**: 지상 시설물 계층 (Ground Facility Layer)
+  - `docking_arm/`: **DOCKING_ARM** - 기체 정밀 도킹 2축 로봇 암 스테이션
   - `landing_pad/`: **LANDING_PAD** - VTOL 착륙패드 및 버티포트 스테이션
   - `runway/`: **RUNWAY** - 활주로 및 항공모함 비행갑판 관제 스테이션
-  - `docking_arm/`: **DOCKING_ARM** - 기체 정밀 도킹 2축 로봇 암 스테이션
 - **`1_control/`**: 제어 계층 (Flight Control Layer)
   - `vas/`: **VAS** (Vessel Attitude Sustainer) - 기체 자세 유지 및 비행 제어 코어
   - `tca/`: **TCA** (Thruster Control Adapter) - 추진기 제어 어댑터
   - `asa/`: **ASA** (Aerodynamic Surface Adapter) - 공력익/조종면 제어 어댑터
 - **`2_guidance/`**: 유도 계층 (Guidance Layer)
-  - `sas/`: **SAS** (Stability Augmentation System) - 안정성 향상 및 자율 항법 시스템
+  - `fcp/`: **FCP** (Flight Control Program) - 비행 제어 프로그램 및 외루프 유도 컴퓨터
 - **`3_planning/`**: 경로 계획 계층 (Path/Trajectory Planning Layer)
   - 항로 및 궤적 계획 시스템
 - **`4_mission/`**: 임무 관리 계층 (Mission Management Layer)

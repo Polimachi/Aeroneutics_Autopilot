@@ -236,7 +236,7 @@ git commit -m "docs(specs): refactor VAS, TCA, and ASA control specs for clean Z
 ### Task 5: Tier 3 자율 항법 및 지상 시험 사양서 3종 리팩토링 (SAS, Alignment, GPS)
 
 **Files:**
-- Modify: `docs/specs/approved/2_guidance/sas/SAS_PROGRAM_SPECIFICATION.md`
+- Modify: `docs/specs/approved/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md`
 - Modify: `docs/specs/approved/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md`
 - Modify: `docs/specs/approved/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md`
 - Test: `scratch/verify_all_specs.py`

@@ -17,17 +17,17 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
 - **아키텍처·기능 설계 (`/plan`, `/grill-me`)**:
   - `domain-aeronautics.md`(금지 모드 체크)만 참조. 구현 승인 전까지 `specification-lifecycle-manager`, `test-driven-development`, `lua`, `computercraft-lua`, `code-simplifier`, `pr-review-toolkit`, `verification-before-completion`, `md-management` **호출 금지** (`/plan`·`walkthrough` 아티팩트 작성 시에도 `specification-lifecycle-manager` 비발동).
 - **문서 유형별 관할 스킬 분리 (Markdown & Config Dispatch)**:
-  - **활성 사양서·ICD 편집 및 명시적 감사** (`docs/system/*.md`, `docs/specs/{approved,implemented}/**/*.md` — `README.md` 제외): `specification-lifecycle-manager` **단독 호출** (`md-management`, `writing-changelogs`, `test-driven-development`, `lua`, `computercraft-lua` 호출 금지; 사양서 내 실행 코드 작성 금지).
-  - **초안·폐기 사양서, 분석 보고서 및 일반 설정·메타 문서 편집** (`docs/specs/{drafts,archived}/**`, `docs/specs/README.md`, `reports/**`, `.agent/**`, 루트/하위 `README.md`, `.json`, `.gitignore`): `specification-lifecycle-manager`, `md-management`, `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
+  - **활성 사양서·ICD 편집 및 명시적 감사** (`docs/system/*.md`, 활성 `docs/specs/**/*.md` — Status: `Draft` 및 `README.md` 제외): `specification-lifecycle-manager` **단독 호출** (`md-management`, `writing-changelogs`, `test-driven-development`, `lua`, `computercraft-lua` 호출 금지; 사양서 내 실행 코드 작성 금지).
+  - **초안 사양서, 분석 보고서 및 일반 설정·메타 문서 편집** (Status: `Draft` 사양서, `docs/specs/README.md`, `reports/**`, `.agent/**`, 루트/하위 `README.md`, `.json`, `.gitignore`): `specification-lifecycle-manager`, `md-management`, `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
   - **프로젝트 컨텍스트·메모리 관리** (`AGENTS.md`, `GEMINI.md`, `.agent/memory/*.md`): 마일스톤 인계 또는 명시적 감사 요청 시 `md-management` **단독 관할**.
   - **배포 릴리스 노트** (`CHANGELOG.md`): 버전 릴리스 시 `writing-changelogs` **단독 관할**.
 - **활성 사양서와 코드베이스 동시 수정 요청 인입 시 (Mixed-Scope)**:
-  - `docs/system/*.md` 또는 `docs/specs/{approved,implemented}/**/*.md`의 스펙 변경과 `src/` 코드 수정을 한 작업에서 동시 요청받으면 `specification-lifecycle-manager`의 **Mixed-Scope Safety Interlock**을 즉시 발동하여 파일 수정 전 **중단(Hard Stop)**하고 진행 방향(Option 1: Spec-First, Option 2: Sequential, Option 3: Codebase-Only)을 질의한다.
+  - `docs/system/*.md` 또는 활성 `docs/specs/**/*.md`의 스펙 변경과 `src/` 코드 수정을 한 작업에서 동시 요청받으면 `specification-lifecycle-manager`의 **Mixed-Scope Safety Interlock**을 즉시 발동하여 파일 수정 전 **중단(Hard Stop)**하고 진행 방향(Option 1: Spec-First, Option 2: Sequential, Option 3: Codebase-Only)을 질의한다.
 - **버전 관리**:
   - `.git`이 존재하고 격리 브랜치/워크트리 작업에 착수할 때만 `using-git-worktrees` 호출.
 - **프로덕션 코드 작성 및 수정 (Authoring — Red/Green)**:
   - 저장소 내 실제 프로덕션 코드 파일 수정 직전에만 `test-driven-development` + `ponytail` 호출 (단, Phase 0 테스트 러너 최초 부트스트랩 시 TDD Red-Green 대신 셀프 스모크 실행 적용).
-  - 사양서 기반 구현 시 대상 사양서가 `docs/specs/approved/`에 위치하는지 선행 확인하며, 코드 작성을 위한 사양서 **읽기 전용 참조 시 `specification-lifecycle-manager`를 호출하지 않는다**.
+  - 사양서 기반 구현 시 대상 사양서의 상단 메타데이터 표 상태가 `Approved`인지 선행 확인하며, 코드 작성을 위한 사양서 **읽기 전용 참조 시 `specification-lifecycle-manager`를 호출하지 않는다**.
   - `.lua` 작업 시 역할 분담: CC:Tweaked API·페리페럴·이벤트 연동은 `computercraft-lua`(필요한 `references/` 파일만 선별 열람), 순수 Lua 구조·메타테이블·최적화는 `lua` 호출. Python(`.py`) 작업 시 두 Lua 스킬 호출 금지.
   - 초기 작성(Red/Green) 중에는 `code-simplifier`, `pr-review-toolkit` 동시 호출 금지.
 - **리팩토링 및 코드 리뷰 (Refactor & Review)**:
@@ -35,19 +35,19 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
   - 코드 리뷰 요청 또는 커밋/PR 전 `.lua` 감사 시: `pr-review-toolkit` (+ API 시그니처 대조 시 `computercraft-lua`, 언어 최적화 대조 시 `lua`).
 - **작업 완료 보고 및 마일스톤 인계 (Completion & Context Sync)**:
   - 실제 코드·설정·테스트 변경 완료 주장 직전에만 `verification-before-completion` 호출.
-  - 사양서 기반 코드 구현이 검증을 통과하면 **Mixed-Scope 중단 예외(경량 완료 전이)**로서 `specification-lifecycle-manager`를 호출하지 않고, 사양서를 `docs/specs/approved/`에서 `docs/specs/implemented/`로 이동하며 `docs/system/` 및 `docs/specs/{approved,implemented}/` 내 깨진 상대 링크만 즉시 치환한다.
+  - 사양서 기반 코드 구현이 검증을 통과하면 **Mixed-Scope 중단 예외(경량 완료 전이)**로서 `specification-lifecycle-manager`를 호출하지 않고, 대상 사양서 상단 메타데이터 표의 `문서 상태`를 `Implemented`로 갱신하고 `최종 수정일`을 당일 날짜로 동기화한다.
   - 아키텍처·디렉토리·표준 명령어·Phase가 바뀐 마일스톤 완료 시에만 `md-management`를 호출해 `GEMINI.md` 스냅샷과 `.agent/memory/<dir>.md`를 갱신한다.
+  - 작업 계획 생성 시 및 작업 완료 후 후속 과제 도출 시 `TASK.md`에 신규/후속 태스크를 즉시 등록하고 진행 상태(`[ ]`, `[-]`, `[x]`)를 동기화한다.
 
 ## 3. 사양서 생명주기 가드레일 (Spec Lifecycle Guardrails)
 - **사양서 수정 및 양방향 동기화 시 (Revision Protocol)**:
-  - 활성 사양서 수정 시 `specification-lifecycle-manager` 규칙에 따라 `docs/system/` 및 `docs/specs/{approved,implemented}/` 간 양방향 동기화를 수행한다 (`drafts/`·`archived/`는 스캔 제외).
-  - `implemented/` 사양서 중 요구사항·패킷 스키마·채널·파라미터 변경으로 **`src/` 런타임 코드 수정이 필요한 사양서만** `drafts/`를 거치지 않고 즉시 계층 경로를 유지한 채 `docs/specs/approved/`로 이동하며 상대 링크를 갱신한다. 단순 상대 링크나 참조 버전 배지만 갱신된 연관 사양서는 `implemented/`에 유지한다 (`docs/system/` 문서는 위치 고정).
-  - 모든 활성 사양서는 상단 인용구(`> **문서 버전**: vX.Y.Z`, `> **최종 수정일**: YYYY-MM-DD`)를 기본 유지하되, **실질 스펙 변경(`approved/` 이동 대상)이 발생한 사양서에 한해** 상단 인용구 바로 아래에 `Revision History` 테이블(버전, 일자, 변경 요약, 변경 사유)을 신설·누적 기록한다.
-- **신규 및 폐기 사양서 전이 시 (Drafting & Archiving Protocol)**:
-  - 신규 기획안은 `docs/specs/drafts/`에서 자유롭게 작성하며(`specification-lifecycle-manager` 비발동), 검토 완료 후 `approved/`로 승격 배치할 때 `specification-lifecycle-manager`로 전역 동기화를 수행한다.
-  - 사양서 폐기 시 `archived/`로 이동하고 `specification-lifecycle-manager`로 활성 문서 내 참조 정리 및 `[DEPRECATED]` 표기를 수행한 뒤, `archived/` 문서는 이후 동기화 스캔에서 영구 제외한다.
+  - 활성 사양서 수정 시 `specification-lifecycle-manager` 규칙에 따라 `docs/system/*.md` 및 활성 `docs/specs/**/*.md`(Status != `Draft`) 간 양방향 동기화를 수행한다.
+  - `Implemented` 사양서 중 요구사항·패킷 스키마·채널·파라미터 변경으로 **`src/` 런타임 코드 수정이 필요한 사양서만** 상단 메타데이터 표의 `문서 상태`를 `Approved`로 전이하고 `최종 수정일` 갱신 및 `Revision History` 테이블(버전, 일자, 변경 요약, 변경 사유)에 행을 추가한다. 단순 상대 링크나 참조 버전 배지만 갱신된 연관 사양서는 `Implemented` 상태를 유지한다.
+- **신규 및 폐기 사양서 전이 시 (Drafting & Deprecation Protocol)**:
+  - 신규 기획안은 대상 도메인 디렉토리에 직접 `문서 상태`: `Draft`로 작성하며(`specification-lifecycle-manager` 비발동), 검토 완료 후 `Approved`로 상태를 승격할 때 `specification-lifecycle-manager`로 전역 동기화를 수행한다.
+  - 사양서 폐기 시 상단 메타데이터 표의 `문서 상태`를 `Deprecated`로 변경하고, `specification-lifecycle-manager`로 활성 문서 내 참조 정리 및 대체 규격 명시를 수행한 뒤 Zero-Fallback 원칙을 엄수한다.
 - **코드베이스 구현 및 완료 승격 시 (Pre-implementation & Completion Protocol)**:
-  - 코드베이스 구현 및 수정은 대상 사양서가 `approved/`에 존재하는 상태에서 착수한다.
-  - `verification-before-completion` 검증 통과 직후 완료 보고 전에 사양서를 `approved/` → `implemented/`로 자동 이동하고 `docs/` 내 상대 링크 경로(`approved` → `implemented`)를 치환한다 (`specification-lifecycle-manager` 비호출, Mixed-Scope 면제).
-- **경로 보존 원칙**:
-  - 상태 디렉토리(`drafts/`, `approved/`, `implemented/`, `archived/`) 간 이동 시 계층 서브디렉토리 경로(예: `1_control/vas/`, `2_guidance/sas/`)를 동일하게 유지한다.
+  - 코드베이스 구현 및 수정은 대상 사양서의 `문서 상태`가 `Approved`인 상태에서 착수한다.
+  - `verification-before-completion` 검증 통과 직후 완료 보고 전에 사양서 상단 메타데이터 표의 `문서 상태`를 `Implemented`로 자동 갱신하고 `최종 수정일`을 동기화한다 (`specification-lifecycle-manager` 비호출, Mixed-Scope 면제).
+- **영구 경로 불변 원칙 (Permanent Unified Path)**:
+  - 사양서는 생명주기 전이에 따라 디렉토리를 이동하지 않으며, `docs/specs/<domain>/<subsystem>/` 경로를 영구 유지하여 문서 간 상대 마크다운 링크 깨짐을 방지한다.

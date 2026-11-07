@@ -15,7 +15,7 @@ function state_machine.init(systemConfig, isCalibrated)
         calibStartMs = 0,
         hoverBaseThrottle = 7.5,
         isAirborne = false,
-        activeSource = "SAS",
+        activeSource = "FCP",
         sensorLossTicks = 0,
         sensorLossDebounceTicks = timeouts.sensorLossDebounceTicks or 1,
         uapTimeoutMs = timeouts.uapCommandTimeoutMs or 1500,
@@ -52,7 +52,7 @@ function state_machine.arbitrate_c2(state, cmd)
         state.activeSource = "MFD_ACRO"
         return cmd
     end
-    state.activeSource = "SAS"
+    state.activeSource = "FCP"
     return cmd
 end
 

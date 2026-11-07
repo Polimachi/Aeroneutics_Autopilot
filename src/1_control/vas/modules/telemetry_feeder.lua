@@ -18,7 +18,7 @@ local function build_telem_payload(comState, fsmState, mixerState, diagState)
         fuel = comState.fuel,
         dynamicLoad = (mixerState and mixerState.dynamicLoad) or 0.0,
         controlState = fsmState.currentState,
-        activeSource = fsmState.activeSource or "SAS",
+        activeSource = fsmState.activeSource or "FCP",
         sensorOk = diagState.sensorOk == true,
         sensorHealth = diagState.sensorHealth,
         actuatorHealth = diagState.actuatorHealth or { tap = true, wap = true }

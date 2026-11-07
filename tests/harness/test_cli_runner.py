@@ -10,7 +10,7 @@ class TestCliRunner(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             # Two separate codebases defining identically named modules/ui_renderer.lua
-            for layer_prog, tag in (("1_control/vas", "VAS_UI"), ("2_guidance/sas", "SAS_UI")):
+            for layer_prog, tag in (("1_control/vas", "VAS_UI"), ("2_guidance/fcp", "FCP_UI")):
                 sdir = root / "src" / layer_prog / "modules"
                 tdir = root / "tests" / layer_prog
                 sdir.mkdir(parents=True)
@@ -36,7 +36,7 @@ class TestCliRunner(unittest.TestCase):
             self.assertEqual(statuses, {
                 "0_infra/gps": "SKIP",
                 "1_control/vas": "PASS",
-                "2_guidance/sas": "PASS",
+                "2_guidance/fcp": "PASS",
             })
 
             code_strict, _ = run_cli(["--require-tests"], workspace_root=root)
