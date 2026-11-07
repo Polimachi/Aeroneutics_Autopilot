@@ -94,6 +94,8 @@ local function process_inbox(ctx, polled, now_ms)
     end
     if polled.rebindAck then
         channel_sentinel.on_rebind_ack(ctx.channel, polled.rebindAck, now_ms)
+    end
+    if ctx.channel and ctx.channel.rebindTx then
         local commit_pkt, status = channel_sentinel.step_rebind_transaction(ctx.channel, now_ms)
         if commit_pkt and status == "COMMITTED" then
             if network_manager.send_channel_rebind then
