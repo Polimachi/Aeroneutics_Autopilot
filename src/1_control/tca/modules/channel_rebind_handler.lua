@@ -58,6 +58,7 @@ function channel_rebind_handler.handle_rebind_commit(modem, pkt, cfg, state, con
     cfg.channels.thrustActuation = newBase + ACTUATION_OFFSET
     cfg.channels.calibration = nil
     cfg.mode = nil
+    if modem and modem.open then pcall(modem.open, cfg.channels.thrustActuation) end
     if p.newAircraftIndexN then
         cfg.aircraftIndexN = tonumber(p.newAircraftIndexN)
     else
@@ -78,6 +79,8 @@ function channel_rebind_handler.handle_channel_rebind(modem, replyChannel, pkt, 
         return channel_rebind_handler.handle_rollback(modem, pkt, state)
     elseif p.action == "COMMIT" then
         return channel_rebind_handler.handle_rebind_commit(modem, pkt, cfg, state, configPath)
+    elseif p.action ~= "PREPARE" and p.action ~= nil then
+        return false, "INVALID_ACTION"
     end
 
     local newBase = tonumber(p.newBaseChannel)

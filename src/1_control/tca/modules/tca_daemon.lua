@@ -168,7 +168,11 @@ function tca_daemon.dispatch_modem_message(inst, channel, replyChannel, rawMsg)
         return channel_rebind_handler.handle_bay_bind(inst.modem, pkt, inst.adapterState)
     elseif t == "MSG_CHANNEL_REBIND" then
         local cfgPath = inst.configPath or (inst.cfg and inst.cfg.configPath) or "config.json"
-        return channel_rebind_handler.handle_channel_rebind(inst.modem, replyChannel, pkt, inst.cfg, inst.adapterState, cfgPath)
+        local ok = channel_rebind_handler.handle_channel_rebind(inst.modem, replyChannel, pkt, inst.cfg, inst.adapterState, cfgPath)
+        if ok and inst.reporter and inst.cfg and inst.cfg.channels and inst.cfg.channels.thrustActuation then
+            inst.reporter.channel = inst.cfg.channels.thrustActuation
+        end
+        return ok
     end
     return false
 end
