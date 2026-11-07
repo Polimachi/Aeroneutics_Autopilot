@@ -1,10 +1,11 @@
 -- GPS Client CLI Entrypoint (Gate 4 Cluster Client #2)
 local gps_client = require("gps_client")
+local protocol = require("protocol")
 
 local function runClient(args)
     local domainId = args[1] or "AIRCRAFT_01"
     local altitudeY = tonumber(args[2]) or 100.0
-    local replyChannel = tonumber(args[3]) or 10045
+    local replyChannel = tonumber(args[3]) or protocol.resolveDomainReplyChannel(domainId) or protocol.DEFAULT_REPLY_CHANNEL
 
     gps_client.init(domainId, "AIRCRAFT", replyChannel)
 

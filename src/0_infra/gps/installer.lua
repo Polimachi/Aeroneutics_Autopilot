@@ -2,6 +2,28 @@
 local installer_core = require("installer_core")
 local storage_hal = require("storage_hal")
 
+local function writeJsonFile(path, data)
+    if storage_hal.writeJsonAtomic then
+        return storage_hal.writeJsonAtomic(path, data)
+    elseif storage_hal.writeJson then
+        return storage_hal.writeJson(path, data)
+    end
+    return false
+end
+
+local function writeTextFile(path, text)
+    if storage_hal.writeAtomic then
+        return storage_hal.writeAtomic(path, text)
+    end
+    local f = fs.open(path, "w")
+    if f then
+        f.write(text)
+        f.close()
+        return true
+    end
+    return false
+end
+
 local function printHeader()
     term.clear()
     term.setCursorPos(1, 1)
@@ -21,11 +43,11 @@ local function installServer()
     fs.makeDir("/gps")
     fs.makeDir("/gps_data")
     if not fs.exists("/gps_data/nodes.json") then
-        storage_hal.writeJson("/gps_data/nodes.json", { nodes = {} })
+        writeJsonFile("/gps_data/nodes.json", { nodes = {} })
     end
     fs.makeDir("/startup")
     local hook = installer_core.generateStartupHook("server", "/gps/server.lua")
-    storage_hal.writeAtomic("/startup/00_gps.lua", hook)
+    writeTextFile("/startup/00_gps.lua", hook)
     print("[SUCCESS] Central Server installed.")
 end
 
@@ -35,17 +57,22 @@ local function installNode()
     fs.makeDir("/gps_data")
     local defaultCfg = {
         role = "NODE",
-        channel = 60002,
+        channels = {
+            ping = 60001,
+            service = 60002,
+            nodeIn = 60003,
+            mgmt = 60004
+        },
         networkKey = "GPS_BASE_NET",
         heartbeatSec = 10,
         position = { x = 0, y = 0, z = 0 }
     }
     local curCfg = storage_hal.readJson("/gps_data/node_cfg.json")
     local finalCfg = installer_core.migrateConfig(curCfg, defaultCfg)
-    storage_hal.writeJson("/gps_data/node_cfg.json", finalCfg)
+    writeJsonFile("/gps_data/node_cfg.json", finalCfg)
     fs.makeDir("/startup")
     local hook = installer_core.generateStartupHook("node", "/gps/node.lua")
-    storage_hal.writeAtomic("/startup/00_gps.lua", hook)
+    writeTextFile("/startup/00_gps.lua", hook)
     print("[SUCCESS] Swarm Node installed.")
 end
 

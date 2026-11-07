@@ -2,6 +2,8 @@
 local protocol = {
     WIRE_VERSION = "1.9.5", COMPAT_PREFIX = "^1%.9",
     CH_GPS_PING = 60001, CH_GPS_SERVICE = 60002, CH_GPS_NODE_IN = 60003, CH_GPS_MGMT = 60004,
+    CRAFT_BASE_MIN = 10000, CRAFT_BASE_MAX = 49960, CRAFT_BANDWIDTH = 40,
+    CRAFT_MAX_INDEX = 1000, CH_REPLY_OFFSET = 5, DEFAULT_REPLY_CHANNEL = 10005,
     MSG_REQUEST = "MSG_GPS_REQUEST", MSG_NODE_REPORT = "MSG_GPS_NODE_REPORT",
     MSG_RESPONSE = "MSG_GPS_RESPONSE", MSG_NODE_HEARTBEAT = "MSG_GPS_NODE_HEARTBEAT",
     MSG_STATUS_REQ = "MSG_GPS_STATUS_REQ", MSG_STATUS_RESP = "MSG_GPS_STATUS_RESP",
@@ -11,6 +13,23 @@ local protocol = {
     MSG_NODE_VERIFY_RESP = "MSG_GPS_NODE_VERIFY_RESP", MSG_NODE_REG_COMMIT = "MSG_GPS_NODE_REG_COMMIT",
     MSG_NODE_REG_ACK = "MSG_GPS_NODE_REG_ACK"
 }
+
+function protocol.computeCraftReplyChannel(aircraftIndexN)
+    local n = tonumber(aircraftIndexN)
+    if not n or n < 1 or n > protocol.CRAFT_MAX_INDEX or math.floor(n) ~= n then
+        return nil
+    end
+    return protocol.CRAFT_BASE_MIN + (n - 1) * protocol.CRAFT_BANDWIDTH + protocol.CH_REPLY_OFFSET
+end
+
+function protocol.resolveDomainReplyChannel(domainId)
+    local s = tostring(domainId or "")
+    local idx = string.match(s, "^AIRCRAFT_(%d+)$")
+    if not idx then
+        return nil
+    end
+    return protocol.computeCraftReplyChannel(tonumber(idx))
+end
 
 function protocol.buildEnvelope(domainId, seq, msgType, payload, nowMs)
     return {

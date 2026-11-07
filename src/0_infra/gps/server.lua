@@ -115,7 +115,7 @@ local function handleModemMsg(scheduler, registry, modem, state, evData)
     if channel == protocol.CH_GPS_NODE_IN and type(msg) == "table" then
         if msg.type == protocol.MSG_NODE_REPORT then
             handleNodeReport(scheduler, registry, modem, state, msg)
-        elseif msg.type == protocol.MSG_HEARTBEAT then
+        elseif msg.type == protocol.MSG_NODE_HEARTBEAT then
             handleHeartbeat(state, msg)
         end
     end

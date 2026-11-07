@@ -8,7 +8,7 @@ function client_core.new()
     local self = setmetatable({}, client_core)
     self.domainId = "CLIENT_" .. tostring(os.getComputerID and os.getComputerID() or 0)
     self.clientType = "AIRCRAFT"
-    self.replyChannel = 10000 + ((os.getComputerID and os.getComputerID() or 0) % 50000)
+    self.replyChannel = protocol.DEFAULT_REPLY_CHANNEL
     self.seq = 0
     self.isManaged = false
     self.pendingResponses = {}
@@ -18,7 +18,11 @@ end
 function client_core:init(domainId, clientType, replyChannel)
     if domainId then self.domainId = tostring(domainId) end
     if clientType then self.clientType = tostring(clientType) end
-    if replyChannel then self.replyChannel = tonumber(replyChannel) or self.replyChannel end
+    if replyChannel ~= nil then
+        self.replyChannel = tonumber(replyChannel) or self.replyChannel
+    else
+        self.replyChannel = protocol.resolveDomainReplyChannel(self.domainId) or protocol.DEFAULT_REPLY_CHANNEL
+    end
 end
 
 function client_core:setManaged(managed)

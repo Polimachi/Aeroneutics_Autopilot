@@ -1,6 +1,8 @@
 -- Unit test suite for 0_infra/gps
 local storage_hal = require("storage_hal")
 local trilateration = require("trilateration")
+local protocol = require("protocol")
+local client_core = require("client_core")
 
 describe("gps storage HAL atomic writes and error handling", function()
     it("writes atomically and reads back JSON in ephemeral CraftOS filesystem", function()
@@ -74,3 +76,123 @@ describe("gps trilateration numerical solver", function()
         assert_near(solvedZ, craftZ, 0.05, "solved Z should match true craft Z")
     end)
 end)
+
+describe("gps protocol 40-channel layout and craft reply channels", function()
+    it("defines standard infrastructure channels and reply channel constants", function()
+        assert_eq(protocol.CH_GPS_PING, 60001)
+        assert_eq(protocol.CH_GPS_SERVICE, 60002)
+        assert_eq(protocol.CH_GPS_NODE_IN, 60003)
+        assert_eq(protocol.CH_GPS_MGMT, 60004)
+        assert_eq(protocol.DEFAULT_REPLY_CHANNEL, 10005)
+        assert_eq(protocol.CRAFT_BASE_MIN, 10000)
+        assert_eq(protocol.CRAFT_BASE_MAX, 49960)
+        assert_eq(protocol.CRAFT_BANDWIDTH, 40)
+        assert_eq(protocol.CRAFT_MAX_INDEX, 1000)
+        assert_eq(protocol.CH_REPLY_OFFSET, 5)
+    end)
+
+    it("computes craft reply channel accurately and guards boundary conditions", function()
+        assert_eq(protocol.computeCraftReplyChannel(1), 10005)
+        assert_eq(protocol.computeCraftReplyChannel(2), 10045)
+        assert_eq(protocol.computeCraftReplyChannel(1000), 49965)
+
+        assert_nil(protocol.computeCraftReplyChannel(0))
+        assert_nil(protocol.computeCraftReplyChannel(1001))
+        assert_nil(protocol.computeCraftReplyChannel(-1))
+        assert_nil(protocol.computeCraftReplyChannel(1.5))
+        assert_nil(protocol.computeCraftReplyChannel("invalid"))
+        assert_nil(protocol.computeCraftReplyChannel(nil))
+    end)
+
+    it("resolves domain reply channel from domainId string", function()
+        assert_eq(protocol.resolveDomainReplyChannel("AIRCRAFT_01"), 10005)
+        assert_eq(protocol.resolveDomainReplyChannel("AIRCRAFT_02"), 10045)
+        assert_eq(protocol.resolveDomainReplyChannel("AIRCRAFT_1000"), 49965)
+        assert_nil(protocol.resolveDomainReplyChannel("AIRCRAFT_0"))
+        assert_nil(protocol.resolveDomainReplyChannel("AIRCRAFT_1001"))
+        assert_nil(protocol.resolveDomainReplyChannel("GROUND_STATION"))
+        assert_nil(protocol.resolveDomainReplyChannel(""))
+        assert_nil(protocol.resolveDomainReplyChannel(nil))
+    end)
+end)
+
+describe("gps client_core 40-channel auto-resolution and message handling", function()
+    it("initializes with default replyChannel 10005 and auto-resolves Base+5 from domainId", function()
+        local c1 = client_core.new()
+        assert_eq(c1.replyChannel, 10005)
+
+        local c2 = client_core.new()
+        c2:init("AIRCRAFT_02", "AIRCRAFT")
+        assert_eq(c2.domainId, "AIRCRAFT_02")
+        assert_eq(c2.replyChannel, 10045)
+
+        local c3 = client_core.new()
+        c3:init("AIRCRAFT_02", "AIRCRAFT", 25000)
+        assert_eq(c3.replyChannel, 25000)
+
+        local c4 = client_core.new()
+        c4:init("GROUND_ROVER", "GROUND")
+        assert_eq(c4.replyChannel, 10005)
+    end)
+
+    it("generates valid request packet and successfully dispatches and polls response", function()
+        local c = client_core.new()
+        c:init("AIRCRAFT_02", "AIRCRAFT")
+        assert_eq(c.replyChannel, 10045)
+
+        local seq, pkt = c:nextRequestPacket(120.5, 1000)
+        assert_eq(seq, 1)
+        assert_eq(pkt.payload.replyChannel, 10045)
+        assert_eq(pkt.payload.altitudeY, 120.5)
+
+        local okPkt, errPkt = protocol.validatePacket(pkt, protocol.MSG_REQUEST)
+        assert_true(okPkt, errPkt)
+
+        local respFields = {
+            targetClient = "AIRCRAFT_02",
+            clientSeq = seq,
+            status = "FIX_OK",
+            nodeCount = 4,
+            position = { x = 150.0, z = -200.0 },
+            accuracy = 0.05,
+            hdop = 1.1
+        }
+        local respPkt = protocol.buildResponse("GPS_BASE_NET", 1, respFields, 1020)
+
+        local handledWrong = c:handleMessage(99999, respPkt, 1020)
+        assert_false(handledWrong)
+        assert_nil(c:poll(seq))
+
+        local handledOk = c:handleMessage(10045, respPkt, 1020)
+        assert_true(handledOk)
+
+        local res = c:poll(seq)
+        assert_not_nil(res)
+        assert_eq(res.targetClient, "AIRCRAFT_02")
+        assert_eq(res.status, "FIX_OK")
+        assert_eq(res.position.x, 150.0)
+        assert_eq(res.position.z, -200.0)
+
+        assert_nil(c:poll(seq))
+    end)
+end)
+
+describe("gps installer node configuration", function()
+    it("writes 4-channel configuration instead of legacy single channel", function()
+        _G.harness_is_testing = true
+        local installer = require("installer")
+        installer.installNode()
+
+        local cfg, err = storage_hal.readJson("/gps_data/node_cfg.json")
+        assert_not_nil(cfg, err)
+        assert_nil(cfg.channel)
+        assert_not_nil(cfg.channels)
+        assert_eq(cfg.channels.ping, 60001)
+        assert_eq(cfg.channels.service, 60002)
+        assert_eq(cfg.channels.nodeIn, 60003)
+        assert_eq(cfg.channels.mgmt, 60004)
+        assert_eq(cfg.role, "NODE")
+        assert_eq(cfg.networkKey, "GPS_BASE_NET")
+    end)
+end)
+
