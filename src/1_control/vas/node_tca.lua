@@ -4,7 +4,7 @@ if not modem then
     error("No modem peripheral found on mock TAP")
 end
 
-local CH_ACTUATION = 10026
+local CH_ACTUATION = 10010
 modem.open(CH_ACTUATION)
 
 while true do
@@ -15,7 +15,7 @@ while true do
                 ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
                 type = "MSG_ACTUATOR_DISCOVER_ACK", time = (os.epoch and os.epoch("utc")) or 0,
                 payload = {
-                    groupId = "THR_MAIN_L", mode = "REDSTONE", activeCount = 4, totalCount = 4,
+                    groupId = "THR_MAIN_L", interactionMode = "REDSTONE", activeCount = 4, totalCount = 4,
                     healthStatus = "REDSTONE_NOMINAL"
                 }
             }

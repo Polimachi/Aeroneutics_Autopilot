@@ -4,7 +4,7 @@ if not modem then
     error("No modem peripheral found on mock UAP")
 end
 
-local CH_GUIDANCE, CH_TELEM = 10021, 10022
+local CH_GUIDANCE, CH_TELEM = 10001, 10002
 modem.open(CH_TELEM)
 
 local nowMs = (os.epoch and os.epoch("utc")) or 0

@@ -44,9 +44,14 @@ function telemetry_feeder.tick(state, netState, comState, fsmState, mixerState, 
 
     local telemPayload = build_telem_payload(comState, fsmState, mixerState, diagState)
     network_manager.send_packet(netState, netState.channels.telemetry, "MSG_FLIGHT_TELEMETRY", telemPayload)
+    if netState and netState.hangarChannels and netState.hangarChannels.telem then
+        network_manager.send_packet(netState, netState.hangarChannels.telem, "MSG_FLIGHT_TELEMETRY", telemPayload)
+    end
 
     local isAcro = (fsmState and fsmState.activeSource == "MFD_ACRO")
-    if isAcro or (state.tickCounter % 4 == 0) then
+    local isFailsafe = (fsmState and (fsmState.currentState == "FAILSAFE_HOLD" or fsmState.currentState == "EMERGENCY_LAND"))
+
+    if isAcro or (isFailsafe and (state.tickCounter % 4 == 0)) then
         local mfdPayload = build_mfd_payload(comState, fsmState, mixerState, diagState)
         network_manager.send_packet(netState, netState.channels.mfd, "MSG_MFD_STATE", mfdPayload)
     end

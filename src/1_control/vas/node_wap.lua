@@ -4,7 +4,7 @@ if not modem then
     error("No modem peripheral found on mock WAP")
 end
 
-local CH_AERO = 10027
+local CH_AERO = 10011
 modem.open(CH_AERO)
 
 while true do

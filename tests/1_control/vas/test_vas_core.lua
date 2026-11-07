@@ -2,6 +2,9 @@
 local quat = require("quat")
 local flight_dynamics_core = require("flight_dynamics_core")
 local sensor_pipeline = require("sensor_pipeline")
+local network_manager = require("network_manager")
+local telemetry_feeder = require("telemetry_feeder")
+local state_machine = require("state_machine")
 
 describe("vas quaternion math invariants", function()
     it("normalizes and calculates error quaternion", function()
@@ -85,5 +88,302 @@ describe("vas sensor pipeline sampling with peripheral registry", function()
         assert_true(allOk)
         assert_true(health.gimbal)
         assert_true(health.altitude)
+    end)
+end)
+
+describe("vas 40-channel 4-zone layout and network manager initialization", function()
+    it("computes base channel, validates base, and initializes 4-zone channels", function()
+        assert_eq(network_manager.compute_base(1), 10000)
+        assert_eq(network_manager.compute_base(2), 10040)
+        assert_eq(network_manager.compute_base(1000), 49960)
+        local outOfRange, err = network_manager.compute_base(0)
+        assert_nil(outOfRange)
+        assert_eq(err, "ERR_AIRCRAFT_INDEX_RANGE")
+        assert_false(network_manager.is_valid_base(10060))
+        assert_false(network_manager.is_valid_base(50000))
+        assert_true(network_manager.is_valid_base(10000))
+        assert_true(network_manager.is_valid_base(10040))
+
+        local wirelessModem = mock.modem({ wireless = true })
+        local wiredModem = mock.modem({ wireless = false })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem },
+            bottom = { type = "modem", dev = wiredModem }
+        })
+
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        assert_eq(net.baseChannel, 10000)
+        assert_eq(net.channels.c2, 10000)
+        assert_eq(net.channels.guidance, 10001)
+        assert_eq(net.channels.telemetry, 10002)
+        assert_eq(net.channels.mfd, 10003)
+        assert_eq(net.channels.navSensor, 10004)
+        assert_eq(net.channels.clientReply, 10005)
+        assert_eq(net.channels.actuation, 10010)
+        assert_eq(net.channels.aero, 10011)
+        assert_eq(net.channels.payloadBus, 10020)
+        assert_eq(net.channels.weaponBus, 10021)
+        assert_eq(net.channels.formationLink, 10030)
+
+        assert_true(wirelessModem.isOpen(10000))
+        assert_true(wirelessModem.isOpen(10001))
+        assert_true(wirelessModem.isOpen(10010))
+        assert_true(wirelessModem.isOpen(10011))
+        assert_false(wirelessModem.isOpen(10004))
+    end)
+end)
+
+describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", function()
+    it("keeps Base+3 silent during normal flight, streams at 20Hz in acro, downsamples in failsafe", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem }
+        })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local tf = telemetry_feeder.init({})
+        local comState = {
+            attitude = { pitch = 0.0, roll = 0.0, yaw = 90.0 },
+            rates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            dynamics = { altitudeY = 150.0, verticalSpeed = 0.0 },
+            fuel = { amount = 800, capacity = 1000 }
+        }
+        local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, wap = true } }
+        local mixerState = { dynamicLoad = 0.0 }
+        local fsmNormal = { currentState = "NORMAL", activeSource = "FCP" }
+
+        -- 8 consecutive ticks in normal FCP mode
+        for _ = 1, 8 do
+            telemetry_feeder.tick(tf, net, comState, fsmNormal, mixerState, diagState)
+        end
+
+        local count10002 = 0
+        local count10003 = 0
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10002 then count10002 = count10002 + 1 end
+            if tx.tx == 10003 then count10003 = count10003 + 1 end
+        end
+        assert_eq(count10002, 8)
+        assert_eq(count10003, 0) -- Base+3 must remain completely silent!
+
+        -- MFD_ACRO mode: transmits every tick (20Hz)
+        wirelessModem._transmitted = {}
+        tf.tickCounter = 0
+        local fsmAcro = { currentState = "NORMAL", activeSource = "MFD_ACRO" }
+        for _ = 1, 3 do
+            telemetry_feeder.tick(tf, net, comState, fsmAcro, mixerState, diagState)
+        end
+        local acro10003 = 0
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" then
+                acro10003 = acro10003 + 1
+            end
+        end
+        assert_eq(acro10003, 3)
+
+        -- FAILSAFE_HOLD mode: transmits 1 every 4 ticks (5Hz)
+        wirelessModem._transmitted = {}
+        tf.tickCounter = 0
+        local fsmFailsafe = { currentState = "FAILSAFE_HOLD", activeSource = "FCP" }
+        for _ = 1, 4 do
+            telemetry_feeder.tick(tf, net, comState, fsmFailsafe, mixerState, diagState)
+        end
+        local failsafe10003 = 0
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" then
+                failsafe10003 = failsafe10003 + 1
+            end
+        end
+        assert_eq(failsafe10003, 1)
+    end)
+end)
+
+describe("vas dynamic hangar bay binding and calibration lifecycle", function()
+    it("dynamically opens bay channels on MSG_CALIBRATION_INIT, replicates telemetry, and closes on MSG_CALIBRATION_CLOSE", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem }
+        })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, false)
+        local tf = telemetry_feeder.init({})
+        local comState = {
+            attitude = { pitch = 0.0, roll = 0.0, yaw = 0.0 },
+            rates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            dynamics = { altitudeY = 0.0, verticalSpeed = 0.0 },
+            fuel = { amount = 500, capacity = 1000 }
+        }
+        local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, wap = true } }
+        local mixer = {}
+
+        -- 1) Receive MSG_CALIBRATION_INIT on Base+0 (10000)
+        local initPkt = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIBRATION_INIT", time = 1000,
+            payload = {
+                stationId = "STATION_BAY_02", bayId = 2,
+                baseHangarChannel = 111, targetCraftDomain = "AIRCRAFT_01"
+            }
+        }
+        network_manager.dispatch(net, fsm, nil, mixer, 10000, 10000, initPkt)
+
+        -- Bay channels 111, 112, 114 dynamically opened
+        assert_true(wirelessModem.isOpen(111))
+        assert_true(wirelessModem.isOpen(112))
+        assert_true(wirelessModem.isOpen(114))
+
+        -- Check MSG_CALIB_BAY_BIND on 10010 and 10011
+        local bind10, bind11, initAck112 = false, false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10010 and tx.pkt.type == "MSG_CALIB_BAY_BIND" and tx.pkt.payload.action == "OPEN" then
+                bind10 = true
+                assert_eq(tx.pkt.payload.bayCalibrationTap, 114)
+                assert_eq(tx.pkt.payload.bayCalibrationCmd, 111)
+            end
+            if tx.tx == 10011 and tx.pkt.type == "MSG_CALIB_BAY_BIND" and tx.pkt.payload.action == "OPEN" then
+                bind11 = true
+            end
+            if tx.tx == 112 and tx.pkt.type == "MSG_CALIBRATION_INIT_ACK" then
+                initAck112 = true
+                assert_eq(tx.pkt.payload.status, "READY")
+                assert_eq(tx.pkt.payload.bayId, 2)
+                assert_eq(tx.pkt.payload.baseChannel, 10000)
+            end
+        end
+        assert_true(bind10)
+        assert_true(bind11)
+        assert_true(initAck112)
+        assert_eq(fsm.currentState, "CALIBRATION")
+
+        -- 2) Telemetry feeder replicates telemetry to Base_hangar+1 (112)
+        wirelessModem._transmitted = {}
+        telemetry_feeder.tick(tf, net, comState, fsm, nil, diagState)
+        local telem10002, telem112 = false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10002 and tx.pkt.type == "MSG_FLIGHT_TELEMETRY" then telem10002 = true end
+            if tx.tx == 112 and tx.pkt.type == "MSG_FLIGHT_TELEMETRY" then telem112 = true end
+        end
+        assert_true(telem10002)
+        assert_true(telem112)
+
+        -- 3) Receive MSG_CALIBRATION_CLOSE on Base_hangar+0 (111)
+        wirelessModem._transmitted = {}
+        local closePkt = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_CALIBRATION_CLOSE", time = 2000,
+            payload = { bayId = 2 }
+        }
+        network_manager.dispatch(net, fsm, nil, mixer, 111, 111, closePkt)
+
+        local closeBind10, closeBind11, closeAck112 = false, false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10010 and tx.pkt.type == "MSG_CALIB_BAY_BIND" and tx.pkt.payload.action == "CLOSE" then
+                closeBind10 = true
+            end
+            if tx.tx == 10011 and tx.pkt.type == "MSG_CALIB_BAY_BIND" and tx.pkt.payload.action == "CLOSE" then
+                closeBind11 = true
+            end
+            if tx.tx == 112 and tx.pkt.type == "MSG_CALIBRATION_CLOSE_ACK" then
+                closeAck112 = true
+                assert_eq(tx.pkt.payload.status, "CLOSED")
+            end
+        end
+        assert_true(closeBind10)
+        assert_true(closeBind11)
+        assert_true(closeAck112)
+
+        -- Bay channels 111, 112, 114 closed
+        assert_false(wirelessModem.isOpen(111))
+        assert_false(wirelessModem.isOpen(112))
+        assert_false(wirelessModem.isOpen(114))
+        assert_nil(net.hangarChannels)
+        assert_eq(fsm.currentState, "IDLE_ARMED")
+    end)
+end)
+
+describe("vas two-phase channel rebind cascade", function()
+    it("handles PREPARE and COMMIT rebind cascade to actuation/aero and closes old channels", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem }
+        })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, true)
+        local mixer = {}
+
+        -- 1) Receive MSG_CHANNEL_REBIND (PREPARE) on Base+1 (10001)
+        local preparePkt = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 10,
+            type = "MSG_CHANNEL_REBIND", time = 5000,
+            payload = {
+                transactionId = "TX-1", action = "PREPARE",
+                oldBaseChannel = 10000, newBaseChannel = 10040, bandwidth = 40
+            }
+        }
+        network_manager.dispatch(net, fsm, nil, mixer, 10001, 10001, preparePkt)
+
+        -- New channels 10040, 10041, 10050, 10051 pre-opened
+        assert_true(wirelessModem.isOpen(10040))
+        assert_true(wirelessModem.isOpen(10041))
+        assert_true(wirelessModem.isOpen(10050))
+        assert_true(wirelessModem.isOpen(10051))
+
+        -- PREPARE relayed on 10010 and 10011, and ACK sent on 10001
+        local prepRelay10, prepRelay11, ack10001 = false, false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10010 and tx.pkt.type == "MSG_CHANNEL_REBIND" and tx.pkt.payload.action == "PREPARE" then
+                prepRelay10 = true
+            end
+            if tx.tx == 10011 and tx.pkt.type == "MSG_CHANNEL_REBIND" and tx.pkt.payload.action == "PREPARE" then
+                prepRelay11 = true
+            end
+            if tx.tx == 10001 and tx.pkt.type == "MSG_CHANNEL_REBIND_ACK" then
+                ack10001 = true
+                assert_eq(tx.pkt.payload.transactionId, "TX-1")
+                assert_eq(tx.pkt.payload.nodeId, "01_core")
+                assert_eq(tx.pkt.payload.status, "READY")
+                assert_true(tx.pkt.payload.subNodesOk)
+            end
+        end
+        assert_true(prepRelay10)
+        assert_true(prepRelay11)
+        assert_true(ack10001)
+
+        -- 2) Receive MSG_CHANNEL_REBIND (COMMIT) on Base+1 (10001)
+        wirelessModem._transmitted = {}
+        local commitPkt = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 11,
+            type = "MSG_CHANNEL_REBIND", time = 6000,
+            payload = {
+                transactionId = "TX-1", action = "COMMIT",
+                oldBaseChannel = 10000, newBaseChannel = 10040, bandwidth = 40
+            }
+        }
+        network_manager.dispatch(net, fsm, nil, mixer, 10001, 10001, commitPkt)
+
+        local commitRelay10, commitRelay11 = false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10010 and tx.pkt.type == "MSG_CHANNEL_REBIND" and tx.pkt.payload.action == "COMMIT" then
+                commitRelay10 = true
+            end
+            if tx.tx == 10011 and tx.pkt.type == "MSG_CHANNEL_REBIND" and tx.pkt.payload.action == "COMMIT" then
+                commitRelay11 = true
+            end
+        end
+        assert_true(commitRelay10)
+        assert_true(commitRelay11)
+
+        -- Old channels 10000, 10001, 10010, 10011 must be closed
+        assert_false(wirelessModem.isOpen(10000))
+        assert_false(wirelessModem.isOpen(10001))
+        assert_false(wirelessModem.isOpen(10010))
+        assert_false(wirelessModem.isOpen(10011))
+
+        -- State baseChannel and channels updated
+        assert_eq(net.baseChannel, 10040)
+        assert_eq(net.channels.c2, 10040)
+        assert_eq(net.channels.guidance, 10041)
+        assert_eq(net.channels.actuation, 10050)
+        assert_eq(net.channels.aero, 10051)
+        assert_nil(net.pendingRebind)
     end)
 end)
