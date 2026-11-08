@@ -30,9 +30,9 @@ Before claiming any task completion or fix:
 4. **VERIFY**: Confirm the output directly proves the requirement:
    - If **NO**: Report actual failure status and log output honestly.
    - If **YES**: Proceed to step 5.
-5. **PROMOTE SPEC (Lightweight Exception, If Applicable)**: When the verified implementation fulfills a specification in `docs/specs/approved/<subpath>.md`:
-   - Move the specification file to `docs/specs/implemented/<subpath>.md` (preserving directory hierarchy).
-   - Update affected relative markdown links (`approved/<subpath>` ↔ `implemented/<subpath>`) across `docs/system/*.md` and `docs/specs/{approved,implemented}/**/*.md` and re-verify markdown link integrity (`scratch/verify_all.py` if present).
+5. **PROMOTE SPEC (Lightweight Exception, If Applicable)**: When the verified implementation fulfills a specification in `docs/specs/<domain>/<subsystem>/<SPEC>.md`:
+   - Keep the file path unchanged (Permanent Unified Spec Path: no moving files to `implemented/`). Update the in-document metadata table `문서 상태` from `Approved` to `Implemented` and sync `최종 수정일` in-place.
+   - Run verification tools (`python tools/verify_all_specs.py`) to confirm metadata and specification integrity.
    - **Scope Boundary**: This promotion involves no specification contract change; it is exempt from Mixed-Scope Hard Stop and does **not** invoke `specification-lifecycle-manager`.
 6. **CLAIM**: State the result alongside concrete command output evidence.
 
