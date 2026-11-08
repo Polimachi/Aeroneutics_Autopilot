@@ -3,6 +3,7 @@ local storage_hal = require("storage_hal")
 local trilateration = require("trilateration")
 local protocol = require("protocol")
 local client_core = require("client_core")
+local config_store = require("config_store")
 
 describe("gps storage HAL atomic writes and error handling", function()
     it("writes atomically and reads back JSON in ephemeral CraftOS filesystem", function()
@@ -177,23 +178,29 @@ describe("gps client_core 40-channel auto-resolution and message handling", func
     end)
 end)
 
-describe("gps installer node configuration", function()
-    it("writes 4-channel configuration instead of legacy single channel", function()
-        _G.harness_is_testing = true
-        local installer = require("installer")
-        installer.installNode()
-
-        local cfg, err = storage_hal.readJson("/gps_data/node_cfg.json")
-        assert_not_nil(cfg, err)
+describe("gps config_store 4-channel node configuration and standalone gps_client load", function()
+    it("normalizes default 4-channel node configuration without legacy channel field", function()
+        local cfg, isComplete = config_store.normalizeNodeConfig({}, 7)
+        assert_not_nil(cfg)
         assert_nil(cfg.channel)
         assert_not_nil(cfg.channels)
         assert_eq(cfg.channels.ping, 60001)
         assert_eq(cfg.channels.service, 60002)
         assert_eq(cfg.channels.nodeIn, 60003)
         assert_eq(cfg.channels.mgmt, 60004)
-        assert_eq(cfg.role, "NODE")
-        assert_eq(cfg.networkKey, "GPS_BASE_NET")
-        _G.harness_is_testing = nil
+        assert_eq(cfg.computerId, 7)
+        assert_false(isComplete)
+    end)
+
+    it("verifies legacy installer removal and cleanly loads standalone gps_client", function()
+        local okInstaller, errInstaller = pcall(require, "installer")
+        assert_false(okInstaller, "legacy gps/installer.lua must not be resolvable")
+
+        local okClient, gpsClient = pcall(require, "gps_client")
+        assert_true(okClient, tostring(gpsClient))
+        assert_eq(type(gpsClient), "table")
+        assert_eq(type(gpsClient.locate), "function")
+        assert_eq(type(gpsClient.request), "function")
     end)
 end)
 

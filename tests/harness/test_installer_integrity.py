@@ -78,6 +78,20 @@ class TestInstallerIntegrity(unittest.TestCase):
             f"The following repoPath files in manifest.lua do not exist on disk: {missing_files}",
         )
 
+    def test_legacy_gps_installer_removed(self) -> None:
+        legacy_installer = WORKSPACE_ROOT / "src" / "0_infra" / "gps" / "installer.lua"
+        legacy_installer_core = (
+            WORKSPACE_ROOT / "src" / "0_infra" / "gps" / "modules" / "installer_core.lua"
+        )
+        self.assertFalse(
+            legacy_installer.exists(),
+            f"Legacy GPS installer must be deleted: {legacy_installer}",
+        )
+        self.assertFalse(
+            legacy_installer_core.exists(),
+            f"Legacy GPS installer_core must be deleted: {legacy_installer_core}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

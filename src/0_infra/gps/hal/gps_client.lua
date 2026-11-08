@@ -1,4 +1,8 @@
 -- Hybrid Client API and Modem HAL Adapter for CC:Tweaked GPS
+if package and package.path and not string.find(package.path, "/gps/modules/?.lua", 1, true) then
+    package.path = package.path .. ";/gps/modules/?.lua"
+end
+
 local client_core = require("client_core")
 local protocol = require("protocol")
 
