@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.16.0` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.17.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
@@ -16,10 +16,11 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.17.0` | 2026-11-08 | ASA 어댑터를 ASA 어댑터로 정식 일원화, FCP 타임아웃 사유 및 텔레메트리 헬스 키 동기화, 구 명칭 전면 척결 | 용어 무결성 및 ASA/FCP 표준화 |
 | `v1.16.0` | 2026-11-08 | 비동기 디버그 TUI(`system.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 20Hz 제어 코어 + 5Hz HUD 렌더러 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
 | `v1.15.0` | 2026-11-08 | CC:Avionics 센서 공용 표준 라이브러리(`/lib/avionics_sensors.lua`) 연동 명세 반영, altitude_sensor 공식 `getHeight()` 및 velocity_sensor 3축 합성(`read_vector3`), gimbal_sensor `getAngularRates()` 공식 API 정합화 | 공식 CC:Avionics 센서 API 규격 일원화 및 정밀 동역학 계측 무결성 확립 |
-| `v1.14.0` | 2026-11-08 | 비공력 기체(VECTORED_VTOL, QUADROTOR, HEXAROTOR) 대상 ASA(WAP) 조종면 믹싱/할당 및 MSG_AERO_CMD 송출 비활성화, 텔레메트리 WAP 헬스 체크 바이패스 명시 | 순수 추력형 기체에서 불필요한 공력 통신 및 결함 오경보 배제 |
-| `v1.13.0` | 2026-11-07 | 상위 자율 유도 컴퓨터 명칭 SAS → FCP(Flight Control Program) 개정에 따른 제어 권한 중재('E_STOP > MFD_ACRO > FCP') 및 텔레메트리/상태머신 activeSource('FCP') 동기화, 상대 링크 갱신 | FCP 명칭 전면 개정 동기화 |
+| `v1.14.0` | 2026-11-08 | 비공력 기체(VECTORED_VTOL, QUADROTOR, HEXAROTOR) 대상 ASA 조종면 믹싱/할당 및 MSG_AERO_CMD 송출 비활성화, 텔레메트리 ASA 헬스 체크 바이패스 명시 | 순수 추력형 기체에서 불필요한 공력 통신 및 결함 오경보 배제 |
+| `v1.13.0` | 2026-11-07 | 상위 자율 유도 컴퓨터 구 명칭 → FCP(Flight Control Program) 개정에 따른 제어 권한 중재('E_STOP > MFD_ACRO > FCP') 및 텔레메트리/상태머신 activeSource('FCP') 동기화, 상대 링크 갱신 | FCP 명칭 전면 개정 동기화 |
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 문서**: 
@@ -76,20 +77,20 @@ flowchart TD
             L2A --> L1["Layer 1: flight_dynamics_core<br/>(단위 쿼터니언 SO(3) 조절기 / 승강률 / 방향성 안티와인드업)"]
             L1 --> L2B["Layer 2B: vehicle_policy (Post-Mixer)<br/>(피치 트림 / 반토크 피드포워드 / 천이 블렌더)"]
             L2B --> L3_TAP["Layer 3: actuator_adapter_tca<br/>(TCA 추진기 할당 / 불감대 / dynamicLoad)"]
-            L2B --> L3_WAP["Layer 3: actuator_adapter_asa<br/>(ASA 조종면 할당 / V² 동적압 스케일링)"]
+            L2B --> L3_ASA["Layer 3: actuator_adapter_asa<br/>(ASA 조종면 할당 / V² 동적압 스케일링)"]
             L3_TAP ==>|"추력 포화 피드백"| L1
-            L3_WAP ==>|"조종면 포화 피드백"| L1
+            L3_ASA ==>|"조종면 포화 피드백"| L1
         end
 
         L3_TAP --> SAFETY["state_machine.apply_output_safety_rule<br/>(비행 상태 외 출력 0 마스킹)"]
-        L3_WAP --> SAFETY
+        L3_ASA --> SAFETY
         SAFETY --> COMMS["network_manager<br/>(상단 무선 / 하단 유선 듀얼 라우팅)"]
         SAFETY --> TELEM["telemetry_feeder<br/>(20Hz 텔레메트리 / ACRO 20Hz MFD 직결)"]
         SENS_PIPE -.->|"오일러 각 투영 (Display Boundary)"| UI["ui_renderer<br/>(51x19 HUD 대시보드 / term.blit)"]
     end
 
     subgraph INTERFACE_EXTERNAL["[외부 통신 노드 - 상단 무선 모뎀]"]
-        SAS["FCP (Node 04)<br/>자율 유도 & 통합 C2"]
+        FCP["FCP (Node 04)<br/>자율 유도 & 통합 C2"]
         TCA["TCA 클러스터 (Node 02-xx)<br/>추진기 분산 구동기"]
         ASA["ASA 클러스터 (Node 06-xx)<br/>공력 날개 및 조종면"]
         MFD["Cockpit MFD (Node 03)<br/>계기판 모니터 / 수동 ACRO"]
@@ -119,7 +120,7 @@ flowchart TD
 
 ### 2.0 물리 포트 배치 규격 (Physical Hardware Interfaces)
 VAS 컴퓨터는 상하 듀얼 모뎀 구성을 표준으로 채택하여 유무선 트래픽을 물리적으로 엄격히 격리합니다:
-- **`top` (상단 포트)**: **무선 모뎀 (Wireless Ender Modem)** — 기체 외부 통신, GCS, 지상 시설물, SAS/MFD/TCA/ASA 무선 패킷 송수신 담당 (`Base+0` C2/교정, `Base+1` 유도/ACRO/E-STOP, `Base+2` 텔레메트리, `Base+3` ACRO MFD, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면).
+- **`top` (상단 포트)**: **무선 모뎀 (Wireless Ender Modem)** — 기체 외부 통신, GCS, 지상 시설물, FCP/MFD/TCA/ASA 무선 패킷 송수신 담당 (`Base+0` C2/교정, `Base+1` 유도/ACRO/E-STOP, `Base+2` 텔레메트리, `Base+3` ACRO MFD, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면).
 - **`bottom` (하단 포트)**: **유선 모뎀 (Wired Modem)** — 기체 내부 폐쇄형 센서 네트워크 버스 연결 (`avionics:*`, `create:fluid_tank`, `battery`).
 - **`left`, `right`, `front`, `back`**: 센서 및 액추에이터 직결 금지 (신호 간섭 차단 및 배선 단순화).
 
@@ -234,7 +235,7 @@ sequenceDiagram
     participant P as 3. vehicle_policy (Pre/Post)
     participant C as 4. flight_dynamics_core
     participant A_TAP as 5. actuator_adapter_tca
-    participant A_WAP as 6. actuator_adapter_asa
+    participant A_ASA as 6. actuator_adapter_asa
     participant COM as 7. network_manager & telemetry_feeder
 
     T->>S: 틱 시작 (t = 0.0ms)
@@ -248,18 +249,18 @@ sequenceDiagram
     C->>P: 기본 6-DoF 렌치 baseWrench 반환
     Note over P: 6. [Layer 2B: Post-Mixer]<br/>피치 트림 & 반토크 피드포워드 주입 (0.2ms)
     P->>A_TAP: 합성 렌치 compWrench 전달
-    P->>A_WAP: 합성 렌치 compWrench & airspeed & flapTarget 전달
+    P->>A_ASA: 합성 렌치 compWrench & airspeed & flapTarget 전달
     Note over A_TAP: 7. [Layer 3: TCA Adapter]<br/>추진기 할당 행렬 승산 & 불감대 확장 & 0~15 스케일링<br/>추력 포화 비트맵(satTap) 도출 (0.5ms)
-    Note over A_WAP: 8. [Layer 3: ASA Adapter]<br/>V² 동적압 스케일링 & 조종면 타각 할당<br/>조종면 포화 비트맵(satWap) 도출 (0.4ms)
+    Note over A_ASA: 8. [Layer 3: ASA Adapter]<br/>V² 동적압 스케일링 & 조종면 타각 할당<br/>조종면 포화 비트맵(satAsa) 도출 (0.4ms)
     A_TAP-->>C: 추력 포화 피드백 (satTap)
-    A_WAP-->>C: 조종면 포화 피드백 (satWap)
+    A_ASA-->>C: 조종면 포화 피드백 (satAsa)
     A_TAP->>F: rawOutputsTap & dynamicLoad 전달
-    A_WAP->>F: rawOutputsWap 전달
+    A_ASA->>F: rawOutputsAsa 전달
     Note over F: 9. 상태별 출력 마스킹 (apply_output_safety_rule) (0.2ms)
     F->>COM: 최종 안전 출력 safeOutputsTap, safeOutputsWap & 상태 전달 (t = 4.7ms)
     COM->>COM: 10. TAP으로 MSG_THRUST_CMD 브로드캐스트 (Base+10, 20Hz, 구 Base+6 [DEPRECATED])
-    COM->>COM: 11. WAP으로 MSG_AERO_CMD 브로드캐스트 (Base+11, 20Hz, 구 Base+7 [DEPRECATED])
-    COM->>COM: 12. UAP로 MSG_FLIGHT_TELEMETRY 송출 (Base+2, 20Hz)
+    COM->>COM: 11. ASA로 MSG_AERO_CMD 브로드캐스트 (Base+11, 20Hz, 구 Base+7 [DEPRECATED])
+    COM->>COM: 12. FCP로 MSG_FLIGHT_TELEMETRY 송출 (Base+2, 20Hz)
     opt ACRO 활성화 시 (acroActive == true)
         COM->>COM: 13. MFD로 MSG_MFD_STATE 고속 직접 송출 (Base+3, 20Hz 인계)
     end
@@ -271,7 +272,7 @@ sequenceDiagram
 | :--- | :--- | :--- | :---: |
 | **센서 획득** | `sensor_pipeline` | 4종 센서(자세/고도/속도/연료) `pcall` 일괄 읽기 및 유효성 검사 | $\le 0.8 \text{ ms}$ |
 | **기하/쿼터니언** | `sensor_pipeline`<br>`vec3` / `quat` | 3D 레버암 좌표 변환, EMA 각속도 필터, $SO(3)$ 쿼터니언 합성, 헬스맵 갱신 | $\le 0.7 \text{ ms}$ |
-| **FSM/선점 중재** | `state_machine` | 듀얼 워치독 만료 판정, 9-State 전이, `Base+1` 선점 중재(E_STOP > ACRO > SAS) | $\le 0.3 \text{ ms}$ |
+| **FSM/선점 중재** | `state_machine` | 듀얼 워치독 만료 판정, 9-State 전이, `Base+1` 선점 중재(E_STOP > ACRO > FCP) | $\le 0.3 \text{ ms}$ |
 | **Layer 2A: Pre-Filter** | `vehicle_policy` | 유도 명령 쿼터니언 해석, Stall Guard($\le 10\text{ m/s}$), Flap $V_{fe}$ 가드, 틸트 클램프 | $\le 0.4 \text{ ms}$ |
 | **Layer 1: Core** | `flight_dynamics_core` | 단위 쿼터니언 오차 자세 토크, 승강 속도 Heave PI, 이중 구동계 포화 안티와인드업 | $\le 0.5 \text{ ms}$ |
 | **Layer 2B: Post-Mixer** | `vehicle_policy` | 피치 트림 및 반토크 피드포워드 주입, 천이 블렌딩 | $\le 0.2 \text{ ms}$ |
@@ -296,7 +297,7 @@ flowchart TD
     CORE["6. flight_dynamics_core [Layer 1] (쿼터니언 자세/승강률 제어 & 방향성 안티와인드업)"]
     POLICY["7. vehicle_policy [Layer 2] (Pre/Post 샌드위치: Stall Guard 10m/s / Flap Guard / 트림)"]
     ADAPTER_TAP["8. actuator_adapter_tca [Layer 3] (TCA 클러스터 할당 & 역방향 포화 피드백)"]
-    ADAPTER_WAP["9. actuator_adapter_asa [Layer 3] (ASA 공력 조종면 할당 & V² 동적압 스케일링)"]
+    ADAPTER_ASA["9. actuator_adapter_asa [Layer 3] (ASA 공력 조종면 할당 & V² 동적압 스케일링)"]
     NET["10. network_manager (상단 무선 / 하단 유선 듀얼 모뎀 라우터)"]
     TELEM["11. telemetry_feeder (20Hz 텔레메트리 & ACRO MFD 송출기)"]
     UI["12. ui_renderer (51x19 HUD 대시보드 렌더러 / Display Boundary)"]
@@ -306,7 +307,7 @@ flowchart TD
     DAEMON --> POLICY
     DAEMON --> CORE
     DAEMON --> ADAPTER_TAP
-    DAEMON --> ADAPTER_WAP
+    DAEMON --> ADAPTER_ASA
     DAEMON --> NET
     DAEMON --> TELEM
 
@@ -320,12 +321,12 @@ flowchart TD
     FSM -->|"effectiveCmd"| POLICY
     POLICY -->|"condCmd (Layer 2A Pre-Filter)"| CORE
     ADAPTER_TAP ==>|"satTap (추력 포화 피드백)"| CORE
-    ADAPTER_WAP ==>|"satWap (조종면 포화 피드백)"| CORE
+    ADAPTER_ASA ==>|"satAsa (조종면 포화 피드백)"| CORE
     CORE -->|"baseWrench"| POLICY
     POLICY -->|"compWrench (Layer 2B Post-Mixer)"| ADAPTER_TAP
-    POLICY -->|"compWrench & airspeed (Layer 2B Post-Mixer)"| ADAPTER_WAP
+    POLICY -->|"compWrench & airspeed (Layer 2B Post-Mixer)"| ADAPTER_ASA
     ADAPTER_TAP -->|"rawOutputsTap & dynamicLoad"| FSM
-    ADAPTER_WAP -->|"rawOutputsWap"| FSM
+    ADAPTER_ASA -->|"rawOutputsAsa"| FSM
     FSM -->|"safeOutputsTap & safeOutputsWap"| NET
     NET <==>|"MSG_ATTITUDE_CMD / MSG_THRUST_CMD / MSG_AERO_CMD"| DAEMON
     TELEM -->|"MSG_FLIGHT_TELEMETRY (Base+2) / MSG_MFD_STATE (Base+3)"| NET
@@ -377,13 +378,13 @@ flowchart TD
       
       -- Layer 3: TCA 추진기 및 ASA 공력 조종면 할당 (기종별 분기)
       local rawOutputsTap, satStatusTap = actuator_adapter_tca.allocate(state.adapterTap, compWrench)
-      local rawOutputsWap, satStatusWap = nil, nil
+      local rawOutputsAsa, satStatusWap = nil, nil
       local isAero = (state.policy.vehicleType == "FIXED_WING" or state.policy.vehicleType == "WINGED_VTOL")
       if isAero then
-          rawOutputsWap, satStatusWap = actuator_adapter_asa.allocate(state.adapterWap, compWrench, comState.airspeed, condCmd.flapTarget)
+          rawOutputsAsa, satStatusWap = actuator_adapter_asa.allocate(state.adapterWap, compWrench, comState.airspeed, condCmd.flapTarget)
       end
       
-      local safeOutputsTap, safeOutputsWap = state_machine.apply_output_safety_rule(state.fsm, rawOutputsTap, rawOutputsWap)
+      local safeOutputsTap, safeOutputsWap = state_machine.apply_output_safety_rule(state.fsm, rawOutputsTap, rawOutputsAsa)
       local dynLoad = actuator_adapter_tca.compute_dynamic_load(state.adapterTap, safeOutputsTap)
 
       state.fdCore.lastDemands = { pitch = compWrench.pitchTorque, roll = compWrench.rollTorque, yaw = compWrench.yawTorque }
@@ -409,7 +410,7 @@ flowchart TD
       
       -- 2. Base+11 ASA 공력 조종면 지령 브로드캐스트 (20Hz, 공력 기체 전용)
       if isAero and safeOutputsWap then
-          network_manager.send_packet(state.net, state.net.channels.wapActuation, "MSG_AERO_CMD", {
+          network_manager.send_packet(state.net, state.net.channels.asaActuation, "MSG_AERO_CMD", {
               watchdogSeq = state.tickCount,
               controlState = state.fsm.currentState,
               surfaces = safeOutputsWap
@@ -439,7 +440,7 @@ flowchart TD
   ```
 
 ### 5.3 모듈 3: `state_machine` (9-State 유한 상태 기계, 2단계 시동 및 C2 선점 중재기)
-- **역할**: 기체의 9대 제어 상태를 관리하고, 2단계 시동 시퀀스(`DISARMED` $\to$ `ARMING` $\to$ `IDLE_ARMED` $\to$ `NORMAL`), `Base+1` C2 선점 중재(`E_STOP` > `MFD_ACRO` > `FCP`), 듀얼 워치독(SAS 1500ms, 교정 120s, Failsafe 10s) 감시, 센서 두절 15틱(750ms) 디바운스, 비상 유도 명령 합성 및 TCA/ASA 출력 안전 마스킹(공중 E_STOP 쿠션 추력 포함)을 집행합니다.
+- **역할**: 기체의 9대 제어 상태를 관리하고, 2단계 시동 시퀀스(`DISARMED` $\to$ `ARMING` $\to$ `IDLE_ARMED` $\to$ `NORMAL`), `Base+1` C2 선점 중재(`E_STOP` > `MFD_ACRO` > `FCP`), 듀얼 워치독(FCP 1500ms, 교정 120s, Failsafe 10s) 감시, 센서 두절 15틱(750ms) 디바운스, 비상 유도 명령 합성 및 TCA/ASA 출력 안전 마스킹(공중 E_STOP 쿠션 추력 포함)을 집행합니다.
 - **핵심 시그니처**:
   ```lua
   function state_machine.init(systemConfig, isCalibrated) -> fsmState
@@ -447,7 +448,7 @@ flowchart TD
   function state_machine.update_watchdogs(state, nowMs, comState, healthMap, sensorOk) -> nil
   function state_machine.arbitrate_c2_preemption(state, uapCmd, acroCmd, eStopCmd) -> effectiveCmd, activeSource
   function state_machine.get_effective_command(state, comState) -> effectiveCmd
-  function state_machine.apply_output_safety_rule(state, rawOutputsTap, rawOutputsWap) -> safeOutputsTap, safeOutputsWap
+  function state_machine.apply_output_safety_rule(state, rawOutputsTap, rawOutputsAsa) -> safeOutputsTap, safeOutputsWap
   ```
 
 ### 5.4 모듈 4: `vec3` (3D 불변 벡터 연산자)
@@ -521,14 +522,14 @@ flowchart TD
 - **역할**: 6-DoF 회전 렌치를 공력 조종면(에일러론, 엘리베이터, 러더) 및 양력 증강면(플랩) 타각으로 매핑하고, 대기속도 동적압($V_{air}^2$) 역비례 게인 스케일링($\eta_q = \text{clamp}(0.25, 2.50, (V_{ref}/V_{air})^2)$) 및 불감대 확장을 적용하여 $0 \sim 15$ 이산 타각 신호를 생성하며, 조종면 포화 비트맵(`axisSaturatedPos`, `axisSaturatedNeg`)을 Layer 1으로 역피드백합니다.
 - **핵심 시그니처**:
   ```lua
-  function actuator_adapter_asa.init(surfacesConfig) -> wapAdapterState
+  function actuator_adapter_asa.init(surfacesConfig) -> asaAdapterState
   function actuator_adapter_asa.allocate(state, wrench, airspeed, flapTarget) -> outputsTable, satStatus
   function actuator_adapter_asa.compute_q_scaling(state, airspeed) -> qScale
   function actuator_adapter_asa.update_feedback(state, payload) -> nil
   ```
 
 ### 5.10 모듈 10: `network_manager` (듀얼 모뎀 라우터, 프로토콜 파서 및 동적 채널 관리자)
-- **역할**: 상단 무선 모뎀 온보드 채널(`Base+0` C2 지령, `Base+1` 유도 명령/ACRO/E-STOP, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면, `Base+2` 텔레메트리, `Base+3` ACRO HUD)과 하단 유선 모뎀을 바인딩하며, 격납고 바인딩(`MSG_CALIBRATION_INIT`) 수신 시 베이 채널을 동적 개방하고 하위 노드(TCA, ASA)로 `MSG_CALIB_BAY_BIND`를 중계 전파하며, 동적 채널 재바인딩(`MSG_CHANNEL_REBIND`) 2단계 트랜잭션(Prepare $\to$ Ack $\to$ Commit)을 처리하고 TCA/WAP으로 계단식 포워딩합니다.
+- **역할**: 상단 무선 모뎀 온보드 채널(`Base+0` C2 지령, `Base+1` 유도 명령/ACRO/E-STOP, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면, `Base+2` 텔레메트리, `Base+3` ACRO HUD)과 하단 유선 모뎀을 바인딩하며, 격납고 바인딩(`MSG_CALIBRATION_INIT`) 수신 시 베이 채널을 동적 개방하고 하위 노드(TCA, ASA)로 `MSG_CALIB_BAY_BIND`를 중계 전파하며, 동적 채널 재바인딩(`MSG_CHANNEL_REBIND`) 2단계 트랜잭션(Prepare $\to$ Ack $\to$ Commit)을 처리하고 TCA/ASA으로 계단식 포워딩합니다.
 - **핵심 시그니처**:
   ```lua
   function network_manager.init(systemConfig) -> netState
@@ -540,7 +541,7 @@ flowchart TD
   ```
 
 ### 5.11 모듈 11: `telemetry_feeder` (20Hz 텔레메트리 & ACRO MFD 직결 송출기)
-- **역할**: 20Hz 비행 텔레메트리(`MSG_FLIGHT_TELEMETRY`)를 채널 `Base+2`로 브로드캐스트하고, 일반 비행 모드에서는 `Base+3` 송출을 유예(UAP가 5Hz 전담)하며, 조종석 수동 급기동(`acroActive == true`) 진입 시에만 `Base+3`으로 `MSG_MFD_STATE`를 20Hz 고속 직접 송출로 인계합니다.
+- **역할**: 20Hz 비행 텔레메트리(`MSG_FLIGHT_TELEMETRY`)를 채널 `Base+2`로 브로드캐스트하고, 일반 비행 모드에서는 `Base+3` 송출을 유예(fcp가 5Hz 전담)하며, 조종석 수동 급기동(`acroActive == true`) 진입 시에만 `Base+3`으로 `MSG_MFD_STATE`를 20Hz 고속 직접 송출로 인계합니다.
 - **핵심 시그니처**:
   ```lua
   function telemetry_feeder.init(systemConfig) -> feederState
@@ -595,7 +596,7 @@ $$S_{cushion} = \lfloor \text{hoverBaseThrottle} \times 0.6 + 0.5 \rfloor \quad 
 
 #### 3) 이중 구동계 역방향 포화 피드백(`satCombined`)에 연동된 방향성 적분기 안티 와인드업 (Directional Anti-Windup)
 Layer 3의 추진기 어댑터(`actuator_adapter_tca`)와 공력 조종면 어댑터(`actuator_adapter_asa`) 양측으로부터 축별 양/음 포화 상태(`axisSaturatedPos`, `axisSaturatedNeg`)를 수집하여 통합 포화 플래그를 산출합니다. 어느 한 구동계라도 해당 방향으로 포화된 경우, **해당 축의 추가 적분 누적만을 선별 동결**합니다:
-$$I_{k} = \begin{cases} I_{k} & (\Delta I_k > 0 \land (\text{satTapPos}_k \lor \text{satWapPos}_k)) \\ I_{k} & (\Delta I_k < 0 \land (\text{satTapNeg}_k \lor \text{satWapNeg}_k)) \\ \text{clamp}(-L_k, L_k, I_k + \Delta I_k) & (\text{정상 적분 허용}) \end{cases} \quad (\Delta I_k = e_k \cdot \Delta t)$$
+$$I_{k} = \begin{cases} I_{k} & (\Delta I_k > 0 \land (\text{satTapPos}_k \lor \text{satAsaPos}_k)) \\ I_{k} & (\Delta I_k < 0 \land (\text{satTapNeg}_k \lor \text{satAsaNeg}_k)) \\ \text{clamp}(-L_k, L_k, I_k + \Delta I_k) & (\text{정상 적분 허용}) \end{cases} \quad (\Delta I_k = e_k \cdot \Delta t)$$
 
 ```lua
 local function update_axis_integrator(currentVal, err, dt, limit, isSatPos, isSatNeg)
@@ -614,13 +615,13 @@ end
 ### 6.3 Layer 2 Vehicle Policy 샌드위치 알고리즘 (Pre/Post Wrapper)
 
 #### 1) Pre-Filter: 포락선 보호, Stall Guard 및 Flap Guard (`pre_process_guidance`)
-- **유도 목표 쿼터니언 변환**: UAP가 전달한 오일러 각도(`angleTargets`) 또는 쿼터니언을 해석하여 일관된 $\mathbf{q}_{target}$ 합성.
+- **유도 목표 쿼터니언 변환**: FCP가 전달한 오일러 각도(`angleTargets`) 또는 쿼터니언을 해석하여 일관된 $\mathbf{q}_{target}$ 합성.
 - **틸트 각도 제한 (`clamp_tilt_limits`)**: 기체 전복을 방지하기 위해 오일러 피치/롤 각도를 설정값($\text{maxTiltDeg} = 35.0^\circ$) 내로 클램핑.
 - **단일화된 실속 방지 가드 (Single Stall Guard)**: 고정익 및 복합익 천이 구간에서 대기속도가 한계 이하($V_{air} \le 10.0\text{ m/s}$)로 떨어질 때, **오직 `isAirspeedValid == true`일 때만** 개입하여:
   - 목표 피치각을 수평 이하($\le 0.0^\circ$)로 강제 클램프 (기수 들림 Nose-Up 원천 차단).
   - 최소 추진 스로틀을 $\ge 0.60$ (정수값 $\ge 9$)으로 강제 부스트.
-  - *(UAP는 중복 연산하지 않고 순수 유도 목표만을 출력하며, 실속 방지는 VAS Layer 2A에서 단일 완결)*
-- **플랩 구조 한계 속도 가드 (Flap $V_{fe}$ Guard)**: 대기속도가 플랩 전개 한계 속도($V_{fe} > 15.0\text{ m/s}$)를 초과할 경우, 상위 UAP의 플랩 요구치(`flapTarget`)를 무시하고 플랩 타각을 강제로 $0.0$(완전 접힘)으로 클램핑하여 고속 비행 시 날개 구조 파손 방지.
+  - *(FCP는 중복 연산하지 않고 순수 유도 목표만을 출력하며, 실속 방지는 VAS Layer 2A에서 단일 완결)*
+- **플랩 구조 한계 속도 가드 (Flap $V_{fe}$ Guard)**: 대기속도가 플랩 전개 한계 속도($V_{fe} > 15.0\text{ m/s}$)를 초과할 경우, 상위 fcp의 플랩 요구치(`flapTarget`)를 무시하고 플랩 타각을 강제로 $0.0$(완전 접힘)으로 클램핑하여 고속 비행 시 날개 구조 파손 방지.
 - **고정익 비상 비행 프로파일 (Fixed-Wing Emergency Profiles)**:
   - `FAILSAFE_HOLD`: 고정익 기체는 제자리 호버링이 불가능하므로, $18.0^\circ$ 뱅크각의 협조 선회 체공(Coordinated Loiter Orbit)을 비행 속도 $V_{air} \ge 1.3 V_{stall}$ ($13.0\text{ m/s}$)로 자동 유지.
   - `EMERGENCY_LAND`: 안전 진입 속도 $V_{air} \ge 1.25 V_{stall}$ ($12.5\text{ m/s}$) 및 정속 완경사 강하($V_y = -1.0\text{ m/s}$) 활공각 유도.
@@ -641,7 +642,7 @@ $$S_{cmd, i} = \begin{cases} 0 & (S_{raw, i} \le 0.05) \\ \text{clamp}\left(\lce
 ### 6.5 Layer 3 Platform Actuator Adapter: ASA 조종면 할당 & 동적압($V^2$) 스케일링 (`actuator_adapter_asa`)
 > **기종별 가동 정책 (Airframe Gating Rule)**:
 > - 본 모듈은 공력 날개/타면을 보유한 `FIXED_WING` 및 `WINGED_VTOL` 기체에서만 활성화됩니다.
-> - `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 비행체에서는 본 모듈 할당 연산 및 `Base+11` `MSG_AERO_CMD` 송출이 원천 배제(Bypass)되며, 포화 비트맵 및 텔레메트리 헬스 진단 시 WAP을 평가하지 않습니다.
+> - `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 비행체에서는 본 모듈 할당 연산 및 `Base+11` `MSG_AERO_CMD` 송출이 원천 배제(Bypass)되며, 포화 비트맵 및 텔레메트리 헬스 진단 시 ASA을 평가하지 않습니다.
 
 공력 조종면(에일러론, 엘리베이터, 러더)의 공력 효과는 대기속도 동적압($q = \frac{1}{2}\rho V^2$)에 비례하므로, 고속 시에는 작은 타각으로 충분한 조종 모멘트가 발생하고 저속 시에는 큰 타각이 필요합니다. 따라서 기준 속도 $V_{ref} = 20.0\text{ m/s}$를 기준으로 동적압 역비례 스케일링 계수 $\eta_q$를 적용합니다:
 $$\eta_q = \text{clamp}\left(0.25, \; 2.50, \; \left(\frac{V_{ref}}{\max(5.0, V_{air})}\right)^2\right)$$
@@ -682,9 +683,9 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 | **`DISARMED`** | 미시동 (미교정) | 미교정 기체 부팅 초기 상태. 계측만 수행하며 모든 액추에이터 출력 0 (`outputs = 0`). |
 | **`ARMING`** | 시동 점검 (1단계) | `arm = true, flightActive = false` 수신 시 진입. TCA/ASA 온라인 탐색 및 액추에이터 헬스 검증, 출력 0 유지. |
 | **`IDLE_ARMED`** | 대기 (시동 완료) | 액추에이터 준비 완료 후 비행 대기 상태. 스로틀 0, 출력 0 유지, 적분기 0 리셋 동결. |
-| **`NORMAL`** | 정상 비행 (2단계) | `arm = true, flightActive = true` 활성화 및 20Hz 폐루프 PID/이중 할당 활성화. SAS 명령 또는 MFD ACRO 추종. |
+| **`NORMAL`** | 정상 비행 (2단계) | `arm = true, flightActive = true` 활성화 및 20Hz 폐루프 PID/이중 할당 활성화. FCP 명령 또는 MFD ACRO 추종. |
 | **`CALIBRATION`** | 지상 동역학 식별 | Alignment 지상 교정 모드. 비행 제어 출력 0 고정, 120초 타임아웃 감시. |
-| **`FAILSAFE_HOLD`** | 1차 페일세이프 (호버/선회) | SAS 명령 두절(1500ms) 또는 15틱(750ms) 이상 센서 두절. Pitch/Roll 0 수평 호버 (고정익은 18° 선회 체공) + 10초 카운트다운. |
+| **`FAILSAFE_HOLD`** | 1차 페일세이프 (호버/선회) | FCP 명령 두절(1500ms) 또는 15틱(750ms) 이상 센서 두절. Pitch/Roll 0 수평 호버 (고정익은 18° 선회 체공) + 10초 카운트다운. |
 | **`EMERGENCY_LAND`** | 2차 비상 착륙 | FAILSAFE_HOLD 10초 초과 또는 구동계 치명 상실. 회전익 수직 강하($Vy = -1.5\text{ m/s}$), 고정익 활공 강하($Vy = -1.0\text{ m/s}$). |
 | **`AIRBORNE_EMERGENCY`** | 공중 비상 개입 | 런타임 패닉 또는 비상 유도 시 진입. 완경사 강하 후 접지 시 `E_STOP` 전이. |
 | **`E_STOP`** | 비상 정지 | 비행 종료 및 치명적 비상 킬스위치. 공중 시 쿠션 스로틀 인가, 지상 안착 시 전 구동계 0 차단 (하드 래치). |
@@ -692,9 +693,9 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 ### 7.2 Base+1 C2 선점 중재 및 2단계 시동 프로토콜
 1. **`Base + 1` 다중 발신원 선점 중재 매트릭스 (Preemption Arbitration)**:
    - **우선순위 1 (`EMERGENCY_DIRECT`)**: `MSG_EMERGENCY_OVERRIDE` (`eStop = true`). 발신처(조종석 MFD `PILOT_PRIMARY` 또는 지상 `GCS_OVERRIDE`) 불문 즉각 물리 구동계 차단 집행.
-   - **우선순위 2 (`MFD_ACRO`)**: 조종석 MFD가 발신한 `MSG_ATTITUDE_CMD` (`acroActive = true`). SAS 명령을 선점 차단하고 20Hz 각속도 직접 조종 인계. 동시에 `Base+3` HUD 다운링크를 20Hz 직접 송출로 전환.
+   - **우선순위 2 (`MFD_ACRO`)**: 조종석 MFD가 발신한 `MSG_ATTITUDE_CMD` (`acroActive = true`). FCP 명령을 선점 차단하고 20Hz 각속도 직접 조종 인계. 동시에 `Base+3` HUD 다운링크를 20Hz 직접 송출로 전환.
    - **우선순위 3 (`FCP`)**: `source = "FCP"`인 자율 비행 지령 추종.
-   - **공중 복구 정책**: `FAILSAFE_HOLD` 및 `EMERGENCY_LAND` 상태에서도 조종사의 ACRO 개입 또는 SAS 명령 정상 복구(`flightActive = true`) 시 `NORMAL`로 자율 복귀 허용. 단, `E_STOP`은 시스템 리셋 전까지 해제 불가(Hard-Latched).
+   - **공중 복구 정책**: `FAILSAFE_HOLD` 및 `EMERGENCY_LAND` 상태에서도 조종사의 ACRO 개입 또는 FCP 명령 정상 복구(`flightActive = true`) 시 `NORMAL`로 자율 복귀 허용. 단, `E_STOP`은 시스템 리셋 전까지 해제 불가(Hard-Latched).
 2. **2단계 시동 프로토콜 (2-Stage Arming Protocol)**:
    - **1단계 (Arming)**: `MSG_ATTITUDE_CMD` (`arm = true`, `flightActive = false`) 수신 $\to$ `ARMING` 전이 $\to$ TCA/ASA 디스커버리 완료 시 `IDLE_ARMED` 대기 (출력 0 마스킹).
    - **2단계 (Flight Active)**: `MSG_ATTITUDE_CMD` (`arm = true`, `flightActive = true`) 수신 $\to$ `NORMAL` 전이 $\to$ 폐루프 제어 출력 즉시 인가.
@@ -706,7 +707,7 @@ stateDiagram-v2
     [*] --> DISARMED: 미교정 부팅
     [*] --> IDLE_ARMED: 교정 완료 부팅
 
-    DISARMED --> ARMING: SAS/MFD 시동 지령 (arm=true, flightActive=false)
+    DISARMED --> ARMING: FCP/MFD 시동 지령 (arm=true, flightActive=false)
     ARMING --> IDLE_ARMED: TCA & ASA 구동계 준비 완료 (ACK 수신)
     ARMING --> DISARMED: 시동 취소 (arm=false) 또는 타임아웃
     
@@ -716,13 +717,13 @@ stateDiagram-v2
 
     CALIBRATION --> IDLE_ARMED: 프로파일 반영 완료 (MSG_PROFILE_SYNC) 또는 타임아웃/ABORT
 
-    NORMAL --> FAILSAFE_HOLD: SAS 명령 두절(1500ms) OR 센서 15틱(750ms) 두절 (ACRO 비활성 시)
+    NORMAL --> FAILSAFE_HOLD: FCP 명령 두절(1500ms) OR 센서 15틱(750ms) 두절 (ACRO 비활성 시)
     NORMAL --> EMERGENCY_LAND: 주 구동계 완전 상실 (API_TOTAL_LOSS)
     NORMAL --> AIRBORNE_EMERGENCY: 런타임 틱 패닉
     NORMAL --> E_STOP: 하드 킬스위치 수신 (MSG_EMERGENCY_OVERRIDE.eStop=true)
     NORMAL --> IDLE_ARMED: 정상 착륙 완료 후 비행 비활성화 (flightActive=false)
 
-    FAILSAFE_HOLD --> NORMAL: SAS 명령 복구 OR 조종사 ACRO 선점 개입
+    FAILSAFE_HOLD --> NORMAL: FCP 명령 복구 OR 조종사 ACRO 선점 개입
     FAILSAFE_HOLD --> EMERGENCY_LAND: 10초 카운트다운 만료
     FAILSAFE_HOLD --> E_STOP: 하드 킬스위치 수신
 
@@ -747,13 +748,13 @@ stateDiagram-v2
 | `IDLE_ARMED` | `MSG_CALIB_START` | `action != "ABORT"` | 120s 타이머 가동, 출력 차단 | `CALIBRATION` | 출력 0 고정 |
 | `CALIBRATION` | `MSG_PROFILE_SYNC` | 유효 계수 수신 | `save_json` 영구저장, `MSG_CALIB_ACK` 송출 | `IDLE_ARMED` | 출력 0 고정 |
 | `CALIBRATION` | `CALIB_TIMEOUT` | 120s 초과 또는 `ABORT` | 베이 채널 닫기, 타이머 리셋 | `IDLE_ARMED` | 출력 0 고정 |
-| `NORMAL` | `UAP_CMD_TIMEOUT` | 최신 명령 > 1500ms & ACRO 미가동 | 호버(선회) 홀드, 10s 타이머 시작 | `FAILSAFE_HOLD` | Pitch/Roll 0 호버 |
+| `NORMAL` | `FCP_CMD_TIMEOUT` | 최신 명령 > 1500ms & ACRO 미가동 | 호버(선회) 홀드, 10s 타이머 시작 | `FAILSAFE_HOLD` | Pitch/Roll 0 호버 |
 | `NORMAL` | `SENSOR_HEALTH_DROP` | sensorOk 실패 $\ge 15$틱 | 호버(선회) 홀드, 10s 타이머 시작 | `FAILSAFE_HOLD` | Pitch/Roll 0 호버 |
 | `NORMAL` | `ACTUATOR_TOTAL_LOSS`| TCA/ASA 치명 상실 | 즉시 비상 착륙 유도 개시 | `EMERGENCY_LAND` | $Vy = -1.5\text{ m/s}$ 강하 |
 | `NORMAL` | `MFD_ACRO_ENGAGE` | `acroActive == true` | MFD 직결 모드 전환, Base+3 20Hz 인계 | `NORMAL` | 조종석 직접 제어 |
 | `NORMAL` | `E_STOP_TRIGGER` | `MSG_EMERGENCY_OVERRIDE` | 하드 킬스위치 발동, 공중 쿠션 스로틀 | `E_STOP` | 공중: 쿠션, 지상: 0 |
 | `NORMAL` | `TOUCHDOWN` | `flightActive == false` 착륙 완료 | 스로틀 0 마스킹, 지상 대기 | `IDLE_ARMED` | 출력 0 고정 |
-| `FAILSAFE_HOLD`| `CMD_RECOVER` | 10s 이내 SAS 유효 명령 OR ACRO 개입 | PID 적분기 동기화 후 복귀 | `NORMAL` | 정상 제어 출력 |
+| `FAILSAFE_HOLD`| `CMD_RECOVER` | 10s 이내 FCP 유효 명령 OR ACRO 개입 | PID 적분기 동기화 후 복귀 | `NORMAL` | 정상 제어 출력 |
 | `FAILSAFE_HOLD`| `HOLD_TIMEOUT` | 10s 초과 미복구 | 정속 비상 강하 유도 개시 | `EMERGENCY_LAND` | $Vy = -1.5\text{ m/s}$ 강하 |
 | `EMERGENCY_LAND`| `PILOT_RECOVER` | 조종사 MFD ACRO 선점 조작 개입 | 수동 탈출 허용, 20Hz 직결 | `NORMAL` | 조종석 직접 제어 |
 | `EMERGENCY_LAND`| `TOUCHDOWN` | 접지 (`isAirborne == false`) | 비상 정지 및 출력 차단 | `E_STOP` | 출력 0 차단 |
@@ -810,7 +811,7 @@ stateDiagram-v2
         },
         actuatorHealth = {         -- 구동계 서브시스템 통합 헬스
             tap = true,            -- TCA 추진기 클러스터 정상 여부
-            wap = true             -- ASA 공력 조종면 클러스터 정상 여부
+            asa = true             -- ASA 공력 조종면 클러스터 정상 여부
         }
     }
 }
@@ -820,8 +821,8 @@ stateDiagram-v2
 - **채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`)
 - **수신 주기**: 20Hz (매 50ms)
 - **패킷 타입**: `MSG_ATTITUDE_CMD`
-- **선점 중재 규칙**: `MFD_ACRO` (`acroActive = true`) 발신 시 SAS 지령 선점 차단 및 VAS 20Hz 직접 추종.
-- **타임아웃 감시**: `NORMAL` 상태에서 SAS 명령 1,500ms 무수신 시 `FAILSAFE_HOLD` 전이.
+- **선점 중재 규칙**: `MFD_ACRO` (`acroActive = true`) 발신 시 FCP 지령 선점 차단 및 VAS 20Hz 직접 추종.
+- **타임아웃 감시**: `NORMAL` 상태에서 FCP 명령 1,500ms 무수신 시 `FAILSAFE_HOLD` 전이.
 
 ```lua
 {
@@ -1169,7 +1170,7 @@ stateDiagram-v2
 ### 8.7 [Interface I-6] 조종석 MFD 상태 피드 (`VAS` $\rightarrow$ `Cockpit MFD`)
 - **채널**: `CH_MFD_STATE` (`Base + 3`)
 - **다운링크 인계 규칙**:
-  - **일반 비행 모드 (NORMAL, FAILSAFE, EMERGENCY_LAND 등)**: UAP가 `Base+3`으로 5Hz 통합 비행/항법 패킷 송출을 전담하며, VAS-Core는 송출을 유예(Silence)합니다.
+  - **일반 비행 모드 (NORMAL, FAILSAFE, EMERGENCY_LAND 등)**: FCP가 `Base+3`으로 5Hz 통합 비행/항법 패킷 송출을 전담하며, VAS-Core는 송출을 유예(Silence)합니다.
   - **수동 급기동 모드 (ACRO)**: 조종석 MFD가 `acroActive = true`를 선점 인가하는 즉시, VAS-Core가 `Base+3`을 독점 인계하여 20Hz 고속 저지연 HUD 프레임을 직접 송출합니다.
 
 ```lua
@@ -1201,10 +1202,10 @@ stateDiagram-v2
 
 ### 8.8 [Interface I-2] 비상 상태 경보 및 하드 킬스위치 (`VAS` $\leftrightarrow$ `MFD` / `GCS` / `FCP`)
 - **채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`)
-- **비상 정지 선점 중재**: MFD (`PILOT_PRIMARY`) 또는 지상 GCS (`GCS_OVERRIDE`)가 발신하는 `MSG_EMERGENCY_OVERRIDE`는 UAP의 연산 생존 여부와 무관하게 최우선 선점되어 즉각 물리 구동계 컷오프(공중 쿠션 정지 포함)를 집행합니다. *(참고: 비상착륙 및 긴급홀드는 UAP가 Base+0으로 주도)*
+- **비상 정지 선점 중재**: MFD (`PILOT_PRIMARY`) 또는 지상 GCS (`GCS_OVERRIDE`)가 발신하는 `MSG_EMERGENCY_OVERRIDE`는 fcp의 연산 생존 여부와 무관하게 최우선 선점되어 즉각 물리 구동계 컷오프(공중 쿠션 정지 포함)를 집행합니다. *(참고: 비상착륙 및 긴급홀드는 fcp가 Base+0으로 주도)*
 
 ```lua
--- 1. 공중 비상 셧다운 경보 (MSG_EMERGENCY_ALERT, VAS -> SAS/GCS)
+-- 1. 공중 비상 셧다운 경보 (MSG_EMERGENCY_ALERT, VAS -> FCP/GCS)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1230,7 +1231,7 @@ stateDiagram-v2
         eStop = true,                 -- 물리 구동계 즉각 컷오프 하드 킬스위치
         reason = "PILOT_MANUAL_E_STOP",
         source = "PILOT_PRIMARY",     -- "PILOT_PRIMARY" 또는 "GCS_OVERRIDE"
-        descentRate = -1.0,           -- [DEPRECATED] 비상착륙은 UAP가 외루프 유도로 Base+0에서 주도
+        descentRate = -1.0,           -- [DEPRECATED] 비상착륙은 FCP가 외루프 유도로 Base+0에서 주도
         targetOrientation = { w = 1.0, x = 0.0, y = 0.0, z = 0.0 } -- [DEPRECATED]
     }
 }
@@ -1255,12 +1256,12 @@ stateDiagram-v2
 ```
 
 ### 8.10 [Interface I-9] 계단식 동적 채널 재바인딩 프로토콜 (`FCP` $\rightarrow$ `VAS` $\rightarrow$ `TCA/ASA`)
-- **수신 채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`) (SAS 발신)
+- **수신 채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`) (FCP 발신)
 - **전파 채널**: `CH_THRUST_ACTUATION` (`Base + 10`), `CH_AERO_ACTUATION` (`Base + 11`) (TCA/ASA 전파, 구 `Base+6/7` [DEPRECATED])
-- **트랜잭션 절차**: 2단계 커밋(Prepare $\to$ Ack $\to$ Commit). UAP로부터 PREPARE 수신 시 하위 TCA/WAP으로 계단식 전파 후 응답 취합, UAP로 ACK 회신, COMMIT 수신 시 일제히 새 베이스 채널로 스위칭.
+- **트랜잭션 절차**: 2단계 커밋(Prepare $\to$ Ack $\to$ Commit). FCP로부터 PREPARE 수신 시 하위 TCA/ASA으로 계단식 전파 후 응답 취합, fcp로 ACK 회신, COMMIT 수신 시 일제히 새 베이스 채널로 스위칭.
 
 ```lua
--- 1. SAS -> VAS 채널 재바인딩 준비 요청 (MSG_CHANNEL_REBIND, Stage 1: PREPARE)
+-- 1. FCP -> VAS 채널 재바인딩 준비 요청 (MSG_CHANNEL_REBIND, Stage 1: PREPARE)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1277,7 +1278,7 @@ stateDiagram-v2
     }
 }
 
--- 2. VAS -> SAS 준비 완료 응답 (MSG_REBIND_ACK)
+-- 2. VAS -> FCP 준비 완료 응답 (MSG_REBIND_ACK)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1290,7 +1291,7 @@ stateDiagram-v2
         status = "READY",
         subnodesReady = {
             tap = true,
-            wap = true
+            asa = true
         }
     }
 }
@@ -1411,7 +1412,7 @@ stateDiagram-v2
     "mfd": 3,
     "reserved04": 4,
     "actuation": 6,
-    "wapActuation": 7
+    "asaActuation": 7
   },
   "bayDynamicAllocation": {
     "blockStart": 101,
@@ -1500,14 +1501,14 @@ projects/vac_core/
 │   │   ├── telemetry_feeder.lua       # 20Hz 텔레메트리 및 ACRO MFD 직결 송출기
 │   │   └── ui_renderer.lua            # 51x19 HUD 대시보드 렌더러 (term.blit)
 │   ├── node_tap.lua                   # 클러스터 시뮬레이션용 Mock TCA 노드
-│   └── node_uap.lua                   # 클러스터 시뮬레이션용 Mock SAS 노드
+│   └── node_fcp.lua                   # 클러스터 시뮬레이션용 Mock FCP 노드
 ├── tests/
 │   ├── test_vec3.lua                  # 3D 벡터 모듈 단위 테스트
 │   ├── test_quat.lua                  # 단위 쿼터니언 모듈 단위 테스트
 │   ├── test_flight_dynamics_core.lua  # Layer 1 제어 코어 단위 테스트
 │   ├── test_vehicle_policy.lua        # Layer 2 차량 정책 모듈 단위 테스트
 │   ├── test_actuator_adapter_tap.lua  # Layer 3 액추에이터 어댑터 단위 테스트
-│   ├── test_actuator_adapter_wap.lua  # Layer 3 ASA 공력 어댑터 단위 테스트
+│   ├── test_actuator_adapter_asa.lua  # Layer 3 ASA 공력 어댑터 단위 테스트
 │   ├── test_sensor_pipeline.lua       # 센서 파이프라인 단위 테스트
 │   ├── test_state_machine.lua         # FSM 상태 전이 단위 테스트
 │   ├── test_network_manager.lua       # 듀얼 모뎀 라우팅 단위 테스트
@@ -1532,10 +1533,10 @@ projects/vac_core/
 | 발생 결함 | 감지 방식 | 시스템 반응 및 안전 동작 |
 | :--- | :--- | :--- |
 | **Gimbal 센서 단절** | `pcall` 실패 / `nil` 반환 | 1. `sensorHealth.gimbal = false`, `sensorHealth.isAttitudeValid = false`, `sensorOk = false` 통보<br/>2. Layer 2A에서 목표 쿼터니언을 수평 단위 쿼터니언($\mathbf{q}_{identity}$)으로 강제 고정<br/>3. `FAILSAFE_HOLD` 진입: 수평 자세 유지 및 10초 카운트다운 개시 |
-| **고도계(Altimeter) 단절** | `pcall` 실패 / `nil` 반환 | 1. `sensorHealth.altitude = false`, `sensorHealth.isAltitudeValid = false`, `sensorOk = false` 통보<br/>2. 고도 유지 루프 해제, 직전 승강 속도 추정치 유지<br/>3. UAP로 비상 지표면 이격 경고 발령 |
+| **고도계(Altimeter) 단절** | `pcall` 실패 / `nil` 반환 | 1. `sensorHealth.altitude = false`, `sensorHealth.isAltitudeValid = false`, `sensorOk = false` 통보<br/>2. 고도 유지 루프 해제, 직전 승강 속도 추정치 유지<br/>3. fcp로 비상 지표면 이격 경고 발령 |
 | **속도계(Velocity) 단절** | `pcall` 실패 / `nil` 반환 | 1. `sensorHealth.velocity = false`, `sensorHealth.isVelocityValid = false`, `isAirspeedValid = false` 통보<br/>2. 레버암 선속도 보정 항을 0으로 차단, `translationBias` 강제 무효화<br/>3. **Stall Guard 개입 차단**: 대기속도 신뢰 불가 상태이므로 오조작 기수 강하 다이브 원천 방지 |
 | **연료(`fuel`) 센서 단절** | `pcall` 실패 / `nil` 반환 | 1. `sensorHealth.fuel = false`, `sensorHealth.isFuelValid = false`, `sensorOk = false` 통보<br/>2. **엄격 페일세이프 발동**: 안전 착륙(Landing) 또는 RTH 복귀 강제 트리거 |
-| **추력기 과부하 (`dynamicLoad > 0.90`)** | 추력기 총합 부하율 | 1. SAS 및 MFD에 추진 한계 임박 경보 표출<br/>2. 급격한 추가 기동 지시 시 선회율 제한(Rate Clamping) 적용 |
+| **추력기 과부하 (`dynamicLoad > 0.90`)** | 추력기 총합 부하율 | 1. FCP 및 MFD에 추진 한계 임박 경보 표출<br/>2. 급격한 추가 기동 지시 시 선회율 제한(Rate Clamping) 적용 |
 | **추력기 포화 (`isSaturated == true`)** | `MSG_ACTUATOR_STATUS` 피드백 | 1. Layer 3 `actuator_adapter_tca`이 `axisSaturatedPos`/`axisSaturatedNeg` 비트맵을 Layer 1으로 즉시 반환<br/>2. Layer 1의 해당 축 적분항(I-Gain)을 방향성 동결(Directional Freeze)하여 추가 와인드업 발산 억제 |
 | **보조 추진기 손실 (`API_TOTAL_LOSS`)** | `MSG_ACTUATOR_STATUS` (`actCount=0`) | 1. 비필수 보조/RCS 추진기일 경우 6-DoF 할당 행렬 동적 재할당(Reconfiguration) 시도<br/>2. MFD에 구동계 성능 저하(DEGRADED) 경보 표출 |
 | **주 추진/양력 축 상실 (`API_TOTAL_LOSS`)** | `MSG_ACTUATOR_STATUS` (`actCount=0`) | 1. 어댑터 재할당 불능 판정 즉시 `EMERGENCY_LAND` 강제 전이<br/>2. 전 기체 안전 하강 시퀀스 즉시 돌입 |
@@ -1555,15 +1556,15 @@ projects/vac_core/
 | **IS-02A.1**| TS-02A| Layer 1: 단위 쿼터니언 자세 조절기, 승강률 렌치 및 방향성 안티와인드업 | `flight_dynamics_core.lua` / `test_flight_dynamics_core.lua` | **PASS** |
 | **IS-03A.1**| TS-03A| Layer 2: 유도 명령 조건화, 센서 유효성 기반 Stall Guard, 트림 주입, 미교정 감쇄 모드($20^\circ$) | `vehicle_policy.lua` / `test_vehicle_policy.lua` | **PASS** |
 | **IS-04A.1**| TS-04A| Layer 3: TCA 클러스터 제어 할당 행렬, 불감대 확장, 역방향 포화 피드백, 프로파일 핫 리로드 | `actuator_adapter_tca.lua` / `test_actuator_adapter_tap.lua` | **PASS** |
-| **IS-04A.2**| TS-04A| Layer 3: ASA 공력 조종면(에일러론/엘리베이터/러더/플랩) 제어 할당 및 동적압($V^2$) 역비례 게인 스케일링 | `actuator_adapter_asa.lua` / `test_actuator_adapter_wap.lua` | **PASS** |
+| **IS-04A.2**| TS-04A| Layer 3: ASA 공력 조종면(에일러론/엘리베이터/러더/플랩) 제어 할당 및 동적압($V^2$) 역비례 게인 스케일링 | `actuator_adapter_asa.lua` / `test_actuator_adapter_asa.lua` | **PASS** |
 | **IS-01.1** | TS-01 | 0-tick pcall 센서 샘플링 및 다계층 헬스 맵(`sensorHealth`, `sensorOk`) 산출 | `sensor_pipeline.lua` / `test_sensor_pipeline.lua` | **PASS** |
 | **IS-01.2** | TS-01 | 3D 레버암 기하 동역학 보정 (`math.rad` 각속도 변환, 고도 부호 교정) | `sensor_pipeline.lua` / `test_sensor_pipeline.lua` | **PASS** |
-| **IS-02.1** | TS-02 | 8-State FSM 상태 전이 매트릭스, 듀얼 워치독(SAS 1500ms, 교정 120s), 센서 두절 15틱 디바운스 | `state_machine.lua` / `test_state_machine.lua` | **PASS** |
+| **IS-02.1** | TS-02 | 8-State FSM 상태 전이 매트릭스, 듀얼 워치독(FCP 1500ms, 교정 120s), 센서 두절 15틱 디바운스 | `state_machine.lua` / `test_state_machine.lua` | **PASS** |
 | **IS-02.2** | TS-02 | Failsafe 목표치 자체 합성기, 공중 E_STOP 쿠션 스로틀 및 출력 안전 마스킹 | `state_machine.lua` / `test_state_machine.lua` | **PASS** |
 | **IS-05.1** | TS-05 | 듀얼 모뎀(상단 무선 `top`, 하단 유선 `bottom`) 타입 모뎀 자동 탐색, ICD 엔벨로프, 비상/교정 패킷 | `network_manager.lua` / `test_network_manager.lua` | **PASS** |
 | **IS-05.2** | TS-05 | 20Hz 텔레메트리(`Base+2`) 및 5Hz MFD 다운샘플(`Base+3`) 피더 | `telemetry_feeder.lua` / `test_telemetry_feeder.lua` | **PASS** |
 | **IS-05.3** | TS-05 | 20Hz CC:Tweaked 타이머 메인 데몬, 공중 비상 알림, 프로파일 영구저장(`save_json`) | `core_daemon.lua` / `test_core_daemon.lua` | **PASS** |
-| **IS-05.4** | TS-05 | 메인 진입점(`main.lua`) 및 클러스터 시뮬레이션용 Mock SAS 노드 | `src/main.lua`, `src/node_uap.lua` | **PASS** |
+| **IS-05.4** | TS-05 | 메인 진입점(`main.lua`) 및 클러스터 시뮬레이션용 Mock FCP 노드 | `src/main.lua`, `src/node_fcp.lua` | **PASS** |
 | **IS-05.5** | TS-05 | Mock TCA 구동기 노드 및 클러스터 통합 검증 | `src/node_tap.lua` | **PASS** |
 | **IS-05.6** | TS-05 | 51x19 HUD 대시보드 렌더러 및 프레임버퍼 게이지 출력 (`term.blit`) | `ui_renderer.lua` / `test_ui_renderer.lua` | **PASS** |
 
@@ -1577,7 +1578,7 @@ projects/vac_core/
 | **G1** | 정적 구문 및 SRP | 함수당 $\le 50$줄 준수, Zero-Sleep 강제, 네이티브 컴파일 | 25개 파일 전수 준수 (565.24ms) | **PASS** |
 | **G2** | CraftOS-PC 단위 테스트 | 네이티브 가상머신 단언문 100% 충족 | 11개 스위트 총 66개 단위 테스트 전원 성공 (418.72ms) | **PASS** |
 | **G3** | 프레임버퍼 검증 | 51x19 HUD 터미널 프레임버퍼 렌더링 무결성 | 터미널 문자열/색상 일치 (660.70ms) | **PASS** |
-| **G4** | 멀티 컴퓨터 클러스터 | 3개 노드(Core, TCA, SAS) 20Hz 패킷 폐루프 | 3개 노드 통신 및 상태 일치 (2,777.52ms) | **PASS** |
+| **G4** | 멀티 컴퓨터 클러스터 | 3개 노드(Core, TCA, FCP) 20Hz 패킷 폐루프 | 3개 노드 통신 및 상태 일치 (2,777.52ms) | **PASS** |
 | **G5** | 번들러 & SourceMap | 배포 번들 생성 및 해시 봉인 | v1.1.5 생성 (`948bcbb3f2da...`, 98.65ms) | **PASS** |
 | **G6** | 오프라인 번들 부팅 | 단일 파일 번들 기동 무결성 확인 | Ingame Probe ACK 확인 완료 (236.23ms) | **PASS** |
 
