@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 (착수 대기)** (Phase 0 전 과제 종결 완료 → Landing Pad 제어기 TASK-102 착수 대기)
+> **현재 단계**: **Phase 1 (착수 대기)** (Phase 0 전 과제 종결 완료 → GAC TASK-101 & Landing Pad TASK-102 착수 대기)
 
 ---
 
@@ -15,12 +15,23 @@
 - **도메인 경로 매핑 기준**: `docs/specs/`, `src/`, `tests/` 간 1:1 도메인 계층 구조는 [README.md](README.md)의 디렉토리 레이아웃을 따른다.
 - **유저 호출 예시**:
   - `TASK.md 확인하고 다음 남은 작업 진행해줘`
+  - `TASK.md의 TASK-101 작업 계획 세워줘`
   - `TASK.md의 TASK-102 작업 계획 세워줘`
   - `TASK.md 상태 점검해줘`
 
 ---
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
+
+- [ ] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 구현** (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`)
+  - GAC 사양서 세부 내용 개편(구 SAS 잔재 청산, FCP/40채널 동기화, Revision History 신설) 및 섹터 대표 비콘(`CH 50003`/`Base_sec+2`), 로컬 백본(`Base_sec+1`), 다속성 패드 슬롯 배정·복행 중재 구현
+  - **세부 작업 항목**:
+    - [ ] **TASK-101-1**: GAC 사양서(`GAC_PROGRAM_SPECIFICATION_AND_ICD.md`) 세부 내용 개편 (구 SAS 식별자 `FCP` 치환, 연관 규격서 버전 갱신, 패킷 스키마 동기화, `Revision History` 테이블 신설 및 무결성 검증)
+    - [ ] **TASK-101-2**: GAC 제어기 설정 로더(`config.lua`) 및 관할 패드 인벤토리/섹터 FSM 구현
+    - [ ] **TASK-101-3**: 1Hz 섹터 대표 집약 비콘(`CH 50003` / `Base_sec+2`) 및 관제 디스패치(`CH 50004`) 송출기 구현
+    - [ ] **TASK-101-4**: 섹터 로컬 백본(`Base_sec+1`) 패킷 수수 및 2단계 다속성(하드 제약 + 맞바람/거리/하중 가중치) 최적 패드 분배 알고리즘 구현
+    - [ ] **TASK-101-5**: 섹터 체크인/진입(`Base_sec+0`), 국지 복행(Go-Around) 격리/대체 패드 재배정, 이륙 인가 및 Tower ATC(`CH 50002`) 핸드오프 구현
+    - [ ] **TASK-101-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/gac/`) 구축 및 통합 인스톨러(`manifest.lua`) 등록
 
 - [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
   - 가상 좌표 비콘, 컴퓨터 기준 상대 좌표 오프셋 보정, 동적 항법 센서 자동 바인딩 및 전술 유도 스트리밍 구현
@@ -50,8 +61,6 @@
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
-- [ ] **[연기] TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 구현** (`src/0_infra/gac/`)
-  - 섹터 대표 비콘(`CH 50003`), 로컬 백본(`Base_sec+1`) 및 다속성 패드 슬롯 배정·복행 중재 구현 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
   - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)

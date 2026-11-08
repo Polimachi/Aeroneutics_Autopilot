@@ -5,7 +5,8 @@
 - **현재 단계**: **Phase 1** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 제어기 확장 착수.
 - **직전 완료**: `TASK-006` 완료 (도구 정식 이관 `tools/`, 일회성 스크립트 정리, README 링크 정리, 하네스 회귀 23/23 PASS).
 - **다음 착수 후보**:
-  1. `TASK-102`: Landing Pad 지상 착륙 패드 제어기 구현 (`src/0_infra/landing_pad/`).
+  1. `TASK-101`: GAC 사양서 세부 개편 및 지상 구역 관제사 구현 (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`).
+  2. `TASK-102`: Landing Pad 지상 착륙 패드 제어기 구현 (`src/0_infra/landing_pad/`).
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
