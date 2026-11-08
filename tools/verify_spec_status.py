@@ -1,7 +1,7 @@
 """
 Specification status validation tool.
-Asserts that all 12 active specifications have expected in-document status:
-- 7 Implemented specs
+Asserts that all 13 active specifications have expected in-document status:
+- 8 Implemented specs
 - 5 Approved specs
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ TARGET_IMPLEMENTED = [
     'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md',
     'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
+    'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
@@ -28,6 +29,7 @@ TARGET_APPROVED = [
     'docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
+    'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
 ]
 
@@ -66,7 +68,8 @@ def check_status(repo_root: Path) -> int:
             print("  - " + e)
         return 1
 
-    print(f"[PASS] All 12 specs have valid statuses (7 Implemented, 5 Approved)!")
+    total_count = len(TARGET_IMPLEMENTED) + len(TARGET_APPROVED)
+    print(f"[PASS] All {total_count} specs have valid statuses ({len(TARGET_IMPLEMENTED)} Implemented, {len(TARGET_APPROVED)} Approved)!")
     return 0
 
 

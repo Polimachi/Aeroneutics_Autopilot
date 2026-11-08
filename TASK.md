@@ -22,8 +22,17 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [ ] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (`src/0_infra/gcs/`)
+- [-] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (`src/0_infra/gcs/`)
   - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현
+  - **하위 작업 내역**:
+    - [-] **TASK-107-1**: GCS 규격서(`GCS_PROGRAM_SPECIFICATION_AND_ICD.md` v1.0.0 Approved) 작성 및 스캐폴딩 설정
+    - [ ] **TASK-107-2**: 40채널 블록 스티키 영속화 관리자(`channel_manager.lua`) 구현
+    - [ ] **TASK-107-3**: 무선 통신 관리자(`network_manager.lua`) 및 CH 50000 / Base+0/1/3 라우팅 구현
+    - [ ] **TASK-107-4**: 원격 비행 C2 명령 생성기(`c2_commander.lua`) 및 E_STOP 직결기 구현
+    - [ ] **TASK-107-5**: 다중 기체 텔레메트리 캐시 및 활성 기체 추적기(`fleet_tracker.lua`) 구현
+    - [ ] **TASK-107-6**: 51x19 분할 TUI 콘솔 화면 렌더러(`ui_renderer.lua`) 구현
+    - [ ] **TASK-107-7**: 메인 데몬 루프(`main.lua`) 및 통합 인스톨러(`manifest.lua`) 등록
+    - [ ] **TASK-107-8**: 종단간(E2E) 시뮬레이션 통합 테스트, 사양서 `Implemented` 승격 및 마일스톤 동기화
 
 ---
 

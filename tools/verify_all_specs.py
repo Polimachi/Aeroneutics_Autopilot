@@ -22,10 +22,12 @@ SPEC_FILES = [
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
+    'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
     'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
+    'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
 ]
 
 REVISION_HISTORY_SPECS = [
@@ -35,12 +37,14 @@ REVISION_HISTORY_SPECS = [
     'docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
     'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
+    'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
+    'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
 ]
 
 VALID_STATUSES = ['Draft', 'Approved', 'Implemented', 'Deprecated']

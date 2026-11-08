@@ -1,0 +1,22 @@
+{
+  "system": {
+    "id": "GCS_01",
+    "name": "Ground Control Station",
+    "domainId": "GCS_01",
+    "loopFrequencyHz": 20,
+    "uiRefreshRateHz": 5,
+    "modemSide": "top"
+  },
+  "channels": {
+    "bootstrapChannel": 50000,
+    "bandwidth": 40,
+    "baseChannelMin": 10000,
+    "baseChannelMax": 49960,
+    "maxCraftBlocks": 1000
+  },
+  "ui": {
+    "screenWidth": 51,
+    "screenHeight": 19,
+    "telemetryTimeoutSec": 5.0
+  }
+}
