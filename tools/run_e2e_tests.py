@@ -142,67 +142,77 @@ def run_e2e_cli(
         )
 
         startup_script = """
-local R = dofile("/_harness/runner_lib.lua")
+local main_ok, main_err = xpcall(function()
+    local R = dofile("/_harness/runner_lib.lua")
 
-local cf = fs.open("/_harness/config.json", "r")
-local cfg = textutils.unserializeJSON(cf.readAll())
-cf.close()
+    local cf = fs.open("/_harness/config.json", "r")
+    local cfg = textutils.unserializeJSON(cf.readAll())
+    cf.close()
 
-R.instruction_budget = tonumber(cfg.instruction_budget) or 500000
-R.filter_substr = cfg.filter_substr
-R.install_log_hooks()
-R.install_dsl()
+    R.instruction_budget = tonumber(cfg.instruction_budget) or 500000
+    R.filter_substr = cfg.filter_substr
+    R.install_log_hooks()
+    R.install_dsl()
 
-if fs.exists("/_harness/test_sdk.lua") then
-    dofile("/_harness/test_sdk.lua")
-end
-
-if package then
-    _G.package = package
-    if package.path then
-        package.path = "/?.lua;/?/init.lua;/modules/?.lua;/modules/?/init.lua;/lib/?.lua;" .. package.path
+    if fs.exists("/_harness/test_sdk.lua") then
+        dofile("/_harness/test_sdk.lua")
     end
-end
 
-for _, tf in ipairs(cfg.test_files) do
-    local fn, load_err = loadfile(tf, nil, _ENV)
-    if not fn then
-        R.suites[#R.suites + 1] = {
-            name = tf,
-            passed = 0,
-            failed = 1,
-            tests = {
-                { name = "<loadfile>", status = "FAIL", error = tostring(load_err) }
-            }
-        }
-    else
-        local before_suites = #R.suites
-        local ok, runtime_err = xpcall(fn, debug.traceback)
-        if not ok then
+    if package then
+        _G.package = package
+        if package.path then
+            package.path = "/?.lua;/?/init.lua;/modules/?.lua;/modules/?/init.lua;/lib/?.lua;" .. package.path
+        end
+    end
+
+    for _, tf in ipairs(cfg.test_files) do
+        local fn, load_err = loadfile(tf, nil, _ENV)
+        if not fn then
             R.suites[#R.suites + 1] = {
                 name = tf,
                 passed = 0,
                 failed = 1,
                 tests = {
-                    { name = "<runtime>", status = "FAIL", error = tostring(runtime_err) }
+                    { name = "<loadfile>", status = "FAIL", error = tostring(load_err) }
                 }
             }
-        elseif #R.suites == before_suites then
-            R.suites[#R.suites + 1] = {
-                name = tf,
-                passed = 0,
-                failed = 0,
-                tests = {}
-            }
+        else
+            local before_suites = #R.suites
+            local ok, runtime_err = xpcall(fn, debug.traceback)
+            if not ok then
+                R.suites[#R.suites + 1] = {
+                    name = tf,
+                    passed = 0,
+                    failed = 1,
+                    tests = {
+                        { name = "<runtime>", status = "FAIL", error = tostring(runtime_err) }
+                    }
+                }
+            elseif #R.suites == before_suites then
+                R.suites[#R.suites + 1] = {
+                    name = tf,
+                    passed = 0,
+                    failed = 0,
+                    tests = {}
+                }
+            end
         end
     end
-end
 
-R.write_result({
-    suites = R.suites,
-    logs = R.logs or {},
-    errors = R.errors or {},
-})
+    R.write_result({
+        suites = R.suites,
+        logs = R.logs or {},
+        errors = R.errors or {},
+    })
+end, debug.traceback)
+
+if not main_ok then
+    if not fs.exists("/_harness_out") then fs.makeDir("/_harness_out") end
+    local ef = fs.open("/_harness_out/error.txt", "w")
+    if ef then ef.write(tostring(main_err)); ef.close() end
+    local df = fs.open("/_harness_out/done.flag", "w")
+    if df then df.write("FAIL"); df.close() end
+end
 
 os.shutdown()
 """
@@ -233,6 +243,14 @@ os.shutdown()
     }
 
     if not args.json:
+        if session_res.timed_out:
+            print("  [DEBUG TIMEOUT] stdout:")
+            print(session_res.stdout_raw)
+            print("  [DEBUG TIMEOUT] stderr:")
+            print(session_res.stderr_raw)
+        err_txt = c0 / "_harness_out" / "error.txt"
+        if err_txt.exists():
+            print("  [GUEST STARTUP ERROR]:", err_txt.read_text(encoding="utf-8"))
         print(f"=== Create_Aeroneutics Multi-Node E2E Simulation Runner ({len(suites)} suites) ===")
         for s in suites:
             s_name = Path(s.get("name", "")).stem

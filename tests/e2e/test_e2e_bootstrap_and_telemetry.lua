@@ -28,7 +28,23 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         assert_not_nil(gcs_app)
         assert_true(gcs.modem:isOpen(50000))
 
-        -- 2. FCP starts on bootstrap channel and requests channel block
+        -- 2. Negative Path Verification: Incompatible version & non-table rejection on CH 50000
+        local ok_bad, err_bad = gcs_app:process_modem_message(50000, 50000, {
+            ver = "0.9.0",
+            domainId = "ROGUE_CRAFT",
+            seq = 1,
+            type = "MSG_BLOCK_REQUEST",
+            time = 1000,
+            payload = { domainId = "ROGUE_CRAFT", requestedBandwidth = 40 }
+        })
+        assert_false(ok_bad)
+        assert_not_nil(err_bad)
+
+        local ok_nontable, err_nontable = gcs_app:process_modem_message(50000, 50000, "INVALID_STRING_PACKET")
+        assert_false(ok_nontable)
+        assert_eq(err_nontable, "message is not a table")
+
+        -- 3. Happy Path: FCP starts on bootstrap channel and requests 40-channel block
         local channel_sentinel = fcp:require("channel_sentinel")
         local fcp_state = channel_sentinel.init({
             system = { domainId = "AIRCRAFT_01", hardwareUuid = "HW-UUID-4401" },
@@ -50,7 +66,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
             payload = {
                 domainId = "AIRCRAFT_01",
                 hardwareUuid = "HW-UUID-4401",
-                requestedBandwidth = 40,
+                requestedBandwidth = boot_req.requestedBandwidth,
             },
         })
         bus:step(0.05)
@@ -70,7 +86,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         assert_eq(assign_payload.baseChannel, 10000)
         assert_eq(assign_payload.bandwidth, 40)
 
-        -- 3. FCP receives assignment and commits Base=10000
+        -- 4. FCP receives assignment and commits Base=10000
         local fcp_inbox = fcp.modem:drain()
         assert_eq(#fcp_inbox, 1)
         channel_sentinel.on_block_assign(fcp_state, fcp_inbox[1].payload.payload)
@@ -88,7 +104,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         -- Confirm GCS automatically opened telemetry downlink Base+3 (10003) upon assigning Block 1
         assert_true(gcs.modem:isOpen(10003))
 
-        -- 4. VAS operates on Base=10000: opens Base+1(10001) and transmits telemetry on Base+2 (10002)
+        -- 5. VAS operates on Base=10000: opens Base+1(10001) and transmits telemetry on Base+2 (10002)
         vas.modem:open(10001)
         vas.modem:transmit(10002, 10002, {
             ver = "1.9.5",
@@ -114,7 +130,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         assert_eq(#fcp_telem_inbox, 1)
         assert_eq(fcp_telem_inbox[1].payload.type, "MSG_FLIGHT_TELEMETRY")
 
-        -- 5. FCP aggregates telemetry and downlinks MSG_MFD_STATE on Base+3 (10003)
+        -- 6. FCP aggregates telemetry and downlinks MSG_MFD_STATE on Base+3 (10003)
         fcp.modem:transmit(10003, 10003, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
@@ -132,7 +148,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         })
         bus:step(0.05)
 
-        -- 6. GCS receives MSG_MFD_STATE on Base+3 (10003) and updates fleet cache
+        -- 7. GCS receives MSG_MFD_STATE on Base+3 (10003) and updates fleet cache
         local gcs_telem_inbox = gcs.modem:drain()
         assert_eq(#gcs_telem_inbox, 1)
         local ok_tlm = gcs_app:process_modem_message(10003, 10003, gcs_telem_inbox[1].payload)
