@@ -231,13 +231,14 @@ def run_mutation(mut: Dict[str, Any], verbose: bool = False) -> bool:
         print(f"  [ERROR] Target file not found: {file_path}")
         return False
 
-    original_content = file_path.read_text(encoding="utf-8")
+    original_bytes = file_path.read_bytes()
+    original_content = original_bytes.decode("utf-8")
     if mut["target"] not in original_content:
         print(f"  [ERROR] Target text not found in {file_path.name}")
         return False
 
     mutated_content = original_content.replace(mut["target"], mut["replacement"], 1)
-    file_path.write_text(mutated_content, encoding="utf-8")
+    file_path.write_text(mutated_content, encoding="utf-8", newline="")
 
     try:
         if mut["runner"] == "unit":
@@ -269,7 +270,7 @@ def run_mutation(mut: Dict[str, Any], verbose: bool = False) -> bool:
         return is_killed
     finally:
         # Atomic restore
-        file_path.write_text(original_content, encoding="utf-8")
+        file_path.write_bytes(original_bytes)
 
 
 def main() -> int:
