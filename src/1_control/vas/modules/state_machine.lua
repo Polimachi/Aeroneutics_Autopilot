@@ -10,15 +10,15 @@ function state_machine.init(systemConfig, isCalibrated)
         previousState = nil,
         lastTransitionMs = now,
         transitionReason = "INIT",
-        lastUapCmdMs = now,
-        lastUapCmd = nil,
+        lastFcpCmdMs = now,
+        lastFcpCmd = nil,
         calibStartMs = 0,
         hoverBaseThrottle = 7.5,
         isAirborne = false,
         activeSource = "FCP",
         sensorLossTicks = 0,
         sensorLossDebounceTicks = timeouts.sensorLossDebounceTicks or 1,
-        uapTimeoutMs = timeouts.uapCommandTimeoutMs or 1500,
+        fcpTimeoutMs = timeouts.fcpCommandTimeoutMs or 1500,
         calibTimeoutSec = timeouts.calibrationTimeoutSec or 120
     }
     fsm.transition_to = function(self, nextState, reason)
@@ -77,7 +77,6 @@ function state_machine.handle_arm_command(state, cmd)
         else
             if curr == "DISARMED" then
                 state_machine.transition_to(state, "ARMING", "PILOT_ARM_STAGE1")
-                state_machine.transition_to(state, "IDLE_ARMED", "ARMING_READY")
             end
         end
     end
@@ -90,8 +89,8 @@ function state_machine.update_watchdogs(state, nowMs, comState, _healthMap, sens
     end
     local curr = state.currentState
     if curr == "NORMAL" then
-        if (now - state.lastUapCmdMs) > state.uapTimeoutMs then
-            state_machine.transition_to(state, "FAILSAFE_HOLD", "UAP_CMD_TIMEOUT_1500MS")
+        if (now - state.lastFcpCmdMs) > state.fcpTimeoutMs then
+            state_machine.transition_to(state, "FAILSAFE_HOLD", "FCP_CMD_TIMEOUT_1500MS")
         elseif not sensorOk then
             state.sensorLossTicks = (state.sensorLossTicks or 0) + 1
             if state.sensorLossTicks >= (state.sensorLossDebounceTicks or 1) then
@@ -121,8 +120,8 @@ function state_machine.get_effective_command(state, comState)
     local baseT = state.hoverBaseThrottle or 7.5
     local curr = state.currentState
 
-    if curr == "NORMAL" and state.lastUapCmd then
-        return state.lastUapCmd
+    if curr == "NORMAL" and state.lastFcpCmd then
+        return state.lastFcpCmd
     elseif curr == "FAILSAFE_HOLD" then
         local trim = baseT + 2.0 * (0.0 - vy)
         return {
@@ -145,11 +144,11 @@ function state_machine.get_effective_command(state, comState)
     return { flightMode = "IDLE", commandType = "ATTITUDE_ANGLE", targetThrottle = 0.0, targetClimbRate = 0.0, flapTarget = 0.0, translationBias = {} }
 end
 
-function state_machine.apply_output_safety_rule(state, rawOutputs, isWap)
+function state_machine.apply_output_safety_rule(state, rawOutputs, isAsa)
     local safe = {}
     local curr = state.currentState
     if curr == "E_STOP" then
-        if state.isAirborne and not isWap then
+        if state.isAirborne and not isAsa then
             local cushionT = math.floor((state.hoverBaseThrottle or 7.5) * 0.6 + 0.5)
             for k, _ in pairs(rawOutputs or {}) do safe[k] = cushionT end
             return safe

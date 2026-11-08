@@ -71,7 +71,7 @@ manifest.MODULES = {
         files = {
             { repoPath = "src/1_control/vas/main.lua", dest = "/main.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/actuator_adapter_tca.lua", dest = "/modules/actuator_adapter_tca.lua", gdriveId = nil },
-            { repoPath = "src/1_control/vas/modules/actuator_adapter_wap.lua", dest = "/modules/actuator_adapter_wap.lua", gdriveId = nil },
+            { repoPath = "src/1_control/vas/modules/actuator_adapter_asa.lua", dest = "/modules/actuator_adapter_asa.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/core_daemon.lua", dest = "/modules/core_daemon.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/dynamic_trim_compensator.lua", dest = "/modules/dynamic_trim_compensator.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/flight_dynamics_core.lua", dest = "/modules/flight_dynamics_core.lua", gdriveId = nil },

@@ -51,7 +51,7 @@ function tui_dashboard.render_dashboard(surf, state, cfg)
     cfg = cfg or {}
 
     local domain = tostring(cfg.aircraftDomainId or "AIRCRAFT_01")
-    local podId = tostring(cfg.podId or "WAP_L")
+    local podId = tostring(cfg.podId or "ASA_L")
     local base = tonumber(cfg.baseChannel) or 10000
     local actChan = (cfg.channels and cfg.channels.surfaceActuation) or (base + 11)
 

@@ -1,4 +1,4 @@
--- [DEPRECATED in v1.8.0]: WAP control and Base+7 socket transferred to VAS Layer 3 (actuator_adapter_wap).
+-- [DEPRECATED in v1.8.0]: ASA control and Base+7 socket transferred to VAS Layer 3 (actuator_adapter_asa).
 -- src/modules/aerodynamic_controller.lua
 local aerodynamic_controller = {}
 
@@ -51,14 +51,14 @@ function aerodynamic_controller.handle_surface_status(pkt, airframe_type)
     if health == "DEGRADED" then
         return {
             action = "WARN",
-            alertBanner = "WAP_DEGRADED_WARN",
+            alertBanner = "ASA_DEGRADED_WARN",
             requestFailsafe = not is_vtol,
             healthStatus = health,
         }
     elseif health == "TOTAL_LOSS" or p.isJammed then
         return {
             action = "WARN",
-            alertBanner = "WAP_TOTAL_LOSS_WARN",
+            alertBanner = "ASA_TOTAL_LOSS_WARN",
             requestFailsafe = not is_vtol,
             healthStatus = health,
         }

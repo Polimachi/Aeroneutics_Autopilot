@@ -22,7 +22,7 @@ function node_vas_sim.run()
                         fuel = 1.0,
                         controlState = "NORMAL",
                         activeSource = "FCP",
-                        actuatorHealth = { tca = true, wap = true, allOk = true },
+                        actuatorHealth = { tca = true, asa = true, allOk = true },
                     }
                 })
                 break

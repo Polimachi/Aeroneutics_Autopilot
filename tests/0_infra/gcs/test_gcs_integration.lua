@@ -65,7 +65,7 @@ describe("GCS E2E closed-loop simulation integration", function()
                 dynamics = { altitudeY = 150.0, verticalSpeed = 0.0, groundSpeed = 18.5 },
                 fuel = 0.75,
                 fsmState = "CRUISE",
-                actuatorHealth = { tap = true, wap = true, allOk = true }
+                actuatorHealth = { tap = true, asa = true, allOk = true }
             }
         }
         local ok2 = app:process_modem_message(10003, 10003, telem_pkt)

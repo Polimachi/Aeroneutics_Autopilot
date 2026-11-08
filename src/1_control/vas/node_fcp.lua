@@ -1,7 +1,7 @@
--- Mock Node 04: FCP (Flight Control Program) ICD v1.19.0 / UAP v1.8.0
+-- Mock Node 04: FCP (Flight Control Program) ICD v1.24.0 / FCP v1.14.0
 local modem = (peripheral and peripheral.wrap and peripheral.wrap("top")) or (peripheral and peripheral.find and peripheral.find("modem"))
 if not modem then
-    error("No modem peripheral found on mock UAP")
+    error("No modem peripheral found on mock FCP")
 end
 
 local CH_GUIDANCE, CH_TELEM = 10001, 10002

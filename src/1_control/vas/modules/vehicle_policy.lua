@@ -93,30 +93,30 @@ function vehicle_policy.clamp_tilt_limits(policy, targetQ, isDerated)
     return targetQ
 end
 
-function vehicle_policy.combine_saturation(satTap, satWap, alpha)
+function vehicle_policy.combine_saturation(satTap, satAsa, alpha)
     local a = math.max(0.0, math.min(1.0, tonumber(alpha) or 0.0))
     local tapPos = (satTap and satTap.axisSaturatedPos) or {}
     local tapNeg = (satTap and satTap.axisSaturatedNeg) or {}
-    local wapPos = (satWap and satWap.axisSaturatedPos) or {}
-    local wapNeg = (satWap and satWap.axisSaturatedNeg) or {}
+    local asaPos = (satAsa and satAsa.axisSaturatedPos) or {}
+    local asaNeg = (satAsa and satAsa.axisSaturatedNeg) or {}
 
-    local function merge_axis(tapVal, wapVal)
+    local function merge_axis(tapVal, asaVal)
         if a <= 0.0 then return tapVal == true
-        elseif a >= 1.0 then return wapVal == true
-        else return (tapVal == true) and (wapVal == true) end
+        elseif a >= 1.0 then return asaVal == true
+        else return (tapVal == true) and (asaVal == true) end
     end
 
     return {
         axisSaturatedPos = {
-            pitch = merge_axis(tapPos.pitch, wapPos.pitch),
-            roll = merge_axis(tapPos.roll, wapPos.roll),
-            yaw = merge_axis(tapPos.yaw, wapPos.yaw),
+            pitch = merge_axis(tapPos.pitch, asaPos.pitch),
+            roll = merge_axis(tapPos.roll, asaPos.roll),
+            yaw = merge_axis(tapPos.yaw, asaPos.yaw),
             heave = tapPos.heave == true
         },
         axisSaturatedNeg = {
-            pitch = merge_axis(tapNeg.pitch, wapNeg.pitch),
-            roll = merge_axis(tapNeg.roll, wapNeg.roll),
-            yaw = merge_axis(tapNeg.yaw, wapNeg.yaw),
+            pitch = merge_axis(tapNeg.pitch, asaNeg.pitch),
+            roll = merge_axis(tapNeg.roll, asaNeg.roll),
+            yaw = merge_axis(tapNeg.yaw, asaNeg.yaw),
             heave = tapNeg.heave == true
         }
     }
