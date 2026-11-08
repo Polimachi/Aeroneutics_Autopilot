@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 (착수 대기)** (Phase 0 전 과제 종결 완료 → GAC TASK-101 & Landing Pad TASK-102 착수 대기)
+> **현재 단계**: **Phase 1 (진행 중)** (TASK-101 GAC 사양서 개편 및 제어기/TUI 구현 완료, TASK-102 착륙패드 착수 대기, TASK-112 VAS 센서 표준화 대기)
 
 ---
 
@@ -23,17 +23,7 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
 
-- [-] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 구현** (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`)
-  - GAC 사양서 세부 내용 개편(구 SAS 잔재 청산, FCP/40채널 동기화, Revision History 신설) 및 섹터 대표 비콘(`CH 50003`/`Base_sec+2`), 로컬 백본(`Base_sec+1`), 다속성 패드 슬롯 배정·복행 중재 구현
-  - **세부 작업 항목**:
-    - [x] **TASK-101-1**: GAC 사양서(`docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md`) 세부 내용 개편 (구 SAS 식별자 `FCP` 치환, 연관 규격서 버전 갱신, 패킷 스키마 동기화, `Revision History` 테이블 신설 및 무결성 검증)
-    - [ ] **TASK-101-2**: GAC 제어기 설정 로더(`config.lua`) 및 관할 패드 인벤토리/섹터 FSM 구현
-    - [ ] **TASK-101-3**: 1Hz 섹터 대표 집약 비콘(`CH 50003` / `Base_sec+2`) 및 관제 디스패치(`CH 50004`) 송출기 구현
-    - [ ] **TASK-101-4**: 섹터 로컬 백본(`Base_sec+1`) 패킷 수수 및 2단계 다속성(하드 제약 + 맞바람/거리/하중 가중치) 최적 패드 분배 알고리즘 구현
-    - [ ] **TASK-101-5**: 섹터 체크인/진입(`Base_sec+0`), 국지 복행(Go-Around) 격리/대체 패드 재배정, 이륙 인가 및 Tower ATC(`CH 50002`) 핸드오프 구현
-    - [ ] **TASK-101-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/gac/`) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
-
-- [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`)
+- [-] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`)
   - 가상 좌표 비콘, 5단계 TUI 셋업 마법사, 컴퓨터 바디 기준 오프셋 및 mountingYawOffset 3D 변환, 자체 GPS(CH 60001 / Base_sec+5) 이중 주기 측위, 동적 센서 3종 바인딩 및 전술 유도 스트리밍 구현
   - **세부 작업 항목**:
     - [ ] **TASK-102-1**: 5단계 대화형 TUI 셋업 마법사(`setup_wizard.lua`), 3초 부팅 카운트다운 FSM, 컴퓨터 바디 기준 오프셋(`bodyOffset`) 및 선체 장착 방위(`mountingYawOffset`) 3D 변환, 자체 GPS(`CH 60001`/`Base_sec+5`) 연동, 원자적 설정 직렬화(`/landing_pad/config.json`) 구현
@@ -43,16 +33,24 @@
     - [ ] **TASK-102-5**: 컴팩트 1줄 순환 로깅 데몬 모드, 독립 완결형 메인 루프(`main.lua`) 및 센서 결손 복행(`reason: SENSOR_FAULT`) / 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
     - [ ] **TASK-102-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/landing_pad/`) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
+- [ ] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
+  - VAS 내루프 실시간 동역학 제어용 센서 파이프라인을 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 동기화하고, CC:Avionics 공식 API(`getHeight()`, 1축 스칼라 `getVelocity()` 3축 합성, 짐벌 오일러/각속도/중력/가속도) 정합성 확보
+  - **세부 작업 항목**:
+    - [ ] **TASK-112-1**: VAS 규격서(`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`) Section 2·3에 `/lib/avionics_sensors.lua` 연동 표준 명세 반영 및 Revision History 갱신
+    - [ ] **TASK-112-2**: `src/1_control/vas/modules/sensor_pipeline.lua` 내 레거시 페리페럴 탐색/폴링 로직을 `require("avionics_sensors")` 기반 4종 센서(`gimbal`, `altitude`, `velocity`, `fuel`) 고속 획득 파이프라인으로 리팩토링
+    - [ ] **TASK-112-3**: `velocity_sensor` 3축 분산 배치(전/상/측) 자동 합성 및 `altitude_sensor`의 `getHeight()` 공식 메서드 적용, 3D 레버암 기하 동역학 보정과 결합 검증
+    - [ ] **TASK-112-4**: `tests/1_control/vas/test_vas_core.lua`의 센서 모킹 및 단위 테스트를 `test_sdk.lua` 최신 CC:Avionics 4종 Mock으로 전면 정합화 및 10/10 PASS 검증
+
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
 - [ ] **TASK-106: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현**
   - 평시 5Hz(`FCP`) / ACRO 20Hz(`VAS`) `Base+3` HUD 렌더링 및 `Base+0`·`Base+1` C2/비상 선점 송출 구현
-- [ ] **TASK-109: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
-  - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
 - [ ] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
   - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
+- [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
+  - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
 - [ ] **TASK-200: Planning 계층 프로그램 사양서 생성** (`docs/specs/3_planning/`)
   - 3차원 글로벌/로컬 경로 계획, 동적 장애물 회피, 웨이포인트 스케줄링 및 FCP 유도 연동 인터페이스 규격서 작성
 - [ ] **TASK-201: 경로 계획 모듈 (`src/3_planning/`) 설계 및 구현**
@@ -76,6 +74,19 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+
+- [x] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 제어기/TUI 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`, `tests/0_infra/gac/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-101-gac-ground-apron-controller.md`
+  - GAC 사양서 v1.3.0 Implemented 승격, 설정 영속화(`config_loader.lua`), 관할 패드 인벤토리(`facility_inventory.lua`), 2단계 다속성 최적 분배(`allocation_engine.lua`), 1Hz 섹터 대표 비콘/디스패치(`beacon_broadcaster.lua`), 섹터 FSM 및 핸드오프/국지 복행 중재(`gac_fsm.lua`), 듀얼 디스플레이 3-Tab TUI 콘솔(`tui_view.lua`), 20Hz 비차단 메인 루프(`main.lua`), 단위 테스트(27/27 PASS) 및 통합 인스톨러(`manifest.lua`) 등록 완료
+  - **구현 내용**:
+    - [x] **TASK-101-1**: GAC 사양서(`GAC_PROGRAM_SPECIFICATION_AND_ICD.md` v1.3.0) 세부 내용 개편 (FCP 치환, 패킷 스키마 동기화, Section 6 TUI 콘솔 및 수동 조작 규격 신설, 사양서 Implemented 승격)
+    - [x] **TASK-101-2**: GAC 제어기 설정 로더 및 원자적 영속화 엔진(`config_loader.lua`) 구현 (4/4 PASS)
+    - [x] **TASK-101-3**: 관할 패드 인벤토리 및 공간 색인(`facility_inventory.lua`), 동적 원격 계측 수신 및 비상 동결 FSM 구현 (5/5 PASS)
+    - [x] **TASK-101-4**: 1Hz 섹터 대표 집약 비콘(`CH 50003` / `Base_sec+2`) 및 관제 디스패치(`CH 50004`) 송출기(`beacon_broadcaster.lua`) 구현 (3/3 PASS)
+    - [x] **TASK-101-5**: 2단계 다속성(하드 제약 + 맞바람/거리/하중 가중치) 최적 패드 분배 엔진(`allocation_engine.lua`) 구현 (5/5 PASS)
+    - [x] **TASK-101-6**: 섹터 체크인/진입(`Base_sec+0`), 국지 복행(Go-Around) 격리/대체 패드 재배정, 이륙 인가 및 Tower ATC(`CH 50002`) 핸드오프(`gac_fsm.lua`) 구현 (4/4 PASS)
+    - [x] **TASK-101-7**: 듀얼 디스플레이(51x19 터미널 + 외장 모니터) 3-Tab TUI 관제 콘솔(`tui_view.lua`) 및 수동 조작(`[M]`, `[F]`, `[W]`, `[E]`, `[A]`, `[D]`) 인터페이스 구현 (4/4 PASS)
+    - [x] **TASK-101-8**: 20Hz 비차단 메인 루프(`main.lua`), CraftOS-PC 단위 테스트 슈트(`tests/0_infra/gac/`, 27/27 PASS), 통합 인스톨러(`manifest.lua`) 등록 및 전체 회귀(112/112 PASS, 24/24 PASS) 통과
 
 - [x] **TASK-109: ASA 관할 범위 축소 (VECTORED_VTOL, 드론 기체 배제 및 FCP/VAS 비활성화)** (완료일: 2026-11-08) (`docs/specs/`, `src/1_control/vas/`, `src/2_guidance/fcp/`, `tests/`)
   - VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체에서 ASA 동작 배제, FCP 외루프 flapTarget 지령 차단(0.0 고정), VAS 내루프 ASA 타면 할당 및 Base+11 MSG_AERO_CMD 송출 비활성화, 텔레메트리 WAP 바이패스 구현
@@ -119,7 +130,7 @@
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-003-spec-status-transition-to-implemented.md`
   - 5대 핵심 사양서(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) `Implemented` 전이 완료 및 `verify_spec_status.py` 12종 전수 검증 통과 (5종 `Implemented`, 7종 `Approved`), 단위 테스트 `42/42 PASS`, 하네스 회귀 `14/14 PASS` (커밋 `dd096e1`, `6daa12d`, `dea477e`)
 - [x] **TASK-002: 코드베이스 40채널·Zone 단위 테스트 및 하네스 루프 통합 검증** (완료일: 2026-11-08)
-  - 6개 활성 타겟(`alignment` 7, `gps` 9, `asa` 3, `tca` 7, `vas` 7, `fcp` 9) 전수 `42/42 PASS` 및 하네스 Python 회귀 테스트 `14/14 PASS`로 통합 종결 (멀티노드 E2E 시나리오는 `TASK-109`로 분리)
+  - 6개 활성 타겟(`alignment` 7, `gps` 9, `asa` 3, `tca` 7, `vas` 7, `fcp` 9) 전수 `42/42 PASS` 및 하네스 Python 회귀 테스트 `14/14 PASS`로 통합 종결 (멀티노드 E2E 시나리오는 `TASK-111`로 분리)
 - [x] **TASK-001: 기체 5대 핵심 모듈(`src/`) 통신 채널·Zone 런타임 코드 동기화** (완료일: 2026-11-08)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-07-task-001-runtime-40ch-sync.md`
   - $BW=40$ ($Base = 10000 + (N-1) \times 40$) 및 4대 Zone 규격을 `VAS`(`16b8390`, `1db52ed`), `TCA`(`e6be320`, `0f29c5b`), `FCP`(`9da4301`, `34fc867`, `4c1db74`), `Alignment`(`f52cb11`, `c5e8b5a`), `GPS`(`8da2d09`)에 반영 완료 (단위 테스트 `42/42 PASS`, 문법 정적 분석 `7/7 PASS`)

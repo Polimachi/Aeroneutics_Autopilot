@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.2.0` |
+| **문서 상태 (Status)** | `Implemented` |
+| **문서 버전 (Version)** | `v1.3.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/gac/` |
 | **주관 도메인 (Domain)** | 국지 에이프런 총괄 관제사 (Ground Apron Controller / GAC) |
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.3.0` | 2026-11-08 | GAC 관제 콘솔 TUI(듀얼 디스플레이, 3-Tab 관제 대시보드, 시설 등록/관리 및 비상동결/상태강제변경 수동 조작, 설정 영속화) 규격 신설 | 관제사 현장 상태 감시 및 수동 오버라이드 인터페이스 표준화 |
 | `v1.2.0` | 2026-11-08 | 구 SAS 식별자 FCP 전면 개편, 연관 규격서 버전 동기화, 이륙 완료(`MSG_ATC_DEPARTURE_COMPLETE`) 및 섹터 상태(`MSG_GAC_SECTOR_STATUS`) 스키마 명시, Base_sec+5 GPS 응답 채널 및 동적 시설물 1Hz 위치 동기화 필드 반영, Revision History 신설 | Phase 1 GAC 제어기 구현(TASK-101) 및 착륙패드(v2.4.0) 연동 무결성 확보 |
 | `v1.1.4` | 2026-11-07 | 40채널 규격 및 영구 단일 경로 반영 | 지상 인프라 및 전역 통신 규격 일원화 |
 
@@ -646,3 +647,109 @@ $$J(P_i) = w_1 \cos(\psi_{wind} - \psi_{approach}(P_i)) - w_2 \frac{\|\vec{p}_{c
 | **섹터 전 패드 만석** | 접근 요청 시 $\mathcal{P}_{valid} == \emptyset$ | GAC | 기체에 로컬 $+30\text{m}$ LOITER 지시, 15초 주기 재탐색, 10회 실패 시 Tower ATC 회항 이양 |
 | **동적 갑판 위험 요동** | $\theta_{deck\_fleet} > 10.0^\circ$ 또는 Heave $> 2.5\text{ m/s}$ | GAC | 전 접근 기체에 즉시 `MSG_ABORT_APPROACH` 발령, 대기 선회 지시 |
 | **광역 비상 기체 진입** | Tower ATC `MSG_ATC_EMERGENCY_ALERT` 수신 | GAC | 일반 접근 기체 전원 로컬 LOITER/복행 명령, 비상 기체에 최적 패드 즉시 강제 징발 |
+
+---
+
+## 6. 관제사 터미널 UI 및 수동 조작 규격 (TUI Console & Operator Interface)
+
+본 섹션은 GAC 컴퓨터 콘솔 및 관제실 모니터에서 관제사가 관할 구역 내 지상 시설물과 비행체 교통 상황을 실시간으로 감시하고, 이상 상황 시 시설물 제원 등록, 상태 강제 오버라이드, 비상 동결을 신속히 집행할 수 있는 전용 TUI(Terminal User Interface) 대시보드와 수동 조작 인터페이스를 정의합니다.
+
+### 6.1 듀얼 디스플레이 및 화면 규격 (Dual Display Specification)
+1. **기본 터미널 모드 (`term`)**:
+   - Advanced Computer의 기본 화면($51 \times 19$ 문자 해상도)을 기본 출력 타깃으로 삼아 별도 외장 모니터 없이도 독립 완결적으로 운용됩니다.
+2. **외장 어드밴스드 모니터 자동 연동 (`peripheral.find("monitor")`)**:
+   - 부팅 시 또는 런타임에 유선/무선으로 연결된 외장 컬러 모니터를 자동 탐색하여 감지 시 대시보드를 자동 미러링하거나 확장 렌더링합니다.
+   - 모니터 터치 이벤트(`monitor_touch`)를 지원하여 마우스 클릭만으로 탭 전환 및 긴급 명령을 실행할 수 있습니다.
+3. **색상 및 렌더링 정책**:
+   - `colors.black`(배경), `colors.blue`/`colors.cyan`(헤더 및 활성 탭), `colors.green`(정상 `FREE`/`OPERATIONAL`), `colors.yellow`(예약 `RESERVED`/`HOLD`), `colors.orange`(점유 `OCCUPIED`), `colors.red`(경고 `MAINTENANCE`/`DECK_DANGEROUS`/`GO_AROUND`)의 표준 시각화 팔레트를 준수합니다.
+
+---
+
+### 6.2 3-Tab 관제 대시보드 구조 (Information Architecture)
+
+화면 상단(Y=1~2)에는 섹터 요약 및 탭 바가 배치되며, 숫자키 `1`~`3` 또는 터치로 탭을 전환합니다.
+
+```
++-----------------------------------------------------------------------------------+
+| GAC CONSOLE | SECTOR: BASE_ALPHA [50201] | WIND: 195@2.4m/s | STATUS: OPERATIONAL |
+| [1: OVERVIEW]   [2: FACILITIES]   [3: LOGS & COMMS]                               |
++-----------------------------------------------------------------------------------+
+```
+
+1. **Tab 1: 관제 총괄 (Overview)**:
+   - **섹터 핵심 지표**: 관할 섹터 ID, 관제 채널($Base_{\text{sec}}+0$), 상위 관제탑 채널, 총 시설물/가용 패드 수, 국지풍, 갑판 상태.
+   - **활성 교통 큐 (Active Traffic Queue)**: 현재 관제 중인 기체의 5단계 생명주기 표출:
+     - `APPROACHING`: GAC 체크인 및 슬롯 배정 완료 후 진입 중인 기체.
+     - `LOITERING`: 패드 만석 또는 요동으로 안전 고도 대기 선회 중인 기체.
+     - `TOUCHDOWN`: 최종 패드 접지 완료 및 점유 중인 기체.
+     - `BERTHED`: 패드 정박 대기 중인 기체.
+     - `DEPARTING`: 이륙 인가 수령 후 상승 중인 기체.
+2. **Tab 2: 시설물 상세 (Facilities)**:
+   - 관할 착륙패드, 활주로, 도킹암의 개별 테이블 뷰:
+     - `ID`: 시설물 식별자 (예: `PAD_01`, `PAD_02`, `RWY_01`).
+     - `TYPE`: 시설물 종류 (`LANDING_PAD`, `RUNWAY`, `DOCKING_ARM`).
+     - `STATUS`: 현재 운영 상태 (`FREE`, `RESERVED`, `OCCUPIED`, `MAINTENANCE`, `GO_AROUND`).
+     - `CRAFT`: 현재 배정/점유 기체 ID.
+     - `TACTICAL CH`: 1:1 전술 유도 채널 ($Base_{\text{sec}}+10+\text{Idx}$).
+     - `MAX SPEC`: 수용 최대 중량(kg) 및 유효 반경(m).
+     - `COORDINATES`: 패드 중심 절대 좌표 (X, Y, Z).
+3. **Tab 3: 무선·이벤트 로그 (Logs & Comms)**:
+   - 최근 패킷 수수 및 관제 상태 전이 타임스탬프 감사 로그 (최대 50건 링버퍼):
+     - 예: `[14:22:01] RECV MSG_GAC_CHECKIN_REQ from AIRCRAFT_01`
+     - 예: `[14:22:02] SEND MSG_ATC_SLOT_ASSIGN to PAD_01 (AIRCRAFT_01)`
+     - 예: `[14:22:03] SEND MSG_GAC_APPROACH_CLEARANCE to AIRCRAFT_01`
+
+---
+
+### 6.3 관제사 수동 조작 기능 (Operator Control Set)
+
+GAC TUI는 전자동 다속성 분배 알고리즘에 우선하여 관제사가 현장 물리 상황에 즉각 개입할 수 있는 4대 수동 조작 기능을 제공합니다:
+
+1. **시설 등록 및 제원 관리 (`[A]` Add, `[D]` Delete, `[P]` Parameters)**:
+   - 신규 시설물 동적 등록 모달: 시설물 ID, 타입, 전술 채널 오프셋, 상대/절대 좌표, 최대 수용 중량($W_{max}$), 유효 반경($R_{pad}$) 입력 및 즉시 인벤토리 반영.
+   - 기존 시설물 등록 해제 및 파라미터 수정.
+2. **시설 상태 강제 변경 (Forced State Override, `[Enter]` on Facility)**:
+   - 관제사가 특정 시설물의 상태를 강제로 전환:
+     - `FREE`: 유령 점유 또는 비정상 잠금 즉시 해제 및 가용 복귀.
+     - `MAINTENANCE`: 정비/장애물 점검을 위해 해당 시설물을 자동 배정 풀에서 즉시 격리.
+     - `OCCUPIED`: 기체 수동 정박 또는 비인가 점유 반영.
+     - `GO_AROUND`: 해당 패드로 접근 중인 기체에 강제 복행(`MSG_ABORT_APPROACH`) 즉각 송출 및 패드 격리.
+3. **시설 비상 동결 (Emergency Sector Lockdown, `[E]` Toggle)**:
+   - 악천후, 적대적 위협 또는 함선 급격한 요동 발생 시 섹터 전체 비상 락다운 선언.
+   - 접근 중인 모든 기체에 즉시 `MSG_ABORT_APPROACH`를 송출하여 안전 고도 대기 선회 지시.
+   - 상위 Tower ATC 및 섹터 집약 비콘의 상태를 `DECK_DANGEROUS`로 강제 전이하고 신규 섹터 진입 차단.
+4. **섹터 환경 및 운영 관리 (`[S]` Sector Config)**:
+   - 섹터 운영 파라미터 실시간 조정: 섹터 명칭, 국지풍 풍향/풍속 수동 오버라이드, 집약 비콘 송출 주기/on-off, 모선/육상 모빌리티 모드(`STATIC`/`DYNAMIC`) 전환.
+
+---
+
+### 6.4 키보드 및 터치 조작 인터페이스 (Keymap & Touch Bindings)
+
+| 키/액션 | 기능 | 동작 설명 |
+| :---: | :--- | :--- |
+| **`1` ~ `3`** | 탭 전환 | `[1: Overview]`, `[2: Facilities]`, `[3: Logs]` 탭 즉시 전환 (상단 탭 터치 동일) |
+| **`↑` / `↓`** | 시설물 선택 | 시설물 목록(Tab 2) 및 교통 큐(Tab 1)에서 항목 커서 이동 |
+| **`Enter`** | 액션 메뉴 호출 | 선택된 시설물에 대한 상태 변경 / 제원 보기 컨텍스트 모달 팝업 |
+| **`M`** | 정비 격리 토글 | 선택된 시설물의 `FREE` $\leftrightarrow$ `MAINTENANCE` 상태 즉시 토글 |
+| **`F`** | 강제 FREE 리셋 | 선택된 시설물의 잠금/점유 상태를 강제로 `FREE`로 초기화 |
+| **`W`** | 강제 복행(Wave-off) | 선택된 패드로 진입 중인 기체에 즉각 복행 명령 송출 |
+| **`A`** | 시설물 신규 등록 | 신규 착륙패드/활주로/도킹암 등록 팝업 모달 호출 |
+| **`D`** | 시설물 등록 삭제 | 선택된 시설물을 관할 인벤토리에서 제거 확인 |
+| **`E`** | 전 시설 비상 동결 | 섹터 비상 동결 및 락다운 토글 (확인 팝업 후 즉시 발동) |
+| **`S`** | 섹터 환경 설정 | 기상/비콘/섹터 속성 편집 팝업 모달 호출 |
+| **`R`** | 화면 강제 갱신 | TUI 화면 버퍼 즉시 리페인트 |
+| **`Q`** | 백그라운드 전환 | TUI 포그라운드 루프 종료 및 백그라운드 데몬 관제 모드로 전환 |
+
+- 화면 하단(Y=19)에는 컨텍스트에 따라 유효한 단축키 힌트 바가 상시 표출됩니다:  
+  `[1-3]Tab [↑↓]Select [Enter]Action [M]aint [F]ree [E]merge [S]ector [Q]Quit`
+
+---
+
+### 6.5 설정 영속성 및 동기화 메커니즘 (Configuration Persistence)
+1. **설정 파일 실시간 커밋**:
+   - TUI 상에서 시설물 등록/수정/삭제 또는 섹터 기본 파라미터를 변경하면, 런타임 메모리 적용과 동시에 GAC 로컬 설정 파일(`config.lua`)의 인벤토리 및 섹터 섹션에 자동 직렬화되어 디스크로 즉시 기록됩니다.
+2. **무중단 재부팅 복원**:
+   - 컴퓨터 재부팅, 청크 언로드 후 리로드 발생 시 `config.lua`에 보존된 관할 시설물 목록 및 오프셋 좌표, 채널 매핑이 100% 원복되어 무인 연속 관제를 보장합니다.
+3. **네트워크 백본 동기화**:
+   - TUI에서 시설물 상태를 `MAINTENANCE`나 `FREE`로 강제 변경 시, GAC는 즉시 섹터 로컬 백본 채널($Base_{\text{sec}}+1$)로 해당 시설물 노드에 `MSG_ATC_FACILITY_UPDATE`를 송신하여 물리 패드 노드의 로컬 FSM과 동기화합니다.
+

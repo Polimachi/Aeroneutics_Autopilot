@@ -42,6 +42,7 @@ manifest.MODULE_ORDER = {
     "gps_node",
     "gps_client",
     "sensors",
+    "gac",
 }
 
 manifest.MODULES = {
@@ -339,6 +340,71 @@ manifest.MODULES = {
         },
         defaultConfigs = {},
         files = {
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
+
+    gac = {
+        id = "gac",
+        name = "GAC",
+        category = "infra",
+        version = "1.3.0",
+        installDir = "/",
+        startup = {
+            enabled = true,
+            path = "/startup/00_gac.lua",
+            target = "/main.lua",
+            name = "GAC",
+        },
+        defaultConfigs = {
+            ["/gac/config.json"] = {
+                sectorId = "BASE_ALPHA_SECTOR_01",
+                sectorName = "Alpha Base Central Vertiport",
+                sectorType = "VERTIPORT",
+                sectorIndex = 1,
+                baseSecChannel = 50201,
+                towerAtcChannel = 50001,
+                beaconChannel = 50003,
+                dispatchChannel = 50004,
+                checkinTimeoutSec = 60,
+                slotDurationSec = 120,
+                surfaceWind = {
+                    speed = 2.4,
+                    direction = 195.0,
+                },
+                facilities = {
+                    {
+                        facilityId = "PAD_01",
+                        type = "LANDING_PAD",
+                        tacticalChannel = 50211,
+                        maxSupportWeight = 40000.0,
+                        maxSupportRadius = 12.0,
+                        coordinates = { x = 1250.0, y = 65.0, z = -820.0 },
+                        status = "FREE",
+                        mobility = "STATIC",
+                    },
+                    {
+                        facilityId = "PAD_02",
+                        type = "LANDING_PAD",
+                        tacticalChannel = 50212,
+                        maxSupportWeight = 25000.0,
+                        maxSupportRadius = 8.0,
+                        coordinates = { x = 1300.0, y = 65.0, z = -800.0 },
+                        status = "FREE",
+                        mobility = "STATIC",
+                    },
+                },
+            },
+        },
+        files = {
+            { repoPath = "src/0_infra/gac/main.lua", dest = "/main.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/config.lua", dest = "/config.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/modules/config_loader.lua", dest = "/modules/config_loader.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/modules/facility_inventory.lua", dest = "/modules/facility_inventory.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/modules/allocation_engine.lua", dest = "/modules/allocation_engine.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/modules/beacon_broadcaster.lua", dest = "/modules/beacon_broadcaster.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/modules/gac_fsm.lua", dest = "/modules/gac_fsm.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gac/modules/tui_view.lua", dest = "/modules/tui_view.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },

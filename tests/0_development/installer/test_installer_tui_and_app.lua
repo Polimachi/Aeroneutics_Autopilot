@@ -53,7 +53,7 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         assert_eq(tui_view.toggleSource("GDRIVE"), "github")
 
         local modules = manifest.listModules()
-        assert_eq(#modules, 8)
+        assert_eq(#modules, 9)
 
         -- 2. Color terminal rendering
         local termColor = mock.term(51, 19)
