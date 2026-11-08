@@ -23,12 +23,12 @@
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
 
 - [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
-  - 가상 좌표 비콘, 동역학 요동 인터록 및 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 구현
+  - 가상 좌표 비콘, 컴퓨터 기준 상대 좌표 오프셋 보정, 동적 항법 센서 자동 바인딩 및 전술 유도 스트리밍 구현
   - **세부 작업 항목**:
-    - [ ] **TASK-102-1**: 정적/동적 제원 설정 로더(`config.lua`) 및 7단계 FSM 상태 머신(`IDLE`, `RESERVED`, `APPROACH`, `TOUCHDOWN`, `OCCUPIED`, `GO_AROUND`, `MAINTENANCE`) 구현
+    - [ ] **TASK-102-1**: 컴퓨터-패드 중심 상대 오프셋 보정(`relativeOffset`), 동적 센서 자동 탐색/바인딩, 설정 로더(`config.lua`) 및 FSM 상태 머신(`INIT`~`MAINTENANCE`) 구현
     - [ ] **TASK-102-2**: GAC 로컬 백본망(`Base_sec+1`) 패킷 수신/응답 및 슬롯 예약/점유 해제 프로토콜 연동
     - [ ] **TASK-102-3**: 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 (정적 1Hz 하트비트 / 동적 20Hz 동역학 및 갑판 요동 `deckStatus` 판정 알고리즘) 구현
-    - [ ] **TASK-102-4**: 독립 완결형 메인 루프(`main.lua`) 및 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
+    - [ ] **TASK-102-4**: 독립 완결형 메인 루프(`main.lua`) 및 센서 결손 격리 / 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
     - [ ] **TASK-102-5**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/landing_pad/`) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
 ---

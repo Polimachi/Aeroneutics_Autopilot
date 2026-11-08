@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.2.5` |
-| **최종 수정일 (Date)** | `2026-11-07` |
+| **문서 버전 (Version)** | `v2.3.0` |
+| **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/landing_pad/` |
 | **주관 도메인 (Domain)** | 지상 인프라 수직이착륙 착륙패드 비콘 (Landing Pad) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v2.3.0` | 2026-11-08 | 초기 설치 시운전(상대 좌표 오프셋 보정) 및 동적 패드 인접 항법 센서 자동 바인딩 규격 추가 | 비콘 컴퓨터 설치 위치 오프셋 및 동적 텔레메트리 센서 연동 실체화 |
 | `v2.2.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
 | `v2.2.4` | 2026-11-07 | 40채널 확장 및 표준 메타데이터 표 적용 | Phase 0 ICD 동기화 |
 
@@ -77,6 +78,40 @@
 
 ---
 
+### 1.4 초기 설치 시운전 및 센서 캘리브레이션 규격 (Initial Commissioning & Sensor Calibration)
+
+착륙패드 비콘 컴퓨터는 물리적 현장 설치 시점에 다음의 상대 좌표 오프셋 보정 및 동적 패드 센서 탐색 절차를 필수적으로 완수해야 합니다.
+
+#### 1.4.1 컴퓨터 기준 착륙패드 중심 상대 좌표 오프셋 보정 (Relative Coordinate Offset Calibration)
+1. **설치 물리 위치 분리 원칙**:
+   - 비콘 컴퓨터 본체는 기체 하강 풍압(Downwash), 물리 충돌 방지 및 유지보수 편의를 위해 착륙패드 표면 정중앙이 아닌 **패드 가장자리(Control Box), 지하 기단부 또는 관제 단말 위치**에 분리 설치됩니다.
+   - 따라서 기체가 유도되어 접지해야 하는 정밀 터치다운 중심 좌표($\vec{p}_{\text{touchdown}}$)는 컴퓨터 본체 물리 위치($\vec{p}_{\text{node}}$)와 3축 상대 변위 오프셋 벡터($\Delta\vec{p}_{\text{offset}}$)의 합성으로 산출됩니다:
+     $$\vec{p}_{\text{touchdown}} = \vec{p}_{\text{node}} + \Delta\vec{p}_{\text{offset}} = \begin{bmatrix} X_{\text{node}} + \Delta X \\ Y_{\text{node}} + \Delta Y \\ Z_{\text{node}} + \Delta Z \end{bmatrix}$$
+2. **시운전(Commissioning) 파라미터 및 보존**:
+   - 초기 부팅 시 대화형 시운전 CLI 또는 `config.json` 설정을 통해 상대 변위 오프셋($\Delta X, \Delta Y, \Delta Z$, 단위: m/block)과 권장 진입 방위각(`approachHeading`)을 설정합니다.
+   - **정적 패드 (Static Pad)**: 고정 좌표계에서 $\vec{p}_{\text{touchdown}}$을 사전 연산하여 `MSG_FACILITY_STATIC_GUIDE`의 `touchdownPoint`로 1Hz 송출합니다.
+   - **이동형 동적 패드 (Dynamic Pad)**: 이동 플랫폼(선체) 회전 자세 행렬 $R(\text{pitch}, \text{roll}, \text{yaw})$을 적용하여 월드 좌표계 중심점을 20Hz 실시간 갱신합니다:
+     $$\vec{p}_{\text{touchdown}}(t) = \vec{p}_{\text{node}}(t) + R(t) \cdot \Delta\vec{p}_{\text{offset}}$$
+
+#### 1.4.2 동적 패드 인접 항법 센서 자동 탐색 및 바인딩 (Dynamic Pad Sensor Auto-Discovery & Binding)
+1. **센서 필수성 및 허용 페리페럴**:
+   - 동적 패드는 20Hz 고속 동역학 스트리밍 및 Section 5.2의 갑판 안정성($\theta_{tilt} \le 10.0^\circ, |v_y| \le 2.5\text{ m/s}$) 실시간 평가를 위해 물리 항법 센서 연동이 필수적입니다.
+   - 본 체계는 Create: Aeronautics 및 Create: Avionics 표준 페리페럴을 지원하며, 금지 모드(Valkyrien Skies 계통) 페리페럴은 일체 사용하지 않습니다:
+     - **3축 자세/틸트 센서**: `gyroscopic_sensor`, `avionics_controller` (제공 메서드: `getPitch()`, `getRoll()`, `getYaw()`, `getPitchRate()`, `getRollRate()`, `getYawRate()`)
+     - **고도 및 수직 속도 센서**: `altitude_sensor`, `velocity_sensor` (제공 메서드: `getAltitude()`, `getVelocity()`)
+2. **부팅 자동 스캔 파이프라인 (Auto-Discovery Pipeline)**:
+   - 시스템 부팅(`INIT`) 시 `peripheral.find()` 및 `peripheral.getNames()`를 순회하여 인접 장착된 자이로 및 속도/고도 센서를 자동 탐색하여 드라이버 인터페이스에 바인딩합니다.
+   - 복수 센서 장착 시 `config.json`에 우선순위 측면(`preferredSide`)을 지정할 수 있습니다.
+
+#### 1.4.3 센서 결손/이상 시 안전 인터록 (Sensor Failure & Zero-False-Stability Interlock)
+1. **허위 안정성 송출 원천 차단 (Zero-False-Stability)**:
+   - 동적 패드로 구동 설정되었으나 필수 센서(자이로스코프 또는 수직 속도계)가 미탐색되었거나 I/O 결손이 발생한 경우, 기본값(0)을 채워 가짜 "STABLE" 신호를 기체에 브로드캐스트하는 것을 엄격히 금지합니다.
+2. **안전 격리 및 GAC 보고**:
+   - 센서 미탐색/결손 시 패드는 `IDLE`로 전이하지 않고 즉시 **`MAINTENANCE` 상태로 격리**됩니다.
+   - 직속 GAC에 `MSG_ATC_FACILITY_UPDATE` (`status: "MAINTENANCE"`, `faultCode: "SENSOR_UNAVAILABLE"`)를 송출하여 해당 패드로의 기체 접근 배정을 원천 차단합니다.
+
+---
+
 ## 2. 네트워크 채널 및 노드 토폴로지 (Network Channels & Topology)
 
 착륙패드 시스템은 물리 구동 장치 없이 컴퓨터 본체와 무선 모뎀(Ender Modem)만으로 구성된 순수 무선(All-Wireless) 경량 네트워크를 사용하며, 직속 GAC가 관할하는 섹터 로컬 백본망에 귀속됩니다.
@@ -108,6 +143,15 @@ flowchart TD
 | **$Base_{\text{sec}} + 1$** | `CH_SECTOR_FACILITY` | Pad Node / GAC | GAC / Pad Node | 1Hz / 이벤트 | **직속 섹터 로컬 백본**: GAC와 패드 간 슬롯 예약(`MSG_ATC_SLOT_ASSIGN/ACK`), 상태 동기화(`MSG_ATC_FACILITY_UPDATE`), 복행 제어 |
 | **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Pad Node / SAS | SAS / Pad Node | 1Hz (정적)<br/>20Hz (동적) | **1:1 정밀 전술 유도 스트리밍** (`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`), 접지 통보 (`MSG_TOUCHDOWN_COMPLETE`), 복행 지시 (`MSG_ABORT_APPROACH`) |
 | **`Base + 5`** | `CH_EXTERNAL_COMM` | Pad Node | FCP (Node 04) | 이벤트 | 기체 전용 응답 채널 (점유 확인 통보) |
+
+### 2.2 노드 하드웨어 구성 및 페리페럴 바인딩 (Node Hardware & Peripherals)
+
+| 시설물 유형 | 필수 장비 구성 | 인터페이스/페리페럴 | 역할 및 기능 |
+| :--- | :--- | :--- | :--- |
+| **공통 (Common)** | CC:Tweaked 컴퓨터 본체 (Advanced Computer 권장) | `modem` (Ender Modem) | 로컬 백본($Base_{\text{sec}}+1$) 및 전술 채널($Base_{\text{sec}}+10+\text{Idx}$) 무선 송수신 |
+| **정적 패드 (Static)** | 무선 모뎀 단독 장착 | 내부 고정 제원 테이블 | 사전 보정된 터치다운 중심 좌표($\vec{p}_{\text{node}} + \Delta\vec{p}_{\text{offset}}$) 기반 1Hz 가이드 송출 |
+| **동적 패드 (Dynamic)** | 3축 자세/틸트 센서 | `gyroscopic_sensor` / `avionics_controller` | 실시간 Pitch/Roll/Yaw 및 3축 각속도 계측 ($\to \theta_{tilt}$ 연산) |
+| **동적 패드 (Dynamic)** | 고도 및 속도 센서 | `altitude_sensor`, `velocity_sensor` | 실시간 해발 고도($Y$) 및 수직 요동 속도($v_y$, Heave) 계측 |
 
 ---
 
@@ -290,7 +334,8 @@ flowchart TD
     payload = {
         facilityId = "PAD_BRAVO_01",
         status = "OCCUPIED",                 -- "FREE", "RESERVED", "OCCUPIED", "MAINTENANCE"
-        currentCraft = "AIRCRAFT_01"         -- FREE 전환 시 nil
+        currentCraft = "AIRCRAFT_01",        -- FREE 전환 시 nil
+        faultCode = nil                      -- MAINTENANCE 상태 시 오류 사유 ("SENSOR_UNAVAILABLE", "CALIBRATION_PENDING" 등)
     }
 }
 ```
@@ -324,7 +369,9 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> IDLE : 시스템 부팅 및 로컬 백본 등록 (status: FREE)
+    [*] --> INIT : 시스템 부팅 및 설정 로드
+    INIT --> IDLE : 오프셋 보정 완료 및 센서 정상 (status: FREE)
+    INIT --> MAINTENANCE : 동적 패드 필수 센서 미탐색 또는 보정 누락 (faultCode: SENSOR_UNAVAILABLE)
     
     IDLE --> RESERVED : GAC 슬롯 인가 수신 (MSG_ATC_SLOT_ASSIGN)
     
@@ -342,6 +389,8 @@ stateDiagram-v2
     
     OCCUPIED --> DEPARTURE_PENDING : GAC 이륙 통보 수신
     DEPARTURE_PENDING --> IDLE : 기체 안전 이탈 확인 (GAC 명령: status: FREE)
+    APPROACH_DYNAMIC --> MAINTENANCE : 런타임 센서 결손/I/O 장애
+    MAINTENANCE --> INIT : 센서 재연결/수동 점검 후 재초기화
 ```
 
 ### 4.2 착륙 및 이륙 3-Tier 관제 시퀀스 다이어그램
@@ -451,3 +500,4 @@ $$\vec{a}_{cmd} = \vec{a}_{pad}(t) + K_p (\vec{p}_{pad}(t) - \vec{p}_{craft}) + 
 | **지상 장애물 감지** | 초음파/적외선/관제 센서 차폐 | 공통 | 패드 노드가 `MSG_ABORT_APPROACH` 즉시 송출, 기체 급상승 복행 |
 | **접지 미확인 타임아웃** | 최저 강하 고도 도달 후 $10.0\text{초}$ 초과 | 공통 | 착륙 중단, 복행 고도로 상승 후 체공 선회 |
 | **슬롯 만료 타임아웃** | 슬롯 인가 후 $120\text{초}$ 동안 접지 미보고 | 공통 | 패드 `GO_AROUND` 전이 후 GAC에 슬롯 만료 보고 및 `FREE` 리셋 |
+| **동적 패드 센서 결손/두절** | 부팅 시 미탐색 또는 런타임 중 $300\text{ms}$ I/O 실패 | 동적 패드 | 즉시 `MAINTENANCE` 격리, 접근 기체에 `MSG_ABORT_APPROACH` (`reason: SENSOR_FAULT`) 발신 및 GAC 통보 |
