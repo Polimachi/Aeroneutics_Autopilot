@@ -4,7 +4,7 @@ local state_machine = require("state_machine")
 local flight_dynamics_core = require("flight_dynamics_core")
 local vehicle_policy = require("vehicle_policy")
 local actuator_adapter_tca = require("actuator_adapter_tca")
-local actuator_adapter_wap = require("actuator_adapter_wap")
+local actuator_adapter_asa = require("actuator_adapter_asa")
 local network_manager = require("network_manager")
 local telemetry_feeder = require("telemetry_feeder")
 
@@ -92,11 +92,11 @@ function core_daemon.init(configDirOrTable)
     local fdCore = flight_dynamics_core.init(cfg.pid)
     local policy = vehicle_policy.init(cfg.system)
     local adapter = actuator_adapter_tca.init(cfg.thrusters)
-    local adapterWap = actuator_adapter_wap.init(cfg.surfaces)
+    local adapterAsa = actuator_adapter_asa.init(cfg.surfaces)
     local feeder = telemetry_feeder.init(cfg.system)
     local nowMs = (os.epoch and os.epoch("utc")) or 0
 
-    net.adapterWap = adapterWap
+    net.adapterAsa = adapterAsa
     net.on_profile_sync = function(payload)
         save_json(dir .. "/thrusters.json", payload)
         if adapter and adapter.reload_coefficients then
@@ -107,7 +107,7 @@ function core_daemon.init(configDirOrTable)
 
     return {
         cfg = cfg, sensors = sensors, fsm = fsm, net = net, fdCore = fdCore,
-        policy = policy, adapter = adapter, adapterWap = adapterWap,
+        policy = policy, adapter = adapter, adapterAsa = adapterAsa,
         controller = fdCore, mixer = adapter, feeder = feeder,
         running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil
     }
@@ -137,23 +137,23 @@ local function step_actuation(state, comState, dt)
 
     local rawTap, satTap = actuator_adapter_tca.allocate(state.adapter, compWrench)
     local isAero = (state.policy and (state.policy.vehicleType == "FIXED_WING" or state.policy.vehicleType == "WINGED_VTOL"))
-    local rawWap, satWap = nil, nil
+    local rawAsa, satAsa = nil, nil
     if isAero then
         local vel = comState and comState.dynamics and comState.dynamics.velocity
         local airspeed = vel and math.sqrt((vel.vx or 0)^2 + (vel.vz or 0)^2) or 0.0
-        rawWap, satWap = actuator_adapter_wap.allocate(state.adapterWap, compWrench, airspeed, condCmd.flapTarget)
+        rawAsa, satAsa = actuator_adapter_asa.allocate(state.adapterAsa, compWrench, airspeed, condCmd.flapTarget)
     end
 
-    local combSat = isAero and vehicle_policy.combine_saturation(satTap, satWap, condCmd.transitionAlpha) or satTap
+    local combSat = isAero and vehicle_policy.combine_saturation(satTap, satAsa, condCmd.transitionAlpha) or satTap
     state.fdCore.saturationStatus = combSat
 
     local safeTap = state_machine.apply_output_safety_rule(state.fsm, rawTap, false)
-    local safeWap = (isAero and rawWap) and state_machine.apply_output_safety_rule(state.fsm, rawWap, true) or nil
+    local safeAsa = (isAero and rawAsa) and state_machine.apply_output_safety_rule(state.fsm, rawAsa, true) or nil
     local dynLoad = actuator_adapter_tca.compute_dynamic_load(state.adapter, safeTap)
 
     state.fdCore.lastDemands = { pitch = compWrench.pitchTorque, roll = compWrench.rollTorque, yaw = compWrench.yawTorque }
     state.fdCore.saturationFreeze = combSat.axisSaturatedPos.pitch or combSat.axisSaturatedNeg.pitch
-    return safeTap, safeWap, dynLoad
+    return safeTap, safeAsa, dynLoad
 end
 
 function core_daemon.tick(state)
@@ -163,23 +163,23 @@ function core_daemon.tick(state)
     state.tickCount = state.tickCount + 1
 
     local comState, healthMap, sensorOk = step_kinematics(state, dt, nowMs)
-    local safeTap, safeWap, _ = step_actuation(state, comState, dt)
+    local safeTap, safeAsa, _ = step_actuation(state, comState, dt)
 
     network_manager.send_packet(state.net, state.net.channels.actuation, "MSG_THRUST_CMD", {
         watchdogSeq = state.tickCount, controlState = state.fsm.currentState, outputs = safeTap
     })
     local isAero = (state.policy and (state.policy.vehicleType == "FIXED_WING" or state.policy.vehicleType == "WINGED_VTOL"))
-    if isAero and safeWap then
+    if isAero and safeAsa then
         network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
-            watchdogSeq = state.tickCount, controlState = state.fsm.currentState, surfaces = safeWap
+            watchdogSeq = state.tickCount, controlState = state.fsm.currentState, surfaces = safeAsa
         })
     end
 
     local tapOk = (state.adapter.healthStatus ~= "API_TOTAL_LOSS")
-    local wapOk = isAero and (state.adapterWap.healthStatus ~= "API_TOTAL_LOSS") or true
+    local asaOk = isAero and (state.adapterAsa.healthStatus ~= "API_TOTAL_LOSS") or true
     telemetry_feeder.tick(state.feeder, state.net, comState, state.fsm, state.mixer, {
         sensorOk = sensorOk, sensorHealth = healthMap,
-        actuatorHealth = { tap = tapOk, wap = wapOk }
+        actuatorHealth = { tap = tapOk, asa = asaOk }
     })
     return true
 end
@@ -195,12 +195,12 @@ function core_daemon.shutdown(state, reason)
         })
     end
     local safeTap = state_machine.apply_output_safety_rule(fsm, {}, false)
-    local safeWap = state_machine.apply_output_safety_rule(fsm, {}, true)
+    local safeAsa = state_machine.apply_output_safety_rule(fsm, {}, true)
     network_manager.send_packet(state.net, state.net.channels.actuation, "MSG_THRUST_CMD", {
         watchdogSeq = 0, controlState = "E_STOP", outputs = safeTap
     })
     network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
-        watchdogSeq = 0, controlState = "E_STOP", surfaces = safeWap
+        watchdogSeq = 0, controlState = "E_STOP", surfaces = safeAsa
     })
 end
 

@@ -234,7 +234,7 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
             dynamics = { altitudeY = 150.0, verticalSpeed = 0.0 },
             fuel = { amount = 800, capacity = 1000 }
         }
-        local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, wap = true } }
+        local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, asa = true } }
         local mixerState = { dynamicLoad = 0.0 }
         local fsmNormal = { currentState = "NORMAL", activeSource = "FCP" }
 
@@ -299,7 +299,7 @@ describe("vas dynamic hangar bay binding and calibration lifecycle", function()
             dynamics = { altitudeY = 0.0, verticalSpeed = 0.0 },
             fuel = { amount = 500, capacity = 1000 }
         }
-        local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, wap = true } }
+        local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, asa = true } }
         local mixer = {}
 
         -- 1) Receive MSG_CALIBRATION_INIT on Base+0 (10000)

@@ -24,7 +24,7 @@ describe("GCS 51x19 dual-pane TUI console renderer", function()
                 dynamics = { altitudeY = 125.4, verticalSpeed = 0.5, groundSpeed = 16.2 },
                 fuel = 0.82,
                 fsmState = "CRUISE",
-                actuatorHealth = { tap = true, wap = true, allOk = true }
+                actuatorHealth = { tap = true, asa = true, allOk = true }
             }
         }
         local fleet_summary = {

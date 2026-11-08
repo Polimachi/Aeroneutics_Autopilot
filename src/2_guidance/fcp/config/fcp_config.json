@@ -140,6 +140,6 @@
     "lowFuelRthThreshold": 0.20,
     "emergencyLandFuelThreshold": 0.10,
     "bumplessRampSec": 2.0,
-    "wapTimeoutMs": 300
+    "asaTimeoutMs": 300
   }
 }

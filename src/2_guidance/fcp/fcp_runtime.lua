@@ -26,7 +26,7 @@ function fcp_runtime.create_context(config, modem_lookup)
         fsm = flight_fsm.init(cfg),
         guidance = guidance_controller.init(cfg),
         lastActiveSource = "FCP",
-        actuatorHealth = { tca = true, wap = true, allOk = true },
+        actuatorHealth = { tca = true, asa = true, allOk = true },
         mission_target = { x = 0.0, y = 64.0, z = -50.0 },
     }
 end
@@ -60,7 +60,7 @@ local function send_mfd_telemetry(ctx, nav_summary)
             crossTrackError = 0.0,
             distanceToWp = 0.0,
         },
-        actuatorHealth = ctx.actuatorHealth or { tca = true, wap = true, allOk = true },
+        actuatorHealth = ctx.actuatorHealth or { tca = true, asa = true, allOk = true },
     }
     network_manager.send_mfd_state(ctx.net, mfd_payload)
 end

@@ -2,15 +2,16 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 1 & 2** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
-- **직전 완료**: `TASK-111` 완료 (멀티노드 종단간(E2E) 패킷 시퀀스 시뮬레이션 및 테스트 실효성 검증 체계 구축: virtual_bus, node_sandbox, run_e2e_tests.py, run_mutation_tests.py, 20개 돌연변이 살상률 100.0%, 6대 E2E 시나리오 6/6 PASS, 12개 유닛 타겟 248/248 PASS, 하네스 29/29 PASS, 정적 분석 14 SPECS 100% CLEAN).
-- **현재 활성**: `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기) / `TASK-010` (플레이북 체계 구축).
+- **현재 단계**: **Phase 1 & 2** — Phase 0 전 과제 및 구버전 용어 척결 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
+- **직전 완료**: `TASK-007` 완료 (구버전 명칭 UAP/SAS/WAP 소급 전면 척결 및 회귀 방지 테스트 슈트 구축: test_terminology_guard.py, verify_all_specs.py Rule 8, 런타임/테스트 22개 파일 마이그레이션, 14대 사양서 전수 무결성 100% CLEAN, 8 Implemented, 6 Approved, 33/33 하네스 테스트 PASS, 248/248 유닛 타겟 PASS, 6/6 E2E 시나리오 PASS, 20/20 돌연변이 살상률 100.0%).
+- **현재 활성**: `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기) / `TASK-010` (플레이북 체계 구축) / `TASK-115` (ADVANCED_VTOL 아키텍처).
 - **다음 착수 후보**:
   1. `TASK-116`: 통합 인스톨러 역할별 원클릭 프로파일 배포 확장 (`installer.lua`, `src/0_development/installer/`).
   2. `TASK-117`: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축 (`src/0_development/ota/`).
-  3. `TASK-007`: 구버전 명칭(UAP/SAS/WAP) 전면 척결 및 회귀 방지 테스트 슈트 구축.
-  4. `TASK-201`: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성.
+  3. `TASK-201`: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성.
+  4. `TASK-103`: Runway 활주로 제어기 구현 (`src/0_infra/runway/`, 사양서 v1.10.6 Approved).
   5. `TASK-301`: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3).
+  6. `TASK-105`: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -29,7 +30,7 @@
 - **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 248/248 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (6개 시나리오 6/6 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (20/20 KILLED, 100.0% 살상률).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (29/29 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (33/33 PASS).
 - **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (8 Implemented, 6 Approved).
 
 ## 4. Gotchas & Invariants

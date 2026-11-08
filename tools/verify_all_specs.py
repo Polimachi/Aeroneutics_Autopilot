@@ -212,6 +212,30 @@ def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
         else:
             print(f"   [PASS] All Mermaid blocks syntactically balanced ({len(mermaid_blocks)} blocks)")
 
+        # 9. Rule 8: Legacy Terminology Hygiene (UAP / SAS / WAP Zero-Tolerance Purge)
+        uap_pat = re.compile(r'(?<![A-Za-z0-9])uap(?![A-Za-z0-9])', re.IGNORECASE)
+        sas_pat = re.compile(r'(?<![A-Za-z0-9])SAS(?![A-Za-z0-9])')
+        wap_pat = re.compile(r'(?<![A-Za-z0-9])wap(?![A-Za-z0-9])', re.IGNORECASE)
+
+        term_violations = []
+        for i, line in enumerate(lines, 1):
+            if uap_pat.search(line):
+                term_violations.append((i, 'UAP', line.strip()))
+            if sas_pat.search(line):
+                term_violations.append((i, 'SAS', line.strip()))
+            if wap_pat.search(line):
+                term_violations.append((i, 'WAP', line.strip()))
+
+        if term_violations:
+            print(f"   [FAIL] Found {len(term_violations)} legacy terminology violation(s):")
+            for lno, term, text in term_violations[:5]:
+                print(f"      L{lno} [{term}]: {text[:80]}")
+            if len(term_violations) > 5:
+                print(f"      ... and {len(term_violations) - 5} more")
+            total_errors += len(term_violations)
+        else:
+            print(f"   [PASS] Legacy terminology hygiene clean (zero UAP/SAS/WAP)")
+
         print("")
 
     # Optional README link audit

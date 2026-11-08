@@ -91,7 +91,7 @@ describe("1_control/asa config_manager", function()
     it("loads and saves config JSON while guaranteeing debug=true default", function()
         local test_path = sdk.temp_path("test_asa_nodebug.json")
         local raw = {
-            podId = "WAP_L",
+            podId = "ASA_L",
             aircraftIndexN = 1,
             baseChannel = 10000
         }
@@ -108,7 +108,7 @@ describe("1_control/asa config_manager", function()
     it("preserves debug=false when explicitly configured", function()
         local test_path = sdk.temp_path("test_asa_debug_false.json")
         local raw = {
-            podId = "WAP_L",
+            podId = "ASA_L",
             aircraftIndexN = 1,
             baseChannel = 10000,
             debug = false
@@ -140,7 +140,7 @@ describe("1_control/asa tui_dashboard and async/headless execution", function()
         }
         local cfg = {
             aircraftDomainId = "AIRCRAFT_01",
-            podId = "WAP_L",
+            podId = "ASA_L",
             baseChannel = 10000,
             channels = { surfaceActuation = 10011 }
         }
@@ -198,7 +198,7 @@ describe("1_control/asa tui_dashboard and async/headless execution", function()
 
         local cfg = {
             aircraftDomainId = "AIRCRAFT_01",
-            podId = "WAP_L",
+            podId = "ASA_L",
             baseChannel = 10000,
             channels = { surfaceActuation = 10011 },
             debug = true
@@ -239,7 +239,7 @@ describe("1_control/asa tui_dashboard and async/headless execution", function()
 
         local cfg = {
             aircraftDomainId = "AIRCRAFT_01",
-            podId = "WAP_L",
+            podId = "ASA_L",
             baseChannel = 10040,
             channels = { surfaceActuation = 10051 },
             interactionMode = "API",
@@ -283,7 +283,7 @@ describe("1_control/asa tui_dashboard and async/headless execution", function()
         }
         local cfg = {
             aircraftDomainId = "AIRCRAFT_01",
-            podId = "WAP_L",
+            podId = "ASA_L",
             baseChannel = 10000,
             channels = { surfaceActuation = 10011 }
         }
@@ -332,7 +332,7 @@ describe("1_control/asa tui_dashboard and async/headless execution", function()
         }
         local cfg = {
             aircraftDomainId = "AIRCRAFT_01",
-            podId = "WAP_L",
+            podId = "ASA_L",
             baseChannel = 10000,
             channels = { surfaceActuation = 10011 }
         }
@@ -368,7 +368,7 @@ describe("1_control/asa tui_dashboard and async/headless execution", function()
         }
         local cfg = {
             aircraftDomainId = "AIRCRAFT_01",
-            podId = "WAP_L",
+            podId = "ASA_L",
             baseChannel = 10000,
             channels = { surfaceActuation = 10011 }
         }

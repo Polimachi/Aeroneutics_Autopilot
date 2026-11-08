@@ -1,7 +1,7 @@
--- VAS WAP Aerodynamic Surface Adapter & V^2 Scaling Module (Layer 3B)
-local actuator_adapter_wap = {}
+-- VAS ASA Aerodynamic Surface Adapter & V^2 Scaling Module (Layer 3B)
+local actuator_adapter_asa = {}
 
-function actuator_adapter_wap.init(surfacesConfig)
+function actuator_adapter_asa.init(surfacesConfig)
     local cfg = surfacesConfig or {}
     return {
         surfaceMix = cfg.surfaceMix or {},
@@ -17,7 +17,7 @@ function actuator_adapter_wap.init(surfacesConfig)
     }
 end
 
-function actuator_adapter_wap.compute_q_scaling(state, airspeed)
+function actuator_adapter_asa.compute_q_scaling(state, airspeed)
     local v = tonumber(airspeed)
     if not v or v <= 0.0 then return 1.0 end
     local env = state.aeroEnvelope or {}
@@ -44,8 +44,8 @@ local function check_axis_sat(sat, mix, isPosLimit)
     end
 end
 
-function actuator_adapter_wap.allocate(state, wrench, airspeed, flapTarget)
-    local qScale = actuator_adapter_wap.compute_q_scaling(state, airspeed)
+function actuator_adapter_asa.allocate(state, wrench, airspeed, flapTarget)
+    local qScale = actuator_adapter_asa.compute_q_scaling(state, airspeed)
     local sat = {
         axisSaturatedPos = { pitch = false, roll = false, yaw = false },
         axisSaturatedNeg = { pitch = false, roll = false, yaw = false }
@@ -77,7 +77,7 @@ function actuator_adapter_wap.allocate(state, wrench, airspeed, flapTarget)
     return outputs, sat
 end
 
-function actuator_adapter_wap.update_feedback(state, payload)
+function actuator_adapter_asa.update_feedback(state, payload)
     if not payload or not payload.surfaceId then return end
     state.surfacesFeedback[payload.surfaceId] = {
         appliedDeg = payload.appliedDeg or 0.0,
@@ -98,4 +98,4 @@ function actuator_adapter_wap.update_feedback(state, payload)
     else state.healthStatus = "API_NOMINAL" end
 end
 
-return actuator_adapter_wap
+return actuator_adapter_asa

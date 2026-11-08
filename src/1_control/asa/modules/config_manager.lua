@@ -8,7 +8,7 @@ config_manager.ACTUATION_OFFSET = 11
 
 config_manager.default_cfg = {
     schemaVersion = "1.0.0",
-    podId = "WAP_L",
+    podId = "ASA_L",
     aircraftDomainId = "AIRCRAFT_01",
     aircraftIndexN = 1,
     baseChannel = 10000,
@@ -34,7 +34,7 @@ end
 function config_manager.default_config()
     return {
         schemaVersion = "1.0.0",
-        podId = "WAP_L",
+        podId = "ASA_L",
         aircraftDomainId = "AIRCRAFT_01",
         aircraftIndexN = 1,
         baseChannel = 10000,
@@ -64,7 +64,7 @@ function config_manager.load(path)
     if type(cfg) ~= "table" then return nil, "INVALID_JSON" end
 
     -- Defaults & Channel Binding
-    cfg.podId = tostring(cfg.podId or "WAP_L")
+    cfg.podId = tostring(cfg.podId or "ASA_L")
     cfg.aircraftDomainId = tostring(cfg.aircraftDomainId or "AIRCRAFT_01")
     cfg.aircraftIndexN = tonumber(cfg.aircraftIndexN) or 1
     cfg.baseChannel = tonumber(cfg.baseChannel) or (config_manager.compute_base(cfg.aircraftIndexN) or 10000)

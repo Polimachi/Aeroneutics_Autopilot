@@ -1,7 +1,7 @@
--- src/node_wap_sim.lua
-local node_wap_sim = {}
+-- src/node_asa_sim.lua
+local node_asa_sim = {}
 
-function node_wap_sim.run()
+function node_asa_sim.run()
     local top_modem = peripheral.wrap("top")
     local cmd_count = 0
     if top_modem then
@@ -17,14 +17,14 @@ function node_wap_sim.run()
         end
     end
     if harness_set_state then
-        harness_set_state("wap_cmd_count", cmd_count)
+        harness_set_state("asa_cmd_count", cmd_count)
     end
     return true
 end
 
 local args = { ... }
 if select("#", ...) == 0 or args[1] == "run" then
-    node_wap_sim.run()
+    node_asa_sim.run()
 end
 
-return node_wap_sim
+return node_asa_sim

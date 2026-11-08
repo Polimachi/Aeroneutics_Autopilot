@@ -64,7 +64,7 @@ describe("GCS fleet tracker and multi-craft telemetry cache", function()
             dynamics = { altitudeY = 125.4, verticalSpeed = 0.5, groundSpeed = 16.2 },
             fuel = 0.82,
             fsmState = "CRUISE",
-            actuatorHealth = { tap = true, wap = true, allOk = true }
+            actuatorHealth = { tap = true, asa = true, allOk = true }
         }
 
         local updated = fleet_tracker.update_telemetry(state, "AIRCRAFT_01", telem_payload, 10000)

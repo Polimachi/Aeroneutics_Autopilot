@@ -120,7 +120,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
                 controlState = "NORMAL",
                 activeSource = "FCP",
                 sensorOk = true,
-                actuatorHealth = { tap = true, wap = true, allOk = true },
+                actuatorHealth = { tap = true, asa = true, allOk = true },
             },
         })
         bus:step(0.05)

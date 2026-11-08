@@ -109,7 +109,7 @@ function network_manager.init(systemConfig)
     return {
         wirelessModem = topM, wiredModem = botM,
         aircraftDomainId = cfg.aircraftDomainId or "AIRCRAFT_01",
-        baseChannel = baseCh, channels = ch, txSeq = 0, latestCommand = nil, adapterWap = nil,
+        baseChannel = baseCh, channels = ch, txSeq = 0, latestCommand = nil, adapterAsa = nil,
         hangarChannels = nil, pendingRebind = nil
     }
 end
@@ -359,8 +359,8 @@ function network_manager.dispatch(state, fsm, controller, mixer, channel, replyC
     elseif channel == (state.channels and state.channels.guidance) or msgType == "MSG_ATTITUDE_CMD" then
         state.latestCommand = rawPacket.payload
         if fsm then
-            fsm.lastUapCmdMs = (os.epoch and os.epoch("utc")) or 0
-            fsm.lastUapCmd = rawPacket.payload
+            fsm.lastFcpCmdMs = (os.epoch and os.epoch("utc")) or 0
+            fsm.lastFcpCmd = rawPacket.payload
             if fsm.arbitrate_c2 then fsm.arbitrate_c2(fsm, rawPacket.payload) end
             if fsm.handle_arm_command then fsm.handle_arm_command(fsm, rawPacket.payload)
             elseif (fsm.currentState == "IDLE_ARMED" or fsm.currentState == "DISARMED") and rawPacket.payload.arm == true then
@@ -378,7 +378,7 @@ function network_manager.dispatch(state, fsm, controller, mixer, channel, replyC
         end
         return true
     elseif channel == (state.channels and state.channels.aero) or msgType == "MSG_AERO_STATUS" then
-        if state.adapterWap and state.adapterWap.update_feedback then state.adapterWap.update_feedback(state.adapterWap, rawPacket.payload) end
+        if state.adapterAsa and state.adapterAsa.update_feedback then state.adapterAsa.update_feedback(state.adapterAsa, rawPacket.payload) end
         return true
     elseif (state.hangarChannels and channel == state.hangarChannels.cmd) or msgType == "MSG_CALIB_START" or msgType == "MSG_PROFILE_SYNC" or msgType == "MSG_CALIBRATION_CLOSE" then
         return handle_calibration_packet(state, fsm, mixer, rawPacket)

@@ -1,7 +1,7 @@
--- Mock Node 06: WAP (Wing Actuator Pod) Cluster ICD v1.19.0 / WAP v1.2.0
+-- Mock Node 06: ASA (Aerodynamic Surface Adapter) Cluster ICD v1.24.0 / ASA v1.6.0
 local modem = (peripheral and peripheral.wrap and peripheral.wrap("top")) or (peripheral and peripheral.find and peripheral.find("modem"))
 if not modem then
-    error("No modem peripheral found on mock WAP")
+    error("No modem peripheral found on mock ASA")
 end
 
 local CH_AERO = 10011
