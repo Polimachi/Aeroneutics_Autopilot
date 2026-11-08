@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.8.0` |
-| **최종 수정일 (Date)** | `2026-11-07` |
+| **문서 버전 (Version)** | `v2.8.1` |
+| **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 시스템 프로그램 관계망 및 채널 토폴로지 구조도 (Architecture Map) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.8.1` | 2026-11-08 | 7장 통신 채널 대역폭 및 경계 검증 규칙 내 구형 격납고 교정 대역(`1000 ~ 9999`) 및 20채널/2,000대 잔재 문구를 현행 표준(`101 ~ 200`, $BW=40$, $N\le 1000$)으로 정합 동기화 | 사양서 간 용어 및 수치 정합성 확립 |
 | `v1.10.4` | 2026-11-07 | 0_ground 도메인의 0_infra 통합 반영 및 하위 사양서 링크(docs/specs/0_infra) 동기화 | 지상 인프라 구조 통합 반영 |
 | `v1.10.4` | 2026-11-07 | 0_ground 도메인의 0_infra 통합 반영 및 하위 사양서 링크(docs/specs/0_infra) 동기화 | 지상 인프라 구조 통합 반영 |
 | `v2.8.0` | 2026-11-07 | 자율 유도 컴퓨터 Node 04 명칭 SAS → FCP(Flight Control Program) 전면 개정, 상대 링크 및 9개 다이어그램 전수 표기 동기화 | 시스템 명칭 표준화 |
@@ -812,7 +813,7 @@ GCS 인프라가 부재한 독립 기동(Standalone) 환경이거나 로컬 캐�
 
 본 시스템에서 **통신 채널 블록 대역폭(Bandwidth, $BW$)**은 네트워크 전송 속도(bps)가 아닌, **단일 비행체 또는 서브시스템이 배타적으로 점유하도록 할당된 무선 모뎀 채널의 개수 및 주파수 구간 폭**을 의미합니다.
 
-- **표준 기체 기본 대역폭**: $BW_{\text{craft}} = 20$ (채널 20개 점유)
+- **표준 기체 기본 대역폭**: $BW_{\text{craft}} = 40$ (채널 40개 점유, 구버전 $BW=20$ [DEPRECATED])
 - **블록 점유 구간**: $[Base, Base + BW - 1]$
 - **서브시스템 오프셋**: $Base + k \quad (k \in \{0, 1, \dots, BW-1\})$
 
@@ -823,14 +824,14 @@ GCS 인프라가 부재한 독립 기동(Standalone) 환경이거나 로컬 캐�
 GCS 및 비행체 온보드 시스템은 채널 블록 확정 전 다음 **4대 경계 검증 규칙(Boundary Rules)**을 100% 통과해야만 채널을 활성화합니다.
 
 #### [Rule 1] 하한선 경계 검증 (Lower Bound Rule)
-시스템 예약 대역(`0 ~ 999`) 및 격납고 교정 대역(`1000 ~ 9999`)과의 간섭을 차단하기 위해, 기체 블록의 최하단 채널은 반드시 10000 이상이어야 합니다.
+시스템 예약 대역(`0 ~ 100`) 및 격납고 교정 대역(`101 ~ 200`, 구버전 `1000 ~ 9999` [DEPRECATED])과의 간섭을 차단하기 위해, 기체 블록의 최하단 채널은 반드시 10000 이상이어야 합니다.
 
 $$Base \ge 10000 \quad (\text{즉, 블록 인덱스 } N \ge 1)$$
 
 #### [Rule 2] 상한선 경계 검증 (Upper Bound Rule)
-기체 전용 대역(`10000 ~ 49999`, 최대 2,000대 수용)을 초과하여 GCS 부트스트랩 채널(`50000`) 및 상위 지상 인프라 대역으로 오버플로우되는 것을 차단합니다.
+기체 전용 대역(`10000 ~ 49999`, 최대 1,000대 수용, 구버전 2,000대 [DEPRECATED])을 초과하여 GCS 부트스트랩 채널(`50000`) 및 상위 지상 인프라 대역으로 오버플로우되는 것을 차단합니다.
 
-$$Base + BW - 1 \le 49999 \quad (\text{즉, 블록 인덱스 } N \le 2000)$$
+$$Base + BW - 1 \le 49999 \quad (\text{즉, 블록 인덱스 } N \le 1000)$$
 
 #### [Rule 3] 인프라 및 전술 예약 대역 침범 차단 (Infrastructure & Tactical Isolation Rule)
 GCS 부트스트랩(`50000`), Sector 0 광역 관제(`50001 ~ 50200`), Sector $S$ 지상 시설물 관제(`50201 ~ 59999`), 및 고정밀 GPS 스웜(`60001 ~ 60020`)을 포함하는 공용 지상 인프라 및 전술 통합 대역(`50000 ~ 60020`)과의 어떠한 주파수 침범도 금지합니다.
@@ -856,13 +857,13 @@ $$0 \le k < BW$$
 local ChannelValidator = {}
 
 ChannelValidator.MIN_CRAFT_BASE = 10000  -- N >= 1
-ChannelValidator.MAX_CRAFT_BASE = 49980  -- N <= 2000 (Base + 19 <= 49999)
+ChannelValidator.MAX_CRAFT_BASE = 49960  -- N <= 1000 (Base + 39 <= 49999, 구 MAX 49980 / N <= 2000 [DEPRECATED])
 ChannelValidator.MAX_CRAFT_CHAN = 49999
 ChannelValidator.INFRA_SPECTRUM_START = 50000  -- 공용 지상 인프라/관제/GPS 통합 보호 [50000, 60020]
 ChannelValidator.INFRA_SPECTRUM_END = 60020
 
 function ChannelValidator.validateBlock(baseChannel, bandwidth)
-    bandwidth = bandwidth or 20
+    bandwidth = bandwidth or 40
     local startChan = baseChannel
     local endChan = baseChannel + bandwidth - 1
 
@@ -871,9 +872,9 @@ function ChannelValidator.validateBlock(baseChannel, bandwidth)
         return false, "ERR_BASE_TOO_LOW: Base must be >= 10000 (N must be >= 1)"
     end
 
-    -- Rule 2: 상한선 검증 (N <= 2000)
+    -- Rule 2: 상한선 검증 (N <= 1000)
     if baseChannel > ChannelValidator.MAX_CRAFT_BASE or endChan > ChannelValidator.MAX_CRAFT_CHAN then
-        return false, "ERR_END_OVERFLOW: Block exceeds craft allocation boundary 49999 (N must be <= 2000)"
+        return false, "ERR_END_OVERFLOW: Block exceeds craft allocation boundary 49999 (N must be <= 1000)"
     end
 
     -- Rule 3: 공용 지상 인프라/관제/GPS 대역 [50000~60020] 격리
@@ -887,7 +888,7 @@ function ChannelValidator.validateBlock(baseChannel, bandwidth)
 end
 
 function ChannelValidator.validatePortOffset(offset, bandwidth)
-    bandwidth = bandwidth or 20
+    bandwidth = bandwidth or 40
     if offset < 0 or offset >= bandwidth then
         return false, "ERR_PORT_OUT_OF_BANDWIDTH: Offset exceeds allocated bandwidth"
     end

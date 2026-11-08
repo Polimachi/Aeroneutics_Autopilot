@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.5.0` |
-| **최종 수정일 (Date)** | `2026-11-07` |
+| **문서 버전 (Version)** | `v2.5.1` |
+| **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.5.1` | 2026-11-08 | 네트워크 토폴로지 다이어그램 내 수용 기체 수 범위를 40채널 기준($N = 1 \sim 1000$)으로 정합 동기화 | 사양서 간 수치 정합성 확립 |
 | `v2.5.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$) 반영, 01호기 직결 바인딩 채널 `Base+0` (`10000`, 구 1000 [DEPRECATED]) 동기화, TCA/ASA 동적 바인딩 `Base+10/11` 반영, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
@@ -85,7 +86,7 @@ flowchart TD
         CONSOLE --- MODEM
     end
 
-    subgraph AIRCRAFT["[시험 대상 입고 비행체] 임의의 기체 (N = 1 ~ 2000)"]
+    subgraph AIRCRAFT["[시험 대상 입고 비행체] 임의의 기체 (N = 1 ~ 1000)"]
         VC["VAS (Node 01)<br/>* Base+0: 직결 바인딩 리스닝<br/>* Base_hangar+1: 20Hz 텔레메트리 피드<br/>* Base_hangar+0: CALIBRATION 지령 수신"]
         TCA["TCA 클러스터 (Node 02-xx)<br/>* Base_hangar+3: 직결 디스커버리<br/>* Base_hangar+0: 펄스(4, 8, 12) 구동 수신<br/>* 상호작용 모드: API / REDSTONE"]
         ASA["ASA 클러스터 (Node 06-xx)<br/>* Base_hangar+3: 조종면 디스커버리/스위프 검증<br/>* 모드: API / REDSTONE"]

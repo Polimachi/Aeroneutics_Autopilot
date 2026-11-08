@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.21.0` |
-| **최종 수정일 (Date)** | `2026-11-07` |
+| **문서 버전 (Version)** | `v1.21.1` |
+| **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.21.1` | 2026-11-08 | MSG_CHANNEL_PROBE/ACK 후보 및 점유 베이스 채널 유효 범위를 40채널 기준(10000~49960, N=1~1000)으로 정합 동기화 | 사양서 간 용어 및 수치 정합성 확립 |
 | `v1.21.0` | 2026-11-07 | 자율 유도 컴퓨터 Node 04 명칭 SAS → FCP(Flight Control Program) 전면 개정, 상대 링크 및 패킷 source/activeSource 식별자('FCP') 동기화, 제어 권한 체계('E_STOP > MFD_ACRO > FCP') 반영 | 시스템 명칭 표준화 및 패킷 스키마 일체화 |
 | `v1.20.1` | 2026-11-07 | 0_ground 도메인의 0_infra 통합 반영 및 하위 사양서 링크·버전(v1.10.5/v2.2.5) 갱신 | 지상 인프라 디렉토리 단일화 반영 |
 | `v1.21.0` | 2026-11-07 | 자율 유도 컴퓨터 Node 04 명칭 SAS → FCP(Flight Control Program) 전면 개정, 상대 링크 및 패킷 source/activeSource 식별자('FCP') 동기화, 제어 권한 체계('E_STOP > MFD_ACRO > FCP') 반영 | 시스템 명칭 표준화 및 패킷 스키마 일체화 |
@@ -1132,9 +1133,9 @@ flowchart TD
     payload = {
         blockId = 3,
         baseChannel = 10080,                     -- Base = 10000 + (3 - 1)*40 (구버전 10040 [DEPRECATED])
-        bandwidth = 20,
+        bandwidth = 40,
         status = "ASSIGNED",
-        channelRange = { start = 10040, end = 10059 }
+        channelRange = { start = 10080, end = 10119 }
     }
 }
 ```
@@ -1155,7 +1156,7 @@ flowchart TD
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
 | `payload.hardwareUuid` | string | UUID 식별자 | 필수 | 프로브를 발신하는 기체의 고유 하드웨어 식별자 |
-| `payload.candidateBase` | uint16 | $10000 \sim 49980$ | 필수 | 선점 시도 중인 후보 기체 베이스 채널 ($N = 1 \sim 2000$) |
+| `payload.candidateBase` | uint16 | $10000 \sim 49960$ | 필수 | 선점 시도 중인 후보 기체 베이스 채널 ($N = 1 \sim 1000$, 구 $10000 \sim 49980$ [DEPRECATED]) |
 | `payload.bandwidth` | uint8 | 40 | 필수 | 점유 요구 대역폭 (기본 40채널, 구버전 20채널 [DEPRECATED]) |
 
 ```lua
@@ -1169,7 +1170,7 @@ flowchart TD
     payload = {
         hardwareUuid = "BOX-CRAFT-4402",
         candidateBase = 10080,                   -- N=3 후보 Base (구 10040 [DEPRECATED])
-        bandwidth = 20
+        bandwidth = 40
     }
 }
 ```
@@ -1178,7 +1179,7 @@ flowchart TD
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
 | `payload.existingDomain`| string | 기체 식별자 | 필수 | 이미 해당 채널 대역을 점유 중인 기체 식별자 |
-| `payload.occupiedBase` | uint16 | $10000 \sim 49980$ | 필수 | 현재 선점 운용 중인 베이스 채널 |
+| `payload.occupiedBase` | uint16 | $10000 \sim 49960$ | 필수 | 현재 선점 운용 중인 베이스 채널 ($N = 1 \sim 1000$, 구 $10000 \sim 49980$ [DEPRECATED]) |
 | `payload.status` | string | 상태 코드 | 필수 | `"CONFLICT_DETECTED"` |
 
 ```lua
@@ -1218,7 +1219,7 @@ flowchart TD
         phase = "PREPARE",               -- "PREPARE" -> "COMMIT" -> "ROLLBACK"
         oldBase = 10080,
         newBase = 10120,                   -- 40채널 기준 재바인딩 (구 10040/10060 [DEPRECATED])
-        bandwidth = 20,
+        bandwidth = 40,
         switchTimeoutMs = 1000
     }
 }

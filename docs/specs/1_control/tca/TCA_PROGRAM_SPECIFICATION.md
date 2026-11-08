@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.9.0` |
-| **최종 수정일 (Date)** | `2026-11-07` |
+| **문서 버전 (Version)** | `v1.9.1` |
+| **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.9.1` | 2026-11-08 | 설정 파라미터 표 내 baseChannel 수식($* 40$) 및 기체 인덱스 범위($N=1\sim 1000$) 잔재 정합 동기화 | 사양서 간 수치 정합성 확립 |
 | `v1.9.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 추진기 버스 Zone 2 이관(`Base+10`: `CH_THRUST_ACTUATION`, 구 `Base+10` [DEPRECATED]), `Base+4` 상시 청취 제거 확정, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
@@ -127,13 +128,13 @@ flowchart TD
 | :--- | :---: | :---: | :---: | :--- |
 | `version` | string | `"1.2.0"` | 시맨틱 버전 | TCA 설정 스키마 버전 |
 | `aircraftDomainId` | string | `"AIRCRAFT_01"` | 식별 문자열 | 비행체 고유 네트워크 도메인 ID |
-| `aircraftIndexN` | integer | `1` | $N \ge 1$ | 기체 고유 인덱스 번호 |
-| `baseChannel` | uint16 | `10000` | $10000 \sim 49980$ | 기체 고유 베이스 채널 ($Base = 10000 + (N - 1) \times 20$, $N=1\sim 2000$, 구버전 10020 [DEPRECATED]) |
+| `aircraftIndexN` | integer | `1` | $1 \le N \le 1000$ | 기체 고유 인덱스 번호 |
+| `baseChannel` | uint16 | `10000` | $10000 \sim 49960$ | 기체 고유 베이스 채널 ($Base = 10000 + (N - 1) \times 40$, $N=1\sim 1000$, 구버전 20채널 및 10020 [DEPRECATED]) |
 | `groupId` | string | (필수) | 추진기 그룹 ID | 담당 추진기 그룹 (`THR_MAIN_L`, `THR_VTOL_F` 등) |
 | `interactionMode` | string | `"REDSTONE"` | `"REDSTONE"`, `"API"` | 초기 추진기 상호작용 모드 (표준) |
 | `mode` `[DEPRECATED]` | string | `"REDSTONE"` | `"REDSTONE"`, `"API"` | 구버전 모드 필드 (`interactionMode` 대체됨. 코드베이스는 무폴백 원칙에 따라 interactionMode만 단일 채택) |
 | `nominalActuatorCount` | integer | `4` | $1 \sim 16$ | 해당 그룹 내에 설치된 총 공칭 추진기 기구 수 |
-| `channels.thrustActuation` | uint16 | `Base + 10` (구 `Base + 6` [DEPRECATED]) | $10006 \sim 49986$ | 실시간 20Hz 추력 지령 및 상태 채널 |
+| `channels.thrustActuation` | uint16 | `Base + 10` (구 `Base + 6` [DEPRECATED]) | $10010 \sim 49970$ | 실시간 20Hz 추력 지령 및 상태 채널 |
 | `channels.bayCalibrationTap` `[DEPRECATED]` | uint16 | `Base_hangar + 3` | $104 \sim 194$ | 구버전 정적 격납고 교정 채널 (`MSG_CALIB_BAY_BIND` 동적 바인딩으로 대체됨: Core로부터 지령 수신 시 $Base_{\text{hangar}}+0$ 및 $+3$ 동적 개방) |
 | `ports.modemSide` | string | `"top"` | CC 6개 면 | 무선/유선 모뎀 장착 포트 면 |
 | `ports.redstoneSide` | string | `"bottom"` | CC 6개 면 | REDSTONE 상호작용 모드 아날로그 변속기 직결 포트 (구 `actuatorSide` `[DEPRECATED]`) |
