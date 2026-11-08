@@ -89,6 +89,93 @@ describe("vas sensor pipeline sampling with peripheral registry", function()
         assert_true(health.gimbal)
         assert_true(health.altitude)
     end)
+
+    it("samples authentic CC:Avionics sensors via avionics_sensors library", function()
+        local g_mock = mock.cc_gimbal_sensor({ pitch = 3.5, roll = -1.2, wx = 0.2, wy = 0.05, wz = -0.1 })
+        local a_mock = mock.cc_altitude_sensor({ height = 250.0, verticalSpeed = -1.5 })
+        local v_mock = mock.cc_velocity_sensor({ velocity = 12.5, axis = "x" })
+        local f_mock = mock.fuel_tank(900, 1000)
+
+        mock.peripheral_registry({
+            top = { type = "gimbal_sensor", dev = g_mock },
+            bottom = { type = "altitude_sensor", dev = a_mock },
+            left = { type = "velocity_sensor", dev = v_mock },
+            right = { type = "fuel", dev = f_mock }
+        })
+
+        local sp = sensor_pipeline.init({
+            roles = {
+                gimbal = { peripheralType = "gimbal_sensor", preferredSide = "top" },
+                altitude = { peripheralType = "altitude_sensor", preferredSide = "bottom" },
+                velocity = { peripheralType = "velocity_sensor", preferredSide = "left" },
+                fuel = { peripheralType = "fuel", preferredSide = "right" }
+            }
+        })
+
+        local raw = sensor_pipeline.sample_all(sp)
+        assert_true(raw.gimbalOk)
+        assert_true(raw.altitudeOk)
+        assert_true(raw.velocityOk)
+        assert_true(raw.fuelOk)
+
+        assert_near(raw.gimbal.pitch, 3.5, 1e-4)
+        assert_near(raw.gimbal.roll, -1.2, 1e-4)
+        assert_near(raw.gimbal.pitchRate, 0.2, 1e-4)
+        assert_near(raw.gimbal.rollRate, -0.1, 1e-4)
+        assert_near(raw.gimbal.yawRate, 0.05, 1e-4)
+
+        assert_near(raw.altitude.altitude, 250.0, 1e-4)
+        assert_near(raw.velocity.vx, 12.5, 1e-4)
+        assert_near(raw.fuel.amount, 900, 1e-4)
+
+        local comState, healthMap, allOk = sensor_pipeline.process_kinematics(sp, raw, 0.05)
+        assert_true(allOk)
+        assert_near(comState.dynamics.altitudeY, 250.0, 1e-4)
+        assert_near(comState.attitude.pitch, 3.5, 1e-4)
+        assert_near(comState.rates.pitchRate, 0.2, 1e-4)
+    end)
+
+    it("compensates 3D lever-arm offsets for altitude and velocity accurately", function()
+        local g_mock = mock.cc_gimbal_sensor({ pitch = 10.0, roll = 0.0, wx = 0.5, wy = 0.0, wz = 0.0 })
+        local a_mock = mock.cc_altitude_sensor({ height = 100.0, verticalSpeed = 2.0 })
+        local v_mock = mock.cc_velocity_sensor({ velocity = 15.0, axis = "x" })
+        local f_mock = mock.fuel_tank(500, 1000)
+
+        mock.peripheral_registry({
+            top = { type = "gimbal_sensor", dev = g_mock },
+            bottom = { type = "altitude_sensor", dev = a_mock },
+            left = { type = "velocity_sensor", dev = v_mock },
+            right = { type = "fuel", dev = f_mock }
+        })
+
+        local sp = sensor_pipeline.init({
+            roles = {
+                gimbal = { peripheralType = "gimbal_sensor", preferredSide = "top" },
+                altitude = {
+                    peripheralType = "altitude_sensor",
+                    preferredSide = "bottom",
+                    leverArmOffset = { dx = 5.0, dy = 0.0, dz = 0.0 }
+                },
+                velocity = {
+                    peripheralType = "velocity_sensor",
+                    preferredSide = "left",
+                    leverArmOffset = { dx = 0.0, dy = 2.0, dz = 0.0 }
+                },
+                fuel = { peripheralType = "fuel", preferredSide = "right" }
+            }
+        })
+
+        local raw = sensor_pipeline.sample_all(sp)
+        assert_true(raw.altitudeOk)
+        assert_true(raw.velocityOk)
+
+        -- Pitch 10 deg: sin(10 deg) ~ 0.173648. dh = 5.0 * sin(10 deg) ~ 0.86824.
+        -- Expected altCoM = 100.0 - 0.86824 ~ 99.13175
+        local comState, healthMap, allOk = sensor_pipeline.process_kinematics(sp, raw, 0.05)
+        assert_true(allOk)
+        assert_near(comState.dynamics.altitudeY, 99.1318, 1e-2)
+        assert_near(comState.dynamics.verticalSpeed, 2.0, 1e-4)
+    end)
 end)
 
 describe("vas 40-channel 4-zone layout and network manager initialization", function()
