@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 인프라(`GAC`, `Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`), VTOL 제어 고도화(`TASK-110`) 구현 완료, 단위 테스트(`241/241 PASS, 12개 타겟`), 하네스 회귀(`24/24 PASS`), 14대 사양서 무결성(`9 Implemented, 5 Approved`) 확보
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — E2E 다중노드 시뮬레이션 및 돌연변이 테스트 체계(`TASK-111`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료, 단위 테스트(`248/248 PASS, 12개 타겟`), E2E 시뮬레이션(`6/6 PASS`), 돌연변이 살상률(`20/20 KILLED, 100.0%`), 하네스 회귀(`29/29 PASS`), 14대 사양서 무결성(`8 Implemented, 6 Approved`) 확보
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm` 일정 보류)
@@ -63,6 +63,7 @@ Create_Aeroneutics/
 │   └── 4_mission/                         # 미션 분배기 (Phase 2)
 │
 ├── harness/                               # CraftOS-PC 헤드리스 기반 전용 테스트 하네스
+│   ├── simulation/                        # 다중 노드 격리 가상 버스 및 게스트 샌드박스 (E2E)
 │   └── unit/                              # 세션 관리, 정적 가드, Mock Peripheral/Rednet 및 게스트 SDK
 │
 ├── tests/                                 # 도메인별 단위 테스트 및 하네스 회귀 테스트 슈트
@@ -73,9 +74,12 @@ Create_Aeroneutics/
 │   ├── 1_control/{asa, tca, vas}/         # 온보드 제어기 단위 테스트
 │   ├── 2_guidance/fcp/                    # FCP 단위 테스트
 │   ├── 3_planning/amm/                    # AMM 단위 테스트
+│   ├── e2e/                               # 멀티노드 종단간(E2E) 패킷 시뮬레이션 시나리오 슈트
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
 │
 ├── tools/                                 # 개발·검증 CLI 도구
+│   ├── run_e2e_tests.py                   # 멀티노드 E2E 패킷 시뮬레이션 러너
+│   ├── run_mutation_tests.py              # 테스트 실효성 검증용 돌연변이 테스터 (살상률 측정)
 │   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
 │   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
 │   ├── verify_all_specs.py                # 14대 사양서 전수 무결성 검증기
@@ -121,7 +125,7 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 
 ### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
 ```bash
-python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/verify_all_specs.py && python tools/validate_lua_syntax.py
+python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_all_specs.py && python tools/validate_lua_syntax.py
 ```
 
 ### 1. Lua 멀티 코드베이스 단위 테스트 실행
@@ -135,13 +139,25 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   python tools/run_unit_tests.py -t tca --filter rebind
   ```
 
-### 2. 테스트 하네스 자체 회귀 검증 (Python)
+### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 6대 핵심 통합 시나리오를 실행합니다:
+```bash
+python tools/run_e2e_tests.py --clean-orphans
+```
+
+### 3. 테스트 실효성 검증 (돌연변이 살상 테스트)
+20개 결정론적 결함을 자동 주입하여 테스트 슈트의 결함 포착 능력(살상률 90% 이상 기준)을 검증합니다:
+```bash
+python tools/run_mutation_tests.py
+```
+
+### 4. 테스트 하네스 자체 회귀 검증 (Python)
 하네스 엔진, 격리 세션, 게스트 SDK, 정적 가드의 단위 테스트를 실행합니다:
 ```bash
 python -m unittest discover -s tests/harness -p "test_*.py"
 ```
 
-### 3. 사양서 전수 무결성 검증
+### 5. 사양서 전수 무결성 검증
 14대 활성 사양서의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
 ```bash
 python tools/verify_all_specs.py
@@ -151,13 +167,13 @@ python tools/verify_all_specs.py
   python tools/verify_all_specs.py --check-readmes
   ```
 
-### 4. 사양서 상태 분포 검증
-14대 활성 사양서의 상태 분포(9 Implemented, 5 Approved)를 검사합니다:
+### 6. 사양서 상태 분포 검증
+14대 활성 사양서의 상태 분포(8 Implemented, 6 Approved)를 검사합니다:
 ```bash
 python tools/verify_spec_status.py
 ```
 
-### 5. Lua 5.2 문법 및 금지 API 정적 검사
+### 7. Lua 5.2 문법 및 금지 API 정적 검사
 전체 Lua 소스(124개 파일)의 Cobalt 런타임 문법 및 허용/차단 모드 네임스페이스 규칙 준수 여부를 검사합니다:
 ```bash
 python tools/validate_lua_syntax.py
