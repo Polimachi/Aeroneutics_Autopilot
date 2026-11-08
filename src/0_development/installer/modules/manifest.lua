@@ -44,6 +44,8 @@ manifest.MODULE_ORDER = {
     "sensors",
     "gac",
     "landing_pad",
+    "amm",
+    "gcs",
 }
 
 manifest.MODULES = {
@@ -454,6 +456,93 @@ manifest.MODULES = {
             { repoPath = "src/0_infra/landing_pad/modules/pad_fsm.lua", dest = "/modules/pad_fsm.lua", gdriveId = nil },
             { repoPath = "src/0_infra/landing_pad/modules/setup_wizard.lua", dest = "/modules/setup_wizard.lua", gdriveId = nil },
             { repoPath = "src/0_infra/landing_pad/modules/tui_view.lua", dest = "/modules/tui_view.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
+    amm = {
+        id = "amm",
+        name = "AMM",
+        category = "planning",
+        version = "1.0.0",
+        installDir = "/",
+        startup = {
+            enabled = true,
+            path = "/startup/00_amm.lua",
+            target = "/main.lua",
+            name = "AMM",
+        },
+        description = "Aircraft Mission Manager & Cockpit MFD Terminal (Node 03)",
+        roles = { "Node 03", "Mission Terminal", "Planning Layer 3" },
+        configTemplate = {
+            targetPath = "/config/amm_config.json",
+            content = {
+                version = "1.0.0",
+                domainId = "AIRCRAFT_01",
+                baseChannel = 10000,
+                defaultAlt = 150.0,
+                defaultSpeed = 18.0,
+                arrivalRadius = 15.0,
+            }
+        },
+        files = {
+            { repoPath = "src/3_planning/amm/main.lua", dest = "/main.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/config/amm_config.json", dest = "/config/amm_config.json", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/waypoint_queue.lua", dest = "/modules/waypoint_queue.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/network_manager.lua", dest = "/modules/network_manager.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/c2_arbiter.lua", dest = "/modules/c2_arbiter.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/input_handler.lua", dest = "/modules/input_handler.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
+    gcs = {
+        id = "gcs",
+        name = "GCS",
+        category = "infra",
+        version = "1.0.0",
+        installDir = "/",
+        startup = {
+            enabled = true,
+            path = "/startup/00_gcs.lua",
+            target = "/main.lua",
+            name = "GCS",
+        },
+        description = "Ground Control Station & RF Channel Manager (Node 08)",
+        roles = { "Node 08", "Ground Station", "Infra Layer 0" },
+        configTemplate = {
+            targetPath = "/config/gcs_config.json",
+            content = {
+                system = {
+                    id = "GCS_01",
+                    name = "Ground Control Station",
+                    domainId = "GCS_01",
+                    loopFrequencyHz = 20,
+                    uiRefreshRateHz = 5,
+                    modemSide = "top"
+                },
+                channels = {
+                    bootstrapChannel = 50000,
+                    bandwidth = 40,
+                    baseChannelMin = 10000,
+                    baseChannelMax = 49960,
+                    maxCraftBlocks = 1000
+                },
+                ui = {
+                    screenWidth = 51,
+                    screenHeight = 19,
+                    telemetryTimeoutSec = 5.0
+                }
+            }
+        },
+        files = {
+            { repoPath = "src/0_infra/gcs/main.lua", dest = "/main.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/config/gcs_config.json", dest = "/config/gcs_config.json", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/config/channel_registry.json", dest = "/config/channel_registry.json", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/modules/channel_manager.lua", dest = "/modules/channel_manager.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/modules/network_manager.lua", dest = "/modules/network_manager.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/modules/c2_commander.lua", dest = "/modules/c2_commander.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/modules/fleet_tracker.lua", dest = "/modules/fleet_tracker.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/gcs/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
