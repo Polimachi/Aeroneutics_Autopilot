@@ -598,3 +598,167 @@ describe("vas core daemon debug config defaults", function()
     end)
 end)
 
+describe("vas ui_renderer and async/headless execution", function()
+    local ui_renderer = require("ui_renderer")
+    local vas_main = require("main")
+
+    it("renders dashboard to mock terminal within 51x19 dimensions without blit error", function()
+        local termMock = mock.term(51, 19)
+        local state = {
+            fsm = { currentState = "NORMAL", transitionReason = "CRUISE" },
+            net = { aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000, wirelessModem = {}, wiredModem = {} },
+            sensors = {
+                devices = { gimbal = {}, altitude = {}, velocity = {}, fuel = {} },
+                roles = { velocity = { required = true }, fuel = { required = true } },
+                lastCom = {
+                    attitude = { pitch = 5.0, roll = -2.0, yaw = 120.0 },
+                    dynamics = { altitudeY = 150.0, verticalSpeed = 1.2, velocity = { vx = 10.0, vy = 1.2, vz = -5.0 } },
+                    fuel = 0.85
+                }
+            },
+            mixer = { dynamicLoad = 0.45, tcaConnected = true, isStaticFallback = false },
+            controller = { saturationFreeze = false, lastDemands = { pitch = 0.15 } },
+            tickCount = 42
+        }
+
+        ui_renderer.render_dashboard(termMock, state)
+        assert_true(termMock:_contains("VAS"))
+        assert_true(termMock:_contains("FLIGHT HUD"))
+        assert_true(termMock:_contains("NORMAL"))
+        assert_true(termMock:_contains("AIRCRAFT_01"))
+
+        for y = 1, 19 do
+            assert_true(#(termMock._lines[y]) <= 51, "line length must not exceed terminal width")
+        end
+    end)
+
+    it("provides clear_screen and restore_screen helpers that reset cursor and colors", function()
+        local termMock = mock.term(51, 19)
+        assert_eq(type(ui_renderer.clear_screen), "function")
+        assert_eq(type(ui_renderer.restore_screen), "function")
+
+        ui_renderer.clear_screen(termMock)
+        local cx, cy = termMock.getCursorPos()
+        assert_eq(cx, 1)
+        assert_eq(cy, 1)
+
+        ui_renderer.restore_screen(termMock)
+        local rx, ry = termMock.getCursorPos()
+        assert_eq(rx, 1)
+        assert_eq(ry, 1)
+    end)
+
+    it("exports main, run_daemon, run_tui in vas main module without stalling in test environment", function()
+        assert_not_nil(vas_main)
+        assert_eq(type(vas_main.main), "function")
+        assert_eq(type(vas_main.run_daemon), "function")
+        assert_eq(type(vas_main.run_tui), "function")
+    end)
+
+    it("launches parallel waitForAny in debug mode when debug flag is true", function()
+        local waitForAnyCalled = false
+        local coroutineCount = 0
+        sdk.patch(parallel, "waitForAny", function(...)
+            waitForAnyCalled = true
+            coroutineCount = select("#", ...)
+        end)
+
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        local cfg = {
+            system = { vehicleType = "FIXED_WING", aircraftDomainId = "AIRCRAFT_01", debug = true, baseChannel = 10000 },
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        }
+
+        vas_main.main(cfg)
+        assert_true(waitForAnyCalled, "parallel.waitForAny must be called in debug mode")
+        assert_eq(coroutineCount, 2, "parallel.waitForAny must receive exactly 2 coroutines (run_daemon and run_tui)")
+    end)
+
+    it("bypasses terminal rendering and runs daemon directly in headless mode when debug is false", function()
+        local waitForAnyCalled = false
+        sdk.patch(parallel, "waitForAny", function(...)
+            waitForAnyCalled = true
+        end)
+
+        local termClearCalled = false
+        local termBlitCalled = false
+        local termMock = {
+            clear = function() termClearCalled = true end,
+            blit = function() termBlitCalled = true end,
+            setCursorPos = function() end,
+            setBackgroundColor = function() end,
+            setTextColor = function() end
+        }
+        sdk.patch(_G, "term", termMock)
+
+        local printed = {}
+        sdk.patch(_G, "print", function(msg)
+            table.insert(printed, tostring(msg))
+        end)
+
+        sdk.patch(os, "pullEventRaw", function()
+            return "terminate"
+        end)
+
+        local cfg = {
+            system = { vehicleType = "FIXED_WING", aircraftDomainId = "AIRCRAFT_01", debug = false, baseChannel = 10040 },
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        }
+
+        vas_main.main(cfg)
+        assert_false(waitForAnyCalled, "parallel.waitForAny must NOT be called in headless mode")
+        assert_false(termClearCalled, "term.clear must NOT be called in headless mode")
+        assert_false(termBlitCalled, "term.blit must NOT be called in headless mode")
+
+        local headlessBannerFound = false
+        for _, msg in ipairs(printed) do
+            if string.find(msg, "%[VAS%] Core running in HEADLESS mode %(Node 01, Base: 10040%)") then
+                headlessBannerFound = true
+                break
+            end
+        end
+        assert_true(headlessBannerFound, "Expected headless banner with Base 10040 printed")
+    end)
+
+    it("runs ui update on timer in run_tui and terminates on key q or t", function()
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        local timerSeq = 200
+        sdk.patch(os, "startTimer", function(duration)
+            timerSeq = timerSeq + 1
+            return timerSeq
+        end)
+
+        local state = {
+            running = true,
+            fsm = { currentState = "NORMAL" },
+            tickCount = 10,
+            cfg = { system = { debug = true } }
+        }
+
+        local pullCount = 0
+        sdk.patch(os, "pullEvent", function()
+            pullCount = pullCount + 1
+            if pullCount == 1 then
+                return "timer", timerSeq
+            else
+                return "key", 16 -- keys.q
+            end
+        end)
+
+        vas_main.run_tui(state)
+        assert_false(state.running, "state.running must be set to false on key event")
+        assert_true(pullCount >= 2, "must have handled timer and key events")
+    end)
+end)
+
+

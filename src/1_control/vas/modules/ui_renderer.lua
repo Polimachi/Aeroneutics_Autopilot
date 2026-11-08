@@ -3,6 +3,23 @@ local quat = require("quat")
 
 local ui_renderer = {}
 
+function ui_renderer.clear_screen(surf)
+    if not surf then return end
+    if surf.setBackgroundColor then surf.setBackgroundColor(colors.black) end
+    if surf.setTextColor then surf.setTextColor(colors.white) end
+    if surf.clear then surf.clear() end
+    if surf.setCursorPos then surf.setCursorPos(1, 1) end
+end
+
+function ui_renderer.restore_screen(surf)
+    if not surf then return end
+    if surf.setBackgroundColor then surf.setBackgroundColor(colors.black) end
+    if surf.setTextColor then surf.setTextColor(colors.white) end
+    if surf.clear then surf.clear() end
+    if surf.setCursorPos then surf.setCursorPos(1, 1) end
+end
+
+
 function ui_renderer.make_gauge(val, minV, maxV, width)
     local clamped = math.max(minV, math.min(maxV, val or minV))
     local ratio = (maxV > minV) and ((clamped - minV) / (maxV - minV)) or 0
@@ -85,7 +102,8 @@ local function render_body_rows(surf, st)
 end
 
 function ui_renderer.render_dashboard(surf, st)
-    if not surf then return end
+    if not surf or not surf.setCursorPos then return end
+    st = st or {}
     local fsmState = (st.fsm and st.fsm.currentState) or "STANDBY"
     local domain = (st.net and st.net.aircraftDomainId) or "AIRCRAFT_01"
     local tick = st.tickCount or 0
