@@ -184,6 +184,50 @@ describe("downloader fetchString redirect chasing, loop rejection, and Google Dr
         assert_eq(gdriveErr, "GDRIVE_HTML_INTERSTITIAL")
         assert_eq(gdriveClosed, 1, "interstitial handle must be closed")
     end)
+
+    it("extracts dynamic confirm and uuid tokens from Google Drive HTML interstitial and retries", function()
+        local initialUrl = "https://drive.usercontent.google.com/download?id=big_file&export=download&confirm=t"
+        local expectedRetryUrl = "https://drive.usercontent.google.com/download?id=big_file&export=download&confirm=dyn_token_abc123&uuid=uuid_test_999"
+        local interstitialHtml = '<!DOCTYPE html><html><body>'
+            .. '<form action="/download" method="get">'
+            .. '<input type="hidden" name="id" value="big_file">'
+            .. '<input type="hidden" name="confirm" value="dyn_token_abc123">'
+            .. '<input type="hidden" name="uuid" value="uuid_test_999">'
+            .. '</form></body></html>'
+        local expectedContent = "print('successfully downloaded via confirm token')"
+
+        local closedCounts = { [initialUrl] = 0, [expectedRetryUrl] = 0 }
+
+        local routes = {
+            [initialUrl] = {
+                code = 200,
+                headers = { ["content-type"] = "text/html" },
+                body = interstitialHtml,
+                onClose = function()
+                    closedCounts[initialUrl] = (closedCounts[initialUrl] or 0) + 1
+                end,
+            },
+            [expectedRetryUrl] = {
+                code = 200,
+                headers = { ["content-type"] = "text/plain" },
+                body = expectedContent,
+                onClose = function()
+                    closedCounts[expectedRetryUrl] = (closedCounts[expectedRetryUrl] or 0) + 1
+                end,
+            },
+        }
+
+        local mockHttp = createMockHttp(routes)
+        local body, err = downloader.fetchString(initialUrl, { http = mockHttp })
+
+        assert_nil(err)
+        assert_eq(body, expectedContent)
+        assert_eq(#mockHttp._calls, 2)
+        assert_eq(mockHttp._calls[1].url, initialUrl)
+        assert_eq(mockHttp._calls[2].url, expectedRetryUrl)
+        assert_eq(closedCounts[initialUrl], 1, "interstitial handle must be closed")
+        assert_eq(closedCounts[expectedRetryUrl], 1, "retried handle must be closed")
+    end)
 end)
 
 describe("downloader downloadFileAtomic temporary file and failure rollback", function()

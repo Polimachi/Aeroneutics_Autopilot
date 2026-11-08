@@ -172,12 +172,22 @@ function downloader.fetchString(url, opts)
                         if confirmVal then
                             retriedGDrive = true
                             local retryUrl = currentUrl
-                            if not retryUrl:find("confirm=") then
-                                retryUrl = retryUrl .. "&confirm=" .. confirmVal
+                            if retryUrl:find("confirm=", 1, true) then
+                                retryUrl = retryUrl:gsub("confirm=[^&]+", "confirm=" .. confirmVal)
+                            else
+                                local sep = retryUrl:find("?", 1, true) and "&" or "?"
+                                retryUrl = retryUrl .. sep .. "confirm=" .. confirmVal
                             end
-                            if uuidVal and not retryUrl:find("uuid=") then
-                                retryUrl = retryUrl .. "&uuid=" .. uuidVal
+
+                            if uuidVal then
+                                if retryUrl:find("uuid=", 1, true) then
+                                    retryUrl = retryUrl:gsub("uuid=[^&]+", "uuid=" .. uuidVal)
+                                else
+                                    local sep = retryUrl:find("?", 1, true) and "&" or "?"
+                                    retryUrl = retryUrl .. sep .. "uuid=" .. uuidVal
+                                end
                             end
+
                             currentUrl = retryUrl
                         else
                             return nil, "GDRIVE_HTML_INTERSTITIAL"
