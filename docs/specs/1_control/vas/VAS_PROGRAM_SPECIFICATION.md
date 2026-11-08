@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.14.0` |
+| **문서 버전 (Version)** | `v1.15.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.15.0` | 2026-11-08 | CC:Avionics 센서 공용 표준 라이브러리(`/lib/avionics_sensors.lua`) 연동 명세 반영, altitude_sensor 공식 `getHeight()` 및 velocity_sensor 3축 합성(`read_vector3`), gimbal_sensor `getAngularRates()` 공식 API 정합화 | 공식 CC:Avionics 센서 API 규격 일원화 및 정밀 동역학 계측 무결성 확립 |
 | `v1.14.0` | 2026-11-08 | 비공력 기체(VECTORED_VTOL, QUADROTOR, HEXAROTOR) 대상 ASA(WAP) 조종면 믹싱/할당 및 MSG_AERO_CMD 송출 비활성화, 텔레메트리 WAP 헬스 체크 바이패스 명시 | 순수 추력형 기체에서 불필요한 공력 통신 및 결함 오경보 배제 |
 | `v1.13.0` | 2026-11-07 | 상위 자율 유도 컴퓨터 명칭 SAS → FCP(Flight Control Program) 개정에 따른 제어 권한 중재('E_STOP > MFD_ACRO > FCP') 및 텔레메트리/상태머신 activeSource('FCP') 동기화, 상대 링크 갱신 | FCP 명칭 전면 개정 동기화 |
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
@@ -130,9 +131,9 @@ v1.0.22에서는 기체 조립 시 포트 장착 방향 오설정 또는 반전�
 ### 2.1 지원 계측 롤(Measurement Roles) 및 규격
 | 롤 식별자 (`role`) | 대상 페리페럴 타입 | 산출 물리량 | 필수 여부 |
 | :--- | :--- | :--- | :---: |
-| `gimbal` | `avionics:gimbal_sensor`, `gimbal_sensor` | Pitch($^\circ$), Roll($^\circ$), Yaw($^\circ$), Angular Rates($^\circ$/s) | **필수** |
-| `altitude` | `avionics:altitude_sensor`, `altitude_sensor` | Altitude($m$), Vertical Speed($m/s$) | **필수** |
-| `velocity` | `avionics:velocity_sensor`, `velocity_sensor` | 3차원 속도 벡터 $\mathbf{v} = \{vx, vy, vz\}$ ($m/s$) | **필수** |
+| `gimbal` | `avionics:gimbal_sensor`, `gimbal_sensor` | `getAngles()`(Pitch/Roll/Yaw $^\circ$), `getAngularRates()`(3축 각속도 $^\circ$/s), 중력 벡터 | **필수** |
+| `altitude` | `avionics:altitude_sensor`, `altitude_sensor` | `getHeight()`(월드 고도 $m$), 수직 요동 속도 $v_y$ ($m/s$) | **필수** |
+| `velocity` | `avionics:velocity_sensor`, `velocity_sensor` | 1축 스칼라 `getVelocity()` 및 3축 분산 배치 시 `read_vector3()` 합성 3차원 속도 벡터 $\mathbf{v} = \{vx, vy, vz\}$ ($m/s$) | **필수** |
 | `fuel` | `create:fluid_tank`, `battery`, 에너지 저장소 | 총 잔여량, 최대 용량, 정규화 잔여율($0.0 \sim 1.0$) | **필수** |
 
 ---
@@ -202,7 +203,7 @@ $$h_{CoM} = h_{sensor} - \Delta h_{lever} - \text{zeroBias}_{alt}$$
 $$\mathbf{q}_{att} = \text{quat.from\_euler}(\theta, \phi, \psi)$$
 
 ### 3.3 Step 3: 각속도 산출 및 EMA 저역통과 필터링 (Angular Rates & Filtering)
-1. **페리페럴 고유 API 우선 탐색**: `avionics:gimbal_sensor`의 `getAngularVelocity()` 우선 사용.
+1. **페리페럴 고유 API 우선 탐색**: `/lib/avionics_sensors.lua` 및 `avionics:gimbal_sensor`의 `getAngularRates()` 우선 사용.
 2. **수치 미분 및 EMA 필터링**: API 미제공 시 실측 경과 시간($\Delta t$) 기반 각도 차분(Yaw는 $\pm 180^\circ$ 최단거리 차분 적용) 및 지수이동평균(EMA, $\alpha=0.35$) 필터 적용:
    $$\bar{\omega}_k = \alpha \cdot \omega_{meas} + (1 - \alpha) \cdot \bar{\omega}_{k-1}$$
 
@@ -425,7 +426,7 @@ flowchart TD
   ```
 
 ### 5.2 모듈 2: `sensor_pipeline` (센서 수집, 3D 레버암 기하 보정 및 쿼터니언 합성)
-- **역할**: 하단 유선 모뎀망의 센서 4종을 0-tick으로 논블로킹 수집하고, 3D 레버암 기하 보정, 단위 쿼터니언 합성 및 5종 유효성 플래그 헬스 평가를 완결합니다.
+- **역할**: 하단 유선 모뎀망의 센서 4종을 전역 공용 표준 라이브러리 `/lib/avionics_sensors.lua` (`require("avionics_sensors")`) 기반으로 0-tick 논블로킹 수집하고, 3D 레버암 기하 보정, 단위 쿼터니언 합성 및 5종 유효성 플래그 헬스 평가를 완결합니다.
 - **핵심 시그니처**:
   ```lua
   function sensor_pipeline.init(sensorsConfig) -> pipelineState
