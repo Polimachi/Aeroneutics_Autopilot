@@ -836,4 +836,37 @@ describe("vas ui_renderer and async/headless execution", function()
     end)
 end)
 
+describe("vas mutation hardening invariants", function()
+    it("verifies envelope rejects domain mismatch (MUT-01)", function()
+        local ok, err = network_manager.verify_envelope({
+            ver = "1.9.5", domainId = "ROGUE_DOMAIN", seq = 1, type = "MSG_OPERATOR_CMD", payload = {}
+        }, "AIRCRAFT_01")
+        assert_false(ok)
+        assert_eq(err, "ERR_DOMAIN_MISMATCH")
+    end)
 
+    it("verifies thrust_mixer calculates positive surge/heave thrust demand (MUT-06)", function()
+        local thrust_mixer = require("thrust_mixer")
+        local mixer_state = thrust_mixer.init({
+            THR_MAIN = { surge = 1.0, heave = 0.5, deadband = 0.0, maxThrust = 15 }
+        })
+        local out = thrust_mixer.mix(mixer_state, {
+            surge = 10.0, sway = 0.0, heave = 4.0, pitch = 0.0, roll = 0.0, yaw = 0.0
+        })
+        assert_not_nil(out)
+        assert_eq(out.THR_MAIN, 12)
+    end)
+
+    it("verifies network_manager dispatches MSG_EMERGENCY_OVERRIDE to transition to E_STOP (MUT-07)", function()
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, true)
+        fsm.currentState = "NORMAL"
+        local ok = network_manager.dispatch(net, fsm, nil, nil, 10000, 10000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 99,
+            type = "MSG_EMERGENCY_OVERRIDE",
+            payload = { action = "E_STOP", reason = "TEST_ESTOP" }
+        })
+        assert_true(ok)
+        assert_eq(fsm.currentState, "E_STOP")
+    end)
+end)
