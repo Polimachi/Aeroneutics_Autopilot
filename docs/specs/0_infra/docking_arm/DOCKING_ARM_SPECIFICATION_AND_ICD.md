@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.10.5` |
+| **문서 버전 (Version)** | `v1.11.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/docking_arm/` |
 | **주관 도메인 (Domain)** | 지상 인프라 도킹암 메커니즘 제어 (Ground Docking Arm) |
@@ -15,18 +15,19 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.11.0` | 2026-11-08 | 특정 VTOL/DRONE 전속 전용 도킹암 운영 및 GAC 슬롯 배정 연동 원칙 신설 | GAC v1.4.0 전용 시설물 아키텍처 상호 동기화 |
 | `v1.10.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
 | `v1.10.4` | 2026-11-07 | 40채널 확장 및 표준 메타데이터 표 적용 | Phase 0 ICD 동기화 |
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.22.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.3.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.9.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.10.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.2.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.11.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.13.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.13.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.1)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.5)
 
 ---
@@ -54,6 +55,9 @@
    - 기체는 자체 6-DoF RCS 및 미세 추진기를 후방/하방으로 분사하여 격납구 밖 안전 공역으로 자력 이탈합니다.
 7. **비상 퀵 릴리스 인터록 (Emergency Quick Release Interlock)**:
    - 접근 중 충돌 위험 감지, 모선 긴급 회피 기동, 또는 기체 이탈 명령 시 100ms 이내에 락 핀을 즉시 후퇴시키고 스프링 분리 펄스를 인가하는 하드웨어 안전 인터록을 탑재합니다.
+8. **GAC 연동 전용 도킹암(Dedicated Docking Arm) 운용 모델**:
+   - 도킹암이 특정 기체 ID 또는 기종(VTOL/DRONE) 전용으로 GAC 인벤토리에 등록된 경우, 상위 GAC로부터 해당 지정 기체 또는 비상 징발 인가된 기체의 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`)만을 수신하여 원거리 대기 전개(`EXTENDED_WAIT`)를 개시합니다.
+   - 비인가 기체의 도킹 진입 시도는 GAC 수준에서 원천 차단되며, 도킹암은 지정 기체의 상시 독점 정박 및 보급 자원으로 격리·운용됩니다.
 
 ### 1.2 GPS 광역 항법 $\rightarrow$ 전술 도킹 랑데부 연계 인터페이스 (GPS to Tactical Transition)
 1. **광역 접근 단계 (GPS En-Route Phase)**:

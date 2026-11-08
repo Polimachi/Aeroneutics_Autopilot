@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.3.0` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.4.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/gac/` |
 | **주관 도메인 (Domain)** | 국지 에이프런 총괄 관제사 (Ground Apron Controller / GAC) |
@@ -15,18 +15,19 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.4.0` | 2026-11-08 | 특정 VTOL/DRONE 전속 전용(Dedicated) 착륙패드 및 도킹암 지원, 다속성 2단계 분배 수치 모델 확장, 비인가 기체 거절 사유(`FACILITY_DEDICATED`) 명시, 비상 시 최후 수단 징발 허용 및 TUI 콘솔 표출 규격 신설 | 전용 기체 상시 대기 및 독점 정박 자원 보호 인터록 표준화 |
 | `v1.3.0` | 2026-11-08 | GAC 관제 콘솔 TUI(듀얼 디스플레이, 3-Tab 관제 대시보드, 시설 등록/관리 및 비상동결/상태강제변경 수동 조작, 설정 영속화) 규격 신설 | 관제사 현장 상태 감시 및 수동 오버라이드 인터페이스 표준화 |
 | `v1.2.0` | 2026-11-08 | 구 SAS 식별자 FCP 전면 개편, 연관 규격서 버전 동기화, 이륙 완료(`MSG_ATC_DEPARTURE_COMPLETE`) 및 섹터 상태(`MSG_GAC_SECTOR_STATUS`) 스키마 명시, Base_sec+5 GPS 응답 채널 및 동적 시설물 1Hz 위치 동기화 필드 반영, Revision History 신설 | Phase 1 GAC 제어기 구현(TASK-101) 및 착륙패드(v2.4.0) 연동 무결성 확보 |
 | `v1.1.4` | 2026-11-07 | 40채널 규격 및 영구 단일 경로 반영 | 지상 인프라 및 전역 통신 규격 일원화 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.22.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.9.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.11.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.13.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.10.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.13.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.1)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.5)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.10.5)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.2.1)
 
 ---
@@ -65,6 +66,9 @@
    - VTOL 기체는 착륙 패드에 정박 대기(`OCCUPIED`)하며, 이륙 준비 완료 시 GAC에 이륙을 요청합니다. GAC가 이륙 인가(`MSG_GAC_DEPARTURE_CLEARANCE`) 및 패드 개방을 집행하고, 기지 공역 이탈 시 Tower ATC(`CH 50001`)로 상향 핸드오프합니다.
 7. **동적 모선/함대 통합 갑판 감시**:
    - 항공모함이나 이동 모선에서 GAC는 선체 중앙 관성 센서(IMU)를 연동하여 전체 비행갑판의 요동을 총괄 감시하며, 위험 시 섹터 단위 진입 동결(`DECK_DANGEROUS`)을 선언합니다.
+8. **전용 시설물(Dedicated Facility) 보호 및 독점 대기 모델**:
+   - 특정 VTOL 또는 DRONE의 전속 정박/대기를 위해 `dedicatedCraftIds`(기체 ID 목록) 및 `dedicatedAirframeTypes`(기종 목록) 기반 전용 시설물을 설정할 수 있습니다.
+   - GAC는 비인가 기체의 접근을 1단계 하드 제약 필터에서 원천 배제하여 지정 기체가 언제든 즉시 착륙·도킹할 수 있도록 상시 독점 대기(Standby) 자원으로 보호하며, 비상 상황(`isEmergency == true`)에 한해 섹터 내 공용 패드가 전무할 때만 최후의 수단으로 제한적 징발을 허용합니다.
 
 ---
 
@@ -142,10 +146,10 @@ GAC 노드가 관할하는 지상 시설물들의 상태를 집약하여 광역 
         towerAtcChannel = 50001,             -- 상위 Tower ATC 교신 채널
         gacChannel = 50201,                  -- 지상 구역 관제 교신 채널 (Base_sec + 0)
         facilitiesSummary = {
-            totalLandingPads = 4,
-            freeLandingPads = 3,
-            totalRunways = 0,
-            freeRunways = 0,
+            totalLandingPads = 4,            -- 관할 내 총 착륙패드 수 (공용 + 전용 포함)
+            freeLandingPads = 3,             -- 일반 공용 가용 패드 수 (전용 패드는 오인 진입 방지를 위해 FREE 상태여도 제외)
+            totalRunways = 0,                -- 관할 내 총 활주로 수
+            freeRunways = 0,                 -- 일반 공용 가용 활주로 수 (전용 활주로 제외)
             maxSupportWeight = 40000.0,      -- 수용 가능 최대 이륙 중량 (kg)
             maxSupportRadius = 12.0          -- 수용 가능 최대 패드 반경 (m)
         },
@@ -197,7 +201,7 @@ GAC가 섹터 수용 가능 여부를 회신합니다.
         sectorId = "BASE_ALPHA_SECTOR_01",
         aircraftId = "AIRCRAFT_01",
         status = "ACCEPTED",                 -- "ACCEPTED" | "REJECTED"
-        rejectReason = nil,                  -- "SECTOR_ALL_OCCUPIED", "OVERWEIGHT", "DECK_DANGEROUS"
+        rejectReason = nil,                  -- "SECTOR_ALL_OCCUPIED", "OVERWEIGHT", "DECK_DANGEROUS", "FACILITY_DEDICATED"
         assignedGacChannel = 50201           -- 기체가 전환할 GAC 관제 채널 (Base_sec + 0)
     }
 }
@@ -292,7 +296,7 @@ GAC가 다속성 알고리즘으로 선정한 최적 패드 ID와 전술 유도 
         safeDescentRate = 1.0,
         clearanceZoneRadius = 5.0,
         holdingArea = nil,                   -- HOLD 시 선회 중심점 및 고도
-        reason = nil
+        reason = nil                         -- DENIED 시 거절 사유 ("SECTOR_ALL_OCCUPIED", "OVERWEIGHT", "FACILITY_DEDICATED")
     }
 }
 ```
@@ -615,9 +619,25 @@ GAC는 기체의 접근 요청 수신 시 관할 패드 인벤토리 $\mathcal{P
 
 #### 1단계: 하드 제약 필터 (Hard Constraint Filter)
 후보 패드군 $\mathcal{P}_{valid}$ 추출:
-$$\mathcal{P}_{valid} = \left\{ P_i \in \mathcal{P} \;\middle|\; \text{status}(P_i) == \text{"FREE"} \;\land\; W_{max}(P_i) \ge W_{craft} \;\land\; R_{pad}(P_i) \ge R_{craft} \right\}$$
-- 기체가 `preferredFacilityId`를 명시했고 해당 패드가 $\mathcal{P}_{valid}$에 포함되어 있다면 즉시 해당 패드로 단독 결정.
-- $\mathcal{P}_{valid} == \emptyset$인 경우, GAC는 기체에 `HOLD` 통보 후 로컬 체공 궤도로 유도.
+$$\text{isEligible}(P_i, C) = \begin{cases} 
+\text{true}, & \text{if } P_i \text{ is PUBLIC (dedicatedCraftIds 및 dedicatedAirframeTypes 미정의)} \\ 
+\text{true}, & \text{if } C.\text{aircraftId} \in P_i.\text{dedicatedCraftIds} \lor C.\text{airframeType} \in P_i.\text{dedicatedAirframeTypes} \\ 
+\text{true}, & \text{if } C.\text{isEmergency} \land \forall P_{pub} \in \mathcal{P}, \text{status}(P_{pub}) \neq \text{"FREE"} \\ 
+\text{false}, & \text{otherwise} 
+\end{cases}$$
+
+$$\mathcal{P}_{valid} = \left\{ P_i \in \mathcal{P} \;\middle|\; \text{status}(P_i) == \text{"FREE"} \;\land\; W_{max}(P_i) \ge W_{craft} \;\land\; R_{pad}(P_i) \ge R_{craft} \;\land\; \text{isEligible}(P_i, C) \right\}$$
+
+- **지정 기체(Dedicated Craft) 접근 시 우선 배정**:
+  - 접근 기체 $C$가 특정 전용 시설물 $P_{ded}$의 지정 기체인 경우, $P_{ded} \in \mathcal{P}_{valid}$이면 다른 일반 공용 패드의 스코어링과 무관하게 **해당 전용 시설물을 1순위 최우선 단독 배정**.
+  - 전용 시설물이 점유(`OCCUPIED`) 또는 정비(`MAINTENANCE`) 상태인 경우, 관할 내 일반 공용 패드($\mathcal{P}_{pub} \cap \mathcal{P}_{valid}$)로의 **대체 배정(폴백)**을 허용.
+- **비인가 기체의 전용 시설물 지목(`preferredFacilityId`) 시 거절 및 대체 배정**:
+  - 비인가 기체가 `preferredFacilityId`로 전용 시설물을 요청한 경우:
+    - 관할 내 가용한 일반 공용 패드가 존재하면 해당 공용 패드로 대체 배정.
+    - 관할 내 가용 공용 패드가 전무하면 즉시 접근 거절 (`status: DENIED`, `reason: "FACILITY_DEDICATED"`).
+- **일반 비인가 기체(`isEligible == false`)**:
+  - 전용 시설물은 $\mathcal{P}_{valid}$ 후보군에서 원천 배제되어 일반 기체에 절대 오배정되지 않음.
+- $\mathcal{P}_{valid} == \emptyset$인 경우, GAC는 기체에 `HOLD` 통보 후 로컬 체공 궤도로 유도 (공용 패드가 없고 전용 시설물만 남은 일반 기체 요청 시 `FACILITY_DEDICATED` 거절).
 
 #### 2단계: 소프트 스코어링 함수 (Soft Scoring Function)
 $\mathcal{P}_{valid}$의 후보 패드들에 대해 맞바람 정렬도, 진입거리, 하중 여유 마진을 종합 평가:
@@ -646,7 +666,7 @@ $$J(P_i) = w_1 \cos(\psi_{wind} - \psi_{approach}(P_i)) - w_2 \frac{\|\vec{p}_{c
 | **패드 슬롯 만료** | 패드 접근 인가 후 $120\text{초}$ 동안 접지 미보고 | GAC / Pad | 패드 `GO_AROUND` 격리 후 GAC에 슬롯 만료 보고, 패드 `FREE` 리셋 |
 | **섹터 전 패드 만석** | 접근 요청 시 $\mathcal{P}_{valid} == \emptyset$ | GAC | 기체에 로컬 $+30\text{m}$ LOITER 지시, 15초 주기 재탐색, 10회 실패 시 Tower ATC 회항 이양 |
 | **동적 갑판 위험 요동** | $\theta_{deck\_fleet} > 10.0^\circ$ 또는 Heave $> 2.5\text{ m/s}$ | GAC | 전 접근 기체에 즉시 `MSG_ABORT_APPROACH` 발령, 대기 선회 지시 |
-| **광역 비상 기체 진입** | Tower ATC `MSG_ATC_EMERGENCY_ALERT` 수신 | GAC | 일반 접근 기체 전원 로컬 LOITER/복행 명령, 비상 기체에 최적 패드 즉시 강제 징발 |
+| **광역 비상 기체 진입** | Tower ATC `MSG_ATC_EMERGENCY_ALERT` 수신 또는 `isEmergency == true` | GAC | 일반 접근 기체 전원 로컬 LOITER/복행 명령, 비상 기체에 최적 공용 패드 우선 징발. 관할 내 전 공용 패드 불가 시 최후의 수단으로 비어 있는 전용 패드 제한적 징발 |
 
 ---
 
@@ -689,6 +709,7 @@ $$J(P_i) = w_1 \cos(\psi_{wind} - \psi_{approach}(P_i)) - w_2 \frac{\|\vec{p}_{c
      - `ID`: 시설물 식별자 (예: `PAD_01`, `PAD_02`, `RWY_01`).
      - `TYPE`: 시설물 종류 (`LANDING_PAD`, `RUNWAY`, `DOCKING_ARM`).
      - `STATUS`: 현재 운영 상태 (`FREE`, `RESERVED`, `OCCUPIED`, `MAINTENANCE`, `GO_AROUND`).
+     - `DEDICATED`: 전용 기체/기종 식별자 (예: `[DED: VTOL_01]`, `[DED: DRONE]`, 미지정 시 공용 `PUBLIC` 표기 및 전용 시설물 Cyan 색상 하이라이트).
      - `CRAFT`: 현재 배정/점유 기체 ID.
      - `TACTICAL CH`: 1:1 전술 유도 채널 ($Base_{\text{sec}}+10+\text{Idx}$).
      - `MAX SPEC`: 수용 최대 중량(kg) 및 유효 반경(m).
@@ -752,4 +773,9 @@ GAC TUI는 전자동 다속성 분배 알고리즘에 우선하여 관제사가 
    - 컴퓨터 재부팅, 청크 언로드 후 리로드 발생 시 `config.lua`에 보존된 관할 시설물 목록 및 오프셋 좌표, 채널 매핑이 100% 원복되어 무인 연속 관제를 보장합니다.
 3. **네트워크 백본 동기화**:
    - TUI에서 시설물 상태를 `MAINTENANCE`나 `FREE`로 강제 변경 시, GAC는 즉시 섹터 로컬 백본 채널($Base_{\text{sec}}+1$)로 해당 시설물 노드에 `MSG_ATC_FACILITY_UPDATE`를 송신하여 물리 패드 노드의 로컬 FSM과 동기화합니다.
+4. **전용 시설물 설정 스키마 (`config.lua` / `config.json`)**:
+   - 개별 시설물 엔트리에 전용 지정 필드를 선택적으로 구성할 수 있습니다:
+     - `dedicatedCraftIds`: 문자열(단일 기체 ID) 또는 문자열 배열(복수 기체 ID 목록). 예: `"VTOL_VIP_01"` 또는 `{"VTOL_VIP_01", "DRONE_SCOUT_02"}`.
+     - `dedicatedAirframeTypes`: 문자열(단일 기종) 또는 문자열 배열(복수 기종 목록). 예: `"VECTORED_VTOL"` 또는 `{"DRONE", "VECTORED_VTOL"}`.
+     - 두 필드가 모두 생략되거나 비어 있으면 일반 공용 시설물(`PUBLIC`)로 동작합니다.
 

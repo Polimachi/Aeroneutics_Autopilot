@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.0` |
+| **문서 버전 (Version)** | `v2.4.1` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/landing_pad/` |
 | **주관 도메인 (Domain)** | 지상 인프라 수직이착륙 착륙패드 비콘 (Landing Pad) |
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v2.4.1` | 2026-11-08 | GAC v1.4.0 전용 시설물 아키텍처 연동 및 전용 패드 슬롯 배정 원칙 명시 | 상위 GAC 전용 시설물 규격 동기화 |
 | `v2.4.0` | 2026-11-08 | GPS 모뎀 기반 수평 좌표 자동 획득, 컴퓨터 바디 기준(전후/좌우/상하) 상대 오프셋 보정, 동적 센서 미감지 강제 중단, 평시 1Hz GPS 측위·GAC 위치 보고 및 5단계 TUI 마법사 규격(Section 6) 증설 | 현장 설치 편의성 및 이동형 플랫폼 공간 인지 무결성 확립 |
 | `v2.3.0` | 2026-11-08 | 초기 설치 시운전(상대 좌표 오프셋 보정) 및 동적 패드 인접 항법 센서 자동 바인딩 규격 추가 | 비콘 컴퓨터 설치 위치 오프셋 및 동적 텔레메트리 센서 연동 실체화 |
 | `v2.2.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
@@ -22,14 +23,14 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.22.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.3.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.9.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.10.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.2.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.11.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.13.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.13.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.5)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.10.5)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.0)
 
 ---
 
@@ -57,6 +58,9 @@
 6. **페일세이프 및 GAC 경유 국지 복행(Go-Around) 안전 인터록**:
    - 동적 패드 20Hz 구간에서 패킷 두절 발생 시 기체 UAP가 즉시 300ms 타임아웃을 감지하여 복행합니다. 패드는 요동 위험(`deckStatus == "DANGEROUS"`) 3초 지속, 명시적 `MSG_ABORT_APPROACH` 수신 또는 슬롯 타임아웃(120초) 시 `GO_AROUND` 상태로 전이합니다.
    - 패드는 복행 기체가 안전 복행 고도로 이탈하여 GAC가 패드 개방 명령(`MSG_ATC_FACILITY_UPDATE`, status: `FREE`)을 하달할 때까지 `GO_AROUND` 격리 상태를 유지하여 공역 경쟁 상태(Race Condition)를 영구 차단합니다.
+7. **GAC 연동 전용 착륙패드(Dedicated Pad) 운용 모델**:
+   - 패드가 특정 기체 ID 또는 기종 전용으로 GAC 인벤토리에 등록된 경우, 패드는 상위 GAC로부터 해당 지정 기체 또는 비상 징발 인가된 기체의 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`)만을 수신하여 1:1 전술 유도를 개시합니다.
+   - 비인가 기체의 임의 전술 채널 접속 시도는 무인가 상태로 간주되며, 패드의 접근 슬롯은 GAC 백본 제어를 통해서만 배타적으로 활성화됩니다.
 
 ---
 

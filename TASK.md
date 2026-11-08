@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-107 GCS 지상 관제 콘솔 및 40채널 블록 관리자 구현 완료, 차기 과제: TASK-111 E2E 통합 시뮬레이션 / TASK-301 ACRO 수동 조종)
+> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-107 GCS 지상 관제 콘솔 및 40채널 블록 관리자 구현 완료, 활성: TASK-111 E2E 통합 시뮬레이션 / TASK-114 GAC 전용 시설물 런타임 구현)
 
 ---
 
@@ -11,7 +11,7 @@
 - **계획 수립 시**: 작업 계획(`/plan` 등)이 확정되면 본 파일의 당면 과제 또는 백로그에 신규 항목(`[ ]`)을 등록한다.
 - **작업 착수 시**: 진행 중인 태스크를 `[-]` (진행 중)으로 전환한다.
 - **작업 완료 시**: 완료 항목을 `[x]` (완료)로 변경해 `## 3. 완료된 작업 이력` 상단으로 이동·기록하고, 도출된 후속 과제를 즉시 본 파일에 등록한다.
-- **완료 이력 보존 상한**: 완료된 작업 이력은 **최근 30개까지만 유지**하며, 30개를 초과하는 과거 완료 항목은 오래된 순서대로 정리(Prune)한다.
+- **완료 이력 보존 상한**: 완료된 작업 이력은 **최근 10개까지만 유지**하며, 10개를 초과하는 과거 완료 항목은 오래된 순서대로 정리(Prune)한다.
 - **도메인 경로 매핑 기준**: `docs/specs/`, `src/`, `tests/` 간 1:1 도메인 계층 구조는 [README.md](README.md)의 디렉토리 레이아웃을 따른다.
 - **유저 호출 예시**:
   - `TASK.md 확인하고 다음 남은 작업 진행해줘`
@@ -22,26 +22,67 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
+- [ ] **TASK-010: 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md`
+  - 계층형 단일 마크다운(`playbook/<도메인>/<서브시스템>.md`) 기반 인게임 운용 실전 매뉴얼 5종(GPS, VAS, TCA, FCP, AMM) 구축, 표준 7대 섹션 템플릿(`playbook/README.md`), CLI 정적 검증 도구(`tools/verify_playbooks.py`), 미인가 체계 작성 차단 가드레일 및 워크플로우 동기화
+  - [ ] **TASK-010-1**: 플레이북 정적 검증 도구(`tools/verify_playbooks.py`) 구현 (7대 필수 섹션, 링크 유효성, 미인가 파일 생성 차단 검증)
+  - [ ] **TASK-010-2**: 표준 템플릿 명세 및 인덱스(`playbook/README.md`) 작성
+  - [ ] **TASK-010-3**: 인프라 도메인 매뉴얼(`playbook/0_infra/gps.md`) 작성
+  - [ ] **TASK-010-4**: 온보드 제어 도메인 매뉴얼(`playbook/1_control/vas.md`, `playbook/1_control/tca.md`) 작성
+  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성
+  - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증
+
 - [-] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (진행 중)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
-  - 복수 노드(`GCS`↔`AMM`↔`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션, GCS C2 오버라이드 및 E-STOP 차단 등) 간 다중 틱 교환 시나리오 통합 검증 확장
+  - 분산 CC:Tweaked 노드(`GCS`, `AMM`, `FCP`, `VAS`, `TCA`, `ASA`, `GPS`, `Alignment`, `Landing Pad`) 대상 격리 샌드박스 및 가상 RF 통신 버스(`VirtualBus`), CLI 러너(`tools/run_e2e_tests.py`), 6대 다중 틱 시나리오 검증
+
+- [ ] **TASK-114: GAC 전용 시설물(Dedicated Facility) 지원 및 2단계 다속성 분배 엔진/TUI 확장**
+  - **사양서 상태**: `docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md` (v1.4.0 Approved)
+  - [x] **TASK-114-1**: 전용 시설물 사양서 개정 및 동기화 (GAC v1.4.0 Approved, 착륙패드 v2.4.1 Implemented, 도킹암 v1.11.0 Approved, 14 SPECS 100% CLEAN 검증 완료)
+  - [ ] **TASK-114-2**: GAC 설정 스키마 및 인벤토리(`dedicatedCraftIds`, `dedicatedAirframeTypes`) 지원 (`src/0_infra/gac/modules/facility_inventory.lua`)
+  - [ ] **TASK-114-3**: 2단계 다속성 분배 엔진 `isEligible` 및 전용 패드 최우선/폴백/비상 징발 알고리즘 구현 (`src/0_infra/gac/modules/allocation_engine.lua`)
+  - [ ] **TASK-114-4**: 3-Tab TUI 콘솔 `DED` 표기 및 시설물 등록/관리 화면 확장 (`src/0_infra/gac/modules/tui_view.lua`, `main.lua`)
+  - [ ] **TASK-114-5**: CraftOS-PC 단위 테스트 확장(전용 패드 격리/비상 징발 시나리오 검증, 사양서 `Implemented` 환원)
+
+- [-] **TASK-115: ADVANCED_VTOL 짐벌 벡터 추진기 기체 아키텍처 및 전계층 연동 구현** (진행 중)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-115-advanced-vtol-architecture-and-implementation.md`
+  - **격리 워크트리**: `.worktrees/task-advanced-vtol` (브랜치: `task-advanced-vtol`)
+  - **진행 상황**:
+    - [x] **환경 격리 및 브랜치 생성**: `.worktrees/task-advanced-vtol` 워크트리 생성 및 기본 테스트 환경 검증 완료
+    - [x] **설계 인터뷰 및 아키텍처 확정 (/grill-me, /brainstorming)**: 2~4기 짐벌 벡터 통합 구동, `Base+10` 다형성 테이블 스키마, 의사역행렬($B^\dagger$) 기반 6-DoF 믹서, Alignment 짐벌 펄스 캘리브레이션 및 FCP 전용 드라이버 설계 합의
+    - [x] **구현 계획서 작성 (/writing-plans)**: 7단계 세부 구현 태스크 수립 및 계획서 아티팩트(`plan-advanced-vtol.md`) 생성 완료
+    - [ ] **TASK-115-1**: 사양서 6종 개정 (ICD v1.24.0, System Diagram v2.11.0, TCA v1.11.0, VAS v1.17.0, FCP v1.14.0, Alignment v2.6.0) 및 100% CLEAN 동기화
+    - [ ] **TASK-115-2**: TCA `vector_thruster` 페리페럴 래핑 및 다형성 추력/짐벌 출력 구동 (`src/1_control/tca/`)
+    - [ ] **TASK-115-3**: Alignment 짐벌 X/Y 펄스 시퀀서 및 제어 효과 의사역행렬 추출기 (`src/0_development/alignment/`)
+    - [ ] **TASK-115-4**: VAS ADVANCED_VTOL 정책, 의사역행렬 6-DoF 렌치 믹서 및 짐벌 포화 안티와인드업 (`src/1_control/vas/`)
+    - [ ] **TASK-115-5**: FCP 외루프 `advanced_vtol_driver.lua` 및 가이던스 컨트롤러 연동 (`src/2_guidance/fcp/`)
+    - [ ] **TASK-115-6**: 지상 인프라 및 미션 시스템 기종 호환성 확장 (GAC, Landing Pad, GCS, Installer)
+    - [ ] **TASK-115-7**: 전계층 CraftOS-PC 단위 테스트, Lua 5.2 문법 및 하네스 회귀 검증 100% PASS
+
+- [ ] **TASK-007: 구버전 명칭(UAP/SAS/WAP) 전면 척결 및 회귀 방지 테스트 슈트 구축**
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-legacy-terminology-elimination-and-test-suite.md`
+  - 회귀 방지 테스트(`tests/harness/test_terminology_guard.py`) 신설, 정적 분석기(`tools/verify_all_specs.py`) Rule 8 추가, 사양서 및 런타임 코드/목업의 비표준 명칭(`UAP`, 비인가 `SAS`, `WAP`) 전면 제거
+
+- [ ] **TASK-201: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성**
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
+  - Layer 4 (`src/4_mission/amp/`) 온보드/지상 겸용 미션 플래너, 인프라 기동 6종 체계(런치패드, 활주로, 도킹 암) 및 3대 도메인 13개 체크포인트 행동 규격 제정 (`docs/specs/4_mission/amp/AMP_PROGRAM_SPECIFICATION.md`) (구 TASK-202 편대 미션 오케스트레이터 및 지상 관제 디스패처 기능 통합 대체)
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
+- [ ] **TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
+  - **사양서 상태**: `docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md` (v1.10.5 Approved)
+  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜
+
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
-- [ ] **[연기] TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
-  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
   - TASK-113의 기본 프레임워크(헤드리스/비동기 TUI, `Base+11` 수신 루프, 300ms Safe Glide Trim, 단위 테스트 15/15 PASS)를 기반으로 물리 액추에이터(Avionics API/RS) 각도 인가, `MSG_AERO_STATUS` 상태 피드백 송출 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 핸드셰이크 완성 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
-- [ ] **[연기] TASK-202: 편대 미션 오케스트레이터 (`src/4_mission/`) 설계 및 구현**
-  - Zone 4(`Base+30~39`) 기반 다중 기체 편대 비행 및 임무 분배 총괄 (일정 연기)
 
 ### 🛠️ Phase 3 예정 백로그 (Physical Hardware & Manual Control)
 
@@ -51,7 +92,7 @@
 
 ---
 
-## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
 
 - [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08, 커밋 `e9febe6` ~ `e8c25b3`) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
@@ -154,42 +195,3 @@
     - [x] **TASK-006-1**: `verify_all_specs.py`·`validate_lua_syntax.py`·`verify_spec_status.py`의 `tools/` 이관, 동적 DLL 탐색 및 90개 Lua 전수 검사 지원, 일회성 `scratch/` 스크립트 정리 및 전용 `scratch/README.md` 구축
     - [x] **TASK-006-2**: `src/1_control/asa/README.md` 및 `src/0_infra/gac/README.md` 내 폐기된 `docs/specs/approved/...` 링크 제거, 영구 단일 경로 동기화 및 `tools/verify_all_specs.py --check-readmes` 0 error 통과
     - [x] **TASK-006-1B**: 도구 무결성 자동화 테스트(`tests/harness/test_tools_integrity.py`, 5/5 PASS) 작성, 전체 하네스 회귀(23/23 PASS) 및 루트 문서(`README.md`, `GEMINI.md`, `TASK.md`) 동기화
-
-- [x] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합** (완료일: 2026-11-08, 커밋 `adfc561` ~ `01d938d`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-005-unified-codebase-installer.md`
-  - **구현 내용**:
-    - [x] **TASK-005-0**: GPS 사양서(`GPS_PROGRAM_SPECIFICATION_AND_ICD.md`) 개정(`v2.2.0`, `Implemented` → `Approved`, 구 인스톨러 `[DEPRECATED]` 명시)
-    - [x] **TASK-005-1**: 선언적 매니페스트(`manifest.lua`, 듀얼 원천) 및 버전 레지스트리(`version_registry.lua`) 구축
-    - [x] **TASK-005-2**: 설정 보존 마이그레이션(`migration_engine.lua`) 및 본체 루트 멀티부트 후크(`startup_generator.lua`) 구축
-    - [x] **TASK-005-3**: HTTP 원자적 다운로더(`downloader.lua`, GitHub & Google Drive 302 리다이렉트 지원) 구축
-    - [x] **TASK-005-4**: 터미널 TUI(`tui_view.lua`, 소스 전환 `[S]`) 및 메인 앱(`installer_app.lua`) 구축
-    - [x] **TASK-005-5**: 3대 배포(화면 직접 업로드·플로피 `/disk/`·원격 `wget run`) 지원 루트 부트스트래퍼(`installer.lua`) 및 byte-parity 검증
-    - [x] **TASK-005-6**: 구버전 개별 인스톨러(`gps/installer.lua`, `installer_core.lua`) Zero-Fallback 삭제
-    - [x] **TASK-005-7**: 단위 테스트 하네스 전수 실행(`tools/run_unit_tests.py` 7개 타겟 71/71 PASS, 하네스 자체 회귀 18/18 PASS, Lua 5.2 문법 7/7 PASS)
-    - [x] **TASK-005-8**: GPS 사양서 메타데이터 `문서 상태`를 `Implemented`로 환원 및 전역 검증(`verify_all_specs.py`, `verify_spec_status.py` 5 Implemented, 7 Approved)
-
-- [x] **TASK-004: 원격 저장소(`origin main`) 푸시 및 인증 완료** (완료일: 2026-11-08)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-004-remote-repository-push.md`
-  - GitHub `Aeroneutics_Autopilot` 저장소 확인, Fine-grained PAT Contents Write 권한 갱신 및 원격 초기 커밋 조정(`1ca730b` merge) 후 `git push -u origin main` 완료, 로컬 HEAD와 원격 ref 일치 검증 통과 (커밋 `197172f`)
-- [x] **TASK-003: 런타임 코드 검증 및 사양서 상태 전이 (`Approved` → `Implemented`)** (완료일: 2026-11-08)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-003-spec-status-transition-to-implemented.md`
-  - 5대 핵심 사양서(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) `Implemented` 전이 완료 및 `verify_spec_status.py` 12종 전수 검증 통과 (5종 `Implemented`, 7종 `Approved`), 단위 테스트 `42/42 PASS`, 하네스 회귀 `14/14 PASS` (커밋 `dd096e1`, `6daa12d`, `dea477e`)
-- [x] **TASK-002: 코드베이스 40채널·Zone 단위 테스트 및 하네스 루프 통합 검증** (완료일: 2026-11-08)
-  - 6개 활성 타겟(`alignment` 7, `gps` 9, `asa` 3, `tca` 7, `vas` 7, `fcp` 9) 전수 `42/42 PASS` 및 하네스 Python 회귀 테스트 `14/14 PASS`로 통합 종결 (멀티노드 E2E 시나리오는 `TASK-111`로 분리)
-- [x] **TASK-001: 기체 5대 핵심 모듈(`src/`) 통신 채널·Zone 런타임 코드 동기화** (완료일: 2026-11-08)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-07-task-001-runtime-40ch-sync.md`
-  - $BW=40$ ($Base = 10000 + (N-1) \times 40$) 및 4대 Zone 규격을 `VAS`(`16b8390`, `1db52ed`), `TCA`(`e6be320`, `0f29c5b`), `FCP`(`9da4301`, `34fc867`, `4c1db74`), `Alignment`(`f52cb11`, `c5e8b5a`), `GPS`(`8da2d09`)에 반영 완료 (단위 테스트 `42/42 PASS`, 문법 정적 분석 `7/7 PASS`)
-- [x] **TASK-P0-06: SAS → FCP(Flight Control Program) 전면 명칭 개정 및 디렉토리·식별자 일체화** (완료일: 2026-11-07)
-  - 디렉토리/파일명(`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`) 및 런타임 식별자(`source`/`activeSource`='FCP', `hardwareUuid`='FCP-04'), 사양서 12종 및 마스터 ICD 동기화, 단위 테스트 6/6 PASS
-- [x] **TASK-P0-05: CC:Tweaked 하네스 및 단위 테스트 검증 파이프라인 구축** (완료일: 2026-11-07)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-07-universal-unit-test-framework.md`
-  - Lua 5.2 문법/금지 모드 정적 분석기(`scratch/validate_lua_syntax.py`), CraftOS-PC 헤드리스 세션·Mock 프레임워크(`harness/unit/`), 멀티 타겟 테스트 러너 CLI(`tools/run_unit_tests.py`) 및 6대 코드베이스 초기 테스트 슈트 구축
-- [x] **TASK-P0-04: 사양서 생명주기 관리 체계 문서 내부화 및 영구 단일 계층 개편** (완료일: 2026-11-07)
-  - `docs/specs/{approved,drafts,implemented,archived}/` 디렉토리 분리 제거 및 도메인 직하 단일 계층 평탄화, 12대 규격서 상단 5대 필수 항목 메타데이터 표 도입, `specification-lifecycle-manager`·`skill-workflows.md`·`verify_all_specs.py` 동기화
-- [x] **TASK-P0-03: 사양서 정합성 무결성 검증기 통과** (완료일: 2026-11-07)
-  - `scratch/verify_all_specs.py` 전수 검증 (0 Errors, 0 Warnings)
-- [x] **TASK-P0-02: 12대 핵심 사양서 전수 리팩토링 및 10종 승격** (완료일: 2026-11-07)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-07-system-specifications-refactoring.md`
-  - 40채널 대역폭, Zero-Fallback 원칙, `ion_thruster` 호환성, 상대 링크 정합성 반영
-- [x] **TASK-P0-01: 기체 통신 40채널($BW=40$) ICD 전면 개편** (완료일: 2026-11-07)
-  - `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` 및 `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` 4대 Zone 규격 반영

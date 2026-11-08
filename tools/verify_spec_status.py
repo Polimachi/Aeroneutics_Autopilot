@@ -1,8 +1,8 @@
 """
 Specification status validation tool.
-Asserts that all 13 active specifications have expected in-document status:
+Asserts that all 14 active specifications have expected in-document status:
 - 8 Implemented specs
-- 5 Approved specs
+- 6 Approved specs
 """
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ TARGET_IMPLEMENTED = [
     'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
-    'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
 ]
@@ -28,6 +27,7 @@ TARGET_IMPLEMENTED = [
 TARGET_APPROVED = [
     'docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md',
     'docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md',
+    'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',

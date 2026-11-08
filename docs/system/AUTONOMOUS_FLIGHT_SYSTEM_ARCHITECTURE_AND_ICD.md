@@ -32,7 +32,7 @@
 
 > [!TIP]
 > - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.9.0)에 완전 시각화되어 있습니다.
-> - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.3.0)에 상세 기술되어 있습니다.
+> - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.4.0)에 상세 기술되어 있습니다.
 > - 비행 제어 컴퓨터(FCP, Node 04)의 5대 기체 타입별 외루프 유도 제어(L1/TECS/Tilt-to-Accelerate/Zero-Tilt 6-DoF/Tilt-Assisted), C2 단일 진입로(Base+0) 총괄, 평시 5Hz MFD 계기 다운링크(Base+3), 15-State FSM, GPS/추측항법 융합, GAC 섹터 관제 연동, 도킹암 4단계 랑데부 FSM 및 20Hz 외루프 지령(Base+1) 명세는 **[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md)** (v1.11.0)에 상세 기술되어 있습니다.
 > - 공력 날개 및 조종면(에일러론/승강타/방향타/플랩) 분산 구동기, VAS 산하 3구역 노드(Node 06-xx, Base+11, 구 Base+7 [DEPRECATED]), `peripheral.find` 동적 탐색 및 300ms 안전 활공 트림(Safe Glide Trim) 규격은 **[ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md)** (v1.4.0)에 상세 기술되어 있습니다.
 > - **ASA 기체 적용 범위**: ASA는 `FIXED_WING` 및 `WINGED_VTOL` 기체에서만 전용 가동되며, `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 기체에서는 ASA 노드가 탑재되지 않고 FCP/VAS 단계에서 조종면/플랩 연산 및 Base+11 전송이 원천 배제됩니다.
@@ -40,9 +40,9 @@
 > - 추진기 개별 하드웨어 구동, REDSTONE 모드/API 모드 듀얼 모드, 자체 비례 손실 보상, 핫플러그 감지, `discovery_handler` 세션 격리, 동적 베이 바인딩(`MSG_CALIB_BAY_BIND`) 및 동적 타이머 300ms 워치독 데몬 명세는 **[TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md)** (v1.8.0)에 상세 기술되어 있습니다.
 > - 격납고 상주 시설 콘솔로서 베이별 10채널 블록(`101 ~ 200`, $Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$) 및 기체 `Base+0` 직결 바인딩을 기반으로 입고된 임의의 기체와 지상 교정 세션을 맺고 6-DoF 추력기/공력 보조 프로파일(`AERO_ASSISTED_PASS`)을 생성하는 `Alignment` 프로그램의 세부 수치해석, 주 작용축 OLS 회귀, 대형 모니터 HUD 및 14단계 FSM 명세는 **[ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md)** (v2.4.0)에 상세 기술되어 있습니다.
 > - 지상 분산 노드 군(Swarm), 노드 간이 셋업 마법사 및 커미셔닝, 0ms 세션 버킷 스케줄러, 계층형 2D 가우스-뉴턴 연산, 순수 진단 로깅 및 대형 모니터 자동 피팅 레이더 명세는 **[GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md)** (v2.2.1)에 상세 기술되어 있습니다.
-> - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.0)에 상세 기술되어 있습니다.
+> - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.1)에 상세 기술되어 있습니다.
 > - 고정익 활주로 및 항모 비행갑판의 가상 ILS, 유선 모뎀 조명망(PAPI/RWSL) 제어, 무선 상태 추적 및 유도로 GAC 연동 관제 명세는 **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.5)에 상세 기술되어 있습니다.
-> - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.10.5)에 상세 기술되어 있습니다.
+> - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.11.0)에 상세 기술되어 있습니다.
 
 ### 1.1 공통 패킷 엔벨로프 (Common Message Envelope)
 CC:Tweaked Rednet 및 모뎀 전송의 직렬화 오버헤드를 최소화하고 고속 역직렬화를 보장하기 위해, 모든 메시지는 다음의 표준 공통 Lua 테이블 엔벨로프를 필수 적용합니다.
@@ -812,10 +812,10 @@ flowchart TD
 
 > [!TIP]
 > 지상/함상 관제 및 시설물별 세부 하드웨어 제어·FSM은 다음의 세부 규격서를 참조하십시오.
-> - **지상 구역 관제사(GAC)**: **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.3.0 - 3-Tier 관제, 2단계 핸드오프, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재, 섹터 200채널 블록 할당)
-> - **수직이착륙 착륙패드**: **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.0 - 무기계식 순수 가상 비콘화, 컴퓨터 바디 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 갑판 요동 10°/2.5m/s 안전 인터록 및 GAC 로컬 백본 $Base_{\text{sec}}+1$ 연동)
+> - **지상 구역 관제사(GAC)**: **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.4.0 - 3-Tier 관제, 2단계 핸드오프, 섹터 집약 비콘, 전용 VTOL/드론 대기 시설 및 다속성 최적 패드 분배, 국지 복행 중재, 섹터 200채널 블록 할당)
+> - **수직이착륙 착륙패드**: **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.1 - 무기계식 순수 가상 비콘화, 컴퓨터 바디 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 갑판 요동 10°/2.5m/s 안전 인터록 및 GAC 로컬 백본 $Base_{\text{sec}}+1$ 연동)
 > - **고정익 활주로 및 항공모함 비행갑판**: **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.5 - 유선 모뎀 조명 제어망 및 GAC 유도로 관제 연계)
-> - **정밀 도킹암 및 모선 붐**: **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.10.5 - 2축 로봇 암 원거리 전개 포획·인입·격납 분리 및 GAC 에이프런 연계)
+> - **정밀 도킹암 및 모선 붐**: **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.11.0 - 2축 로봇 암 원거리 전개 포획·인입·격납 분리 및 GAC 에이프런 연계)
 
 #### 5대 기체 타입 및 지상/함상 스마트 시설물 호환성 매트릭스
 
