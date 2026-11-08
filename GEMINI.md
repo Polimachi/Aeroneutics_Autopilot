@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 제어기 확장 착수.
-- **직전 완료**: `TASK-100` 완료 (CC:Avionics 4종 센서 표준 라이브러리 `avionics_sensors`, 인스톨러/하네스 `/lib/` 자동 주입, 단위 테스트 85/85 PASS, 하네스 24/24 PASS).
+- **직전 완료**: `TASK-101` 완료 (GAC 사양서 v1.3.0 Implemented 승격, 지상 구역 관제사 7개 모듈 및 3-Tab TUI 콘솔 구현, 인스톨러 등록, 단위 테스트 112/112 PASS, 하네스 24/24 PASS).
 - **다음 착수 후보**:
-  1. `TASK-101`: GAC 사양서 세부 개편 및 지상 구역 관제사 구현 (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`).
-  2. `TASK-102`: Landing Pad 지상 착륙 패드 제어기 구현 (`src/0_infra/landing_pad/`).
+  1. `TASK-102`: Landing Pad 지상 착륙 패드 제어기 구현 (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`).
+  2. `TASK-112`: VAS/FCP 센서 표준 라이브러리(`avionics_sensors`) 연동 및 잔재 정리.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -22,7 +22,7 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (8개 타겟 85/85 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (9개 타겟 112/112 PASS).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (24/24 PASS).
 - **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py`.
 
