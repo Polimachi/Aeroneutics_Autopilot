@@ -3,9 +3,9 @@ local manifest = require("manifest")
 local version_registry = require("version_registry")
 
 describe("manifest dual-source module definitions", function()
-    it("registers all 7 modules in deterministic order with valid production file mappings", function()
+    it("registers all 8 modules in deterministic order with shared /lib/avionics_sensors.lua bundling", function()
         local list = manifest.listModules()
-        assert_eq(#list, 7)
+        assert_eq(#list, 8)
         assert_eq(list[1].id, "vas")
         assert_eq(list[2].id, "tca")
         assert_eq(list[3].id, "fcp")
@@ -13,6 +13,24 @@ describe("manifest dual-source module definitions", function()
         assert_eq(list[5].id, "gps_server")
         assert_eq(list[6].id, "gps_node")
         assert_eq(list[7].id, "gps_client")
+        assert_eq(list[8].id, "sensors")
+
+        assert_not_nil(manifest.SHARED_LIBS)
+        assert_not_nil(manifest.SHARED_LIBS.avionics_sensors)
+        assert_eq(manifest.SHARED_LIBS.avionics_sensors.repoPath, "src/0_development/sensors/avionics_sensors.lua")
+        assert_eq(manifest.SHARED_LIBS.avionics_sensors.dest, "/lib/avionics_sensors.lua")
+
+        -- Every module must deploy /lib/avionics_sensors.lua
+        for _, mod in ipairs(list) do
+            local foundShared = false
+            for _, f in ipairs(mod.files) do
+                if f.dest == "/lib/avionics_sensors.lua" and f.repoPath == "src/0_development/sensors/avionics_sensors.lua" then
+                    foundShared = true
+                    break
+                end
+            end
+            assert_true(foundShared, "Module " .. tostring(mod.id) .. " missing /lib/avionics_sensors.lua")
+        end
 
         local fcp = manifest.getModule("fcp")
         assert_eq(fcp.installDir, "/")
@@ -22,6 +40,9 @@ describe("manifest dual-source module definitions", function()
 
         local gpsClient = manifest.getModule("gps_client")
         assert_false(gpsClient.startup.enabled)
+
+        local sensorsMod = manifest.getModule("sensors")
+        assert_false(sensorsMod.startup.enabled)
     end)
 
     it("resolves GitHub raw URLs and handles configured vs unconfigured Google Drive IDs", function()

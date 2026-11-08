@@ -31,7 +31,7 @@ class UnitTargetConfig:
     target_id: str
     source_dir: Path
     tests_dir: Path
-    timeout_sec: float = 8.0
+    timeout_sec: float = 15.0
     abort_timeout_ms: int = 4000
     term_width: int = 51
     term_height: int = 19

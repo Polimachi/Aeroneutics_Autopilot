@@ -387,3 +387,84 @@ describe("vas two-phase channel rebind cascade", function()
         assert_nil(net.pendingRebind)
     end)
 end)
+
+
+describe("vas asa exclusion for vectored_vtol and drone", function()
+    local vehicle_policy = require("vehicle_policy")
+    local core_daemon = require("core_daemon")
+
+    it("clamps flapTarget to 0.0 in vehicle_policy for non-aero airframes", function()
+        local non_aero = { "VECTORED_VTOL", "QUADROTOR", "HEXAROTOR", "VTOL" }
+        for _, vType in ipairs(non_aero) do
+            local pol = vehicle_policy.init({ vehicleType = vType })
+            local flap = vehicle_policy.resolve_flap_target(pol, { flapTarget = 0.8 }, 15.0, {})
+            assert_eq(flap, 0.0, "flapTarget must be 0.0 for " .. vType)
+        end
+
+        local pol_fw = vehicle_policy.init({ vehicleType = "FIXED_WING" })
+        assert_eq(vehicle_policy.resolve_flap_target(pol_fw, { flapTarget = 0.8 }, 15.0, {}), 0.8)
+
+        local pol_wv = vehicle_policy.init({ vehicleType = "WINGED_VTOL" })
+        assert_eq(vehicle_policy.resolve_flap_target(pol_wv, { flapTarget = 0.8 }, 15.0, {}), 0.8)
+    end)
+
+    it("suppresses MSG_AERO_CMD broadcast in core_daemon for VECTORED_VTOL", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem },
+            bottom = { type = "altitude_sensor", dev = mock.avionics_altitude({ altitude = 100.0, verticalSpeed = 0.0 }) },
+            left = { type = "velocity_sensor", dev = mock.avionics_velocity({ vx = 5.0, vy = 0.0, vz = 0.0 }) },
+            right = { type = "fuel", dev = mock.fuel_tank(500, 1000) }
+        })
+        local daemonState = core_daemon.init({
+            system = { vehicleType = "VECTORED_VTOL", aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 },
+            thrusters = {},
+            surfaces = {},
+            sensors = { roles = { altitude = { preferredSide = "bottom", peripheralType = "altitude_sensor" } } },
+            pid = {}
+        })
+
+        wirelessModem._transmitted = {}
+        core_daemon.tick(daemonState)
+
+        local sentThrust = false
+        local sentAero = false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.pkt.type == "MSG_THRUST_CMD" then sentThrust = true end
+            if tx.pkt.type == "MSG_AERO_CMD" then sentAero = true end
+        end
+
+        assert_true(sentThrust, "MSG_THRUST_CMD must be transmitted")
+        assert_false(sentAero, "MSG_AERO_CMD must NOT be transmitted for VECTORED_VTOL")
+    end)
+
+    it("transmits MSG_AERO_CMD broadcast in core_daemon for WINGED_VTOL", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem },
+            bottom = { type = "altitude_sensor", dev = mock.avionics_altitude({ altitude = 100.0, verticalSpeed = 0.0 }) },
+            left = { type = "velocity_sensor", dev = mock.avionics_velocity({ vx = 5.0, vy = 0.0, vz = 0.0 }) },
+            right = { type = "fuel", dev = mock.fuel_tank(500, 1000) }
+        })
+        local daemonState = core_daemon.init({
+            system = { vehicleType = "WINGED_VTOL", aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 },
+            thrusters = {},
+            surfaces = { surfaceMix = { AIL_L = { pitch = 1.0 } } },
+            sensors = { roles = { altitude = { preferredSide = "bottom", peripheralType = "altitude_sensor" } } },
+            pid = {}
+        })
+
+        wirelessModem._transmitted = {}
+        core_daemon.tick(daemonState)
+
+        local sentThrust = false
+        local sentAero = false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.pkt.type == "MSG_THRUST_CMD" then sentThrust = true end
+            if tx.pkt.type == "MSG_AERO_CMD" then sentAero = true end
+        end
+
+        assert_true(sentThrust, "MSG_THRUST_CMD must be transmitted")
+        assert_true(sentAero, "MSG_AERO_CMD must be transmitted for WINGED_VTOL")
+    end)
+end)

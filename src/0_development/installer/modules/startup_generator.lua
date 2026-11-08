@@ -109,7 +109,7 @@ function startup_generator.generateHookContent(spec)
         "while #baseDir > 1 and baseDir:sub(-1) == \"/\" do baseDir = baseDir:sub(1, -2) end",
         "if baseDir == \"\" then baseDir = \"/\" end",
         "local dirPrefix = (baseDir == \"/\") and \"\" or baseDir",
-        "local searchPath = dirPrefix .. \"/?.lua;\" .. dirPrefix .. \"/?/init.lua;\" .. dirPrefix .. \"/modules/?.lua;\" .. dirPrefix .. \"/modules/drivers/?.lua;\" .. dirPrefix .. \"/hal/?.lua;\" .. dirPrefix .. \"/tools/?.lua;/apis/?.lua;\"",
+        "local searchPath = dirPrefix .. \"/?.lua;\" .. dirPrefix .. \"/?/init.lua;\" .. dirPrefix .. \"/modules/?.lua;\" .. dirPrefix .. \"/modules/drivers/?.lua;\" .. dirPrefix .. \"/hal/?.lua;\" .. dirPrefix .. \"/tools/?.lua;\" .. dirPrefix .. \"/lib/?.lua;/lib/?.lua;/apis/?.lua;\"",
         "",
         "if env.package then",
         "    env.package.path = searchPath .. (env.package.path or \"\")",

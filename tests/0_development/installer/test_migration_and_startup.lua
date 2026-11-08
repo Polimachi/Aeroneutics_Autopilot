@@ -133,16 +133,22 @@ describe("startup_generator multi-boot hook generator", function()
         fs.makeDir(bootRoot .. "/modules")
         fs.makeDir(bootRoot .. "/startup")
 
-        -- Submodule helper
+        -- Submodule helper and /lib shared helper
+        fs.makeDir(bootRoot .. "/lib")
         local subHelperPath = bootRoot .. "/modules/sub_helper.lua"
         local sh = fs.open(subHelperPath, "w")
         sh.write("return { tag = \"OK_SUB\" }")
         sh.close()
 
+        local libHelperPath = bootRoot .. "/lib/avionics_sensors.lua"
+        local lh = fs.open(libHelperPath, "w")
+        lh.write("return { VERSION = \"1.0.0\" }")
+        lh.close()
+
         -- Target main.lua
         local mainPath = bootRoot .. "/main.lua"
         local mh = fs.open(mainPath, "w")
-        mh.write("local h = require(\"sub_helper\"); local a = {...}; _G.__BOOT_TEST_OUT = h.tag .. \":\" .. tostring(a[1])")
+        mh.write("local h = require(\"sub_helper\"); local s = require(\"avionics_sensors\"); local a = {...}; _G.__BOOT_TEST_OUT = h.tag .. \":\" .. s.VERSION .. \":\" .. tostring(a[1])")
         mh.close()
 
         -- Install hook
@@ -165,7 +171,7 @@ describe("startup_generator multi-boot hook generator", function()
         -- Execute the generated hook
         _G.__BOOT_TEST_OUT = nil
         dofile(expectedHookPath)
-        assert_eq(_G.__BOOT_TEST_OUT, "OK_SUB:--daemon")
+        assert_eq(_G.__BOOT_TEST_OUT, "OK_SUB:1.0.0:--daemon")
 
         -- Remove hook
         local okRemove = startup_generator.removeHook("/startup/00_fcp.lua", bootRoot)

@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-08 — CC:Avionics 4종 센서 API 표준 라이브러리(TASK-100) 구축 및 공용 /lib/ 주입 확립
+
+- **결정 배경**: 전체 코드베이스에서 CC:Avionics 센서 4종(`velocity_sensor`, `altitude_sensor`, `gimbal_sensor`, `physics_assembler`)을 직접 분산 접근하며 발생하는 중복 로직, `mainThread = true` 틱 yield 분산 지연, 3축 분산 속도 센서 매핑 파편화를 해소하기 위해 단일 원본(SSOT) 표준 라이브러리(`avionics_sensors`)를 구축하고 인스톨러 및 하네스에 자동 주입 파이프라인을 확립함.
+- **반영 내역**:
+  1. **표준 센서 라이브러리 구현 (`src/0_development/sensors/avionics_sensors.lua`)**: 4종 센서 전용 peripheral 탐색, 속도 단건/3축 합성(`get_triaxial_velocity`), 고도 요약(`get_altitude_summary`), 짐벌 자세/각속도/가속도/중력(`get_gimbal_summary`), 어셈블러 `parallel.waitForAll` 1틱 일괄 쿼리(`get_physics_summary`) 구현.
+  2. **하네스 공용 `/lib/` 자동 주입 및 정밀 Mocking (`harness/unit/engine.py`, `test_sdk.lua`)**: 단위 테스트 세션 격리 시 `src/0_development/sensors/*.lua`를 게스트 컴퓨터 루트 `/lib/`로 자동 스테이징하고, `mock.cc_*` 4종 Mock 구축 (`tests/harness/test_guest_sdk.py` 2/2 PASS).
+  3. **통합 인스톨러 배포 연동 (`manifest.lua`, `startup_generator.lua`)**: 8번째 모듈 `sensors` 등록 및 모든 타겟 설치 번들에 `/lib/avionics_sensors.lua` 포함, 부팅 훅의 `package.path`에 `/lib/?.lua` 자동 주입.
+  4. **전역 회귀 검증 통과**: 8개 타겟 단위 테스트 `85/85 PASS`, 하네스 자체 회귀 `24/24 PASS`, 91개 Lua 문법 전수 PASS, 12개 사양서 무결성 `0 Errors 0 Warnings` 확인.
+
+---
+
 ## 2026-11-08 — 검증 스크립트 정식 도구화(TASK-006) 및 Phase 0 종결
 
 - **결정 배경**: 임시 작업 공간(`scratch/`)에 혼재되어 있던 핵심 사양서·문법 검증 스크립트를 정식 도구 디렉토리(`tools/`)로 격리 이관하고, 도메인 하위 README 내 폐기된 구 사양서 경로(`docs/specs/approved/...`) 잔재를 전수 정리함.

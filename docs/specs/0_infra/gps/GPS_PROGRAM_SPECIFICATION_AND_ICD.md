@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.2.0` |
+| **문서 버전 (Version)** | `v2.2.1` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |
 | **주관 도메인 (Domain)** | 중앙 고정밀 GPS 서버 및 분산 노드 군 (GPS Infrastructure) |
@@ -16,19 +16,20 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.2.1` | 2026-11-08 | 지상 시설물 전용 응답 채널($Base_{\text{sec}}+5$) 및 클라이언트 타입(`"FACILITY"`) 규격 명시 | 지상 인프라 착륙패드(v2.4.0) 및 GAC(v1.2.0) 연동 동기화 |
 | `v2.2.0` | 2026-11-08 | 독자 `gps/installer.lua` 및 `installer_core.lua` 폐기(`[DEPRECATED]`), 전역 통합 코드베이스 인스톨러(`installer.lua` / `src/0_development/installer/`) 연계 규격화 (직접 업로드, `/disk/installer.lua`, `wget run`, GitHub/Google Drive 이중 소스, `/.version.json` 추적) | 단일 진입점 기반 전역 모듈 일괄 설치 및 버전 관리 체계 확립 |
 | `v2.1.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 반영, 01호기 회신 채널 `Base+5` (`10005`, 구 10045 [DEPRECATED]) 동기화, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
   
 > **연계 규격**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.20.0 동기화)  
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.1.3 동기화)  
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 비행 제어 클라이언트 연계 (v1.9.0 동기화)  
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.11.0 동기화)  
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.6.0 동기화)  
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.22.0 동기화)  
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.2.0 동기화)  
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 비행 제어 클라이언트 연계 (v1.11.0 동기화)  
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.13.0 동기화)  
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.9.0 동기화)  
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.8.0 동기화)  
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.4.0 동기화)  
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.10.5 동기화)  
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.3.0 동기화)  
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.0 동기화)  
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.10.5 동기화)  
 
 ---
@@ -137,7 +138,7 @@ flowchart TD
 | **`60002`** | `CH_GPS_SERVICE` | 클라이언트 / GCS / SAS | 중앙 연산 서버 | 이벤트 기반 | **GPS 중앙 서버 상태 조회 및 서비스 관리 전용 포트** (`MSG_GPS_STATUS_REQ` / `RESP`) |
 | **`60003`** | `CH_GPS_NODE_IN` | 노드 군 / 신규 노드 | 중앙 연산 서버 | 틱당 다수 / 10s 주기 / 등록 시 | 노드 거리 보고(`NODE_REPORT`), 노드 생존 하트비트, **노드 커미셔닝 요청/검증/커밋** |
 | **`60004`** | `CH_GPS_MGMT` | 중앙 연산 서버 | 노드 군 전체 / 신규 노드 | 60s / 등록 시 | 노드 상호 교정 지시(`DIAG_TRIGGER`), **노드 ID 발급 제안 및 검증 회신(`NODE_OFFER`, `NODE_VERIFY_RESP`, `NODE_REG_ACK`)** |
-| **`replyChannel`**<br>*(Base+5 등)* | `CH_CLIENT_REPLY` | 중앙 연산 서버 | 클라이언트 / SAS | 요청 직후 ($\le 50\text{ms}$) | 계산된 최종 (X, Z) 좌표 응답 (`MSG_GPS_RESPONSE`) |
+| **`replyChannel`**<br>*(Base+5, $Base_{\text{sec}}+5$ 등)* | `CH_CLIENT_REPLY` | 중앙 연산 서버 | 클라이언트 / SAS / 시설물 | 요청 직후 ($\le 50\text{ms}$) | 계산된 최종 (X, Z) 좌표 응답 (`MSG_GPS_RESPONSE`, 기체: `Base+5`, 지상 시설물: $Base_{\text{sec}}+5$) |
 
 ---
 
@@ -168,9 +169,9 @@ flowchart TD
 - **필드 명세**:
   | 필드 경로 | 타입 | 필수 | 설명 |
   | :--- | :---: | :---: | :--- |
-  | `payload.replyChannel` | uint16 | 필수 | 서버가 연산 완료 후 좌표를 회신할 전용 채널 (예: 10045) |
+  | `payload.replyChannel` | uint16 | 필수 | 서버가 연산 완료 후 좌표를 회신할 전용 채널 (기체: `Base+5`, 지상 시설물: `$Base_{\text{sec}}+5$`) |
   | `payload.altitudeY` | float | **필수** | 온보드 고도계 실측 Y 좌표 (2D 정밀 수평 투영의 기준) |
-  | `payload.clientType` | string | 필수 | 클라이언트 분류 (`"AIRCRAFT"`, `"TURTLE"`, `"POCKET"`, `"ROVER"`) |
+  | `payload.clientType` | string | 필수 | 클라이언트 분류 (`"AIRCRAFT"`, `"TURTLE"`, `"POCKET"`, `"ROVER"`, `"FACILITY"`) |
   | `payload.clientSeq` | uint32 | 필수 | 클라이언트가 부여한 요청 고유 일련번호 (응답 매칭용) |
 
 ```lua

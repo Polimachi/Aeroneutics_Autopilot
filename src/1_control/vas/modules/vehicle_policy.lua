@@ -54,9 +54,13 @@ function vehicle_policy.compute_transition_weights(policy, airspeed)
 end
 
 function vehicle_policy.resolve_flap_target(policy, rawCmd, airspeed, health)
+    local isAero = (policy and (policy.vehicleType == "FIXED_WING" or policy.vehicleType == "WINGED_VTOL"))
+    if not isAero then
+        return 0.0
+    end
     local flap = tonumber(rawCmd and rawCmd.flapTarget) or 0.0
     local v = tonumber(airspeed) or 0.0
-    local isVValid = (health.velocity ~= false) and (health.isVelocityValid ~= false)
+    local isVValid = (health and health.velocity ~= false) and (health and health.isVelocityValid ~= false)
     if isVValid and v > (policy.vFe or 22.0) then
         return 0.0
     end

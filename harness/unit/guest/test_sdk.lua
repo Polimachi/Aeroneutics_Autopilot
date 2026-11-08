@@ -444,6 +444,126 @@ function _G.mock.avionics_velocity(initial)
     return v
 end
 
+-- Authentic upstream CC:Avionics (Create: Avionics) 4-sensor peripheral mocks
+function _G.mock.cc_velocity_sensor(initial)
+    local state = initial or {}
+    local s = {
+        _velocity = tonumber(state.velocity or 0.0),
+        _axis = tostring(state.axis or "x"),
+    }
+    s.getVelocity = function()
+        return s._velocity
+    end
+    s.getAxis = function()
+        return s._axis
+    end
+    return s
+end
+
+function _G.mock.cc_altitude_sensor(initial)
+    local state = initial or {}
+    local s = {
+        _height = tonumber(state.height or state.altitude or 64.0),
+        _airPressure = tonumber(state.airPressure or state.air_pressure or 1.0),
+        _verticalSpeed = tonumber(state.verticalSpeed or state.vertical_speed or 0.0),
+    }
+    s.getHeight = function()
+        return s._height
+    end
+    s.getAirPressure = function()
+        return s._airPressure
+    end
+    s.getVerticalSpeed = function()
+        return s._verticalSpeed
+    end
+    return s
+end
+
+function _G.mock.cc_gimbal_sensor(initial)
+    local state = initial or {}
+    local s = {
+        _pitch = tonumber(state.pitch or 0.0),
+        _roll = tonumber(state.roll or 0.0),
+        _wx = tonumber(state.wx or state.pitchRate or 0.0),
+        _wy = tonumber(state.wy or state.yawRate or 0.0),
+        _wz = tonumber(state.wz or state.rollRate or 0.0),
+        _gravity = state.gravity or { 0.0, -11.0, 0.0 },
+        _linearAccel = state.linearAcceleration or state.linear_acceleration or { 0.0, 11.0, 0.0 },
+    }
+    s.getAngles = function()
+        return { s._pitch, s._roll }
+    end
+    s.getAnglesRad = function()
+        return { math.rad(s._pitch), math.rad(s._roll) }
+    end
+    s.getAngularRates = function()
+        return { s._wx, s._wy, s._wz }
+    end
+    s.getAngularRatesRad = function()
+        return { math.rad(s._wx), math.rad(s._wy), math.rad(s._wz) }
+    end
+    s.getGravity = function()
+        return { s._gravity[1], s._gravity[2], s._gravity[3] }
+    end
+    s.getLinearAcceleration = function()
+        return { s._linearAccel[1], s._linearAccel[2], s._linearAccel[3] }
+    end
+    return s
+end
+
+function _G.mock.cc_physics_assembler(initial)
+    local state = initial or {}
+    local default_tensor = { 100.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 150.0 }
+    local assembled = (state.assembled ~= false)
+    local s = {
+        _assembled = assembled,
+        _mass = assembled and tonumber(state.mass or 1000.0) or 0.0,
+        _com = assembled and (state.com or state.centerOfMass or { 0.0, 0.0, 0.0 }) or { 0.0, 0.0, 0.0 },
+        _tensor = assembled and (state.inertiaTensor or default_tensor) or { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
+        _subLevelId = state.subLevelId,
+        _subLevelName = state.subLevelName,
+        _yield = (state.yield == true),
+        _callCount = 0,
+    }
+    local function maybe_yield()
+        s._callCount = s._callCount + 1
+        if s._yield and coroutine and coroutine.running and coroutine.running() ~= nil then
+            coroutine.yield("task_complete")
+        end
+    end
+    s.isAssembled = function()
+        maybe_yield()
+        return s._assembled == true
+    end
+    s.getMass = function()
+        maybe_yield()
+        return s._assembled and s._mass or 0.0
+    end
+    s.getCenterOfMass = function()
+        maybe_yield()
+        if not s._assembled then return { 0.0, 0.0, 0.0 } end
+        return { s._com[1], s._com[2], s._com[3] }
+    end
+    s.getInertiaTensor = function()
+        maybe_yield()
+        if not s._assembled then
+            return { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }
+        end
+        local out = {}
+        for i = 1, 9 do out[i] = s._tensor[i] or 0.0 end
+        return out
+    end
+    s.getSubLevelId = function()
+        maybe_yield()
+        return s._subLevelId
+    end
+    s.getSubLevelName = function()
+        maybe_yield()
+        return s._subLevelName
+    end
+    return s
+end
+
 function _G.mock.fuel_tank(amount, capacity)
     local am = tonumber(amount or 1000)
     local cap = tonumber(capacity or 1000)

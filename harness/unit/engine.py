@@ -112,6 +112,15 @@ def run_target_unit_tests(
     ) as session:
         c0 = session.computer_dir(0)
 
+        # Stage shared sensor SSOT library at /lib/ across all targets
+        shared_sensors_dir = target.source_dir.parent.parent / "0_development" / "sensors"
+        if shared_sensors_dir.is_dir():
+            lib_dest = c0 / "lib"
+            lib_dest.mkdir(parents=True, exist_ok=True)
+            for lua_file in sorted(shared_sensors_dir.glob("*.lua")):
+                if lua_file.name != "main.lua":
+                    shutil.copy2(lua_file, lib_dest / lua_file.name)
+
         # Stage source codebase at /
         session.stage_tree(target.source_dir, computer_id=0, dest_subdir="")
 

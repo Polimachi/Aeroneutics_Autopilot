@@ -78,6 +78,59 @@ class TestGuestSdk(unittest.TestCase):
             self.assertEqual(rep.status, "PASS", rep.errors or [t.error for t in rep.tests])
             self.assertEqual(rep.passed_tests, 4)
 
+    def test_shared_sensors_lib_staging_and_cc_avionics_mocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shared_dir = root / "src" / "0_development" / "sensors"
+            sdir = root / "src" / "1_control" / "consumer_check"
+            tdir = root / "tests" / "1_control" / "consumer_check"
+            shared_dir.mkdir(parents=True)
+            sdir.mkdir(parents=True)
+            tdir.mkdir(parents=True)
+
+            (shared_dir / "avionics_sensors.lua").write_text(
+                'return { SENTINEL = "SHARED_LIB_OK" }\n',
+                encoding="utf-8",
+            )
+            (sdir / "main.lua").write_text("return true\n", encoding="utf-8")
+            (tdir / "test_shared_and_mocks.lua").write_text(
+                'local sensors = require("avionics_sensors")\n'
+                'describe("shared /lib staging and authentic CC:Avionics mocks", function()\n'
+                '    it("resolves shared avionics_sensors from /lib across targets", function()\n'
+                '        assert_eq(sensors.SENTINEL, "SHARED_LIB_OK")\n'
+                '    end)\n'
+                '    it("provides authentic CC:Avionics 4-sensor mocks", function()\n'
+                '        local vs = mock.cc_velocity_sensor({ velocity = 12.5, axis = "x" })\n'
+                '        assert_near(vs.getVelocity(), 12.5, 1e-6)\n'
+                '        assert_eq(vs.getAxis(), "x")\n'
+                '        local as = mock.cc_altitude_sensor({ height = 84.0, airPressure = 0.92, verticalSpeed = -1.5 })\n'
+                '        assert_near(as.getHeight(), 84.0, 1e-6)\n'
+                '        assert_near(as.getAirPressure(), 0.92, 1e-6)\n'
+                '        assert_near(as.getVerticalSpeed(), -1.5, 1e-6)\n'
+                '        local gs = mock.cc_gimbal_sensor({ pitch = 10.0, roll = -5.0, wx = 1.0, wy = 2.0, wz = 3.0 })\n'
+                '        local ang = gs.getAngles()\n'
+                '        assert_near(ang[1], 10.0, 1e-6)\n'
+                '        assert_near(ang[2], -5.0, 1e-6)\n'
+                '        local rates = gs.getAngularRates()\n'
+                '        assert_near(rates[1], 1.0, 1e-6)\n'
+                '        assert_near(rates[2], 2.0, 1e-6)\n'
+                '        assert_near(rates[3], 3.0, 1e-6)\n'
+                '        local pa = mock.cc_physics_assembler({ assembled = true, mass = 4200.0, com = { 1.0, 2.0, 3.0 }, subLevelId = "uuid-1", subLevelName = "HMS Test" })\n'
+                '        assert_true(pa.isAssembled())\n'
+                '        assert_near(pa.getMass(), 4200.0, 1e-6)\n'
+                '        assert_deep_eq(pa.getCenterOfMass(), { 1.0, 2.0, 3.0 })\n'
+                '        assert_eq(#pa.getInertiaTensor(), 9)\n'
+                '        assert_eq(pa.getSubLevelId(), "uuid-1")\n'
+                '        assert_eq(pa.getSubLevelName(), "HMS Test")\n'
+                '    end)\n'
+                'end)\n',
+                encoding="utf-8",
+            )
+            target = UnitTargetConfig(target_id="1_control/consumer_check", source_dir=sdir, tests_dir=tdir)
+            rep = run_target_unit_tests(target, self.paths, root / "sessions")
+            self.assertEqual(rep.status, "PASS", rep.errors or [t.error for t in rep.tests])
+            self.assertEqual(rep.passed_tests, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

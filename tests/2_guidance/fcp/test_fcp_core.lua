@@ -235,3 +235,39 @@ describe("fcp flight FSM state transitions and failsafes", function()
         assert_eq(fsm.lockReason, "CRITICAL_LOW_FUEL")
     end)
 end)
+
+
+describe("fcp asa exclusion for vectored_vtol and drone", function()
+    local guidance_controller = require("guidance_controller")
+    local aerodynamic_controller = require("aerodynamic_controller")
+
+    it("ensures flapTarget is strictly 0.0 for VECTORED_VTOL, QUADROTOR, and HEXAROTOR", function()
+        local non_aero_types = { "VECTORED_VTOL", "QUADROTOR", "HEXAROTOR" }
+        for _, af in ipairs(non_aero_types) do
+            local state = guidance_controller.init({ system = { airframeType = af } })
+            local cmd_takeoff = guidance_controller.pack_attitude_cmd(state, {}, "TAKEOFF", true)
+            assert_eq(cmd_takeoff.flapTarget, 0.0, "flapTarget must be 0.0 for " .. af .. " in TAKEOFF")
+
+            local cmd_land = guidance_controller.pack_attitude_cmd(state, {}, "APPROACH_LAND", true)
+            assert_eq(cmd_land.flapTarget, 0.0, "flapTarget must be 0.0 for " .. af .. " in APPROACH_LAND")
+
+            assert_false(aerodynamic_controller.is_enabled_for_airframe(af), "aerodynamic_controller must be disabled for " .. af)
+            local pkt = aerodynamic_controller.build_surface_packet({ airframeType = af }, { aileron = 1.0 })
+            assert_nil(pkt, "build_surface_packet must be nil for " .. af)
+        end
+    end)
+
+    it("allows flapTarget scheduling for FIXED_WING and WINGED_VTOL", function()
+        local aero_types = { "FIXED_WING", "WINGED_VTOL" }
+        for _, af in ipairs(aero_types) do
+            local state = guidance_controller.init({ system = { airframeType = af } })
+            local cmd_takeoff = guidance_controller.pack_attitude_cmd(state, {}, "TAKEOFF", true)
+            assert_eq(cmd_takeoff.flapTarget, 0.35, "flapTarget must be 0.35 for " .. af .. " in TAKEOFF")
+
+            local cmd_land = guidance_controller.pack_attitude_cmd(state, {}, "APPROACH_LAND", true)
+            assert_eq(cmd_land.flapTarget, 1.0, "flapTarget must be 1.0 for " .. af .. " in APPROACH_LAND")
+
+            assert_true(aerodynamic_controller.is_enabled_for_airframe(af), "aerodynamic_controller must be enabled for " .. af)
+        end
+    end)
+end)

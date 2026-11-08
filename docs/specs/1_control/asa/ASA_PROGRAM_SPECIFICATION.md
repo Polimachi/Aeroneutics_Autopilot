@@ -6,16 +6,16 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.3.0` |
-| **최종 수정일 (Date)** | `2026-11-07` |
+| **문서 버전 (Version)** | `v1.4.0` |
+| **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/asa/` |
 | **주관 도메인 (Domain)** | 공력 조종면 및 날개 구동기 분산 클러스터 (ASA / Node 06-xx) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.9.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.10.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.12.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.14.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.8.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.4.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.3)
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.4.0` | 2026-11-08 | ASA 관할 기체 범위 축소: VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체 배제 규격 명시, FIXED_WING 및 WINGED_VTOL 전용 구동계로 한정 | 비공력 순수 추력형 기체에서 공력 타면 및 불필요한 제어 연산·통신 배제 |
 | `v1.3.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 조종면 버스 Zone 2 이관(`Base+11`: `CH_SURFACE_ACTUATION`, 구 `Base+11` [DEPRECATED]) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
@@ -96,6 +97,18 @@ flowchart TD
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서 내에 `[DEPRECATED]` 배지를 부여하고 대체 신규 필드명과 변경 이력을 명시하여 문서상에 보존합니다.
 2. **코드베이스 경량화 원칙 (Zero-Fallback)**: CC:Tweaked Lua 분산 컴퓨터 환경의 자원 제약(메모리 절약, 20Hz 실시간 루프 성능 보장)을 준수하기 위해, 코드베이스는 사전 이중 호환(Fallback 래퍼, `payload.new or payload.old` 등)을 일체 작성하지 않고 **최신 표준 필드명/패킷명만을 단일 채택**합니다.
 3. **런타임 오류 시 복구 원칙 (송신 노드 즉시 패치)**: 구버전 필드/패킷을 전송하는 미갱신 노드로 인해 수신 측에서 `nil` 인덱싱 등의 런타임 오류가 발생할 경우, 수신 측에 임시 폴백 코드를 추가하지 않고 **구버전 패킷을 송신한 발신 노드의 코드를 최신 사양으로 즉시 패치 및 재배포**하여 전역 일원화를 달성합니다.
+
+### 1.4 비행체 적용 대상 및 관할 범위 (Airframe Applicability & Scope Boundary)
+- **지원 비행체 (Supported Airframes)**:
+  - `FIXED_WING`: 고정익기 (에일러론, 승강타, 방향타, 플랩 또는 에일러본 직접 구동)
+  - `WINGED_VTOL`: 양력 날개 보유 하이브리드 VTOL (호버/순항 모드 공력 타면 및 플랩 구동)
+- **관할 배제 비행체 (Excluded Airframes)**:
+  - `VECTORED_VTOL`: 다축 추력 벡터 VTOL (공력 타면 없음, 전 축 TCA 추력 벡터로 제어)
+  - `QUADROTOR` / `HEXAROTOR`: 4-T / 6-T 멀티로터 드론 (공력 타면 없음, 차동 로터 추력으로 제어)
+- **관할 배제 원칙 및 연계 제어기 비활성화**:
+  - `VECTORED_VTOL` 및 드론 기체는 물리적 공력 타면과 플랩이 일체 존재하지 않으므로 온보드 ASA 소프트웨어 클러스터(`Node 06-xx`)를 배치하지 않습니다.
+  - 상위 외루프 제어기인 **FCP**는 해당 기체 운용 시 플랩 요구율을 항상 수납 상태(`flapTarget = 0.0`)로 고정하며 공력 타면 지령 생성을 배제합니다.
+  - 내루프 제어 코어인 **VAS**는 해당 기체 운용 시 `actuator_adapter_asa`의 타면 믹싱/할당을 생략하고 전용 채널 `Base + 11` (`CH_SURFACE_ACTUATION`)으로의 `MSG_AERO_CMD` 송출을 비활성화하며, 텔레메트리 헬스 진단에서 WAP 검사를 배제(Bypass)합니다.
 
 ---
 
@@ -497,11 +510,11 @@ end
 
 ## 7. 교차 참조 및 버전 메타데이터
 
-- 본 규격서 시맨틱 버전: **v1.2.2**
-- 연계 상위 마스터 ICD: **v1.20.0**
-- 연계 FCP 비행 제어 규격서: **v1.9.0**
-- 연계 VAS 규격서: **v1.11.0**
-- 연계 전체 구조도: **v2.6.0**
+- 본 규격서 시맨틱 버전: **v1.4.0**
+- 연계 상위 마스터 ICD: **v1.23.0**
+- 연계 FCP 비행 제어 규격서: **v1.12.0**
+- 연계 VAS 규격서: **v1.14.0**
+- 연계 전체 구조도: **v2.10.0**
 - 연계 TCA 규격서: **v1.8.0**
 - 연계 Alignment 규격서: **v2.4.0**
 - 연계 GPS 체계 규격서: **v2.0.3**

@@ -25,6 +25,14 @@ manifest.BOOTSTRAP_FILES = {
     { repoPath = "src/0_development/installer/modules/tui_view.lua", cacheRelPath = "modules/tui_view.lua", gdriveId = nil },
 }
 
+manifest.SHARED_LIBS = {
+    avionics_sensors = {
+        repoPath = "src/0_development/sensors/avionics_sensors.lua",
+        dest = "/lib/avionics_sensors.lua",
+        gdriveId = nil,
+    },
+}
+
 manifest.MODULE_ORDER = {
     "vas",
     "tca",
@@ -33,6 +41,7 @@ manifest.MODULE_ORDER = {
     "gps_server",
     "gps_node",
     "gps_client",
+    "sensors",
 }
 
 manifest.MODULES = {
@@ -72,6 +81,7 @@ manifest.MODULES = {
             { repoPath = "src/1_control/vas/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/vec3.lua", dest = "/modules/vec3.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/vehicle_policy.lua", dest = "/modules/vehicle_policy.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 
@@ -119,6 +129,7 @@ manifest.MODULES = {
             { repoPath = "src/1_control/tca/modules/tca_daemon.lua", dest = "/modules/tca_daemon.lua", gdriveId = nil },
             { repoPath = "src/1_control/tca/modules/tui_dashboard.lua", dest = "/modules/tui_dashboard.lua", gdriveId = nil },
             { repoPath = "src/1_control/tca/modules/watchdog_sentinel.lua", dest = "/modules/watchdog_sentinel.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 
@@ -174,6 +185,7 @@ manifest.MODULES = {
             { repoPath = "src/2_guidance/fcp/modules/drivers/drone_driver.lua", dest = "/modules/drivers/drone_driver.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/drivers/fixed_wing_driver.lua", dest = "/modules/drivers/fixed_wing_driver.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/drivers/helicopter_driver.lua", dest = "/modules/drivers/helicopter_driver.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 
@@ -223,6 +235,7 @@ manifest.MODULES = {
             { repoPath = "src/0_development/alignment/modules/profile_exporter.lua", dest = "/modules/profile_exporter.lua", gdriveId = nil },
             { repoPath = "src/0_development/alignment/modules/safety_sentinel.lua", dest = "/modules/safety_sentinel.lua", gdriveId = nil },
             { repoPath = "src/0_development/alignment/modules/settling_guard.lua", dest = "/modules/settling_guard.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 
@@ -254,6 +267,7 @@ manifest.MODULES = {
             { repoPath = "src/0_infra/gps/modules/radar_math.lua", dest = "/gps/modules/radar_math.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gps/modules/session_scheduler.lua", dest = "/gps/modules/session_scheduler.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gps/modules/trilateration.lua", dest = "/gps/modules/trilateration.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 
@@ -291,6 +305,7 @@ manifest.MODULES = {
             { repoPath = "src/0_infra/gps/modules/commissioning.lua", dest = "/gps/modules/commissioning.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gps/modules/config_store.lua", dest = "/gps/modules/config_store.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gps/modules/protocol.lua", dest = "/gps/modules/protocol.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 
@@ -309,6 +324,22 @@ manifest.MODULES = {
             { repoPath = "src/0_infra/gps/client_entry.lua", dest = "/gps/client_entry.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gps/modules/client_core.lua", dest = "/gps/modules/client_core.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gps/modules/protocol.lua", dest = "/gps/modules/protocol.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
+
+    sensors = {
+        id = "sensors",
+        name = "Sensors API",
+        category = "development",
+        version = "1.0.0",
+        installDir = "/",
+        startup = {
+            enabled = false,
+        },
+        defaultConfigs = {},
+        files = {
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
 }
