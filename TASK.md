@@ -31,20 +31,16 @@
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 구현** (`src/0_infra/gac/`)
-  - 섹터 대표 비콘(`CH 50003`), 로컬 백본(`Base_sec+1`) 및 다속성 패드 슬롯 배정·복행 중재 구현
 - [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
   - 가상 좌표 비콘, 동역학 요동 인터록 및 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 구현
-- [ ] **TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
-  - 기초 모듈 및 단위 테스트(`3/3 PASS`)를 기반으로 `Base+11` 20Hz 구동 루프, `peripheral.find` 동적 바인딩 및 300ms Safe Glide Trim 본체 엔트리 완성
 - [ ] **TASK-106: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현**
   - 평시 5Hz(`FCP`) / ACRO 20Hz(`VAS`) `Base+3` HUD 렌더링 및 `Base+0`·`Base+1` C2/비상 선점 송출 구현
-- [ ] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현**
-  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현
-- [ ] **TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
-  - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현
 - [ ] **TASK-109: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
   - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
+- [ ] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
+  - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
+- [ ] **TASK-200: Planning 계층 프로그램 사양서 생성** (`docs/specs/3_planning/`)
+  - 3차원 글로벌/로컬 경로 계획, 동적 장애물 회피, 웨이포인트 스케줄링 및 FCP 유도 연동 인터페이스 규격서 작성
 - [ ] **TASK-201: 경로 계획 모듈 (`src/3_planning/`) 설계 및 구현**
   - 3차원 장애물 회피 및 비행 웨이포인트 스케줄링
 - [ ] **TASK-202: 편대 미션 오케스트레이터 (`src/4_mission/`) 설계 및 구현**
@@ -52,10 +48,18 @@
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
+- [ ] **[연기] TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 구현** (`src/0_infra/gac/`)
+  - 섹터 대표 비콘(`CH 50003`), 로컬 백본(`Base_sec+1`) 및 다속성 패드 슬롯 배정·복행 중재 구현 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
   - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지)
+- [ ] **[연기] TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
+  - 기초 모듈 및 단위 테스트(`3/3 PASS`)를 기반으로 `Base+11` 20Hz 구동 루프, `peripheral.find` 동적 바인딩 및 300ms Safe Glide Trim 본체 엔트리 완성 (일정 연기 — 사양서 `Approved` 유지)
+- [ ] **[연기] TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현**
+  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현 (일정 연기)
+- [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
+  - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
 
 ---
 

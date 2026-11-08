@@ -6,7 +6,7 @@
 - **직전 완료**: `TASK-005` 완료 (통합 인스톨러 `installer.lua`·`src/0_development/installer/`, 71/71 PASS, GPS v2.2.0 `Implemented` 승격).
 - **다음 착수 후보**:
   1. `TASK-006`: 검증 스크립트 정식 도구화(`scratch/` → `tools/`) 및 하위 문서 구 경로 정리.
-  2. `TASK-101`: GAC (Ground Area Controller) 지상 구역 관제사 구현 (`src/0_infra/gac/`).
+  2. `TASK-102`: Landing Pad 지상 착륙 패드 제어기 구현 (`src/0_infra/landing_pad/`).
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
