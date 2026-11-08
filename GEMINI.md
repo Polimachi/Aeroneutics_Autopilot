@@ -13,7 +13,7 @@
 - `AGENTS.md`: 불변 행동 헌장 (`attention-span` × `caveman` 하이브리드 + `no-overclaim`). **사전 diff 승인 없이 수정 금지**.
 - `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
-- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
+- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위 테스트 하네스(`harness/unit/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,harness}/`).
 - `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
@@ -37,4 +37,5 @@
 - **온보드 제어기 20Hz 헤드리스 원칙**: VAS/TCA/ASA는 터미널 UI 블로킹 방지를 위해 헤드리스가 기본이며, 디버그 TUI는 `config.json`의 `debug: true` 시 비동기(`parallel`)로만 격리 구동한다.
 - **VECTORED_VTOL 외루프 가이던스**: 3축 Surge/Sway/Heave 완전 PID + Anti-windup, CRUISE 한정 TILT_ASSISTED 15°/s 피치 슬루율, 안전고도 미달 시 수평 차단 수직 이륙 및 패드 0.5m 정렬 2단계 감속 터치다운을 적용한다.
 - **GCS 지상 비행 지휘 콘솔**: `CH 50000` 부트스트랩 스티키 영속화, `Base+0` 원격 C2 오버라이드, `Base+1` 하드 E_STOP 직결 셧다운, `Base+3` 텔레메트리 51x19 무깜빡임 콘솔 모니터링을 적용한다.
+- **AMM 임무 관리 및 조종 중재**: GCS 원격 C2 무반향 감청, 웨이포인트 2D 수평 거리 15m 자동 전환 및 E-STOP/HOLD 하드웨어 선점 중재를 적용한다.
 

@@ -6,11 +6,12 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 (진행 중)** — 지상 인프라(`GAC`, `Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`), VTOL 제어 고도화(`TASK-110`) 구현 완료, 단위 테스트(`241/241 PASS, 12개 타겟`), 하네스 회귀(`24/24 PASS`), 14대 사양서 무결성(`9 Implemented, 5 Approved`) 확보
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 인프라(`GAC`, `Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`), VTOL 제어 고도화(`TASK-110`) 구현 완료, 단위 테스트(`241/241 PASS, 12개 타겟`), 하네스 회귀(`24/24 PASS`), 14대 사양서 무결성(`9 Implemented, 5 Approved`) 확보
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
-  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료, `Tower ATC` 추진 (`Runway`·`Docking Arm` 일정 보류)
+  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm` 일정 보류)
   - **Phase 2 (고등 항법 및 편대 임무)**: 3차원 경로 계획(`3_planning/`) 및 다중 기체 편대 미션 오케스트레이터(`4_mission/`) 구축
+  - **Phase 3 (물리 하드웨어 및 수동 급기동)**: Create/Avionics 아날로그 스틱 및 물리 컨트롤러 연동, `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 ACRO 수동 조종(`TASK-301`)
 - **실시간 작업 진행 현황 및 상세 백로그 (SSOT)**: [TASK.md](TASK.md)
 
 ---
@@ -117,6 +118,11 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 ---
 
 ## 🛠️ 개발 및 검증 명령어 (Standard Commands)
+
+### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
+```bash
+python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/verify_all_specs.py && python tools/validate_lua_syntax.py
+```
 
 ### 1. Lua 멀티 코드베이스 단위 테스트 실행
 CraftOS-PC 격리 세션에서 전체 코드베이스의 단위 테스트를 실행합니다:
