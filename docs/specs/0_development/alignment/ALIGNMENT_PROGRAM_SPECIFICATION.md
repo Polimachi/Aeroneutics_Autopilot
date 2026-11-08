@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.5.1` |
+| **문서 버전 (Version)** | `v2.5.2` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.5.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.5.1` | 2026-11-08 | 네트워크 토폴로지 다이어그램 내 수용 기체 수 범위를 40채널 기준($N = 1 \sim 1000$)으로 정합 동기화 | 사양서 간 수치 정합성 확립 |
 | `v2.5.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$) 반영, 01호기 직결 바인딩 채널 `Base+0` (`10000`, 구 1000 [DEPRECATED]) 동기화, TCA/ASA 동적 바인딩 `Base+10/11` 반영, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
@@ -593,7 +594,7 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
     time = 1729845000050,
     payload = {
         aircraftDomainId = "AIRCRAFT_01",
-        hardwareUuid = "SAS-NODE-04-4402",
+        hardwareUuid = "FCP-NODE-04-4402",
         bayId = 1,
         status = "READY",
         airframeType = "WINGED_VTOL"
@@ -710,12 +711,12 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
             }
         },
         discoveredSurfaces = {
-            ["AIL_L"]  = { podId = "WAP_L", type = "control_surface", boundPort = "left", mode = "API", maxDeflectionDeg = 30.0 },
-            ["AIL_R"]  = { podId = "WAP_R", type = "control_surface", boundPort = "left", mode = "API", maxDeflectionDeg = 30.0 },
-            ["ELEV"]   = { podId = "WAP_T", type = "control_surface", boundPort = "left", mode = "API", maxDeflectionDeg = 30.0 },
-            ["RUDD"]   = { podId = "WAP_T", type = "control_surface", boundPort = "right", mode = "API", maxDeflectionDeg = 30.0 },
-            ["FLAP_L"] = { podId = "WAP_L", type = "flap", boundPort = "right", mode = "API", maxDeflectionDeg = 40.0 },
-            ["FLAP_R"] = { podId = "WAP_R", type = "flap", boundPort = "right", mode = "API", maxDeflectionDeg = 40.0 }
+            ["AIL_L"]  = { podId = "ASA_L", type = "control_surface", boundPort = "left", mode = "API", maxDeflectionDeg = 30.0 },
+            ["AIL_R"]  = { podId = "ASA_R", type = "control_surface", boundPort = "left", mode = "API", maxDeflectionDeg = 30.0 },
+            ["ELEV"]   = { podId = "ASA_T", type = "control_surface", boundPort = "left", mode = "API", maxDeflectionDeg = 30.0 },
+            ["RUDD"]   = { podId = "ASA_T", type = "control_surface", boundPort = "right", mode = "API", maxDeflectionDeg = 30.0 },
+            ["FLAP_L"] = { podId = "ASA_L", type = "flap", boundPort = "right", mode = "API", maxDeflectionDeg = 40.0 },
+            ["FLAP_R"] = { podId = "ASA_R", type = "flap", boundPort = "right", mode = "API", maxDeflectionDeg = 40.0 }
         }
     }
 }
@@ -821,4 +822,4 @@ VAS-Core가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.j
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 격납고 상주형 기체 동역학 식별 및 정밀 프로파일러(Alignment)의 공식 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.8.0), SAS 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.0.3)와 100% 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 격납고 상주형 기체 동역학 식별 및 정밀 프로파일러(Alignment)의 공식 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.8.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.0.3)와 100% 정합성을 유지합니다.*

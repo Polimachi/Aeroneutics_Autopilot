@@ -1,12 +1,12 @@
 # 도킹암 시스템 및 통신 인터페이스 제어 규격서 (ICD)
 > **Docking Arm System Specification & Interface Control Document (ICD)**  
-> **프로젝트**: Universal Autonomous Flight Stack (SAS · VAS · Ground Infrastructure)  
+> **프로젝트**: Universal Autonomous Flight Stack (FCP · VAS · Ground Infrastructure)  
 > **대상 환경**: Minecraft CC:Tweaked (Ender Modem, Wired Modem), Create: Aeronautics, Create: Avionics  
 
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.11.0` |
+| **문서 버전 (Version)** | `v1.11.1` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/docking_arm/` |
 | **주관 도메인 (Domain)** | 지상 인프라 도킹암 메커니즘 제어 (Ground Docking Arm) |
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.11.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.11.0` | 2026-11-08 | 특정 VTOL/DRONE 전속 전용 도킹암 운영 및 GAC 슬롯 배정 연동 원칙 신설 | GAC v1.4.0 전용 시설물 아키텍처 상호 동기화 |
 | `v1.10.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
 | `v1.10.4` | 2026-11-07 | 40채널 확장 및 표준 메타데이터 표 적용 | Phase 0 ICD 동기화 |
@@ -61,14 +62,14 @@
 
 ### 1.2 GPS 광역 항법 $\rightarrow$ 전술 도킹 랑데부 연계 인터페이스 (GPS to Tactical Transition)
 1. **광역 접근 단계 (GPS En-Route Phase)**:
-   - 비행체 UAP는 `CH_FACILITY_BEACON` (50003, 구버전 `30000` [DEPRECATED])에서 브로드캐스트되는 도킹암 시설물의 글로벌 기준 좌표와 진입 정렬 회랑(`corridorLength = 15.0m`, `standoffDistanceM = 18.0m`) 제원을 수신합니다.
+   - 비행체 FCP는 `CH_FACILITY_BEACON` (50003, 구버전 `30000` [DEPRECATED])에서 브로드캐스트되는 도킹암 시설물의 글로벌 기준 좌표와 진입 정렬 회랑(`corridorLength = 15.0m`, `standoffDistanceM = 18.0m`) 제원을 수신합니다.
    - 중앙 GPS 체계(`CH_GPS_PING` 60001, 구버전 `30004` [DEPRECATED] / 회신 채널 `Base+5`)의 정밀 2D 위치 추정을 기반으로 도킹암 외곽 100~200m 지점의 대기 공역(Staging Point)까지 장거리 L1 자율 비행을 수행합니다.
 2. **관제 인가 및 전술 유도 전이 (Terminal Handoff)**:
-   - Staging Point 진입 시 UAP는 `CH_ATC_COMM` (50001, 구버전 `30001` [DEPRECATED])로 `MSG_ATC_APPROACH_REQ`를 송신하여 섹터 관제 채널($Base_{\text{sec}} + 0$, 구버전 `30100 + S` [DEPRECATED])로 핸드오프를 인가받습니다.
-   - 관할 지상 구역 관제사(GAC)가 시설물 가용성을 확인하고 도킹암 슬롯 배정(`MSG_ATC_SLOT_ASSIGN` via $Base_{\text{sec}} + 1$, 구버전 `30200 + S` [DEPRECATED])을 완료한 후, UAP에 `MSG_GAC_APPROACH_CLEARANCE`를 통해 전술 채널(`CH_TACTICAL_GUIDANCE = Base_sec + 10 + Idx`, 구버전 `31000 + ID` [DEPRECATED])을 하달합니다.
-   - UAP는 광역 GPS 연산 의존도를 낮추고 도킹암 노드가 20Hz(동적 모선) 또는 1Hz(정적 타워)로 송출하는 정밀 상대 벡터(`MSG_FACILITY_DYNAMIC_GUIDE`) 추종 모드로 전이합니다.
+   - Staging Point 진입 시 FCP는 `CH_ATC_COMM` (50001, 구버전 `30001` [DEPRECATED])로 `MSG_ATC_APPROACH_REQ`를 송신하여 섹터 관제 채널($Base_{\text{sec}} + 0$, 구버전 `30100 + S` [DEPRECATED])로 핸드오프를 인가받습니다.
+   - 관할 지상 구역 관제사(GAC)가 시설물 가용성을 확인하고 도킹암 슬롯 배정(`MSG_ATC_SLOT_ASSIGN` via $Base_{\text{sec}} + 1$, 구버전 `30200 + S` [DEPRECATED])을 완료한 후, FCP에 `MSG_GAC_APPROACH_CLEARANCE`를 통해 전술 채널(`CH_TACTICAL_GUIDANCE = Base_sec + 10 + Idx`, 구버전 `31000 + ID` [DEPRECATED])을 하달합니다.
+   - FCP는 광역 GPS 연산 의존도를 낮추고 도킹암 노드가 20Hz(동적 모선) 또는 1Hz(정적 타워)로 송출하는 정밀 상대 벡터(`MSG_FACILITY_DYNAMIC_GUIDE`) 추종 모드로 전이합니다.
 3. **이동 모선 동역학 융합**:
-   - 항진 중인 모선의 도킹암은 모선 자체의 관성 항법 및 GPS 노드를 통해 산출된 선체 속도 벡터($\vec{v}$) 및 가속도($\vec{a}$)를 전술 유도 패킷에 동봉하여, 기체 UAP가 이동 좌표계 상에서 무경사(Zero-Tilt) 상대 정지 및 6-DoF 랑데부를 완료하도록 지원합니다.
+   - 항진 중인 모선의 도킹암은 모선 자체의 관성 항법 및 GPS 노드를 통해 산출된 선체 속도 벡터($\vec{v}$) 및 가속도($\vec{a}$)를 전술 유도 패킷에 동봉하여, 기체 FCP가 이동 좌표계 상에서 무경사(Zero-Tilt) 상대 정지 및 6-DoF 랑데부를 완료하도록 지원합니다.
 
 ### 1.3 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서 내에 `[DEPRECATED]` 배지를 부여하고 대체 신규 필드명과 변경 이력을 명시하여 문서상에 보존합니다.
@@ -85,7 +86,7 @@
 flowchart TD
     ATC["기지/모선 관제탑 (ATC Node)<br/>[무선 CH 50001 / 50002]"]
     ARM["도킹암 제어 컴퓨터 (Docking Arm Node)<br/>[무선 CH 50003 / Base_sec+1 / Base_sec+10+Idx]"]
-    SAS["기체 자율항법 FCP (Node 04)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
+    FCP["기체 자율항법 FCP (Node 04)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
 
     subgraph WIRED_MECH["도킹암 유선 모뎀 구동망 (Wired Peripheral Network)"]
         BEARING["1축 선회 제어기 (dock_bearing_controller)<br/>* Create Mechanical Bearing / Clutch"]
@@ -95,11 +96,11 @@ flowchart TD
         UMBILICAL["엄빌리컬 커플러 유닛 (dock_umbilical_unit)<br/>* Create Hose Pulley & Fluid Pump<br/>* CC Wired Modem Cable Coupler"]
     end
 
-    ARM -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| SAS
+    ARM -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| FCP
     ARM <==>|"무선 Base_sec + 1 (로컬 백본)<br/>도킹암 전개/상태 보고"| ATC
-    SAS <==>|"무선 CH 50001 (ATC 관제)<br/>도킹 허가 및 언도킹 인가"| ATC
-    SAS <==>|"무선 Base_sec + 10 + Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| ARM
-    SAS <==>|"CH Base + 5 (결합 핸드셰이크)<br/>포획/엄빌리컬 상태 교환"| ARM
+    FCP <==>|"무선 CH 50001 (ATC 관제)<br/>도킹 허가 및 언도킹 인가"| ATC
+    FCP <==>|"무선 Base_sec + 10 + Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| ARM
+    FCP <==>|"CH Base + 5 (결합 핸드셰이크)<br/>포획/엄빌리컬 상태 교환"| ARM
 
     ARM ===|"유선 모뎀 케이블 버스 (Wired Bus)"| WIRED_MECH
 ```
@@ -107,13 +108,13 @@ flowchart TD
 ### 2.1 무선 채널 할당 표
 | 채널 번호 | 채널 식별자 | 송신자 | 수신자 | 전송 주기 | 통신 목적 및 내용 |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`50003`** | `CH_FACILITY_BEACON` | Arm Node | All (SAS, MFD) | 1Hz | 도킹 포트 규격 (포트 직경, 어댑터 타입, 가용 상태, 이동성 플래그) (구버전 `30000` [DEPRECATED]) |
-| **`50001`** | `CH_ATC_COMM` | SAS / ATC | ATC / SAS | 이벤트 기반 | 도킹 진입 인가(`DOCK_APPROACH_REQ`), 언도킹 분리 허가 교신 (구버전 `30001` [DEPRECATED]) |
+| **`50003`** | `CH_FACILITY_BEACON` | Arm Node | All (FCP, MFD) | 1Hz | 도킹 포트 규격 (포트 직경, 어댑터 타입, 가용 상태, 이동성 플래그) (구버전 `30000` [DEPRECATED]) |
+| **`50001`** | `CH_ATC_COMM` | FCP / ATC | ATC / FCP | 이벤트 기반 | 도킹 진입 인가(`DOCK_APPROACH_REQ`), 언도킹 분리 허가 교신 (구버전 `30001` [DEPRECATED]) |
 | **`50002`** | `CH_ATC_FACILITY` | Tower ATC / GAC | GAC / Tower ATC | 1Hz / 이벤트 | 광역 관제탑과 GAC 간 섹터 관제 이양 및 상태 동기화 (구버전 `30002` [DEPRECATED]) |
-| **`Base_sec + 0`** | `CH_GAC_COMM` | SAS / GAC | GAC / SAS | 이벤트 | 도킹 섹터 체크인(`MSG_GAC_CHECKIN_REQ`), 도킹암 인가(`MSG_GAC_APPROACH_CLEARANCE`), 언도킹 허가 (구버전 `30100 + S` [DEPRECATED]) |
+| **`Base_sec + 0`** | `CH_GAC_COMM` | FCP / GAC | GAC / FCP | 이벤트 | 도킹 섹터 체크인(`MSG_GAC_CHECKIN_REQ`), 도킹암 인가(`MSG_GAC_APPROACH_CLEARANCE`), 언도킹 허가 (구버전 `30100 + S` [DEPRECATED]) |
 | **`Base_sec + 1`** | `CH_SECTOR_FACILITY` | Arm Node / GAC | GAC / Arm Node | 1Hz / 이벤트 | 도킹암 노드와 직속 GAC 간 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`), 전개/인입 상태 보고 (구버전 `30200 + S` [DEPRECATED]) |
 | **`Base_sec + 10 + Idx`** | `CH_TACTICAL_GUIDANCE` | Arm Node | FCP (Node 04) | 1Hz (정적)<br/>20Hz (동적) | 포트 중심 좌표, 조준선 벡터($\vec{n}_{bore}$), 동적 속도/가속도 스트리밍 (예: 50230, 구버전 `31000 + ID` [DEPRECATED]) |
-| **`Base + 5`** | `CH_EXTERNAL_COMM` | Arm / SAS | SAS / Arm | 이벤트 | 래치 포획(`MSG_DOCK_CAPTURE_STAGE`), 엄빌리컬 서비스 상태 교환 |
+| **`Base + 5`** | `CH_EXTERNAL_COMM` | Arm / FCP | FCP / Arm | 이벤트 | 래치 포획(`MSG_DOCK_CAPTURE_STAGE`), 엄빌리컬 서비스 상태 교환 |
 
 ### 2.2 유선 모뎀 주변기기 매핑 표 (Wired Modem Peripherals)
 | 주변기기 식별자 (Peripheral ID) | 물리 블록 타입 | 제어 방식 및 신호 | 기능 설명 |
@@ -246,8 +247,8 @@ flowchart TD
 #### 1. 도킹 체결 단계 갱신 패킷 (`MSG_DOCK_CAPTURE_STAGE`, Base_sec + 10 + Idx $\leftrightarrow$ Base+5)
 > [!IMPORTANT]
 > **도킹 결합 FSM 정합성 확정 (감사 결함 #1 해소)**:
-> 도킹 체결 확인 시 발신하는 공식 와이어 패킷 식별자는 `MSG_DOCK_CAPTURE_STAGE`이며, `stage = "HARD_LOCKED"`를 전달하여 SAS FSM의 즉각적인 추진기 셧다운 및 `DISARMED` 전이를 완수합니다.
-> 비행 소프트웨어의 상호 호환성을 위해 SAS 및 도킹암 노드는 `MSG_DOCKING_ARM_CMD` (`ACTION = "CAPTURE_CLOSE"`) 식별자를 동등한 체결 완료 이벤트로 상호 수용(Aliasing)하여 FSM 교착 위험을 원천 배제합니다.
+> 도킹 체결 확인 시 발신하는 공식 와이어 패킷 식별자는 `MSG_DOCK_CAPTURE_STAGE`이며, `stage = "HARD_LOCKED"`를 전달하여 FCP FSM의 즉각적인 추진기 셧다운 및 `DISARMED` 전이를 완수합니다.
+> 비행 소프트웨어의 상호 호환성을 위해 FCP 및 도킹암 노드는 `MSG_DOCKING_ARM_CMD` (`ACTION = "CAPTURE_CLOSE"`) 식별자를 동등한 체결 완료 이벤트로 상호 수용(Aliasing)하여 FSM 교착 위험을 원천 배제합니다.
 
 ```lua
 {
@@ -299,7 +300,7 @@ flowchart TD
 }
 ```
 
-#### 3. 언도킹 및 격납 위치 분리 인가 패킷 (`MSG_UNDOCK_CLEARANCE`, CH 50001, ATC $\rightarrow$ SAS)
+#### 3. 언도킹 및 격납 위치 분리 인가 패킷 (`MSG_UNDOCK_CLEARANCE`, CH 50001, ATC $\rightarrow$ FCP)
 ```lua
 {
     ver = "1.9.5",
@@ -428,7 +429,7 @@ sequenceDiagram
 - **자세각 정렬 오차 및 접근 속도 한계**:
   $$|\Delta \psi| \le 2.0^\circ, \quad v_{axial} \le 0.4\text{ m/s}$$
 
-기체 SAS([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md))는 축 방향 진입 속도를 $v_{axial} = -0.30 \cdot \tanh(d_{axial} / 2.0)\text{ m/s}$로 제어하여, 도킹 포트 접촉 시 충격을 $0.2\text{ m/s}$ 이하로 제한합니다.
+기체 FCP([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md))는 축 방향 진입 속도를 $v_{axial} = -0.30 \cdot \tanh(d_{axial} / 2.0)\text{ m/s}$로 제어하여, 도킹 포트 접촉 시 충격을 $0.2\text{ m/s}$ 이하로 제한합니다.
 
 ### 5.2 안전 인터록 및 페일세이프 매트릭스
 | 이상 상황 | 감지 조건 | 대상 시스템 | 조치 사항 및 페일세이프 |

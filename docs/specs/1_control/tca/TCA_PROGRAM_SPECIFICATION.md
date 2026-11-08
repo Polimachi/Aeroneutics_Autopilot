@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.10.0` |
+| **문서 버전 (Version)** | `v1.10.1` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.10.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.10.0` | 2026-11-08 | 비동기 디버그 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 데몬 + TUI 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 디버그 가시성 제공 및 헤드리스 런타임 호환성 확보 |
 | `v1.9.1` | 2026-11-08 | 설정 파라미터 표 내 baseChannel 수식($* 40$) 및 기체 인덱스 범위($N=1\sim 1000$) 잔재 정합 동기화 | 사양서 간 수치 정합성 확립 |
 | `v1.9.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 추진기 버스 Zone 2 이관(`Base+10`: `CH_THRUST_ACTUATION`, 구 `Base+10` [DEPRECATED]), `Base+4` 상시 청취 제거 확정, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
@@ -421,7 +422,7 @@ function config_manager.save(path, cfg) -> boolean, err
 
 #### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
 - **통신 채널**: `CH_THRUST_ACTUATION` (`oldBase + 10`, 구 `oldBase + 6` [DEPRECATED])
-- **전송 조건**: GCS 발령에 따라 SAS $\to$ VAS-Core를 거쳐 하달되는 채널 재바인딩 트랜잭션.
+- **전송 조건**: GCS 발령에 따라 FCP $\to$ VAS-Core를 거쳐 하달되는 채널 재바인딩 트랜잭션.
 - **2단계 트랜잭션 수신 시퀀스**:
   1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 6`으로 ACK 회신.
   2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 10` 채널을 닫고 `newBase + 10`을 (구 oldBase/newBase + 6 [DEPRECATED]) 주 통신 채널로 영속 확정.
@@ -557,11 +558,11 @@ end
 
 | 감지 결함 상황 | 감지 주체 및 판정식 | TCA 노드 자체 동작 | VAS 및 상위 시스템 반응 |
 | :--- | :--- | :--- | :--- |
-| **통신 두절 (Watchdog)** | `watchdog_sentinel.is_expired()` ($\Delta t > 300\text{ ms}$) | `cut_thrust()` 즉각 집행 (RS=0, API=0.0 차단) 및 `REDSTONE_TIMEOUT` / `API_TIMEOUT` 보고 | VAS 측 텔레메트리 누락 감지, 기체 균형 상실 방지를 위해 SAS 호버 홀드 전환 |
+| **통신 두절 (Watchdog)** | `watchdog_sentinel.is_expired()` ($\Delta t > 300\text{ ms}$) | `cut_thrust()` 즉각 집행 (RS=0, API=0.0 차단) 및 `REDSTONE_TIMEOUT` / `API_TIMEOUT` 보고 | VAS 측 텔레메트리 누락 감지, 기체 균형 상실 방지를 위해 FCP 호버 홀드 전환 |
 | **단선/파손 발생 (API 모드)** | `detect_api_peripherals()` 결과 $0 < N_{active} < N_{total}$ | 잔여 추진기 $N_{total}/N_{active}$ 비례 증폭 및 `API_DEGRADED` 즉시 보고 | VAS-Core가 참 `dynamicLoad` 재산출, MFD에 추진 경고 표출 |
 | **핫플러그 분리/결속** | `os.pullEvent("peripheral*")` | `scan_api_peripherals()` 즉시 재스캔 및 온-체인지 피드백 발신 | VAS-Core가 변경된 액추에이터 상태 수신 즉시 닫힌 루프 게인 재산출 |
 | **추력 포화 (Saturation)** | $S_{req} \cdot \frac{N_{total}}{N_{active}} > 15.0$ | 출력 15 클램핑 및 `isSaturated=true` 즉각 송출 | 해당 축 내루프 PID I-Gain(적분항) 즉시 동결 (안티 와인드업) |
-| **전체 상실 (`API_TOTAL_LOSS`)** | $N_{active} == 0$ (API 모드) | 출력 0 차단, `healthStatus="API_TOTAL_LOSS"` 즉각 송출 | 1차: 6-DoF 믹서 재할당 시도<br/>2차: 주 추진/양력 축 상실 시 SAS 비상 착륙 강제 발동 |
+| **전체 상실 (`API_TOTAL_LOSS`)** | $N_{active} == 0$ (API 모드) | 출력 0 차단, `healthStatus="API_TOTAL_LOSS"` 즉각 송출 | 1차: 6-DoF 믹서 재할당 시도<br/>2차: 주 추진/양력 축 상실 시 FCP 비상 착륙 강제 발동 |
 | **E-STOP 지령 수신** | `controlState == "E_STOP"` | **2단계 안전 분기 집행**:<br/>1. 공중 완충 지령(`outputs[groupId] > 0`): 쿠션 추력 인가 유지(`CUSHION_HOLD`)로 자유낙하 방지<br/>2. 지상 접지 후 0 지령(`outputs == 0`) 또는 `HARD_CUT`: 즉각 전 출력 0 차단(`cut_thrust()`) | 공중 완충 강하 유도 후 지상 안착 시 전 기체 셧다운 시퀀스 돌입 |
 
 ---
@@ -639,4 +640,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), SAS 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.4.0) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0)와 100% 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.4.0) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0)와 100% 정합성을 유지합니다.*
