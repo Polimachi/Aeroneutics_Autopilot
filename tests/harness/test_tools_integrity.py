@@ -18,6 +18,7 @@ class TestToolsIntegrity(unittest.TestCase):
             WORKSPACE_ROOT / "tools" / "validate_lua_syntax.py",
             WORKSPACE_ROOT / "tools" / "verify_spec_status.py",
             WORKSPACE_ROOT / "tools" / "run_unit_tests.py",
+            WORKSPACE_ROOT / "tools" / "run_e2e_tests.py",
         ]
         for tool_path in expected_tools:
             self.assertTrue(
