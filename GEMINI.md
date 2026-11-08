@@ -3,7 +3,7 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
-- **직전 완료**: `TASK-111` 완료 (멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 프레임워크 구축: virtual_bus, node_sandbox, run_e2e_tests.py, 6대 시나리오 6/6 PASS, 12개 유닛 타겟 241/241 PASS, 하네스 28/28 PASS, 정적 분석 14 SPECS 100% CLEAN).
+- **직전 완료**: `TASK-111` 완료 (멀티노드 종단간(E2E) 패킷 시퀀스 시뮬레이션 및 테스트 실효성 검증 체계 구축: virtual_bus, node_sandbox, run_e2e_tests.py, run_mutation_tests.py, 20개 돌연변이 살상률 100.0%, 6대 E2E 시나리오 6/6 PASS, 12개 유닛 타겟 248/248 PASS, 하네스 29/29 PASS, 정적 분석 14 SPECS 100% CLEAN).
 - **다음 착수 후보**:
   1. `TASK-301`: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3).
   2. `TASK-105`: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성.
@@ -15,17 +15,18 @@
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
 - `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`).
+- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
 - `.agent/`: 온디맨드 이력(`memory/workspace-root.md`), 규칙 3종(`rules/`), 전문 스킬 13종(`skills/`), 안전 훅(`hooks/`).
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 241/241 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 248/248 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (6개 시나리오 6/6 PASS).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (28/28 PASS).
-- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (9 Implemented, 5 Approved).
+- **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (20/20 KILLED, 100.0% 살상률).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (29/29 PASS).
+- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (8 Implemented, 6 Approved).
 
 ## 4. Gotchas & Invariants
 - **멀티 코드베이스 독립 완결성**: `src/<layer>/<name>/` 간 공용 모듈 직접 참조 금지 (개별 CC 컴퓨터 루트 마운트 단위 캡슐화, 기본 진입점 `main.lua`).

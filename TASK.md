@@ -49,7 +49,7 @@
 
 - [x] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (완료일: 2026-11-08, 커밋 `646d831` ~ `81e584b`) (`harness/simulation/`, `tools/run_e2e_tests.py`, `tests/e2e/`, `tests/harness/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
-  - **목적 및 성과**: 다중 노드 격리 가상 버스(`virtual_bus.lua`), Cobalt Lua 5.2 `_ENV` 기반 게스트 샌드박스(`node_sandbox.lua`), 자동화 E2E 테스트 러너(`tools/run_e2e_tests.py`) 구축 및 6대 핵심 통합 시나리오(부트스트랩/텔레메트리, 웨이포인트 폐루프, GPS 10Hz 스웜 측위, 행거 캘리브레이션/OLS, GCS C2 오버라이드/E-STOP, GAC/패드 3-Tier 전술 착륙) 검증 완료. 전체 6개 E2E 슈트(6/6 PASS, ~490ms), 12개 유닛 타겟(241/241 PASS), Python 하네스 테스트(28/28 PASS), 14개 사양서(100% CLEAN, 9 Implemented, 5 Approved) 달성.
+  - **목적 및 성과**: 다중 노드 격리 가상 버스(`virtual_bus.lua`), Cobalt Lua 5.2 `_ENV` 기반 게스트 샌드박스(`node_sandbox.lua`), 자동화 E2E 테스트 러너(`tools/run_e2e_tests.py`), 자동화 돌연변이 테스터(`tools/run_mutation_tests.py`) 구축 및 6대 핵심 통합 시나리오(부트스트랩/텔레메트리, 웨이포인트 폐루프, GPS 10Hz 스웜 측위, 행거 캘리브레이션/OLS, GCS C2 오버라이드/E-STOP, GAC/패드 3-Tier 전술 착륙) 검증 완료. 전체 6개 E2E 슈트(6/6 PASS, ~410ms), 12개 유닛 타겟(248/248 PASS), 돌연변이 살상률 100.0%(20/20 KILLED), Python 하네스 테스트(29/29 PASS), 14개 사양서(100% CLEAN, 8 Implemented, 6 Approved) 달성.
   - **구현 내용**:
     - [x] **TASK-111-1**: 가상 RF 네트워크 버스 및 패킷 트레이서(`harness/simulation/virtual_bus.lua`) 구현
     - [x] **TASK-111-2**: 멀티노드 게스트 격리 샌드박스(`harness/simulation/node_sandbox.lua`) 구현
@@ -60,7 +60,10 @@
     - [x] **TASK-111-7**: 시나리오 4 — 격납고 Alignment 센서/제어면 캘리브레이션 세션 및 OLS 동기화 검증 (`test_e2e_hangar_alignment.lua`)
     - [x] **TASK-111-8**: 시나리오 5 — GCS C2 오버라이드, AMM 무반향 감청 및 하드 E_STOP 직결 차단 검증 (`test_e2e_c2_and_estop.lua`)
     - [x] **TASK-111-9**: 시나리오 6 — GAC & 착륙패드 3-Tier 스마트 전술 착륙 시퀀스 검증 (`test_e2e_facility_landing.lua`)
-    - [x] **TASK-111-10**: 전체 회귀 검증, 마일스톤 동기화 및 작업 완결
+    - [x] **TASK-111-10**: 테스트 실효성 검증 및 20개 돌연변이 테스트 슈트 구축 (`tools/run_mutation_tests.py`, `tests/harness/test_mutation_runner.py`)
+      - 20개 결정론적 돌연변이 자동 주입 및 10대 도메인 살상률 검증 (초기 12/20 -> 단위 테스트 보강 후 20/20 KILLED, 100.0% 살상률 달성).
+      - 6대 E2E 시나리오 프로덕션 디스패처/상태머신 직결 및 음수/침해 경로(도메인 스푸핑, 비인가 버전, 중량 초과, 노드 부족) 검증.
+    - [x] **TASK-111-11**: 전체 회귀 검증, 마일스톤 동기화 및 작업 완결
 
 - [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08, 커밋 `e9febe6` ~ `e8c25b3`) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
