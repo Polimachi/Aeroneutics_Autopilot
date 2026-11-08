@@ -746,18 +746,93 @@ describe("vas ui_renderer and async/headless execution", function()
         }
 
         local pullCount = 0
-        sdk.patch(os, "pullEvent", function()
+        local pullFn = function()
             pullCount = pullCount + 1
             if pullCount == 1 then
                 return "timer", timerSeq
             else
                 return "key", 16 -- keys.q
             end
-        end)
+        end
+        sdk.patch(os, "pullEvent", pullFn)
+        sdk.patch(os, "pullEventRaw", pullFn)
 
         vas_main.run_tui(state)
         assert_false(state.running, "state.running must be set to false on key event")
         assert_true(pullCount >= 2, "must have handled timer and key events")
+    end)
+
+    it("isolates render errors in run_tui using pcall without crashing or stopping state.running", function()
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        local renderAttemptCount = 0
+        sdk.patch(ui_renderer, "render_dashboard", function()
+            renderAttemptCount = renderAttemptCount + 1
+            error("Simulated renderer catastrophic error")
+        end)
+
+        local timerSeq = 300
+        sdk.patch(os, "startTimer", function(duration)
+            timerSeq = timerSeq + 1
+            return timerSeq
+        end)
+
+        local state = {
+            running = true,
+            fsm = { currentState = "NORMAL" },
+            tickCount = 10,
+            cfg = { system = { debug = true } }
+        }
+
+        local pullCount = 0
+        local pullFn = function()
+            pullCount = pullCount + 1
+            if pullCount == 1 then
+                return "timer", timerSeq
+            else
+                assert_true(state.running, "state.running must remain true despite render_dashboard errors")
+                return "key", 16
+            end
+        end
+        sdk.patch(os, "pullEvent", pullFn)
+        sdk.patch(os, "pullEventRaw", pullFn)
+
+        local ok, err = pcall(vas_main.run_tui, state)
+        assert_true(ok, "run_tui must not propagate render exceptions")
+        assert_false(state.running, "state.running must be false after key terminate")
+        assert_true(renderAttemptCount >= 2, "render_dashboard must have been attempted at least twice")
+    end)
+
+    it("handles terminate event in run_tui and isolates fatal error while keeping idle until state stopped", function()
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        sdk.patch(os, "startTimer", function()
+            return 999
+        end)
+
+        local state = {
+            running = true,
+            fsm = { currentState = "NORMAL" },
+            tickCount = 10,
+            cfg = { system = { debug = true } }
+        }
+
+        local pullCount = 0
+        local pullFn = function()
+            pullCount = pullCount + 1
+            if pullCount == 1 then
+                return "terminate"
+            end
+            state.running = false
+            return "dummy"
+        end
+        sdk.patch(os, "pullEvent", pullFn)
+        sdk.patch(os, "pullEventRaw", pullFn)
+
+        vas_main.run_tui(state)
+        assert_false(state.running, "state.running must become false on terminate event")
     end)
 end)
 

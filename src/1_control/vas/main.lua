@@ -19,22 +19,36 @@ local function run_daemon(state)
 end
 
 local function run_tui(state)
-    if term and term.clear then
-        ui_renderer.clear_screen(term)
-    end
-    ui_renderer.render_dashboard(term, state)
+    local ok, err = pcall(function()
+        if term and term.clear then
+            pcall(ui_renderer.clear_screen, term)
+        end
+        pcall(ui_renderer.render_dashboard, term, state)
 
-    local uiTimer = os.startTimer(0.2) -- 5Hz 비동기 UI 주기
-    while state.running do
-        local event, p1, p2, p3 = os.pullEvent()
-        if event == "timer" and p1 == uiTimer then
-            ui_renderer.render_dashboard(term, state)
-            uiTimer = os.startTimer(0.2)
-        elseif event == "key" then
-            if p1 == ((keys and keys.q) or 16) or p1 == ((keys and keys.t) or 20) then
+        local uiTimer = os.startTimer(0.2) -- 5Hz 비동기 UI 주기
+        while state.running do
+            local event, p1, p2, p3 = os.pullEventRaw()
+            if event == "timer" and p1 == uiTimer then
+                pcall(ui_renderer.render_dashboard, term, state)
+                uiTimer = os.startTimer(0.2)
+            elseif event == "key" then
+                if p1 == ((keys and keys.q) or 16) or p1 == ((keys and keys.t) or 20) then
+                    state.running = false
+                    break
+                end
+            elseif event == "terminate" then
                 state.running = false
                 break
             end
+        end
+    end)
+
+    if not ok then
+        -- Fault isolation: if an unhandled fatal error occurred in run_tui,
+        -- do NOT exit immediately (which causes parallel.waitForAny to kill run_daemon).
+        -- Idle silently until state.running becomes false so run_daemon finishes safely.
+        while state.running do
+            os.pullEventRaw()
         end
     end
 end
