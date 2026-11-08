@@ -22,10 +22,10 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [ ] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
+- [-] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
   - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
   - **하위 작업 내역**:
-    - [ ] **TASK-110-1**: FCP 사양서(`FCP_PROGRAM_SPECIFICATION.md`) VTOL 유도 모드 및 천이(Transition) FSM 규격 개정 (`Approved` 전이)
+    - [-] **TASK-110-1**: FCP 사양서(`FCP_PROGRAM_SPECIFICATION.md`) VTOL 유도 모드 및 천이(Transition) FSM 규격 개정 (`Approved` 전이)
     - [ ] **TASK-110-2**: 호버링 위치/고도 유지 PID 및 TECS 수직 속도 보정 로직 고도화
     - [ ] **TASK-110-3**: 수직 이착륙 천이(Transition) 가속/감속 시퀀스 및 틸트 각도/추력 인터록 제어 구현
     - [ ] **TASK-110-4**: FCP VTOL 단위 테스트 슈트 보강 및 통합 회귀 검증
@@ -46,7 +46,7 @@
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
-  - 기초 모듈 및 단위 테스트(`3/3 PASS`)를 기반으로 `Base+11` 20Hz 구동 루프, `peripheral.find` 동적 바인딩 및 300ms Safe Glide Trim 본체 엔트리 완성 (일정 연기 — 사양서 `Approved` 유지)
+  - TASK-113의 기본 프레임워크(헤드리스/비동기 TUI, `Base+11` 수신 루프, 300ms Safe Glide Trim, 단위 테스트 15/15 PASS)를 기반으로 물리 액추에이터(Avionics API/RS) 각도 인가, `MSG_AERO_STATUS` 상태 피드백 송출 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 핸드셰이크 완성 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
 - [ ] **[연기] TASK-202: 편대 미션 오케스트레이터 (`src/4_mission/`) 설계 및 구현**

@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.12.0` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.13.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 외루프 유도 및 자율 임무 컴퓨터 (FCP / Node 04) |
@@ -29,6 +29,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.13.0` | 2026-11-08 | VECTORED_VTOL 외루프 제어기 3축 완전 PID + Anti-windup, TILT_ASSISTED 피치 슬루율(15°/s), 수평 고정 수직 이륙 및 2단계 감속 수직 착륙 시퀀스 상세 규격 반영 (`Implemented` $\to$ `Approved`) | TASK-110 VTOL 제어 고도화 사양 개정 |
 | `v1.11.0` | 2026-11-07 | 기존 SAS 명칭을 FCP(Flight Control Program)로 전면 개정, 디렉토리/파일명(`fcp/`) 및 런타임 식별자(`FCP`) 동기화, 구 SAS 명칭 [DEPRECATED] 이력 명시 | 시스템 명칭 통일 및 식별자 표준화 |
 | `v1.10.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 01호기 기준선(Base 10000, MFD 10003, 회신 10005) 동기화, GCS 부트스트랩 채널 50000 고정, 구버전 Base+6/+7 [DEPRECATED] Zone 2 이관 반영, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
@@ -534,19 +535,50 @@ UAP는 부팅 및 캘리브레이션 단계에서 [ALIGNMENT_PROGRAM_SPECIFICATI
    - 텔레메트리에서 사이드 스러스터의 고착/결손(`isJammed == true` 또는 `TOTAL_LOSS`)이 감지되거나 Sway 권능 미달 시:
    - 무경사 수평 기동을 즉시 인터록 차단하고, 자동으로 롤 뱅크를 사용하는 멀티로터형 경사 가속(`Tilt-to-Accelerate`) 또는 `TILT_ASSISTED` 모드로 긴급 안전 강등을 수행하여 비행 안정성을 방어합니다.
 
-#### 3) 듀얼 비행 포락선 자세 제어 모드 (`STRICT_LEVEL` vs `TILT_ASSISTED`)
+#### 3) 듀얼 비행 포락선 자세 제어 모드 (`STRICT_LEVEL` vs `TILT_ASSISTED`) 및 피치 슬루율 완화
 비행 환경과 요구 속도에 따라 UAP는 자세 제어 방식을 동적으로 절체합니다:
 - **`STRICT_LEVEL` (완전 무경사 레벨 비행)**:
   - 자세 지령: $\theta_{cmd} = 0.0^\circ, \quad \phi_{cmd} = 0.0^\circ$ 완전 수평 고정.
   - 구동 원리: 자세를 전혀 기울이지 않고 $surge, sway, heave$ 바이어스만으로 3축 이동.
-  - 적용 영역: 착륙패드 접근, 도킹암 4단계 랑데부, 표적 정밀 촬영 및 저속 전술 기동 ($V \le 15.0\text{ m/s}$).
+  - 적용 영역: 이륙(`TAKEOFF`), 착륙패드 접근(`APPROACH_LAND`), 도킹암 4단계 랑데부, 표적 정밀 촬영, 비상 모드(`FAILSAFE_HOLD`, `EMERGENCY_LAND`) 및 저속 전술 기동 ($V \le 15.0\text{ m/s}$).
 - **`TILT_ASSISTED` (피치 틸트 보조 가속 모드)**:
-  - 장거리 순항($V > 15.0\text{ m/s}$) 또는 급가속 구간에서 $surge = 1.0$ 포화 감지 시 가동.
+  - 오직 FSM 상태가 **`CRUISE`**일 때만 인가되며, 순항 속도 $V > 15.0\text{ m/s}$ 또는 전진 서지 포화($|surge| \ge 0.95$) 시 가동.
   - 상하 리프트팬의 대출력 양력 벡터 일부를 전방 추진력으로 활용하기 위해 최대 $\pm 10.0^\circ$ 이내로 완만한 피치 각도를 보조 인가합니다:
-    $$\theta_{cmd} = \text{clamp}\left(K_{\theta,v} \cdot (v_{cmd} - v_{meas}), \; -10.0^\circ, \; +10.0^\circ\right), \quad \phi_{cmd} = 0.0^\circ$$
-  - 결과적으로 $V_{max} \ge 20.0\text{ m/s}$ 이상의 고속 비행을 달성하며 배터리 소모를 대폭 절감합니다.
+    $$\theta_{target} = \text{clamp}\left(-surge_{raw} \cdot \theta_{max}, \; -\theta_{max}, \; +\theta_{max}\right), \quad \theta_{max} = 10.0^\circ$$
+  - **피치 슬루율(Slew-Rate) 완화 인터록**: 모드 진입/이탈 시 피치각 급변(Step Jump)에 따른 기체 요동을 방지하기 위해 1초당 최대 변화율($\text{tiltSlewRateDegPerSec} = 15.0^\circ/\text{s}$)로 완만한 1차 램핑을 적용합니다:
+    $$\theta_{cmd}(t) = \text{clamp}\left(\theta_{target}, \; \theta_{cmd}(t - \Delta t) - \Delta\theta_{max}, \; \theta_{cmd}(t - \Delta t) + \Delta\theta_{max}\right), \quad \Delta\theta_{max} = 15.0 \cdot \Delta t$$
+  - `CRUISE` 이외의 모든 비행 상태(`TAKEOFF`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `LOITER` 등)에서는 `STRICT_LEVEL`($\theta_{cmd} = 0.0^\circ$)로 강제 고정됩니다.
 
-#### 4) 3대 전술 헤딩(Yaw) 운용 모드 수식
+#### 4) 3축 병진 완전 PID 및 Anti-windup 제어기
+정상상태 위치/고도 오차 및 지속적인 바람/외란을 제거하기 위해 3축(Surge/Sway/Heave) 모두 P-I-D 폐루프로 연산합니다:
+1. **국소 기체 좌표계 오차 사상**:
+   $$\begin{bmatrix} e_{surge} \\ e_{sway} \end{bmatrix} = \begin{bmatrix} \sin\psi & -\cos\psi \\ \cos\psi & \sin\psi \end{bmatrix} \begin{bmatrix} x_{target} - x_{pos} \\ z_{target} - z_{pos} \end{bmatrix}$$
+   $$\begin{bmatrix} v_{surge} \\ v_{sway} \end{bmatrix} = \begin{bmatrix} \sin\psi & -\cos\psi \\ \cos\psi & \sin\psi \end{bmatrix} \begin{bmatrix} v_x \\ v_z \end{bmatrix}$$
+2. **적분기 갱신 및 Anti-windup 클램프**:
+   $$I_{surge} = \text{clamp}\left(I_{surge} + K_{i,s} \cdot e_{surge} \cdot \Delta t, \; -I_{max,s}, \; I_{max,s}\right)$$
+   $$I_{sway} = \text{clamp}\left(I_{sway} + K_{i,w} \cdot e_{sway} \cdot \Delta t, \; -I_{max,w}, \; I_{max,w}\right)$$
+   $$I_{heave} = \text{clamp}\left(I_{heave} + K_{i,h} \cdot (y_{target} - y_{pos}) \cdot \Delta t, \; -I_{max,h}, \; I_{max,h}\right)$$
+   *(기본 게인: $K_{p,s}=0.15, K_{d,s}=0.08, K_{i,s}=0.02, I_{max,s}=0.20$; Heave: $K_{p,h}=0.12, K_{d,h}=0.15, K_{i,h}=0.02, I_{max,h}=0.20$)*
+3. **최종 제어 출력 합성**:
+   $$surge = \text{clamp}(K_{p,s} \cdot e_{surge} - K_{d,s} \cdot v_{surge} + I_{surge}, \; -1.0, \; 1.0)$$
+   $$sway = \text{clamp}(K_{p,w} \cdot e_{sway} - K_{d,w} \cdot v_{sway} + I_{sway}, \; -1.0, \; 1.0)$$
+   $$heave = \text{clamp}(K_{p,h} \cdot (y_{target} - y_{pos}) - K_{d,h} \cdot v_y + I_{heave}, \; -1.0, \; 1.0)$$
+   $$throttle = \text{clamp}(T_{hover} + heave \cdot 0.35, \; 0.0, \; 1.0), \quad T_{hover} = 0.635$$
+4. **적분기 리셋 인터록**: 비행 모드 전환(HOLD 진입, DISARM 등) 시 `reset_integrals()`를 호출하여 적분기를 즉각 0으로 초기화함으로써 모드 복귀 시 범프(Bump)를 방지합니다.
+
+#### 5) 수직 이륙(TAKEOFF) 및 2단계 감속 착륙(APPROACH_LAND) 시퀀스
+1. **수평 고정 수직 이륙 시퀀스 (`TAKEOFF`)**:
+   - 지상 구조물 및 인프라와의 충돌을 원천 차단하기 위해, 이륙 기준 고도로부터 안전 이륙 고도($\Delta h_{takeoff} = 15.0\text{ m}$) 또는 목표 고도 미달 시 수평 바이어스를 강제 차단합니다:
+     $$surge = 0.0, \quad sway = 0.0, \quad \theta_{cmd} = 0.0^\circ, \quad \phi_{cmd} = 0.0^\circ$$
+     $$targetClimbRate = +2.5\text{ m/s}$$
+   - 안전 고도에 도달하여 FSM이 `CRUISE`로 전이된 직후부터 수평 궤도 추종을 개시합니다.
+2. **2단계 감속 패드 정밀 착륙 시퀀스 (`APPROACH_LAND`)**:
+   - 패드 중심과의 2D 수평 편차 $d_{2D} = \sqrt{\Delta x^2 + \Delta z^2}$를 기준으로 제어 단계를 분기합니다:
+     - **1단계 (수평 정렬 집중, $d_{2D} > 0.5\text{ m}$)**: $surge, sway$ 위치 PID를 활성화하여 패드 상공으로 진입하며, 침강률을 접근 속도 $targetClimbRate = -1.5\text{ m/s}$로 유지.
+     - **2단계 (수직 터치다운 강하, $d_{2D} \le 0.5\text{ m}$)**: 수평 정렬 완료 후 터치다운 속도 $targetClimbRate = -0.5\text{ m/s}$로 완만히 강하하여 착륙 충격을 최소화.
+     - 전 착륙 과정에서 피치/롤은 $0.0^\circ$ 완전 수평을 유지합니다.
+
+#### 6) 3대 전술 헤딩(Yaw) 운용 모드 수식
 `VECTORED_VTOL`은 동체 헤딩각과 이동 궤적이 완전히 분리(Decoupled)될 수 있으므로 전술 임무에 따라 3가지 독립 헤딩 모드를 지원합니다:
 1. **`FACE_PATH` (경로 진행 방향 정렬)**:
    $$\psi_{cmd} = \text{atan2}(v_E, \; v_N)$$
@@ -561,7 +593,7 @@ UAP는 부팅 및 캘리브레이션 단계에서 [ALIGNMENT_PROGRAM_SPECIFICATI
    $$\vec{v}_{cmd} = v_{tangent} \cdot \vec{u}_{orbit\_tangent} + K_r (R_{orbit} - d_{target}) \cdot \vec{u}_{radial}$$
    - 이때 원심력 보상을 고려한 구심가속도 $a_c = \frac{v_t^2}{R_{orbit}}$는 `sway` 추력기로 정밀 보상하며, 급격한 요 선회 충격을 방지하기 위해 요 슬루율(Slew Rate)을 최대 $30.0^\circ/\text{s}$로 제한합니다.
 
-#### 5) 무천이(Zero-Transition) 고신뢰성 FSM
+#### 7) 무천이(Zero-Transition) 고신뢰성 FSM
 공력 날개가 없으므로 실속 속도($V_{stall}$)의 개념이 없으며, 임의의 속도(0 ~ 최고속)에서 천이 지연 시간(Transition Latency = 0s) 없이 즉각 제동 및 호버링 전환이 가능합니다.
 
 ---
@@ -1828,9 +1860,10 @@ function guidance_controller.compute_longitudinal(airframeType, targetAlt, curre
         return tecsPitch, tecsThrottle, 0.0
 
     elseif airframeType == "VECTORED_VTOL" then
-        -- 2. VECTORED_VTOL: 피치 수평(또는 TILT_ASSISTED 보조), 수직 PI 스로틀 + Heave 바이어스 직접 승강
+        -- 2. VECTORED_VTOL: 피치 수평(또는 TILT_ASSISTED 보조 슬루율 완화), 수직 PID 스로틀 + Heave 바이어스 직접 승강
         local cfgV = params.vectored_vtol
-        local heaveBias = math.max(-1.0, math.min(1.0, (cfgV.heaveKp or 0.12) * altErr - (cfgV.heaveKd or 0.15) * (craftVel.y or 0.0)))
+        state.heave_i = math.max(-(cfgV.heaveMaxI or 0.20), math.min((cfgV.heaveMaxI or 0.20), (state.heave_i or 0.0) + (cfgV.heaveKi or 0.02) * altErr * dt))
+        local heaveBias = math.max(-1.0, math.min(1.0, (cfgV.heaveKp or 0.12) * altErr - (cfgV.heaveKd or 0.15) * (craftVel.y or 0.0) + state.heave_i))
         local cmdPitch = 0.0
         if cfgV.envelopeMode == "TILT_ASSISTED" and state.tiltAssistPitch then
             cmdPitch = state.tiltAssistPitch
