@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.9.1` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.10.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.10.0` | 2026-11-08 | 비동기 디버그 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 데몬 + TUI 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 디버그 가시성 제공 및 헤드리스 런타임 호환성 확보 |
 | `v1.9.1` | 2026-11-08 | 설정 파라미터 표 내 baseChannel 수식($* 40$) 및 기체 인덱스 범위($N=1\sim 1000$) 잔재 정합 동기화 | 사양서 간 수치 정합성 확립 |
 | `v1.9.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 추진기 버스 Zone 2 이관(`Base+10`: `CH_THRUST_ACTUATION`, 구 `Base+10` [DEPRECATED]), `Base+4` 상시 청취 제거 확정, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
@@ -48,8 +49,9 @@ TAP은 상위 비행 컴퓨터인 **VAS (Node 01)**로부터 20Hz(50ms) 주기�
 2. **추진기 상호작용 모드(Thruster Interaction Mode) 완벽 분리 (`REDSTONE` vs `API`)**:
    - **`REDSTONE` 모드**: 컴퓨터 하단 포트(`ports.redstoneSide`, 기본값 `bottom`)를 통해 Create 아날로그 변속기 및 레드스톤 기구에 $0 \sim 15$ 정수 신호를 직결 인가 (추력 손실 보상 바이패스, 단일 기구 제어).
    - **`API` 모드**: 외곽 지정 포트(`ports.apiSides`: `left`, `right`, `front`, `back`)에 연결된 추진기 모듈을 자동 탐색하고, 활성 추진기 파손/단선 시 자율 비례 증폭 공식($ratio = \frac{N_{total}}{N_{active}}$)을 적용하여 $0.0 \sim 1.0$ 정규화 비율로 인가.
-3. **고성능 헤드리스 백그라운드 데몬 (Headless Background Daemon)**:
-   - 비행 중 터미널 화면(TUI) 렌더링에 의한 불필요한 CPU 명령어 예산 소모를 일체 배제하고, 순수 비차단(Non-blocking) 이벤트 데몬으로 가동되어 50ms 틱당 처리 시간을 $\le 0.5\text{ ms}$ 이내로 극소화합니다.
+3. **비동기 디버그 대시보드 및 헤드리스 런타임 (Asynchronous Debug TUI & Headless Runtime)**:
+   - **기본 구동 모드 (`debug: true`)**: `config.json` 내 `debug: true`(기본값) 가동 시 ComputerCraft `parallel.waitForAny`를 통해 메인 이벤트 데몬(`run_daemon`)과 비동기 단말 진단 뷰(`tui_dashboard.run_loop`)를 상호 독립된 코루틴으로 분리 실행하여 터미널 I/O가 50ms 제어 루프를 블로킹하지 않도록 격리합니다.
+   - **순수 헤드리스 모드 (`debug: false`)**: `debug: false` 명시 시 터미널 화면(TUI) 렌더링을 완전히 배제하고 순수 비차단(Non-blocking) 이벤트 데몬으로 직결 가동되어 50ms 틱당 처리 시간을 $\le 0.5\text{ ms}$ 이내로 극소화합니다.
 4. **이벤트 기반 예외 텔레메트리 피드백 (Event-driven On-Change Feedback)**:
    - 평시 20Hz 실시간 비행 제어 채널의 트래픽을 0으로 유지하다가, 추진기 단선/파손(`activeCount` 변동), 런타임 상호작용 모드 전환(`interactionMode`), 또는 추력 포화(`isSaturated == true/false`) 발생 시 즉시 VAS-Core로 `MSG_ACTUATOR_STATUS`를 송신하여 닫힌 루프(Closed-loop) 안전망을 구축합니다.
 5. **동적 타이머 기반 300ms 고신뢰성 하드웨어 페일세이프 (Watchdog Sentinel)**:
@@ -106,6 +108,7 @@ flowchart TD
   "aircraftDomainId": "AIRCRAFT_01",
   "aircraftIndexN": 1,
   "baseChannel": 10000,
+  "debug": true,
   "groupId": "THR_MAIN_L",
   "interactionMode": "REDSTONE",
   "mode": "REDSTONE",
@@ -130,6 +133,7 @@ flowchart TD
 | `aircraftDomainId` | string | `"AIRCRAFT_01"` | 식별 문자열 | 비행체 고유 네트워크 도메인 ID |
 | `aircraftIndexN` | integer | `1` | $1 \le N \le 1000$ | 기체 고유 인덱스 번호 |
 | `baseChannel` | uint16 | `10000` | $10000 \sim 49960$ | 기체 고유 베이스 채널 ($Base = 10000 + (N - 1) \times 40$, $N=1\sim 1000$, 구버전 20채널 및 10020 [DEPRECATED]) |
+| `debug` | boolean | `true` | `true`, `false` | `true` 시 `parallel.waitForAny` 기반 비동기 디버그 TUI 가동(기본값), `false` 시 터미널 렌더링 0% 순수 헤드리스 모드 가동 |
 | `groupId` | string | (필수) | 추진기 그룹 ID | 담당 추진기 그룹 (`THR_MAIN_L`, `THR_VTOL_F` 등) |
 | `interactionMode` | string | `"REDSTONE"` | `"REDSTONE"`, `"API"` | 초기 추진기 상호작용 모드 (표준) |
 | `mode` `[DEPRECATED]` | string | `"REDSTONE"` | `"REDSTONE"`, `"API"` | 구버전 모드 필드 (`interactionMode` 대체됨. 코드베이스는 무폴백 원칙에 따라 interactionMode만 단일 채택) |
@@ -400,7 +404,7 @@ function config_manager.save(path, cfg) -> boolean, err
 
 ### 4.8 모듈 8: `tui_dashboard` (진단 렌더러) & `tap_setup.lua` (대화형 CLI 도구)
 
-- **`tui_dashboard.lua`**: 내장 단말 화면에 그룹 ID, 상호작용 모드(`API`/`REDSTONE`), 활성 추진기 수, 신호 레벨 ASCII 바 그래프(`render_bar`) 및 진단 행을 표출.
+- **`tui_dashboard.lua`**: 내장 단말 화면에 그룹 ID, 상호작용 모드(`API`/`REDSTONE`), 활성 추진기 수, 신호 레벨 ASCII 바 그래프(`render_bar`) 및 진단 행을 표출. `debug: true`(기본값) 구동 시 `parallel.waitForAny`를 통해 비동기 주기 루프(`run_loop`)로 독립 실행되며, `debug: false` 시 비활성화됨.
 - **`src/tools/tap_setup.lua`**: 독립 대화형 CLI 도구로서 추진기 자동 탐색, 변속기 레드스톤 펄스 테스트, 그룹 ID 편집(`[G]`), 상호작용 모드 토글(`[M]`), 재스캔(`[S]`) 및 `config.json` 생성을 지원. `config.json` 부재 시 메인 데몬에 의해 자동 기동.
 
 ---
@@ -428,6 +432,7 @@ function config_manager.save(path, cfg) -> boolean, err
 ## 5. 실시간 데몬 생명주기 및 이벤트 제어 루프
 
 TCA 노드는 CC:Tweaked의 `os.pullEvent()` 기반 비차단 이벤트 루프로 구동되며, 불필요한 폴링 없이 이벤트 기반으로만 반응합니다.
+`config.json`의 `debug` 설정에 따라 기본적으로 `parallel.waitForAny`를 통해 메인 이벤트 데몬(`run_daemon`)과 비동기 진단 대시보드(`run_tui`)를 동시 구동하며, `debug: false` 시 터미널 출력을 배제한 순수 헤드리스 데몬으로 직결 가동됩니다.
 
 ```mermaid
 sequenceDiagram
@@ -492,42 +497,57 @@ end
 local sentinel = watchdog_sentinel.init(cfg.watchdogTimeoutMs, cut_thrust_cb)
 sentinel:start_timer(cfg.watchdogTimeoutMs / 1000.0)
 
-while true do
-    local ev, p1, p2, p3, p4 = os.pullEvent()
-    if ev == "modem_message" then
-        local channel, replyChannel, msg = p2, p3, p4
-        if channel == cfg.channels.thrustActuation or channel == state.hangarBayChannel then
-            local ok, pkt = packet_protocol.verify_packet(msg, cfg.aircraftDomainId)
-            if ok then
-                if pkt.type == "MSG_THRUST_CMD" then
-                    dispatch_thrust(pkt)
-                elseif pkt.type == "MSG_ACTUATOR_DISCOVER_REQ" then
-                    discovery_handler.handle_request(modem, channel, replyChannel, pkt, cfg, adapterState)
-                elseif pkt.type == "MSG_CALIB_BAY_BIND" then
-                    local bayBase = pkt.payload.bayBaseChannel
-                    state.hangarBayChannel = bayBase + 3
-                    modem.open(bayBase + 0)
-                    modem.open(bayBase + 3)
-                elseif pkt.type == "MSG_CHANNEL_REBIND" then
-                    if pkt.payload.action == "PREPARE" then
-                        modem.open(pkt.payload.newBaseChannel + 6)
-                        packet_protocol.send_rebind_ack(modem, replyChannel, cfg, "PREPARED")
-                    elseif pkt.payload.action == "COMMIT" then
-                        modem.close(cfg.channels.thrustActuation)
-                        cfg.channels.thrustActuation = pkt.payload.newBaseChannel + 6
-                        config_manager.save(cfg)
+local function run_daemon()
+    while true do
+        local ev, p1, p2, p3, p4 = os.pullEvent()
+        if ev == "modem_message" then
+            local channel, replyChannel, msg = p2, p3, p4
+            if channel == cfg.channels.thrustActuation or channel == state.hangarBayChannel then
+                local ok, pkt = packet_protocol.verify_packet(msg, cfg.aircraftDomainId)
+                if ok then
+                    if pkt.type == "MSG_THRUST_CMD" then
+                        dispatch_thrust(pkt)
+                    elseif pkt.type == "MSG_ACTUATOR_DISCOVER_REQ" then
+                        discovery_handler.handle_request(modem, channel, replyChannel, pkt, cfg, adapterState)
+                    elseif pkt.type == "MSG_CALIB_BAY_BIND" then
+                        local bayBase = pkt.payload.bayBaseChannel
+                        state.hangarBayChannel = bayBase + 3
+                        modem.open(bayBase + 0)
+                        modem.open(bayBase + 3)
+                    elseif pkt.type == "MSG_CHANNEL_REBIND" then
+                        if pkt.payload.action == "PREPARE" then
+                            modem.open(pkt.payload.newBaseChannel + 6)
+                            packet_protocol.send_rebind_ack(modem, replyChannel, cfg, "PREPARED")
+                        elseif pkt.payload.action == "COMMIT" then
+                            modem.close(cfg.channels.thrustActuation)
+                            cfg.channels.thrustActuation = pkt.payload.newBaseChannel + 6
+                            config_manager.save(cfg)
+                        end
                     end
                 end
             end
+        elseif ev == "timer" then
+            sentinel:handle_timer(p1)
+        elseif ev == "peripheral" or ev == "peripheral_detach" then
+            handle_hardware_change()
+        elseif ev == "terminate" then
+            actuator_adapter.cut_thrust(adapterState)
+            break
         end
-    elseif ev == "timer" then
-        sentinel:handle_timer(p1)
-    elseif ev == "peripheral" or ev == "peripheral_detach" then
-        handle_hardware_change()
-    elseif ev == "terminate" then
-        actuator_adapter.cut_thrust(adapterState)
-        break
     end
+end
+
+local function run_tui()
+    while true do
+        tui_dashboard.render(state, cfg)
+        os.sleep(0.5)
+    end
+end
+
+if cfg.debug ~= false then
+    parallel.waitForAny(run_daemon, run_tui)
+else
+    run_daemon()
 end
 ```
 

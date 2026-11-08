@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.4.0` |
+| **문서 버전 (Version)** | `v1.5.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/asa/` |
 | **주관 도메인 (Domain)** | 공력 조종면 및 날개 구동기 분산 클러스터 (ASA / Node 06-xx) |
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.5.0` | 2026-11-08 | 비동기 진단 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 이벤트 루프 + 진단 뷰 분리) 및 `debug: false` 헤드리스 직결 모드 명세 반영, baseChannel 수식 정합화 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
 | `v1.4.0` | 2026-11-08 | ASA 관할 기체 범위 축소: VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체 배제 규격 명시, FIXED_WING 및 WINGED_VTOL 전용 구동계로 한정 | 비공력 순수 추력형 기체에서 공력 타면 및 불필요한 제어 연산·통신 배제 |
 | `v1.3.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 조종면 버스 Zone 2 이관(`Base+11`: `CH_SURFACE_ACTUATION`, 구 `Base+11` [DEPRECATED]) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
@@ -90,8 +91,9 @@ flowchart TD
    - 추진기 버스(`Base + 6`) 및 상위 유도 명령 버스(`Base + 1`)와의 무선 간섭을 원천 차단하기 위해 기체별 전용 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 단독 점유하여 VAS-Core와 통신합니다.
 5. **동적 타이머 기반 300ms 안전 활공 트림 (Safe Glide Trim Sentinel)**:
    - VAS 지령(`MSG_AERO_CMD`)이 300ms(6틱) 이상 두절될 경우, 스핀/스파이럴 다이브를 방지하기 위해 에일러론 0.0, 방향타 0.0, 승강타 +0.1(약 $+3.0^\circ$ 미세 기수 유지 완만 활공), 플랩 0.0으로 즉시 강제 클램프합니다.
-6. **고성능 헤드리스 백그라운드 데몬 (Headless Daemon)**:
-   - 비행 중 불필요한 TUI 렌더링에 의한 연산 부하를 일체 배제하고, 순수 비차단(Non-blocking) 코루틴 데몬으로 가동되어 50ms 틱당 처리 시간을 $\le 0.4\text{ ms}$ 이내로 극소화합니다.
+6. **비동기 진단 뷰 및 헤드리스 백그라운드 데몬 (Asynchronous Diagnostic View & Headless Daemon)**:
+   - **기본 구동 모드 (`debug: true`)**: `config.json` 내 `debug: true`(기본값) 가동 시 ComputerCraft `parallel.waitForAny`를 통해 메인 제어 루프와 비동기 단말 진단 뷰를 상호 독립된 코루틴으로 분리 실행하여 화면 갱신이 50ms 제어 루프에 지연을 유발하지 않도록 격리합니다.
+   - **순수 헤드리스 모드 (`debug: false`)**: `debug: false` 명시 시 TUI 출력을 완전히 배제하고 순수 비차단(Non-blocking) 코루틴 데몬으로 직결 가동되어 50ms 틱당 처리 시간을 $\le 0.4\text{ ms}$ 이내로 극소화합니다.
 
 ### 1.3 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서 내에 `[DEPRECATED]` 배지를 부여하고 대체 신규 필드명과 변경 이력을 명시하여 문서상에 보존합니다.
@@ -173,6 +175,7 @@ end
   "aircraftDomainId": "AIRCRAFT_01",
   "aircraftIndexN": 1,
   "baseChannel": 10000,
+  "debug": true,
   "channels": {
     "surfaceActuation": 10007
   },
@@ -212,8 +215,9 @@ end
 | :--- | :---: | :---: | :---: | :--- |
 | `podId` | string | (필수) | `"WAP_L"`, `"WAP_R"`, `"WAP_T"` | ASA 구역 노드 고유 식별자 |
 | `aircraftDomainId` | string | `"AIRCRAFT_01"` | 식별 문자열 | 기체 네트워크 도메인 ID |
-| `baseChannel` | uint16 | `10000` | $10000 \sim 49999$ | 기체 고유 베이스 채널 ($Base = 10000 + (N - 1) \times 20$, $N=1\sim 2000$, 구버전 $10000+N\times 20$ [DEPRECATED]) |
-| `channels.surfaceActuation` | uint16 | `Base + 11` (구 `Base + 7` [DEPRECATED]) | $10007 \sim 49987$ | 20Hz 실시간 조종면 명령 및 피드백 채널 |
+| `baseChannel` | uint16 | `10000` | $10000 \sim 49960$ | 기체 고유 베이스 채널 ($Base = 10000 + (N - 1) \times 40$, $N=1\sim 1000$, 구버전 $10000+N\times 20$ [DEPRECATED]) |
+| `debug` | boolean | `true` | `true`, `false` | `true` 시 `parallel.waitForAny` 기반 비동기 진단 TUI 가동(기본값), `false` 시 터미널 렌더링 0% 순수 헤드리스 모드 가동 |
+| `channels.surfaceActuation` | uint16 | `Base + 11` (구 `Base + 7` [DEPRECATED]) | $10011 \sim 49971$ | 20Hz 실시간 조종면 명령 및 피드백 채널 |
 | `legacyChannels.calibration` `[DEPRECATED]` | uint16 | `1001` | `1001` | 구버전 지상 교정 직결 채널 (격납고 101~200 블록화 및 기체 Base+0 바인딩으로 폐지됨) |
 | `watchdogTimeoutMs` | integer | `300` | $100 \sim 1000\text{ ms}$ | 통신 두절 시 안전 활공 트림 전환 제한 시간 |
 | `slots.<id>.type` | string | 페리페럴 타입 | 문자열 | 동적 탐색 대상 Create: Avionics 페리페럴 ID |
@@ -441,67 +445,83 @@ function wap_main()
 
     state.watchdogTimerId = os.startTimer(config.watchdogTimeoutMs / 1000)
 
-    while true do
-        local event, p1, p2, p3, p4, p5 = os.pullEvent()
+    local function run_daemon()
+        while true do
+            local event, p1, p2, p3, p4, p5 = os.pullEvent()
 
-        if event == "modem_message" then
-            local channel, replyChannel, msg = p2, p3, p4
-            if channel == config.channels.surfaceActuation or channel == state.hangarBayChannel then
-                local ok, pkt = packet_protocol.verify_envelope(msg, config.aircraftDomainId)
-                if ok then
-                    if pkt.type == "MSG_AERO_CMD" then
-                        -- 1. 워치독 리셋 및 상태 갱신
-                        os.cancelTimer(state.watchdogTimerId)
-                        state.watchdogTimerId = os.startTimer(config.watchdogTimeoutMs / 1000)
-                        state.fsm = "ARMED_NORMAL"
+            if event == "modem_message" then
+                local channel, replyChannel, msg = p2, p3, p4
+                if channel == config.channels.surfaceActuation or channel == state.hangarBayChannel then
+                    local ok, pkt = packet_protocol.verify_envelope(msg, config.aircraftDomainId)
+                    if ok then
+                        if pkt.type == "MSG_AERO_CMD" then
+                            -- 1. 워치독 리셋 및 상태 갱신
+                            os.cancelTimer(state.watchdogTimerId)
+                            state.watchdogTimerId = os.startTimer(config.watchdogTimeoutMs / 1000)
+                            state.fsm = "ARMED_NORMAL"
 
-                        -- 2. 조종면 인가 및 포화 검출
-                        for slotId, slotDev in pairs(state.slots) do
-                            local targetNorm = pkt.payload.surfaces[slotId] or 0.0
-                            local isSat = surface_actuator.apply(slotDev, targetNorm)
-                            status_reporter.check_and_emit(modem, config, slotId, slotDev, isSat)
-                        end
+                            -- 2. 조종면 인가 및 포화 검출
+                            for slotId, slotDev in pairs(state.slots) do
+                                local targetNorm = pkt.payload.surfaces[slotId] or 0.0
+                                local isSat = surface_actuator.apply(slotDev, targetNorm)
+                                status_reporter.check_and_emit(modem, config, slotId, slotDev, isSat)
+                            end
 
-                    elseif pkt.type == "MSG_SURFACE_DISCOVER_REQ" then
-                        -- VAS 시동 및 무결성 디스커버리 핸드셰이크 회신
-                        packet_protocol.send_discover_ack(modem, replyChannel, config, state.slots)
+                        elseif pkt.type == "MSG_SURFACE_DISCOVER_REQ" then
+                            -- VAS 시동 및 무결성 디스커버리 핸드셰이크 회신
+                            packet_protocol.send_discover_ack(modem, replyChannel, config, state.slots)
 
-                    elseif pkt.type == "MSG_CALIB_BAY_BIND" then
-                        -- Alignment 격납고 동적 베이 바인딩
-                        local bayBase = pkt.payload.bayBaseChannel
-                        state.hangarBayChannel = bayBase + 0
-                        modem.open(bayBase + 0)
-                        modem.open(bayBase + 3)
+                        elseif pkt.type == "MSG_CALIB_BAY_BIND" then
+                            -- Alignment 격납고 동적 베이 바인딩
+                            local bayBase = pkt.payload.bayBaseChannel
+                            state.hangarBayChannel = bayBase + 0
+                            modem.open(bayBase + 0)
+                            modem.open(bayBase + 3)
 
-                    elseif pkt.type == "MSG_CHANNEL_REBIND" then
-                        -- 2단계 Base 채널 재바인딩 트랜잭션
-                        if pkt.payload.action == "PREPARE" then
-                            local tempCh = pkt.payload.newBaseChannel + 7
-                            modem.open(tempCh)
-                            packet_protocol.send_rebind_ack(modem, replyChannel, config, "PREPARED")
-                        elseif pkt.payload.action == "COMMIT" then
-                            modem.close(config.channels.surfaceActuation)
-                            config.channels.surfaceActuation = pkt.payload.newBaseChannel + 7
-                            config_manager.save(config)
+                        elseif pkt.type == "MSG_CHANNEL_REBIND" then
+                            -- 2단계 Base 채널 재바인딩 트랜잭션
+                            if pkt.payload.action == "PREPARE" then
+                                local tempCh = pkt.payload.newBaseChannel + 7
+                                modem.open(tempCh)
+                                packet_protocol.send_rebind_ack(modem, replyChannel, config, "PREPARED")
+                            elseif pkt.payload.action == "COMMIT" then
+                                modem.close(config.channels.surfaceActuation)
+                                config.channels.surfaceActuation = pkt.payload.newBaseChannel + 7
+                                config_manager.save(config)
+                            end
                         end
                     end
                 end
-            end
 
-        elseif event == "timer" and p1 == state.watchdogTimerId then
-            -- 300ms 타임아웃 만료 시 안전 활공 트림 강제 집행
-            state.fsm = "SAFE_GLIDE_TRIM"
-            for slotId, slotDev in pairs(state.slots) do
-                local safeVal = config.safeGlideTrim[slotId] or 0.0
-                surface_actuator.apply(slotDev, safeVal)
-            end
-            status_reporter.emit_degraded(modem, config)
-            state.watchdogTimerId = os.startTimer(config.watchdogTimeoutMs / 1000)
+            elseif event == "timer" and p1 == state.watchdogTimerId then
+                -- 300ms 타임아웃 만료 시 안전 활공 트림 강제 집행
+                state.fsm = "SAFE_GLIDE_TRIM"
+                for slotId, slotDev in pairs(state.slots) do
+                    local safeVal = config.safeGlideTrim[slotId] or 0.0
+                    surface_actuator.apply(slotDev, safeVal)
+                end
+                status_reporter.emit_degraded(modem, config)
+                state.watchdogTimerId = os.startTimer(config.watchdogTimeoutMs / 1000)
 
-        elseif event == "peripheral" or event == "peripheral_detach" then
-            -- 핫플러그 감지 시 슬롯 재바인딩
-            state.slots = dynamic_binder.init_all(config.slots)
+            elseif event == "peripheral" or event == "peripheral_detach" then
+                -- 핫플러그 감지 시 슬롯 재바인딩
+                state.slots = dynamic_binder.init_all(config.slots)
+            end
         end
+    end
+
+    local function run_tui()
+        while true do
+            -- 2Hz 비동기 조종면 진단 뷰 표출
+            render_surface_diagnostic(state, config)
+            os.sleep(0.5)
+        end
+    end
+
+    if config.debug ~= false then
+        parallel.waitForAny(run_daemon, run_tui)
+    else
+        run_daemon()
     end
 end
 ```

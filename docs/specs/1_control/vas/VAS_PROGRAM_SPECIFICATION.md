@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.15.0` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.16.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.16.0` | 2026-11-08 | 비동기 디버그 TUI(`system.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 20Hz 제어 코어 + 5Hz HUD 렌더러 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
 | `v1.15.0` | 2026-11-08 | CC:Avionics 센서 공용 표준 라이브러리(`/lib/avionics_sensors.lua`) 연동 명세 반영, altitude_sensor 공식 `getHeight()` 및 velocity_sensor 3축 합성(`read_vector3`), gimbal_sensor `getAngularRates()` 공식 API 정합화 | 공식 CC:Avionics 센서 API 규격 일원화 및 정밀 동역학 계측 무결성 확립 |
 | `v1.14.0` | 2026-11-08 | 비공력 기체(VECTORED_VTOL, QUADROTOR, HEXAROTOR) 대상 ASA(WAP) 조종면 믹싱/할당 및 MSG_AERO_CMD 송출 비활성화, 텔레메트리 WAP 헬스 체크 바이패스 명시 | 순수 추력형 기체에서 불필요한 공력 통신 및 결함 오경보 배제 |
 | `v1.13.0` | 2026-11-07 | 상위 자율 유도 컴퓨터 명칭 SAS → FCP(Flight Control Program) 개정에 따른 제어 권한 중재('E_STOP > MFD_ACRO > FCP') 및 텔레메트리/상태머신 activeSource('FCP') 동기화, 상대 링크 갱신 | FCP 명칭 전면 개정 동기화 |
@@ -55,7 +56,7 @@
      - **`actuator_adapter_tca`**: TCA 클러스터 제어 할당 행렬($0 \sim 15$ 이산 정수 스케일링, 불감대 확장), dynamicLoad 실시간 산출, 채널 `Base+10` (구 `Base+6` [DEPRECATED]) 20Hz `MSG_THRUST_CMD` 송출.
      - **`actuator_adapter_asa`**: ASA 공력 조종면(Aileron, Elevator, Rudder, Flap) 제어 할당, 동적압($V^2$) 역비례 게인 스케일링($\eta_q$), 채널 `Base+11` (구 `Base+7` [DEPRECATED]) 20Hz `MSG_AERO_CMD` 송출.
      - 양 구동계의 역방향 포화 상태(`axisSaturatedPos`, `axisSaturatedNeg`)를 Layer 1으로 통합 피드백하여 방향성 적분 동결 집행.
-6. **51x19 HUD 대시보드 (`ui_renderer`)**: 오일러 각도 변환은 제어 루프 내부가 아닌 디스플레이 경계에서만 한정 수행되며, `term.blit` 무깜빡임 고속 TUI 게이지 표출. (일반 비행 시 MFD는 FCP 5Hz 통합 패킷을 수신하며, 조종석 수동 급기동 ACRO 진입 시에만 VAS-Core가 `Base+3`으로 20Hz 직접 저지연 송출을 인계)
+6. **비동기 51x19 HUD 대시보드 (`ui_renderer`) 및 런타임 분리**: 설정 파일(`config/system.json`)의 `debug: true`(기본값) 가동 시 ComputerCraft `parallel.waitForAny` 기반으로 20Hz 실시간 제어 코어 루프와 5Hz 비동기 HUD 렌더러 루틴을 상호 독립적인 코루틴으로 분리 격리하여 터미널 I/O로 인한 제어 지연을 방지합니다. 오일러 각도 변환은 제어 루프 내부가 아닌 디스플레이 경계에서만 한정 수행되며, `term.blit` 무깜빡임 고속 TUI 게이지를 표출합니다. `debug: false` 설정 시 TUI 렌더링을 완전히 배제하고 0% 오버헤드의 순수 헤드리스 모드로 직결 구동됩니다. (일반 비행 시 MFD는 FCP 5Hz 통합 패킷을 수신하며, 조종석 수동 급기동 ACRO 진입 시에만 VAS-Core가 `Base+3`으로 20Hz 직접 저지연 송출을 인계)
 
 ```mermaid
 flowchart TD
@@ -547,11 +548,12 @@ flowchart TD
   ```
 
 ### 5.12 모듈 12: `ui_renderer` (51x19 HUD 대시보드 및 터미널 프레임버퍼 렌더러)
-- **역할**: CC:Tweaked Advanced Computer 51x19 텍스트 터미널 상에 `term.blit` 무깜빡임 방식으로 실시간 비행 HUD 게이지 및 시스템 상태를 렌더링합니다. (오일러 각도 변환은 디스플레이 경계에서만 수행)
+- **역할**: CC:Tweaked Advanced Computer 51x19 텍스트 터미널 상에 `term.blit` 무깜빡임 방식으로 실시간 비행 HUD 게이지 및 시스템 상태를 렌더링합니다. `debug: true`(기본값) 구동 시 `parallel.waitForAny`를 통해 5Hz 비동기 루프로 독립 실행되며, `debug: false` 시 완전히 비활성화됩니다. (오일러 각도 변환은 디스플레이 경계에서만 수행)
 - **핵심 시그니처**:
   ```lua
   function ui_renderer.make_gauge(val, minV, maxV, width) -> string
   function ui_renderer.render_dashboard(surf, state) -> nil
+  function ui_renderer.run_loop(stateSupplier, intervalSec) -> nil
   ```
 ---
 
@@ -651,6 +653,15 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 1. **포화 비트맵 감지**: 인가 신호가 최대값($15$) 또는 최소값($0$)에 도달했을 때 기여 축의 부호를 분석하여 12개 역방향 포화 플래그(`axisSaturatedPos`, `axisSaturatedNeg`)를 산출하고 Layer 1으로 즉시 반환.
 2. **참 동적 부하율 (`dynamicLoad`) 연속 산출**:
    $$dynamicLoad = \frac{\sum_{i=1}^M S_{eff, i}}{15.0 \times \max(1, M)} \quad (0.0 \sim 1.0)$$
+
+### 6.7 비동기 디버그 TUI 및 헤드리스 런타임 스케줄링 (Asynchronous Debug TUI & Headless Execution)
+1. **기본 구동 모드 (`debug: true`)**:
+   - `config/system.json` 내 `debug` 필드의 기본값은 `true`입니다.
+   - 메인 엔트리포인트(`main.lua`)는 ComputerCraft `parallel.waitForAny`를 호출하여 **20Hz 실시간 제어 코어 데몬**(`core_daemon.run_loop`)과 **5Hz 비동기 HUD 대시보드 렌더러**(`ui_renderer.run_loop`)를 상호 분리된 코루틴으로 동시 스케줄링합니다.
+   - 비동기 렌더러 코루틴은 매 렌더링 주기(`os.sleep(0.2)`)마다 시스템 자원 제어권을 이벤트 루프로 반환하므로, 50ms 주기의 실시간 센서 폴링 및 액추에이터 제어 명령 송출 루프에 터미널 I/O 블로킹 오버헤드가 전파되지 않습니다.
+2. **순수 헤드리스 모드 (`debug: false`)**:
+   - `config/system.json`에 `"debug": false`가 명시된 경우, `parallel` 코루틴 분기를 생략하고 `core_daemon.run_loop`를 단독 직결 구동합니다.
+   - 터미널 초기화 및 화면 렌더링 오버헤드가 0%로 완전히 배제되어 최소 자원 소모 및 극대화된 실시간 제어 신뢰성을 제공합니다.
 
 ---
 
@@ -1392,6 +1403,7 @@ stateDiagram-v2
   "aircraftDomainId": "AIRCRAFT_01",
   "vehicleType": "VTOL",
   "baseChannel": 10000,
+  "debug": true,
   "subchannels": {
     "c2Command": 0,
     "guidance": 1,
