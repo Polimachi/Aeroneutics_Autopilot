@@ -43,6 +43,7 @@ manifest.MODULE_ORDER = {
     "gps_client",
     "sensors",
     "gac",
+    "landing_pad",
 }
 
 manifest.MODULES = {
@@ -405,6 +406,54 @@ manifest.MODULES = {
             { repoPath = "src/0_infra/gac/modules/beacon_broadcaster.lua", dest = "/modules/beacon_broadcaster.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gac/modules/gac_fsm.lua", dest = "/modules/gac_fsm.lua", gdriveId = nil },
             { repoPath = "src/0_infra/gac/modules/tui_view.lua", dest = "/modules/tui_view.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
+
+    landing_pad = {
+        id = "landing_pad",
+        name = "LANDING_PAD",
+        category = "infra",
+        version = "2.4.0",
+        installDir = "/",
+        startup = {
+            enabled = true,
+            path = "/startup/00_landing_pad.lua",
+            target = "/main.lua",
+            name = "LANDING_PAD",
+        },
+        defaultConfigs = {
+            ["/landing_pad/config.json"] = {
+                version = "2.4.0",
+                facilityId = "PAD_BRAVO_01",
+                sectorId = 1,
+                padIndex = 1,
+                mobility = "DYNAMIC",
+                gacChannel = 50201,
+                sectorFacilityChannel = 50202,
+                sectorGpsReplyChannel = 50206,
+                tacticalChannel = 50211,
+                mountingYawOffset = 0.0,
+                bodyOffset = { forward = 0.0, right = 0.0, up = 0.0 },
+                approachHeading = 180.0,
+                safeDescentRate = 1.0,
+                clearanceZoneRadius = 5.0,
+                maxSupportedWeight = 45000.0,
+                wirelessModemSide = "top",
+                slotDurationSec = 120
+            }
+        },
+        files = {
+            { repoPath = "src/0_infra/landing_pad/main.lua", dest = "/main.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/config.lua", dest = "/config.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/config_store.lua", dest = "/modules/config_store.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/offset_transform.lua", dest = "/modules/offset_transform.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/sensor_adapter.lua", dest = "/modules/sensor_adapter.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/gps_client.lua", dest = "/modules/gps_client.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/tactical_streamer.lua", dest = "/modules/tactical_streamer.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/pad_fsm.lua", dest = "/modules/pad_fsm.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/setup_wizard.lua", dest = "/modules/setup_wizard.lua", gdriveId = nil },
+            { repoPath = "src/0_infra/landing_pad/modules/tui_view.lua", dest = "/modules/tui_view.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },

@@ -1,8 +1,8 @@
 """
 Specification status validation tool.
 Asserts that all 12 active specifications have expected in-document status:
-- 6 Implemented specs
-- 6 Approved specs
+- 7 Implemented specs
+- 5 Approved specs
 """
 from __future__ import annotations
 
@@ -20,13 +20,13 @@ TARGET_IMPLEMENTED = [
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
+    'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
 ]
 
 TARGET_APPROVED = [
     'docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md',
     'docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
-    'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
 ]
@@ -66,7 +66,7 @@ def check_status(repo_root: Path) -> int:
             print("  - " + e)
         return 1
 
-    print(f"[PASS] All 12 specs have valid statuses (6 Implemented, 6 Approved)!")
+    print(f"[PASS] All 12 specs have valid statuses (7 Implemented, 5 Approved)!")
     return 0
 
 

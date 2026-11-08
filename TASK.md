@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 (진행 중)** (TASK-101 GAC 사양서 개편 및 제어기/TUI 구현 완료, TASK-102 착륙패드 착수 대기, TASK-112 VAS 센서 표준화 대기)
+> **현재 단계**: **Phase 1 (진행 중)** (TASK-101 GAC 및 TASK-102 Landing Pad 제어기 구현 완료, TASK-112 VAS 센서 표준화 대기)
 
 ---
 
@@ -22,16 +22,6 @@
 ---
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
-
-- [-] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`)
-  - 가상 좌표 비콘, 5단계 TUI 셋업 마법사, 컴퓨터 바디 기준 오프셋 및 mountingYawOffset 3D 변환, 자체 GPS(CH 60001 / Base_sec+5) 이중 주기 측위, 동적 센서 3종 바인딩 및 전술 유도 스트리밍 구현
-  - **세부 작업 항목**:
-    - [ ] **TASK-102-1**: 5단계 대화형 TUI 셋업 마법사(`setup_wizard.lua`), 3초 부팅 카운트다운 FSM, 컴퓨터 바디 기준 오프셋(`bodyOffset`) 및 선체 장착 방위(`mountingYawOffset`) 3D 변환, 자체 GPS(`CH 60001`/`Base_sec+5`) 연동, 원자적 설정 직렬화(`/landing_pad/config.json`) 구현
-    - [ ] **TASK-102-2**: 동적 패드 필수 3종 센서(`gimbal_sensor`, `altitude_sensor`, `velocity_sensor`) 바인딩, TUI 결손 차단(`HALT_WITH_WARNING`), 런타임 결손 격리(`MAINTENANCE`), 1초(1Hz) 백그라운드 자동 재연결(`Auto-Reconnect`) 및 FSM 상태 머신 구현
-    - [ ] **TASK-102-3**: GAC 로컬 백본망(`Base_sec+1`) 패킷 수수(`MSG_ATC_SLOT_ASSIGN/ACK`), 평시 1Hz 위치/상태 동기화(`MSG_ATC_FACILITY_UPDATE`), 복행 및 슬롯 예약/점유 해제 프로토콜 연동
-    - [ ] **TASK-102-4**: 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 (정적 1Hz 하트비트 / 동적 5Hz 비동기 GPS + 20Hz 속도 적분 융합 20Hz 전술 유도 `MSG_FACILITY_DYNAMIC_GUIDE` 및 갑판 요동 `deckStatus` 판정 알고리즘) 구현
-    - [ ] **TASK-102-5**: 컴팩트 1줄 순환 로깅 데몬 모드, 독립 완결형 메인 루프(`main.lua`) 및 센서 결손 복행(`reason: SENSOR_FAULT`) / 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
-    - [ ] **TASK-102-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/landing_pad/`) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
 - [ ] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
   - VAS 내루프 실시간 동역학 제어용 센서 파이프라인을 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 동기화하고, CC:Avionics 공식 API(`getHeight()`, 1축 스칼라 `getVelocity()` 3축 합성, 짐벌 오일러/각속도/중력/가속도) 정합성 확보
@@ -74,6 +64,17 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+
+- [x] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`, `tests/0_infra/landing_pad/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-102-landing-pad-controller.md`
+  - Landing Pad 사양서 v2.4.0 Implemented 승격, 설정 영속화(`config_store.lua`), 마인크래프트 좌표계 3D 바디 오프셋 변환(`offset_transform.lua`), CC:Avionics 센서 어댑터 및 갑판 요동 판정(`sensor_adapter.lua`), GPS 클라이언트 및 20Hz 추측항법 적분기(`gps_client.lua`), 전술 유도 스트리머(`tactical_streamer.lua`), 패드 FSM 및 로컬 백본 중재(`pad_fsm.lua`), 5단계 셋업 마법사(`setup_wizard.lua`), 51x19 TUI 뷰(`tui_view.lua`), 20Hz 메인 데몬 루프(`main.lua`), 단위 테스트(32/32 PASS) 및 통합 인스톨러(`manifest.lua`) 등록 완료
+  - **구현 내용**:
+    - [x] **TASK-102-1**: 5단계 대화형 TUI 셋업 마법사(`setup_wizard.lua`), 3초 부팅 카운트다운 FSM, 컴퓨터 바디 기준 오프셋(`bodyOffset`) 및 선체 장착 방위(`mountingYawOffset`) 3D 변환(`offset_transform.lua`), 자체 GPS(`CH 60001`/`Base_sec+5`) 연동, 원자적 설정 직렬화(`/landing_pad/config.json`) 구현
+    - [x] **TASK-102-2**: 동적 패드 필수 3종 센서(`gimbal_sensor`, `altitude_sensor`, `velocity_sensor`) 바인딩, TUI 결손 차단(`HALT_WITH_WARNING`), 런타임 결손 격리(`MAINTENANCE`), 1초(1Hz) 백그라운드 자동 재연결(`Auto-Reconnect`) 및 FSM 상태 머신 구현
+    - [x] **TASK-102-3**: GAC 로컬 백본망(`Base_sec+1`) 패킷 수수(`MSG_ATC_SLOT_ASSIGN/ACK`), 평시 1Hz 위치/상태 동기화(`MSG_ATC_FACILITY_UPDATE`), 복행 및 슬롯 예약/점유 해제 프로토콜 연동
+    - [x] **TASK-102-4**: 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 (정적 1Hz 하트비트 / 동적 5Hz 비동기 GPS + 20Hz 속도 적분 융합 20Hz 전술 유도 `MSG_FACILITY_DYNAMIC_GUIDE` 및 갑판 요동 `deckStatus` 판정 알고리즘) 구현
+    - [x] **TASK-102-5**: 컴팩트 1줄 순환 로깅 데몬 모드, 독립 완결형 메인 루프(`main.lua`) 및 센서 결손 복행(`reason: SENSOR_FAULT`) / 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
+    - [x] **TASK-102-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/landing_pad/`, 32/32 PASS) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
 - [x] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 제어기/TUI 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`, `tests/0_infra/gac/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-101-gac-ground-apron-controller.md`
