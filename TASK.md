@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 0** (기체 5대 핵심 사양서 Implemented 전이 완료 → 원격 푸시 및 통합 인스톨러 대기)
+> **현재 단계**: **Phase 0** (원격 저장소 origin/main 푸시 완료 → 통합 인스톨러 TASK-005 대기)
 
 ---
 
@@ -31,9 +31,11 @@
   - [x] **TASK-003-2**: 구현 완료 5대 사양서 상단 메타데이터 `문서 상태`를 `Implemented`로 갱신 및 `최종 수정일` 동기화 (커밋 `dea477e`)
   - [x] **TASK-003-3**: `python scratch/verify_all_specs.py` 및 `verify_spec_status.py` 사후 무결성 스캔 통과(`0 Errors, 0 Warnings`) 및 컨텍스트 동기화 (커밋 `6daa12d`, `dea477e`)
 
-- [ ] **TASK-004: 원격 저장소(`origin main`) 푸시 및 인증 완료**
+- [x] **TASK-004: 원격 저장소(`origin main`) 푸시 및 인증 완료** (완료일: 2026-11-08)
   - **목표**: 로컬 커밋 내역을 원격 GitHub 저장소에 푸시 (`git` 미인식 시 `"C:\Program Files\Git\cmd\git.exe"` 호출)
-  - [ ] **TASK-004-1**: 사용자 인증(PAT/SSH) 상태 확인 및 명시적 푸시 승인 후 실행
+  - **계획서**: `docs/superpowers/plans/2026-11-08-task-004-remote-repository-push.md`
+  - **완료 요약**: GitHub `Aeroneutics_Autopilot` 저장소 확인, Fine-grained PAT Contents Write 권한 갱신 및 원격 초기 커밋 조정(`1ca730b` merge) 후 `git push -u origin main` 완료, 로컬 HEAD와 원격 ref 일치 검증 통과 (커밋 `197172f`)
+  - [x] **TASK-004-1**: 사용자 인증(PAT/SSH) 상태 확인 및 명시적 푸시 승인 후 실행
 
 - [ ] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합**
   - **목표**: 3대 배포(화면 직접 업로드 `/installer.lua`, 플로피 디스크 `/disk/`, HTTP `wget run`) 지원, GitHub/Google Drive 듀얼 다운로드 원천, `/.version.json` 메타데이터 및 설정 보존 마이그레이션 연동, 구버전 개별 인스톨러(`gps/installer.lua` 등) Zero-Fallback 폐기
