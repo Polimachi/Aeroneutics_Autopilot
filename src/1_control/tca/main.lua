@@ -3,6 +3,7 @@ package.path = package.path .. ";modules/?.lua;tools/?.lua;?.lua;src/1_control/t
 local config_manager = require("config_manager")
 local tca_daemon = require("tca_daemon")
 local tui_dashboard = require("tui_dashboard")
+
 _G.__TCA_SETUP_IMPORTED_ONLY = true
 local function load_setup_tool()
     local ok, mod = pcall(require, "tca_setup")
@@ -30,7 +31,8 @@ local default_cfg = {
         redstoneSide = "bottom",
         apiSides = { "left", "right", "front", "back" }
     },
-    deadband = 0
+    deadband = 0,
+    debug = true
 }
 
 local function select_modem(ports)
@@ -60,55 +62,145 @@ local function handle_key_event(daemon, key, activeCfg, modemDev)
             end
             daemon:resume(newCfg)
         end
-        if term and term.clear then term.clear() end
+        if term and term.clear then pcall(tui_dashboard.clear_screen, term) end
         daemon.isDirty = true
     elseif key == ((keys and keys.d) or 32) then
         daemon:send_manual_ping()
-    elseif key == ((keys and keys.t) or 20) then
+    elseif key == ((keys and keys.t) or 20) or key == ((keys and keys.q) or 16) then
         daemon:pause()
-        if term and term.clear then term.clear() end
+        daemon.running = false
+        if term and term.clear then pcall(tui_dashboard.clear_screen, term) end
         print("[TCA] Daemon safely terminated by operator.")
         return false, activeCfg
     end
     return true, activeCfg
 end
 
-local cfg = config_manager.load("config.json")
-if not cfg then
-    cfg = default_cfg
-    pcall(config_manager.save, "config.json", cfg)
-end
-local migrated = cfg.migratedLegacyBase
-cfg.migratedLegacyBase = nil
-if migrated then pcall(config_manager.save, "config.json", cfg) end
-
-local modem = select_modem(cfg.ports)
-if modem and cfg.channels and cfg.channels.thrustActuation then
-    pcall(modem.open, cfg.channels.thrustActuation)
-end
-
-local daemon = tca_daemon.init(cfg, modem)
-daemon.sentinel:start_timer(cfg.watchdogTimeoutMs / 1000.0)
-if migrated then daemon:push_log(string.format("[MIGRATE] Base -> %d (ICD N-1)", cfg.baseChannel)) end
-tui_dashboard.render_full_screen(cfg, daemon)
-
-while true do
-    local ev, p1, p2, p3, p4 = os.pullEvent()
-    if ev == "key" then
-        local cont, nextCfg = handle_key_event(daemon, p1, cfg, modem)
-        cfg = nextCfg
-        if not cont then break end
-    else
-        local ok, keepGoing = pcall(daemon.step_event, daemon, ev, p1, p2, p3, p4)
-        if not ok then
-            daemon:push_log("[ERR] " .. tostring(keepGoing):sub(1, 35))
-        elseif keepGoing == false then
-            print("[TCA] Daemon terminated safely.")
+local function run_daemon(daemon, activeCfg)
+    daemon.running = true
+    while daemon.running do
+        local ev, p1, p2, p3, p4 = os.pullEventRaw()
+        if ev == "terminate" then
+            daemon:pause()
+            daemon.running = false
             break
+        else
+            local ok, keepGoing = pcall(daemon.step_event, daemon, ev, p1, p2, p3, p4)
+            if not ok then
+                daemon:push_log("[ERR] " .. tostring(keepGoing):sub(1, 35))
+            elseif keepGoing == false then
+                daemon.running = false
+                break
+            end
         end
     end
-    if daemon.isDirty then
-        tui_dashboard.render_full_screen(cfg, daemon)
-        daemon.isDirty = false
+end
+
+local function run_tui(daemon, activeCfg, modemDev)
+    local ok, err = pcall(function()
+        if term and term.clear then
+            pcall(tui_dashboard.clear_screen, term)
+        end
+        pcall(tui_dashboard.render_full_screen, activeCfg, daemon)
+        local uiTimer = os.startTimer(0.2)
+        while daemon.running do
+            local ev, p1, p2 = os.pullEventRaw()
+            if ev == "key" then
+                local cont, nextCfg = handle_key_event(daemon, p1, activeCfg, modemDev)
+                activeCfg = nextCfg
+                if not cont then
+                    daemon.running = false
+                    break
+                end
+            elseif ev == "timer" and p1 == uiTimer then
+                if daemon.isDirty then
+                    pcall(tui_dashboard.render_full_screen, activeCfg, daemon)
+                    daemon.isDirty = false
+                end
+                uiTimer = os.startTimer(0.2)
+            elseif ev == "terminate" then
+                daemon.running = false
+                break
+            end
+        end
+    end)
+
+    if not ok then
+        -- Fault isolation: if an unhandled fatal error occurred in run_tui,
+        -- do NOT exit immediately (which causes parallel.waitForAny to kill run_daemon).
+        -- Idle silently until daemon.running becomes false so run_daemon finishes safely.
+        while daemon.running do
+            os.pullEventRaw()
+        end
     end
 end
+
+local function main(cfgPathOrTable)
+    local cfg
+    if type(cfgPathOrTable) == "table" then
+        cfg = cfgPathOrTable
+    else
+        local path = cfgPathOrTable or "config.json"
+        cfg = config_manager.load(path)
+        if not cfg then
+            cfg = default_cfg
+            pcall(config_manager.save, path, cfg)
+        end
+    end
+
+    local migrated = cfg.migratedLegacyBase
+    cfg.migratedLegacyBase = nil
+    if migrated and type(cfgPathOrTable) ~= "table" then
+        pcall(config_manager.save, cfgPathOrTable or "config.json", cfg)
+    end
+
+    local modem = select_modem(cfg.ports)
+    if modem and cfg.channels and cfg.channels.thrustActuation then
+        pcall(modem.open, cfg.channels.thrustActuation)
+    end
+
+    local daemon = tca_daemon.init(cfg, modem)
+    daemon.running = true
+    daemon.sentinel:start_timer((cfg.watchdogTimeoutMs or 300) / 1000.0)
+    if migrated then
+        daemon:push_log(string.format("[MIGRATE] Base -> %d (ICD N-1)", cfg.baseChannel))
+    end
+
+    local isDebug = not (cfg.debug == false)
+
+    if isDebug then
+        if parallel and parallel.waitForAny then
+            parallel.waitForAny(
+                function() run_daemon(daemon, cfg) end,
+                function() run_tui(daemon, cfg, modem) end
+            )
+        else
+            run_daemon(daemon, cfg)
+        end
+        if term and term.clear then
+            pcall(tui_dashboard.restore_screen, term)
+        end
+    else
+        local gId = cfg.groupId or "THR_MAIN_L"
+        local baseCh = cfg.baseChannel or 10000
+        print(string.format("[TCA] Actuator daemon running in HEADLESS mode (Group: %s, Base: %d)", gId, baseCh))
+        run_daemon(daemon, cfg)
+    end
+
+    print("[TCA] Daemon terminated safely.")
+    return daemon
+end
+
+if _G.describe == nil then
+    main(...)
+end
+
+return {
+    main = main,
+    run = main,
+    run_daemon = run_daemon,
+    run_tui = run_tui,
+    handle_key_event = handle_key_event,
+    select_modem = select_modem,
+    default_cfg = default_cfg
+}

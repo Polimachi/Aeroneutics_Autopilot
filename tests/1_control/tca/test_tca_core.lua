@@ -336,3 +336,266 @@ describe("tca setup CLI tools", function()
         assert_true(termMock:_contains("THR_MAIN_L"))
     end)
 end)
+
+describe("tca tui_dashboard and async/headless execution", function()
+    local tui_dashboard = require("tui_dashboard")
+    local tca_main = require("main")
+
+    it("renders dashboard to mock terminal within 51x19 dimensions without error", function()
+        local termMock = mock.term(51, 19)
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            nominalActuatorCount = 4,
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} }
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.linkStatus = "CONNECTED"
+        daemon:push_log("VAC LINK NOMINAL")
+
+        tui_dashboard.render_full_screen(cfg, daemon, termMock)
+        assert_true(termMock:_contains("TCA CONSOLE"))
+        assert_true(termMock:_contains("THR_MAIN_L"))
+        assert_true(termMock:_contains("AIRCRAFT_01"))
+        assert_true(termMock:_contains("THRUST"))
+        assert_true(termMock:_contains("VAC LINK NOMINAL"))
+
+        for y = 1, 19 do
+            assert_true(#(termMock._lines[y]) <= 51, "line length must not exceed terminal width")
+        end
+    end)
+
+    it("calculates visual bar gauges accurately with clamp and percentage", function()
+        local bar0 = tui_dashboard.render_bar(0, 15, 10)
+        assert_true(string.find(bar0, "0/15", 1, true) ~= nil)
+        assert_true(string.find(bar0, "0%", 1, true) ~= nil)
+
+        local bar8 = tui_dashboard.render_bar(8, 15, 10)
+        assert_true(string.find(bar8, "8/15", 1, true) ~= nil)
+        assert_true(string.find(bar8, "53%", 1, true) ~= nil)
+
+        local bar15 = tui_dashboard.render_bar(15, 15, 10)
+        assert_true(string.find(bar15, "15/15", 1, true) ~= nil)
+        assert_true(string.find(bar15, "100%", 1, true) ~= nil)
+
+        local barClamped = tui_dashboard.render_bar(20, 15, 10)
+        assert_true(string.find(barClamped, "15/15", 1, true) ~= nil)
+    end)
+
+    it("provides clear_screen and restore_screen helpers that reset cursor and colors", function()
+        local termMock = mock.term(51, 19)
+        assert_eq(type(tui_dashboard.clear_screen), "function")
+        assert_eq(type(tui_dashboard.restore_screen), "function")
+
+        tui_dashboard.clear_screen(termMock)
+        local cx, cy = termMock.getCursorPos()
+        assert_eq(cx, 1)
+        assert_eq(cy, 1)
+
+        tui_dashboard.restore_screen(termMock)
+        local rx, ry = termMock.getCursorPos()
+        assert_eq(rx, 1)
+        assert_eq(ry, 1)
+    end)
+
+    it("exports main, run_daemon, run_tui in tca main module without stalling in test environment", function()
+        assert_not_nil(tca_main)
+        assert_eq(type(tca_main.main), "function")
+        assert_eq(type(tca_main.run_daemon), "function")
+        assert_eq(type(tca_main.run_tui), "function")
+    end)
+
+    it("launches parallel waitForAny in debug mode when debug flag is true", function()
+        local waitForAnyCalled = false
+        local coroutineCount = 0
+        sdk.patch(parallel, "waitForAny", function(...)
+            waitForAnyCalled = true
+            coroutineCount = select("#", ...)
+        end)
+
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            nominalActuatorCount = 4,
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} },
+            debug = true
+        }
+
+        tca_main.main(cfg)
+        assert_true(waitForAnyCalled, "parallel.waitForAny must be called in debug mode")
+        assert_eq(coroutineCount, 2, "parallel.waitForAny must receive exactly 2 coroutines (run_daemon and run_tui)")
+    end)
+
+    it("bypasses terminal rendering and runs daemon directly in headless mode when debug is false", function()
+        local waitForAnyCalled = false
+        sdk.patch(parallel, "waitForAny", function(...)
+            waitForAnyCalled = true
+        end)
+
+        local termClearCalled = false
+        local termBlitCalled = false
+        local termWriteCalled = false
+        local termMock = {
+            clear = function() termClearCalled = true end,
+            blit = function() termBlitCalled = true end,
+            write = function() termWriteCalled = true end,
+            setCursorPos = function() end,
+            setBackgroundColor = function() end,
+            setTextColor = function() end
+        }
+        sdk.patch(_G, "term", termMock)
+
+        local printed = {}
+        sdk.patch(_G, "print", function(msg)
+            table.insert(printed, tostring(msg))
+        end)
+
+        sdk.patch(os, "pullEventRaw", function()
+            return "terminate"
+        end)
+
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10040,
+            channels = { thrustActuation = 10050 },
+            nominalActuatorCount = 4,
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} },
+            debug = false
+        }
+
+        tca_main.main(cfg)
+        assert_false(waitForAnyCalled, "parallel.waitForAny must NOT be called in headless mode")
+        assert_false(termClearCalled, "term.clear must NOT be called in headless mode")
+        assert_false(termBlitCalled, "term.blit must NOT be called in headless mode")
+        assert_false(termWriteCalled, "term.write must NOT be called in headless mode")
+
+        local headlessBannerFound = false
+        for _, msg in ipairs(printed) do
+            if string.find(msg, "%[TCA%] Actuator daemon running in HEADLESS mode %(Group: THR_MAIN_L, Base: 10040%)") then
+                headlessBannerFound = true
+                break
+            end
+        end
+        assert_true(headlessBannerFound, "Expected headless banner with Group THR_MAIN_L and Base 10040 printed")
+    end)
+
+    it("runs ui update on timer in run_tui when dirty and terminates on key q or t", function()
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        local timerSeq = 500
+        sdk.patch(os, "startTimer", function(duration)
+            timerSeq = timerSeq + 1
+            return timerSeq
+        end)
+
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 }
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.running = true
+        daemon.isDirty = true
+
+        local pullCount = 0
+        local pullFn = function()
+            pullCount = pullCount + 1
+            if pullCount == 1 then
+                return "timer", timerSeq
+            else
+                return "key", 20 -- keys.t
+            end
+        end
+        sdk.patch(os, "pullEvent", pullFn)
+        sdk.patch(os, "pullEventRaw", pullFn)
+
+        tca_main.run_tui(daemon, cfg, mockModem)
+        assert_false(daemon.running, "daemon.running must be set to false on terminate key event")
+        assert_true(pullCount >= 2, "must have handled timer and key events")
+    end)
+
+    it("isolates render errors in run_tui using pcall without crashing or stopping daemon.running", function()
+        local termMock = mock.term(51, 19)
+        sdk.patch(_G, "term", termMock)
+
+        local renderAttemptCount = 0
+        sdk.patch(tui_dashboard, "render_full_screen", function()
+            renderAttemptCount = renderAttemptCount + 1
+            error("Simulated catastrophic TUI dashboard error")
+        end)
+
+        local timerSeq = 600
+        sdk.patch(os, "startTimer", function(duration)
+            timerSeq = timerSeq + 1
+            return timerSeq
+        end)
+
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 }
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.running = true
+        daemon.isDirty = true
+
+        local pullCount = 0
+        local pullFn = function()
+            pullCount = pullCount + 1
+            if pullCount == 1 then
+                return "timer", timerSeq
+            else
+                assert_true(daemon.running, "daemon.running must remain true despite render errors")
+                return "key", 20 -- keys.t
+            end
+        end
+        sdk.patch(os, "pullEvent", pullFn)
+        sdk.patch(os, "pullEventRaw", pullFn)
+
+        local ok, err = pcall(tca_main.run_tui, daemon, cfg, mockModem)
+        assert_true(ok, "run_tui must not propagate render exceptions")
+        assert_false(daemon.running, "daemon.running must be false after operator terminates")
+        assert_true(renderAttemptCount >= 1, "render_full_screen must have been attempted")
+    end)
+
+    it("handles terminate event gracefully in run_daemon and pauses daemon", function()
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 }
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.running = true
+
+        local pullFn = function()
+            return "terminate"
+        end
+        sdk.patch(os, "pullEventRaw", pullFn)
+
+        tca_main.run_daemon(daemon, cfg)
+        assert_false(daemon.running, "daemon.running must be false on terminate")
+        assert_true(daemon.adapterState.lastSignal == 0, "thrust must be cut on pause/terminate")
+    end)
+end)

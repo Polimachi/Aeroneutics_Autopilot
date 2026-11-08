@@ -1,6 +1,24 @@
 -- Terminal TUI Status Dashboard for TCA
 local tui_dashboard = {}
 
+function tui_dashboard.clear_screen(surf)
+    local t = surf or term
+    if not t then return end
+    if t.setBackgroundColor and colors and colors.black then pcall(t.setBackgroundColor, colors.black) end
+    if t.setTextColor and colors and colors.white then pcall(t.setTextColor, colors.white) end
+    if t.clear then pcall(t.clear) end
+    if t.setCursorPos then pcall(t.setCursorPos, 1, 1) end
+end
+
+function tui_dashboard.restore_screen(surf)
+    local t = surf or term
+    if not t then return end
+    if t.setBackgroundColor and colors and colors.black then pcall(t.setBackgroundColor, colors.black) end
+    if t.setTextColor and colors and colors.white then pcall(t.setTextColor, colors.white) end
+    if t.clear then pcall(t.clear) end
+    if t.setCursorPos then pcall(t.setCursorPos, 1, 1) end
+end
+
 --- Render top header bar containing group ID and status
 function tui_dashboard.render_header(groupId, busType, isCommOk, mode)
     local gId = tostring(groupId or "THR_MAIN_L")
@@ -68,9 +86,17 @@ function tui_dashboard.get_diagnostic_lines(groupId, busChannel, isOk)
 end
 
 --- Render full TUI dashboard with VAC link status and live log stream
-function tui_dashboard.render_full_screen(cfg, daemon, w, h)
-    if not term or not term.setCursorPos then return end
-    local width = w or 51
+function tui_dashboard.render_full_screen(cfg, daemon, surfOrW, h)
+    local surf = term
+    local width = 51
+    if type(surfOrW) == "table" then
+        surf = surfOrW
+        width = tonumber(h) or (surf.getSize and select(1, surf.getSize())) or 51
+    else
+        width = tonumber(surfOrW) or 51
+    end
+    if not surf or not surf.setCursorPos then return end
+
     local gId = cfg and cfg.groupId or "THR_MAIN_L"
     local domain = cfg and cfg.aircraftDomainId or "AIRCRAFT_01"
     local airN = cfg and cfg.aircraftIndexN or 1
@@ -102,9 +128,16 @@ function tui_dashboard.render_full_screen(cfg, daemon, w, h)
     lines[14] = border
 
     for y = 1, 14 do
-        term.setCursorPos(1, y)
+        surf.setCursorPos(1, y)
         local pad = width - #lines[y]
-        term.write(lines[y] .. (pad > 0 and string.rep(" ", pad) or ""))
+        local fullText = lines[y] .. (pad > 0 and string.rep(" ", pad) or "")
+        if surf.blit then
+            local fg = string.rep("0", #fullText)
+            local bg = string.rep("f", #fullText)
+            surf.blit(fullText, fg, bg)
+        elseif surf.write then
+            surf.write(fullText)
+        end
     end
 end
 
