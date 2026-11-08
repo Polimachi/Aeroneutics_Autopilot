@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 제어기 확장 착수.
-- **직전 완료**: `TASK-102` 완료 (Landing Pad 사양서 v2.4.0 Implemented 승격, 지상 착륙패드 제어기 8개 모듈 및 51x19 TUI 구현, 인스톨러 등록, 단위 테스트 144/144 PASS, 하네스 24/24 PASS).
+- **직전 완료**: `TASK-112` 완료 (VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화 완료, 사양서 v1.15.0 `Implemented` 유지, 단위 테스트 146/146 PASS).
 - **다음 착수 후보**:
-  1. `TASK-112`: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화 (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`).
-  2. `TASK-106`: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현.
+  1. `TASK-106`: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현.
+  2. `TASK-110`: FCP VTOL 제어 고도화 (`src/2_guidance/fcp/`).
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -22,9 +22,9 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (10개 타겟 144/144 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (10개 타겟 146/146 PASS).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (24/24 PASS).
-- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py`.
+- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (7 Implemented, 5 Approved).
 
 ## 4. Gotchas & Invariants
 - **멀티 코드베이스 독립 완결성**: `src/<layer>/<name>/` 간 공용 모듈 직접 참조 금지 (개별 CC 컴퓨터 루트 마운트 단위 캡슐화, 기본 진입점 `main.lua`).

@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 (진행 중)** (TASK-101 GAC 및 TASK-102 Landing Pad 제어기 구현 완료, TASK-112 VAS 센서 표준화 대기)
+> **현재 단계**: **Phase 1 (진행 중)** (TASK-112 VAS 센서 표준화 완료, TASK-106 Cockpit MFD 대기)
 
 ---
 
@@ -23,20 +23,13 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
 
-- [ ] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
-  - VAS 내루프 실시간 동역학 제어용 센서 파이프라인을 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 동기화하고, CC:Avionics 공식 API(`getHeight()`, 1축 스칼라 `getVelocity()` 3축 합성, 짐벌 오일러/각속도/중력/가속도) 정합성 확보
-  - **세부 작업 항목**:
-    - [ ] **TASK-112-1**: VAS 규격서(`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`) Section 2·3에 `/lib/avionics_sensors.lua` 연동 표준 명세 반영 및 Revision History 갱신
-    - [ ] **TASK-112-2**: `src/1_control/vas/modules/sensor_pipeline.lua` 내 레거시 페리페럴 탐색/폴링 로직을 `require("avionics_sensors")` 기반 4종 센서(`gimbal`, `altitude`, `velocity`, `fuel`) 고속 획득 파이프라인으로 리팩토링
-    - [ ] **TASK-112-3**: `velocity_sensor` 3축 분산 배치(전/상/측) 자동 합성 및 `altitude_sensor`의 `getHeight()` 공식 메서드 적용, 3D 레버암 기하 동역학 보정과 결합 검증
-    - [ ] **TASK-112-4**: `tests/1_control/vas/test_vas_core.lua`의 센서 모킹 및 단위 테스트를 `test_sdk.lua` 최신 CC:Avionics 4종 Mock으로 전면 정합화 및 10/10 PASS 검증
+- [ ] **TASK-106: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현**
+  - 평시 5Hz(`FCP`) / ACRO 20Hz(`VAS`) `Base+3` HUD 렌더링 및 `Base+0`·`Base+1` C2/비상 선점 송출 구현
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-106: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현**
-  - 평시 5Hz(`FCP`) / ACRO 20Hz(`VAS`) `Base+3` HUD 렌더링 및 `Base+0`·`Base+1` C2/비상 선점 송출 구현
 - [ ] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
   - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
 - [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
@@ -65,7 +58,16 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
 
-- [x] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`, `tests/0_infra/landing_pad/`)
+- [x] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (완료일: 2026-11-08, 커밋 `1ee16b2` ~ `3c6b3e6`) (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-112-vas-sensor-pipeline-avionics.md`
+  - VAS 내루프 실시간 동역학 제어용 센서 파이프라인을 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 동기화하고, CC:Avionics 공식 API(`getHeight()`, 1축 스칼라 `getVelocity()` 3축 합성, 짐벌 오일러/각속도/중력/가속도) 정합성 확보
+  - **구현 내용**:
+    - [x] **TASK-112-1**: VAS 규격서(`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` v1.15.0) Section 2·3에 `/lib/avionics_sensors.lua` 연동 표준 명세 반영 및 Revision History 갱신
+    - [x] **TASK-112-2**: `src/1_control/vas/modules/sensor_pipeline.lua` 내 레거시 페리페럴 탐색/폴링 로직을 `require("avionics_sensors")` 기반 4종 센서(`gimbal`, `altitude`, `velocity`, `fuel`) 고속 획득 파이프라인으로 리팩토링
+    - [x] **TASK-112-3**: `velocity_sensor` 3축 분산 배치(전/상/측) 자동 합성 및 `altitude_sensor`의 `getHeight()` 공식 메서드 적용, 3D 레버암 기하 동역학 보정과 결합 검증
+    - [x] **TASK-112-4**: `tests/1_control/vas/test_vas_core.lua`의 센서 모킹 및 단위 테스트를 `test_sdk.lua` 최신 CC:Avionics 4종 Mock으로 전면 정합화 및 12/12 PASS 검증
+
+- [x] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (완료일: 2026-11-08, 커밋 `47b98bb` ~ `c064823`) (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`, `tests/0_infra/landing_pad/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-102-landing-pad-controller.md`
   - Landing Pad 사양서 v2.4.0 Implemented 승격, 설정 영속화(`config_store.lua`), 마인크래프트 좌표계 3D 바디 오프셋 변환(`offset_transform.lua`), CC:Avionics 센서 어댑터 및 갑판 요동 판정(`sensor_adapter.lua`), GPS 클라이언트 및 20Hz 추측항법 적분기(`gps_client.lua`), 전술 유도 스트리머(`tactical_streamer.lua`), 패드 FSM 및 로컬 백본 중재(`pad_fsm.lua`), 5단계 셋업 마법사(`setup_wizard.lua`), 51x19 TUI 뷰(`tui_view.lua`), 20Hz 메인 데몬 루프(`main.lua`), 단위 테스트(32/32 PASS) 및 통합 인스톨러(`manifest.lua`) 등록 완료
   - **구현 내용**:
@@ -76,7 +78,7 @@
     - [x] **TASK-102-5**: 컴팩트 1줄 순환 로깅 데몬 모드, 독립 완결형 메인 루프(`main.lua`) 및 센서 결손 복행(`reason: SENSOR_FAULT`) / 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
     - [x] **TASK-102-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/landing_pad/`, 32/32 PASS) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
-- [x] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 제어기/TUI 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`, `tests/0_infra/gac/`)
+- [x] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 제어기/TUI 구현** (완료일: 2026-11-08, 커밋 `0787649` ~ `e5aa176`) (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`, `tests/0_infra/gac/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-101-gac-ground-apron-controller.md`
   - GAC 사양서 v1.3.0 Implemented 승격, 설정 영속화(`config_loader.lua`), 관할 패드 인벤토리(`facility_inventory.lua`), 2단계 다속성 최적 분배(`allocation_engine.lua`), 1Hz 섹터 대표 비콘/디스패치(`beacon_broadcaster.lua`), 섹터 FSM 및 핸드오프/국지 복행 중재(`gac_fsm.lua`), 듀얼 디스플레이 3-Tab TUI 콘솔(`tui_view.lua`), 20Hz 비차단 메인 루프(`main.lua`), 단위 테스트(27/27 PASS) 및 통합 인스톨러(`manifest.lua`) 등록 완료
   - **구현 내용**:
@@ -97,7 +99,7 @@
     - [x] **TASK-109-3**: `src/1_control/vas/modules/vehicle_policy.lua` 및 `core_daemon.lua`에서 비공력 기체 대상 조종면 할당 생략, `MSG_AERO_CMD` 미송출, TCA 단독 포화 평가 및 텔레메트리 헬스 바이패스 구현 및 단위 테스트(`tests/1_control/vas/`, 10/10 PASS) 검증
     - [x] **TASK-109-4**: 전체 사양서 무결성(`verify_all_specs.py`, `verify_spec_status.py`), Lua 5.2 문법(`validate_lua_syntax.py`, 91/91 PASS), 하네스 회귀(24/24 PASS) 전수 통과 확인
 
-- [x] **TASK-100: CC:Avionics 4종 센서 API 표준 라이브러리(`avionics_sensors`) 구축 및 공용 배포·하네스 연동** (완료일: 2026-11-08) (`src/0_development/sensors/`, `tests/0_development/sensors/`)
+- [x] **TASK-100: CC:Avionics 4종 센서 API 표준 라이브러리(`avionics_sensors`) 구축 및 공용 배포·하네스 연동** (완료일: 2026-11-08, 커밋 `6164848`, `93e959b`) (`src/0_development/sensors/`, `tests/0_development/sensors/`)
   - `velocity_sensor`, `altitude_sensor`, `gimbal_sensor`, `physics_assembler` 4종 전용 표준 함수 모음 단일 원본(SSOT) 구축 및 통합 인스톨러(`manifest.lua`)·단위 테스트 하네스(`engine.py`) `/lib/` 자동 스테이징 연동
   - **구현 내용**:
     - [x] **TASK-100-1**: 단위 테스트 하네스(`harness/unit/engine.py`) 공용 `/lib/` 자동 스테이징 및 `test_sdk.lua` 정밀 CC:Avionics 4종 Mock 추가

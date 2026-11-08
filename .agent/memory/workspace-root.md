@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-11-08 — VAS 센서 파이프라인의 CC:Avionics 표준 API 동기화 및 3축 속도/고도 정합화 (TASK-112)
+
+- **결정 배경**: VAS의 내루프 실시간 동역학 제어용 `sensor_pipeline.lua`를 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 정합화하고, 공식 CC:Avionics 센서 메서드(`getHeight()`, 1축 스칼라 `getVelocity()`의 3축 합성, 짐벌 오일러/각속도 벡터) 및 3D 기하 레버암 오프셋 보정을 통합 검증함.
+- **반영 내역**:
+  1. **사양서 갱신 (`VAS_PROGRAM_SPECIFICATION.md` v1.15.0)**: Section 2·3에 `/lib/avionics_sensors.lua` 연동 표준 명세 반영, Revision History 기록 (커밋 `1ee16b2`).
+  2. **센서 파이프라인 리팩토링 (`src/1_control/vas/modules/sensor_pipeline.lua`)**: `require("avionics_sensors")` 연동, `getHeight()` 우선 호출 및 레거시 딕셔너리 폴백, 3D 레버암 기하 동역학 보정 적용 (커밋 `3c6b3e6`).
+  3. **단위 테스트 확장 (`tests/1_control/vas/test_vas_core.lua`)**: 정밀 CC:Avionics 센서 모킹 샘플링 테스트 및 3D 레버암 오프셋 보정 정밀 테스트 추가 (12/12 PASS, 전체 146/146 PASS).
+  4. **인스톨러 동기화 (`manifest.lua`)**: VAS 버전 1.15.0 갱신 및 `/lib/avionics_sensors.lua` 번들링 검증.
+
+---
+
+## 2026-11-08 — 루트 4대 마크다운(GEMINI·README·TASK·AGENTS) 감사 및 Phase 1 기준선 최신화
+
+- **결정 배경**: Phase 1 착수 및 `TASK-101`(GAC), `TASK-102`(Landing Pad) 구현 완료 이후 루트 마크다운 문서 중 특히 `README.md`에 남아 있던 과거 Phase 0 잔재 수치(`71/71 PASS, 7개 타겟`, `5 Implemented, 7 Approved`)와 디렉토리 트리 결손(`sensors`, `gac`, `landing_pad`)을 해소하고, `GEMINI.md`와 `TASK.md`의 핸드오버 및 계획서 링크를 최신화하기 위해 `md-management` Mode B 감사를 수행함.
+- **반영 내역**:
+  1. **`AGENTS.md` 현행 유지**: 41줄 불변 헌장으로서 과장 금지 및 소통 원칙이 완결되어 있어 diff 없이 보존.
+  2. **`GEMINI.md` 스냅샷 압축 및 사양서 상태 분포 동기화 (36줄)**: `TASK-102` 완료 상세 모듈 나열을 압축하고 `TASK-112` 착수 준비 상태와 사양서 7 Implemented, 5 Approved 최신 분포를 반영.
+  3. **`README.md` 전면 최신화**: Phase 1 진행 중 상태 표기, 단위 테스트 `144/144 PASS`(10개 타겟), 하네스 `24/24 PASS`, 사양서 상태 분포 `7 Implemented, 5 Approved`로 동기화하고, `src/0_development/sensors/` 및 `tests/` 산하 `sensors`, `gac`, `landing_pad` 디렉토리 트리를 누락 없이 보강.
+  4. **`TASK.md` 계획서 경로 및 형상 추적성 보강**: `TASK-112`에 사전 수립된 실행 계획서 경로를 명시하고, 최근 완료 작업(`TASK-100`~`TASK-102`)의 커밋 해시 범위를 보완.
+
+---
+
 ## 2026-11-08 — CC:Avionics 4종 센서 API 표준 라이브러리(TASK-100) 구축 및 공용 /lib/ 주입 확립
 
 - **결정 배경**: 전체 코드베이스에서 CC:Avionics 센서 4종(`velocity_sensor`, `altitude_sensor`, `gimbal_sensor`, `physics_assembler`)을 직접 분산 접근하며 발생하는 중복 로직, `mainThread = true` 틱 yield 분산 지연, 3축 분산 속도 센서 매핑 파편화를 해소하기 위해 단일 원본(SSOT) 표준 라이브러리(`avionics_sensors`)를 구축하고 인스톨러 및 하네스에 자동 주입 파이프라인을 확립함.

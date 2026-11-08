@@ -6,10 +6,10 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 0** — 기체 통신 40채널($BW=40$) 아키텍처 개편, 사양서 영구 단일 계층 전환, CraftOS-PC 기반 단위 테스트 하네스(`18/18 PASS`) 및 통합 인스톨러 구축·핵심 코드베이스 단위 테스트(`71/71 PASS, 7개 타겟`) 완료
+- **현재 단계**: **Phase 1 (진행 중)** — 지상 인프라(`GAC`, `Landing Pad`) 및 핵심 온보드 제어기 구현 완료, 단위 테스트(`146/146 PASS, 10개 타겟`), 하네스 회귀(`24/24 PASS`), 12대 사양서 무결성(`7 Implemented, 5 Approved`) 확보
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
-  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `ASA` 본 구현 완성, `Cockpit MFD`, `GCS`, `Tower ATC` 구축 (`Runway`·`Docking Arm` 일정 보류)
+  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad` 구현 및 `VAS` 센서 파이프라인 표준화(`TASK-112`) 완료, `Cockpit MFD`, `GCS`, `Tower ATC` 구축 (`Runway`·`Docking Arm`·`ASA` 일정 보류)
   - **Phase 2 (고등 항법 및 편대 임무)**: 3차원 경로 계획(`3_planning/`) 및 다중 기체 편대 미션 오케스트레이터(`4_mission/`) 구축
 - **실시간 작업 진행 현황 및 상세 백로그 (SSOT)**: [TASK.md](TASK.md)
 
@@ -54,6 +54,7 @@ Create_Aeroneutics/
 ├── src/                                   # CC:Tweaked Lua 독립 완결형 멀티 코드베이스
 │   ├── 0_development/alignment/           # 지상 정렬 및 시스템 식별 프로그램
 │   ├── 0_development/installer/           # 통합 인스톨러 코어 및 선언적 매니페스트
+│   ├── 0_development/sensors/             # CC:Avionics 4종 센서 공용 표준 라이브러리 (SSOT)
 │   ├── 0_infra/                           # 기지 인프라 및 지상 관제 시설 (docking_arm, gac, gps, landing_pad, runway)
 │   ├── 1_control/                         # 실시간 온보드 제어 (asa, tca, vas)
 │   ├── 2_guidance/fcp/                    # 비행 제어 프로그램 및 외루프 유도 (FCP)
@@ -66,7 +67,8 @@ Create_Aeroneutics/
 ├── tests/                                 # 도메인별 단위 테스트 및 하네스 회귀 테스트 슈트
 │   ├── 0_development/alignment/           # Alignment 단위 테스트
 │   ├── 0_development/installer/           # 통합 인스톨러 단위 테스트
-│   ├── 0_infra/gps/                       # GPS 단위 테스트
+│   ├── 0_development/sensors/             # 센서 표준 라이브러리 단위 테스트
+│   ├── 0_infra/{gac, gps, landing_pad}/   # 기지 인프라 단위 테스트 (GAC, GPS, Landing Pad)
 │   ├── 1_control/{asa, tca, vas}/         # 온보드 제어기 단위 테스트
 │   ├── 2_guidance/fcp/                    # FCP 단위 테스트
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
@@ -143,7 +145,7 @@ python tools/verify_all_specs.py
   ```
 
 ### 4. 사양서 상태 분포 검증
-12대 활성 사양서의 상태 분포(5 Implemented, 7 Approved)를 검사합니다:
+12대 활성 사양서의 상태 분포(7 Implemented, 5 Approved)를 검사합니다:
 ```bash
 python tools/verify_spec_status.py
 ```
