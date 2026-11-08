@@ -293,3 +293,36 @@ describe("fcp asa exclusion for vectored_vtol and drone", function()
         end
     end)
 end)
+
+describe("vectored_vtol 3-axis PID and anti-windup integration", function()
+    local vectored_vtol_driver = require("vectored_vtol_driver")
+    local main = require("main")
+    local cfg = main.load_config()
+
+    it("accumulates error into driver_state integrals and clamps to maxI", function()
+        local nav = {
+            pos = { x = 0.0, y = 64.0, z = 0.0 },
+            vel = { x = 0.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        local target = { x = 0.0, y = 74.0, z = -10.0 }
+        local driver_state = {}
+
+        local out1 = vectored_vtol_driver.compute(cfg, nav, target, "CRUISE", 1.0, driver_state)
+        assert_not_nil(out1)
+        assert_not_nil(driver_state.surge_i, "driver_state.surge_i must exist")
+        assert_eq(driver_state.surge_i, 0.20, "surge_i reached maxI 0.20")
+        assert_eq(driver_state.heave_i, 0.20, "heave_i reached maxI 0.20")
+
+        vectored_vtol_driver.compute(cfg, nav, target, "CRUISE", 1.0, driver_state)
+        assert_eq(driver_state.surge_i, 0.20, "surge_i clamped to maxI 0.20")
+        assert_eq(driver_state.heave_i, 0.20, "heave_i clamped to maxI 0.20")
+
+        assert_not_nil(vectored_vtol_driver.reset_integrals, "reset_integrals function must exist")
+        vectored_vtol_driver.reset_integrals(driver_state)
+        assert_eq(driver_state.surge_i, 0.0, "surge_i reset to 0.0")
+        assert_eq(driver_state.sway_i, 0.0, "sway_i reset to 0.0")
+        assert_eq(driver_state.heave_i, 0.0, "heave_i reset to 0.0")
+    end)
+end)

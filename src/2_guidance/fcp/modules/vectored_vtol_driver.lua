@@ -79,6 +79,13 @@ local function compute_emergency(nav, hover_thr)
     }
 end
 
+function vectored_vtol_driver.reset_integrals(driver_state)
+    if not driver_state then return end
+    driver_state.surge_i = 0.0
+    driver_state.sway_i = 0.0
+    driver_state.heave_i = 0.0
+end
+
 function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_state)
     local g = cfg and cfg.guidance and cfg.guidance.vectored_vtol or {}
     local hover_thr = g.hoverThrottle or 0.635
@@ -100,9 +107,26 @@ function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_st
     local wkp, wkd = g.swayKp or 0.15, g.swayKd or 0.08
     local hkp, hkd = g.heaveKp or 0.12, g.heaveKd or 0.15
 
-    local surge = clamp(skp * err_surge - skd * vel_surge, -1.0, 1.0)
-    local sway = clamp(wkp * err_sway - wkd * vel_sway, -1.0, 1.0)
-    local heave = clamp(hkp * (tgt_y - pos.y) - hkd * vel.y, -1.0, 1.0)
+    local delta_t = dt or 0.05
+    local ski = g.surgeKi or 0.02
+    local smaxi = g.surgeMaxI or 0.20
+    local wki = g.swayKi or 0.02
+    local wmaxi = g.swayMaxI or 0.20
+    local hki = g.heaveKi or 0.02
+    local hmaxi = g.heaveMaxI or 0.20
+
+    if driver_state then
+        driver_state.surge_i = clamp((driver_state.surge_i or 0.0) + ski * err_surge * delta_t, -smaxi, smaxi)
+        driver_state.sway_i = clamp((driver_state.sway_i or 0.0) + wki * err_sway * delta_t, -wmaxi, wmaxi)
+        driver_state.heave_i = clamp((driver_state.heave_i or 0.0) + hki * (tgt_y - pos.y) * delta_t, -hmaxi, hmaxi)
+    end
+    local s_i = driver_state and driver_state.surge_i or 0.0
+    local w_i = driver_state and driver_state.sway_i or 0.0
+    local h_i = driver_state and driver_state.heave_i or 0.0
+
+    local surge = clamp(skp * err_surge - skd * vel_surge + s_i, -1.0, 1.0)
+    local sway = clamp(wkp * err_sway - wkd * vel_sway + w_i, -1.0, 1.0)
+    local heave = clamp(hkp * (tgt_y - pos.y) - hkd * vel.y + h_i, -1.0, 1.0)
     local throttle = clamp(hover_thr + heave * 0.35, 0.0, 1.0)
 
     local gs = nav.groundSpeed or math.sqrt(vel.x * vel.x + vel.z * vel.z)
