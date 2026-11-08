@@ -37,7 +37,7 @@
   - **완료 요약**: GitHub `Aeroneutics_Autopilot` 저장소 확인, Fine-grained PAT Contents Write 권한 갱신 및 원격 초기 커밋 조정(`1ca730b` merge) 후 `git push -u origin main` 완료, 로컬 HEAD와 원격 ref 일치 검증 통과 (커밋 `197172f`)
   - [x] **TASK-004-1**: 사용자 인증(PAT/SSH) 상태 확인 및 명시적 푸시 승인 후 실행
 
-- [ ] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합**
+- [-] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합**
   - **목표**: 3대 배포(화면 직접 업로드 `/installer.lua`, 플로피 디스크 `/disk/`, HTTP `wget run`) 지원, GitHub/Google Drive 듀얼 다운로드 원천, `/.version.json` 메타데이터 및 설정 보존 마이그레이션 연동, 구버전 개별 인스톨러(`gps/installer.lua` 등) Zero-Fallback 폐기
   - **참조 계획서**: `docs/superpowers/plans/2026-11-07-unified-codebase-installer.md`
   - [ ] **TASK-005-1**: 선언적 매니페스트(`manifest.lua`, 듀얼 원천) 및 버전 레지스트리(`version_registry.lua`) 구축
