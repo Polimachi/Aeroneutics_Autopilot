@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 0** (검증 스크립트 도구화 TASK-006 완료 → Landing Pad 제어기 TASK-102 대기)
+> **현재 단계**: **Phase 1 (착수 대기)** (Phase 0 전 과제 종결 완료 → Landing Pad 제어기 TASK-102 착수 대기)
 
 ---
 
@@ -15,15 +15,21 @@
 - **도메인 경로 매핑 기준**: `docs/specs/`, `src/`, `tests/` 간 1:1 도메인 계층 구조는 [README.md](README.md)의 디렉토리 레이아웃을 따른다.
 - **유저 호출 예시**:
   - `TASK.md 확인하고 다음 남은 작업 진행해줘`
-  - `TASK.md의 TASK-005 작업 계획 세워줘`
+  - `TASK.md의 TASK-102 작업 계획 세워줘`
   - `TASK.md 상태 점검해줘`
 
 ---
 
-## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 0)
+## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
 
 - [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
   - 가상 좌표 비콘, 동역학 요동 인터록 및 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 구현
+  - **세부 작업 항목**:
+    - [ ] **TASK-102-1**: 정적/동적 제원 설정 로더(`config.lua`) 및 7단계 FSM 상태 머신(`IDLE`, `RESERVED`, `APPROACH`, `TOUCHDOWN`, `OCCUPIED`, `GO_AROUND`, `MAINTENANCE`) 구현
+    - [ ] **TASK-102-2**: GAC 로컬 백본망(`Base_sec+1`) 패킷 수신/응답 및 슬롯 예약/점유 해제 프로토콜 연동
+    - [ ] **TASK-102-3**: 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 (정적 1Hz 하트비트 / 동적 20Hz 동역학 및 갑판 요동 `deckStatus` 판정 알고리즘) 구현
+    - [ ] **TASK-102-4**: 독립 완결형 메인 루프(`main.lua`) 및 300ms 패킷 두절 / 120초 슬롯 타임아웃 / `DANGEROUS` 지속 시 `GO_AROUND` 안전 인터록 구현
+    - [ ] **TASK-102-5**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/landing_pad/`) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
 ---
 
@@ -61,14 +67,14 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
 
-- [x] **TASK-006: 검증 스크립트 정식 도구화(`scratch/` → `tools/`) 및 하위 문서 구 경로 정리** (완료일: 2026-11-08)
+- [x] **TASK-006: 검증 스크립트 정식 도구화(`scratch/` → `tools/`) 및 하위 문서 구 경로 정리** (완료일: 2026-11-08, 커밋 `8ab621e`, `44ef922`, `c4c4a6e`, `1d3b658`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-006-tooling-and-spec-links-cleanup.md`
   - **구현 내용**:
     - [x] **TASK-006-1**: `verify_all_specs.py`·`validate_lua_syntax.py`·`verify_spec_status.py`의 `tools/` 이관, 동적 DLL 탐색 및 90개 Lua 전수 검사 지원, 일회성 `scratch/` 스크립트 정리 및 전용 `scratch/README.md` 구축
     - [x] **TASK-006-2**: `src/1_control/asa/README.md` 및 `src/0_infra/gac/README.md` 내 폐기된 `docs/specs/approved/...` 링크 제거, 영구 단일 경로 동기화 및 `tools/verify_all_specs.py --check-readmes` 0 error 통과
     - [x] **TASK-006-1B**: 도구 무결성 자동화 테스트(`tests/harness/test_tools_integrity.py`, 5/5 PASS) 작성, 전체 하네스 회귀(23/23 PASS) 및 루트 문서(`README.md`, `GEMINI.md`, `TASK.md`) 동기화
 
-- [x] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합** (완료일: 2026-11-08)
+- [x] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합** (완료일: 2026-11-08, 커밋 `adfc561` ~ `01d938d`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-005-unified-codebase-installer.md`
   - **구현 내용**:
     - [x] **TASK-005-0**: GPS 사양서(`GPS_PROGRAM_SPECIFICATION_AND_ICD.md`) 개정(`v2.2.0`, `Implemented` → `Approved`, 구 인스톨러 `[DEPRECATED]` 명시)

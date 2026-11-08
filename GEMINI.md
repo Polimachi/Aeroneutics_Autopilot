@@ -2,7 +2,7 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 0** — 검증 스크립트 정식 도구화 및 하위 문서 구 경로 정리(TASK-006) 완료.
+- **현재 단계**: **Phase 1** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 제어기 확장 착수.
 - **직전 완료**: `TASK-006` 완료 (도구 정식 이관 `tools/`, 일회성 스크립트 정리, README 링크 정리, 하네스 회귀 23/23 PASS).
 - **다음 착수 후보**:
   1. `TASK-102`: Landing Pad 지상 착륙 패드 제어기 구현 (`src/0_infra/landing_pad/`).

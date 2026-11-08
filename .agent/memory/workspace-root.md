@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-08 — 검증 스크립트 정식 도구화(TASK-006) 및 Phase 0 종결
+
+- **결정 배경**: 임시 작업 공간(`scratch/`)에 혼재되어 있던 핵심 사양서·문법 검증 스크립트를 정식 도구 디렉토리(`tools/`)로 격리 이관하고, 도메인 하위 README 내 폐기된 구 사양서 경로(`docs/specs/approved/...`) 잔재를 전수 정리함.
+- **반영 내역**:
+  1. **검증 도구 정식화 (`tools/`)**: `verify_all_specs.py`, `validate_lua_syntax.py`, `verify_spec_status.py`를 `tools/`로 이관하고, Windows 동적 DLL 탐색 보강 및 90개 Lua 전수 문법 검사 지원.
+  2. **임시 스크립트 정리 및 가이드 확립**: 일회성 `scratch/` 스크립트를 제거하고 `scratch/README.md`를 신설하여 임시 스크립트 격리 원칙 확립.
+  3. **서브시스템 README 영구 단일 경로 정합화**: `src/1_control/asa/README.md` 및 `src/0_infra/gac/README.md` 내 폐기된 구 경로 링크를 제거하고 `verify_all_specs.py --check-readmes` 0 error 달성.
+  4. **도구 무결성 자동화 테스트 및 Phase 0 전 과제 종결**: `tests/harness/test_tools_integrity.py`(5/5 PASS) 추가로 하네스 자체 회귀 `23/23 PASS` 달성, Phase 0 전 과제 완료 및 Phase 1 인계 준비 완료.
+
 ## 2026-11-08 — 통합 코드베이스 설치 프로그램(TASK-005) 구축 및 GPS 사양서 v2.2.0 Implemented 승격
 
 - **결정 배경**: 분산된 개별 모듈 인스톨러(`gps/installer.lua` 등)를 폐기하고, 단일 진입점 기반으로 7개 전 모듈을 일괄 설치·갱신·마이그레이션할 수 있는 전역 통합 인스톨러와 단위 테스트 하네스를 구축함.
