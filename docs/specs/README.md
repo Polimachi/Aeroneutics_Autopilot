@@ -13,7 +13,7 @@ Create: Aeronautics 및 CC:Tweaked 비행선 제어 소프트웨어의 프로그
 - `0_development/`: 개발·검증·교정 지원 도구 사양서 (`alignment` 등)
 - `0_infra/`: 기지 지상 인프라 및 핵심 유틸리티 규격서 (`gps`, `gac`, `docking_arm`, `landing_pad`, `runway` 등)
 - `1_control/`: 온보드 실시간 제어 사양서 (`vas`, `tca`, `asa` 등)
-- `2_guidance/`: 자율 항법 및 오토파일럿 사양서 (`sas` 등)
+- `2_guidance/`: 자율 항법 및 외루프 유도 컴퓨터 사양서 (`fcp` 등)
 - `3_planning/`: 경로 생성 및 자율 편대 비행 기획 사양서
 - `4_mission/`: 미션 시나리오 및 탑재체 임무 제어 사양서
 
