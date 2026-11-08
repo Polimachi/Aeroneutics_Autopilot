@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-113 온보드 제어기 헤드리스/비동기 TUI 구현 완료 및 검증 통과, TASK-110 FCP VTOL 제어 고도화 착수 대기)
+> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-110 FCP VTOL 제어 고도화 구현 완료 및 검증 통과, TASK-107 GCS 구현 착수 대기)
 
 ---
 
@@ -22,20 +22,13 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [-] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
-  - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
-  - **하위 작업 내역**:
-    - [-] **TASK-110-1**: FCP 사양서(`FCP_PROGRAM_SPECIFICATION.md`) VTOL 유도 모드 및 천이(Transition) FSM 규격 개정 (`Approved` 전이)
-    - [ ] **TASK-110-2**: 호버링 위치/고도 유지 PID 및 TECS 수직 속도 보정 로직 고도화
-    - [ ] **TASK-110-3**: 수직 이착륙 천이(Transition) 가속/감속 시퀀스 및 틸트 각도/추력 인터록 제어 구현
-    - [ ] **TASK-110-4**: FCP VTOL 단위 테스트 슈트 보강 및 통합 회귀 검증
+- [ ] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (`src/0_infra/gcs/`)
+  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (`src/0_infra/gcs/`)
-  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현
 - [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
   - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
 
@@ -61,6 +54,15 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+
+- [x] **TASK-110: FCP VTOL 제어 고도화** (완료일: 2026-11-08) (`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-110-fcp-vtol-refinement.md`
+  - **목적 및 성과**: VECTORED_VTOL 기종의 외루프 유도 제어기를 3축(Surge/Sway/Heave) 완전 PID + Anti-windup, CRUISE 모드 한정 15m/s TILT_ASSISTED 피치 슬루율(최대 15°/s) 완화, 수평 고정 수직 이륙 및 착륙 패드 정렬 2단계 감속 수직 착륙 시퀀스로 전면 고도화. 단위 테스트 슈트 보강(FCP 17/17 PASS, 전체 11개 타겟 216/216 PASS), 사양서(`FCP_PROGRAM_SPECIFICATION.md` v1.13.0) `Implemented` 환원 및 정적 무결성(13 SPECS 100% CLEAN) 달성.
+  - **구현 내용**:
+    - [x] **TASK-110-1**: FCP 사양서(`FCP_PROGRAM_SPECIFICATION.md` v1.13.0) VTOL 외루프 3축 PID/슬루율/이착륙 규격 개정 및 `fcp_config.json` 스키마 확장
+    - [x] **TASK-110-2**: `vectored_vtol_driver.lua` 3축 Surge/Sway/Heave PID 및 Anti-windup 클램프(`maxI = 0.20`), `reset_integrals` 구현
+    - [x] **TASK-110-3**: TILT_ASSISTED 모드 천이 피치 슬루율(15°/s) 완화 및 CRUISE 외 전 상태 STRICT_LEVEL($0.0^\circ$) 강제 인터록 구현
+    - [x] **TASK-110-4**: 수평 이동 차단 수직 이륙 및 착륙 패드 정렬 2단계 감속 수직 착륙 시퀀스 구현 및 회귀 검증 통과
 
 - [x] **TASK-113: 온보드 제어기(VAS, TCA, ASA) 헤드리스 기본 구동 및 `parallel` 비동기 디버그 TUI 분리** (완료일: 2026-11-08) (`docs/specs/1_control/`, `src/1_control/`, `tests/1_control/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-113-headless-parallel-debug-tui.md`
