@@ -5,7 +5,7 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v2.2.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |

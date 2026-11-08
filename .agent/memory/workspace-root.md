@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-08 — 통합 코드베이스 설치 프로그램(TASK-005) 구축 및 GPS 사양서 v2.2.0 Implemented 승격
+
+- **결정 배경**: 분산된 개별 모듈 인스톨러(`gps/installer.lua` 등)를 폐기하고, 단일 진입점 기반으로 7개 전 모듈을 일괄 설치·갱신·마이그레이션할 수 있는 전역 통합 인스톨러와 단위 테스트 하네스를 구축함.
+- **반영 내역**:
+  1. **통합 인스톨러 아키텍처 확립 (`installer.lua`, `src/0_development/installer/`)**: 화면 직접 업로드, 플로피 디스크(`/disk/`), 원격 HTTP(`wget run`) 3대 배포 방식 및 GitHub/Google Drive 듀얼 다운로드 소스 지원.
+  2. **선언적 매니페스트 및 자동 마이그레이션**: `manifest.lua`, `version_registry.lua`, `migration_engine.lua`, `startup_generator.lua`를 구축하여 `/.version.json` 메타데이터 및 기존 설정 파일 보존 지원.
+  3. **Zero-Fallback 구버전 정리 및 GPS v2.2.0 승격**: `src/0_infra/gps/installer.lua` 및 `installer_core.lua` 완전 제거, `GPS_PROGRAM_SPECIFICATION_AND_ICD.md` 상태를 `Implemented`로 전이.
+  4. **전역 검증 통과**: 7개 타겟 단위 테스트 `71/71 PASS`, 하네스 회귀 `18/18 PASS`, 12대 사양서 무결성 `0 Errors 0 Warnings` (5 Implemented, 7 Approved).
+
 ## 2026-11-08 — 루트 4대 마크다운 문서(AGENTS·GEMINI·README·TASK) 감사 및 아키텍처 정합화
 
 - **결정 배경**: `Phase 0` 런타임 동기화 완료 직후 루트 문서 간 이중 로드 토큰 중복, 진부화된 태스크 상태(`SAS`, `TASK-001 진행 예정`, `TASK-002` 중복), 마스터 ICD와의 수치/도메인 불일치(`N <= 99`, `ASA 레이더` 오기재 등), Windows `git.exe`·CraftOS-PC 의존성 누락을 일괄 해소하기 위해 `md-management` Mode B 감사를 수행함.

@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 0** — 기체 통신 40채널($BW=40$) 아키텍처 개편, 사양서 영구 단일 계층 전환, CraftOS-PC 기반 단위 테스트 하네스(`14/14 PASS`) 및 핵심 코드베이스 런타임 동기화·단위 테스트(`42/42 PASS`) 완료
+- **현재 단계**: **Phase 0** — 기체 통신 40채널($BW=40$) 아키텍처 개편, 사양서 영구 단일 계층 전환, CraftOS-PC 기반 단위 테스트 하네스(`18/18 PASS`) 및 통합 인스톨러 구축·핵심 코드베이스 단위 테스트(`71/71 PASS, 7개 타겟`) 완료
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `ASA` 본 구현 완성, `Cockpit MFD`, `GCS`, `Tower ATC` 구축 (`Runway`·`Docking Arm` 일정 보류)
@@ -37,6 +37,7 @@ Create_Aeroneutics/
 ├── README.md                              # 프로젝트 개요 및 표준 개발 가이드
 ├── GEMINI.md                              # 작업 간 동적 컨텍스트 스냅샷 (<= 80줄)
 ├── AGENTS.md                              # 에이전트 불변 행동 헌장
+├── installer.lua                          # 통합 코드베이스 설치 프로그램 (화면 직접 업로드/플로피/wget)
 │
 ├── docs/                                  # 시스템 사양서 및 아키텍처 문서
 │   ├── system/                            # 마스터 ICD 및 시스템 전역 관계도
@@ -52,6 +53,7 @@ Create_Aeroneutics/
 │
 ├── src/                                   # CC:Tweaked Lua 독립 완결형 멀티 코드베이스
 │   ├── 0_development/alignment/           # 지상 정렬 및 시스템 식별 프로그램
+│   ├── 0_development/installer/           # 통합 인스톨러 코어 및 선언적 매니페스트
 │   ├── 0_infra/                           # 기지 인프라 및 지상 관제 시설 (docking_arm, gac, gps, landing_pad, runway)
 │   ├── 1_control/                         # 실시간 온보드 제어 (asa, tca, vas)
 │   ├── 2_guidance/fcp/                    # 비행 제어 프로그램 및 외루프 유도 (FCP)
@@ -63,6 +65,7 @@ Create_Aeroneutics/
 │
 ├── tests/                                 # 도메인별 단위 테스트 및 하네스 회귀 테스트 슈트
 │   ├── 0_development/alignment/           # Alignment 단위 테스트
+│   ├── 0_development/installer/           # 통합 인스톨러 단위 테스트
 │   ├── 0_infra/gps/                       # GPS 단위 테스트
 │   ├── 1_control/{asa, tca, vas}/         # 온보드 제어기 단위 테스트
 │   ├── 2_guidance/fcp/                    # FCP 단위 테스트

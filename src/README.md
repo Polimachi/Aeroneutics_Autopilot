@@ -18,6 +18,7 @@ Create: Aeronautics 및 CC:Tweaked 환경에서 구동되는 비행선 제어·�
 
 - **`0_development/`**: 개발 계층 (Development Layer)
   - `alignment/`: **Alignment** - 지상 기지 추진기 캘리브레이션 및 횡측 정렬 엔진
+  - `installer/`: **Installer** - 통합 코드베이스 설치 프로그램 코어 및 매니페스트 (루트 `installer.lua`와 연계)
 - **`0_infra/`**: 인프라 및 지상 시설물 계층 (Infrastructure & Ground Facility Layer)
   - `gps/`: **GPS** - 중앙 연산형 고정밀 GPS 측위 서버 및 노드 클러스터
   - `gac/`: **GAC** - 지상 구역 관제사 (Ground Area Controller)
