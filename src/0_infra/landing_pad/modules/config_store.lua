@@ -8,14 +8,24 @@ local DEFAULT_CONFIG_PATH = "/landing_pad/config.json"
 function config_store.get_default_config()
     return {
         version = "2.4.0",
+        ver = "2.4.0",
         facilityId = "PAD_BRAVO_01",
+        padId = "PAD_BRAVO_01",
         sectorId = 1,
+        sectorIndex = 1,
         padIndex = 1,
         mobility = "DYNAMIC",
+        mode = "DYNAMIC",
         gacChannel = 50201,
         sectorFacilityChannel = 50202,
         sectorGpsReplyChannel = 50206,
         tacticalChannel = 50211,
+        channels = {
+            sectorChannel = 50201,
+            sectorFacilityChannel = 50202,
+            sectorGpsReplyChannel = 50206,
+            tacticalChannel = 50211
+        },
         mountingYawOffset = 0.0,
         bodyOffset = {
             forward = 0.0,
@@ -23,6 +33,7 @@ function config_store.get_default_config()
             up = 0.0
         },
         staticPosition = nil,
+        position = { x = 0.0, y = 64.0, z = 0.0 },
         approachHeading = 180.0,
         safeDescentRate = 1.0,
         clearanceZoneRadius = 5.0,
@@ -31,6 +42,8 @@ function config_store.get_default_config()
         slotDurationSec = 120
     }
 end
+
+config_store.create_default = config_store.get_default_config
 
 function config_store.validate_config(cfg)
     if type(cfg) ~= "table" then
