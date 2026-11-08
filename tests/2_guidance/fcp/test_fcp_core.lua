@@ -366,3 +366,50 @@ describe("vectored_vtol tilt slew-rate limiter and strict level interlock", func
         assert_eq(out_land.targetPitch, 0.0, "APPROACH_LAND must enforce strict level 0.0 pitch")
     end)
 end)
+
+describe("vectored_vtol takeoff horizontal lock and approach 2-stage descent", function()
+    local vectored_vtol_driver = require("vectored_vtol_driver")
+    local main = require("main")
+    local cfg = main.load_config()
+
+    it("locks horizontal surge and sway to 0.0 during TAKEOFF until safe altitude", function()
+        local nav = {
+            pos = { x = 0.0, y = 64.0, z = 0.0 },
+            vel = { x = 0.0, y = 1.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        local target = { x = 50.0, y = 100.0, z = -50.0 }
+        local driver_state = {}
+
+        local out_to = vectored_vtol_driver.compute(cfg, nav, target, "TAKEOFF", 0.05, driver_state)
+        assert_eq(out_to.surge, 0.0, "surge must be locked to 0.0 in TAKEOFF below clearance")
+        assert_eq(out_to.sway, 0.0, "sway must be locked to 0.0 in TAKEOFF below clearance")
+        assert_eq(out_to.targetPitch, 0.0, "targetPitch must be 0.0 in TAKEOFF")
+        assert_eq(out_to.targetRoll, 0.0, "targetRoll must be 0.0 in TAKEOFF")
+        assert_eq(out_to.targetClimbRate, 2.5, "targetClimbRate must be takeoffClimbRateMps (2.5)")
+
+        nav.pos.y = 80.0
+        local out_to_cleared = vectored_vtol_driver.compute(cfg, nav, target, "TAKEOFF", 0.05, driver_state)
+        assert_true(out_to_cleared.surge > 0.0, "surge released once clearance altitude reached")
+    end)
+
+    it("stages descent rate in APPROACH_LAND based on landingAlignDistanceM (0.5m)", function()
+        local nav = {
+            pos = { x = 0.0, y = 70.0, z = 0.0 },
+            vel = { x = 0.0, y = -1.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        local driver_state = {}
+        local target_far = { x = 3.0, y = 64.0, z = 4.0 }
+        local out_align = vectored_vtol_driver.compute(cfg, nav, target_far, "APPROACH_LAND", 0.05, driver_state)
+        assert_eq(out_align.targetClimbRate, -1.5, "approachDescentRateMps (-1.5) when unaligned")
+        assert_eq(out_align.targetPitch, 0.0)
+
+        local target_near = { x = 0.1, y = 64.0, z = 0.1 }
+        local out_touchdown = vectored_vtol_driver.compute(cfg, nav, target_near, "APPROACH_LAND", 0.05, driver_state)
+        assert_eq(out_touchdown.targetClimbRate, -0.5, "touchdownDescentRateMps (-0.5) when aligned")
+        assert_eq(out_touchdown.targetPitch, 0.0)
+    end)
+end)

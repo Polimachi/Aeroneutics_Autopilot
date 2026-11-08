@@ -95,6 +95,7 @@ function vectored_vtol_driver.reset_integrals(driver_state)
     driver_state.sway_i = 0.0
     driver_state.heave_i = 0.0
     driver_state.current_pitch = 0.0
+    driver_state.takeoff_origin_y = nil
 end
 
 function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_state)
@@ -140,6 +141,40 @@ function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_st
     local heave = clamp(hkp * (tgt_y - pos.y) - hkd * vel.y + h_i, -1.0, 1.0)
     local throttle = clamp(hover_thr + heave * 0.35, 0.0, 1.0)
 
+    local takeoff_clearance = g.takeoffClearanceAltitudeM or 15.0
+    local takeoff_climb = g.takeoffClimbRateMps or 2.5
+    local approach_descent = g.approachDescentRateMps or -1.5
+    local touchdown_descent = g.touchdownDescentRateMps or -0.5
+    local align_dist = g.landingAlignDistanceM or 0.5
+
+    local target_climb = clamp((tgt_y - pos.y) * 0.5, -5.0, 5.0)
+
+    if fsm_state == "TAKEOFF" then
+        if driver_state then
+            if not driver_state.takeoff_origin_y then
+                driver_state.takeoff_origin_y = pos.y
+            end
+            if pos.y < (driver_state.takeoff_origin_y + takeoff_clearance) then
+                surge = 0.0
+                sway = 0.0
+                target_climb = takeoff_climb
+            end
+        else
+            target_climb = takeoff_climb
+        end
+    elseif fsm_state == "APPROACH_LAND" then
+        local dist_2d = math.sqrt(err_x * err_x + err_z * err_z)
+        if dist_2d > align_dist then
+            target_climb = approach_descent
+        else
+            target_climb = touchdown_descent
+        end
+    else
+        if driver_state then
+            driver_state.takeoff_origin_y = nil
+        end
+    end
+
     local gs = nav.groundSpeed or math.sqrt(vel.x * vel.x + vel.z * vel.z)
     local pitch, roll = vectored_vtol_driver.compute_envelope_attitude(cfg, fsm_state, gs, surge, delta_t, driver_state)
     local prev_h = driver_state and driver_state.prev_heading or head
@@ -148,7 +183,7 @@ function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_st
     return {
         surge = surge, sway = sway, heave = heave, throttle = throttle,
         targetPitch = pitch, targetRoll = roll, targetHeading = cmd_h,
-        targetClimbRate = clamp((tgt_y - pos.y) * 0.5, -5.0, 5.0),
+        targetClimbRate = target_climb,
     }
 end
 
