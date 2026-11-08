@@ -1,4 +1,17 @@
-import os, sys, re
+"""
+Universal Specification Suite Integrity Scanner.
+Validates relative link integrity, in-document metadata tables, revision history,
+deprecation hygiene, base channel formula standard, and mermaid diagram syntax.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SPEC_FILES = [
     'docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md',
@@ -31,27 +44,28 @@ REVISION_HISTORY_SPECS = [
 
 VALID_STATUSES = ['Draft', 'Approved', 'Implemented', 'Deprecated']
 
-def verify_all():
+
+def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
     print("=" * 65)
-    print("Universal Specification Suite Comprehensive Integrity Scanner")
+    print("Universal Specification Suite Integrity Scanner")
     print(f"Inspecting {len(SPEC_FILES)} active specifications...")
+    print(f"Repository Root: {repo_root}")
     print("=" * 65 + "\n")
 
     total_errors = 0
     total_warnings = 0
     link_pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 
-    for path in SPEC_FILES:
-        if not os.path.exists(path):
-            print(f"[ERROR] Missing file: {path}")
+    for rel_path in SPEC_FILES:
+        spec_path = (repo_root / rel_path).resolve()
+        if not spec_path.exists():
+            print(f"[ERROR] Missing file: {rel_path} ({spec_path})")
             total_errors += 1
             continue
 
-        with open(path, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        doc_dir = os.path.dirname(path)
-        base_name = os.path.basename(path)
+        content = spec_path.read_text(encoding='utf-8')
+        doc_dir = spec_path.parent
+        base_name = spec_path.name
         lines = content.splitlines()
 
         print(f">> Checking {base_name} ({len(lines)} lines)")
@@ -60,14 +74,14 @@ def verify_all():
         links = link_pattern.findall(content)
         broken = []
         for text, link in links:
-            if link.startswith('http://') or link.startswith('https://') or link.startswith('#'):
+            if link.startswith('http://') or link.startswith('https://') or link.startswith('#') or link.startswith('mailto:'):
                 continue
             clean = link.split('#')[0]
             if not clean:
                 continue
-            target = os.path.normpath(os.path.join(doc_dir, clean))
-            if not os.path.exists(target):
-                broken.append((clean, target))
+            target = (doc_dir / clean).resolve()
+            if not target.exists():
+                broken.append((clean, str(target)))
 
         if broken:
             print(f"   [FAIL] {len(broken)} broken relative link(s):")
@@ -91,7 +105,6 @@ def verify_all():
             print(f"   [FAIL] Missing standard metadata table (| 항목 | 내용 |)")
             total_errors += 1
         else:
-            # Check 5 mandatory fields
             status_match = re.search(r'\|\s*\*\*문서 상태 \(Status\)\*\*\s*\|\s*`([^`]+)`\s*\|', content)
             ver_match = re.search(r'\|\s*\*\*문서 버전 \(Version\)\*\*\s*\|\s*`([^`]+)`\s*\|', content)
             date_match = re.search(r'\|\s*\*\*최종 수정일 \(Date\)\*\*\s*\|\s*`([^`]+)`\s*\|', content)
@@ -117,7 +130,7 @@ def verify_all():
                     print(f"   [PASS] In-document metadata table verified (Status: {status_val}, Version: {ver_match.group(1).strip()}, Date: {date_match.group(1).strip()})")
 
         # 4. Check Revision History presence & table columns
-        if path in REVISION_HISTORY_SPECS:
+        if rel_path in REVISION_HISTORY_SPECS:
             if '### Revision History' not in content:
                 print(f"   [FAIL] Missing '### Revision History' table")
                 total_errors += 1
@@ -130,7 +143,7 @@ def verify_all():
                         total_warnings += 1
                 print(f"   [PASS] Revision History verified")
 
-        # 5. Check for nested/messy deprecation patterns
+        # 5. Check for nested/awkward deprecation patterns
         nested_patterns = [
             r'구\s*Base\+10',
             r'구\s*Base\+11',
@@ -196,6 +209,50 @@ def verify_all():
 
         print("")
 
+    # Optional README link audit
+    if check_readmes:
+        print(">> Running README relative link audit...")
+        candidate_readmes = [repo_root / "README.md", repo_root / "src" / "README.md"]
+        src_dir = repo_root / "src"
+        if src_dir.exists():
+            candidate_readmes.extend(src_dir.glob("**/README.md"))
+
+        existing_readmes = sorted({r.resolve() for r in candidate_readmes if r.exists()})
+        print(f"   Found {len(existing_readmes)} README file(s) to scan.")
+
+        readme_errors = 0
+        for rpath in existing_readmes:
+            rcontent = rpath.read_text(encoding='utf-8')
+            rdir = rpath.parent
+            rlinks = link_pattern.findall(rcontent)
+            rbroken = []
+            for text, link in rlinks:
+                if link.startswith('http://') or link.startswith('https://') or link.startswith('#') or link.startswith('mailto:'):
+                    continue
+                clean = link.split('#')[0]
+                if not clean:
+                    continue
+                target = (rdir / clean).resolve()
+                if not target.exists():
+                    rbroken.append((clean, str(target)))
+
+            # Stale lifecycle directory check in README links
+            rstale = re.findall(r'\[[^\]]+\]\([^\)]*(?:approved/|implemented/|drafts/|archived/)[^\)]*\)', rcontent)
+
+            rel_display = rpath.relative_to(repo_root) if rpath.is_relative_to(repo_root) else rpath
+            if rbroken or rstale:
+                print(f"   [FAIL] {rel_display}:")
+                for c, t in rbroken:
+                    print(f"      - Broken link: '{c}' -> '{t}' not found")
+                for s in rstale:
+                    print(f"      - Stale lifecycle path: {s}")
+                readme_errors += len(rbroken) + len(rstale)
+            else:
+                print(f"   [PASS] {rel_display} ({len(rlinks)} links valid)")
+
+        total_errors += readme_errors
+        print(f">> README audit complete: {readme_errors} error(s).\n")
+
     print("=" * 65)
     if total_errors == 0:
         print(f"SCAN RESULT: ALL {len(SPEC_FILES)} SPECS 100% CLEAN (0 Errors, {total_warnings} Warnings)")
@@ -204,5 +261,16 @@ def verify_all():
         print(f"SCAN RESULT: FAILED with {total_errors} errors, {total_warnings} warnings.")
         return total_errors
 
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Universal Specification Suite Integrity Scanner")
+    parser.add_argument("--root", type=str, default=None, help="Repository root path override")
+    parser.add_argument("--check-readmes", action="store_true", help="Also verify relative links in README.md, src/README.md, and src/**/README.md")
+    args = parser.parse_args()
+
+    repo_root = Path(args.root).resolve() if args.root else REPO_ROOT
+    return verify_all(repo_root=repo_root, check_readmes=args.check_readmes)
+
+
 if __name__ == '__main__':
-    sys.exit(verify_all())
+    sys.exit(main())
