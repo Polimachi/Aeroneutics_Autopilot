@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 0** (기체 5대 핵심 모듈 40채널 런타임 동기화 및 단위·하네스 테스트 검증 완료 → 사양서 정합성 마무리 및 `Implemented` 상태 전이 대기)
+> **현재 단계**: **Phase 0** (기체 5대 핵심 사양서 Implemented 전이 완료 → 원격 푸시 및 통합 인스톨러 대기)
 
 ---
 
@@ -22,13 +22,14 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 0)
 
-- [ ] **TASK-003: 런타임 코드 검증 및 사양서 상태 전이 (`Approved` → `Implemented`)**
+- [x] **TASK-003: 런타임 코드 검증 및 사양서 상태 전이 (`Approved` → `Implemented`)** (완료일: 2026-11-08)
   - **목표**: 런타임 동작 검증 증거를 최종 확인하고, 워킹 트리 내 미커밋 사양서 변경분을 정리한 뒤 Phase 0 구현 완료 5대 사양서(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 메타데이터 표의 상태를 `Implemented`로 인플레이스 전이 (영구 경로 불변 원칙 준수, 미구현/연기/전역 7종은 `Approved` 유지)
   - **계획서**: `docs/superpowers/plans/2026-11-08-task-003-spec-status-transition-to-implemented.md`
-  - [ ] **TASK-003-0**: 워킹 트리 미커밋 사양서 4종(`AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md`, `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md`, `ALIGNMENT_PROGRAM_SPECIFICATION.md`, `TCA_PROGRAM_SPECIFICATION.md` — 중복 `Revision History` 행 정리 포함) 검토·반영 및 `src/`·`tests/` 레거시 20채널 상수 잔존 0건 선행 감사
-  - [ ] **TASK-003-1**: 하네스 자체 회귀(`python -m unittest discover -s tests/harness -p "test_*.py"`) 및 멀티 타겟 단위 테스트(`python tools/run_unit_tests.py --require-tests --clean-orphans`) 전수 통과 확인
-  - [ ] **TASK-003-2**: 구현 완료 5대 사양서 상단 메타데이터 `문서 상태`를 `Implemented`로 갱신 및 `최종 수정일` 동기화
-  - [ ] **TASK-003-3**: `python scratch/verify_all_specs.py` 사후 무결성 스캔 통과(`0 Errors, 0 Warnings`) 및 컨텍스트 동기화
+  - **완료 요약**: 5대 핵심 사양서 `Implemented` 전이 완료, `verify_spec_status.py` 12종 전수 검증 통과 (5종 `Implemented`, 7종 `Approved`), 단위 테스트 `42/42 PASS`, 하네스 회귀 `14/14 PASS` (커밋 `dd096e1`, `6daa12d`, `dea477e`)
+  - [x] **TASK-003-0**: 워킹 트리 미커밋 사양서 4종(`AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md`, `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md`, `ALIGNMENT_PROGRAM_SPECIFICATION.md`, `TCA_PROGRAM_SPECIFICATION.md` — 중복 `Revision History` 행 정리 포함) 검토·반영 및 `src/`·`tests/` 레거시 20채널 상수 잔존 0건 선행 감사 (커밋 `dd096e1`)
+  - [x] **TASK-003-1**: 하네스 자체 회귀(`python -m unittest discover -s tests/harness -p "test_*.py"`) 및 멀티 타겟 단위 테스트(`python tools/run_unit_tests.py --require-tests --clean-orphans`) 전수 통과 확인 (하네스 14/14 PASS, 단위 테스트 42/42 PASS)
+  - [x] **TASK-003-2**: 구현 완료 5대 사양서 상단 메타데이터 `문서 상태`를 `Implemented`로 갱신 및 `최종 수정일` 동기화 (커밋 `dea477e`)
+  - [x] **TASK-003-3**: `python scratch/verify_all_specs.py` 및 `verify_spec_status.py` 사후 무결성 스캔 통과(`0 Errors, 0 Warnings`) 및 컨텍스트 동기화 (커밋 `6daa12d`, `dea477e`)
 
 - [ ] **TASK-004: 원격 저장소(`origin main`) 푸시 및 인증 완료**
   - **목표**: 로컬 커밋 내역을 원격 GitHub 저장소에 푸시 (`git` 미인식 시 `"C:\Program Files\Git\cmd\git.exe"` 호출)
@@ -84,6 +85,8 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
 
+- [x] **TASK-003: 런타임 코드 검증 및 사양서 상태 전이 (`Approved` → `Implemented`)** (완료일: 2026-11-08)
+  - 5대 핵심 사양서(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) `Implemented` 전이 완료 및 `verify_spec_status.py` 12종 전수 검증 통과 (5종 `Implemented`, 7종 `Approved`), 단위 테스트 `42/42 PASS`, 하네스 회귀 `14/14 PASS` (커밋 `dd096e1`, `6daa12d`, `dea477e`)
 - [x] **TASK-002: 코드베이스 40채널·Zone 단위 테스트 및 하네스 루프 통합 검증** (완료일: 2026-11-08)
   - 6개 활성 타겟(`alignment` 7, `gps` 9, `asa` 3, `tca` 7, `vas` 7, `fcp` 9) 전수 `42/42 PASS` 및 하네스 Python 회귀 테스트 `14/14 PASS`로 통합 종결 (멀티노드 E2E 시나리오는 `TASK-109`로 분리)
 - [x] **TASK-001: 기체 5대 핵심 모듈(`src/`) 통신 채널·Zone 런타임 코드 동기화** (완료일: 2026-11-08)

@@ -2,12 +2,11 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 0** — 기체 5대 핵심 모듈 40채널·Zone 런타임 코드 동기화 및 단위·하네스 테스트 검증 완료.
-- **직전 완료**: `TASK-001`·`TASK-002` 종결 및 루트 4대 문서 정합화 (VAS, TCA, FCP, Alignment, GPS 40채널 동기화, 커밋 `16b8390`~`4c1db74`, 단위 테스트 42/42 PASS, 하네스 회귀 14/14 PASS).
+- **현재 단계**: **Phase 0** — 기체 5대 핵심 모듈 40채널 코드 동기화 및 사양서 Implemented 승격 완료.
+- **직전 완료**: `TASK-003` 완료 (5대 핵심 사양서 Implemented 전이, `verify_spec_status.py` 12종 전수 검증).
 - **다음 착수 후보**:
-  1. `TASK-003`: 워킹 트리 미커밋 사양서 4종 정리·검증 후 구현 완료 5대 사양서 상태 전이 (`Approved` → `Implemented`).
-  2. `TASK-004`: 원격 푸시 (`git push -u origin main`) 사용자 인증 완료 확인.
-  3. `TASK-005`: 통합 코드베이스 설치 프로그램(Unified Installer) 구축.
+  1. `TASK-004`: 원격 푸시 (`git push -u origin main`) 사용자 인증 완료 확인.
+  2. `TASK-005`: 통합 코드베이스 설치 프로그램(Unified Installer) 구축.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
