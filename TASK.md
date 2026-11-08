@@ -26,14 +26,14 @@
 - [ ] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 구현** (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`)
   - GAC 사양서 세부 내용 개편(구 SAS 잔재 청산, FCP/40채널 동기화, Revision History 신설) 및 섹터 대표 비콘(`CH 50003`/`Base_sec+2`), 로컬 백본(`Base_sec+1`), 다속성 패드 슬롯 배정·복행 중재 구현
   - **세부 작업 항목**:
-    - [ ] **TASK-101-1**: GAC 사양서(`GAC_PROGRAM_SPECIFICATION_AND_ICD.md`) 세부 내용 개편 (구 SAS 식별자 `FCP` 치환, 연관 규격서 버전 갱신, 패킷 스키마 동기화, `Revision History` 테이블 신설 및 무결성 검증)
+    - [ ] **TASK-101-1**: GAC 사양서(`docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md`) 세부 내용 개편 (구 SAS 식별자 `FCP` 치환, 연관 규격서 버전 갱신, 패킷 스키마 동기화, `Revision History` 테이블 신설 및 무결성 검증)
     - [ ] **TASK-101-2**: GAC 제어기 설정 로더(`config.lua`) 및 관할 패드 인벤토리/섹터 FSM 구현
     - [ ] **TASK-101-3**: 1Hz 섹터 대표 집약 비콘(`CH 50003` / `Base_sec+2`) 및 관제 디스패치(`CH 50004`) 송출기 구현
     - [ ] **TASK-101-4**: 섹터 로컬 백본(`Base_sec+1`) 패킷 수수 및 2단계 다속성(하드 제약 + 맞바람/거리/하중 가중치) 최적 패드 분배 알고리즘 구현
     - [ ] **TASK-101-5**: 섹터 체크인/진입(`Base_sec+0`), 국지 복행(Go-Around) 격리/대체 패드 재배정, 이륙 인가 및 Tower ATC(`CH 50002`) 핸드오프 구현
-    - [ ] **TASK-101-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/gac/`) 구축 및 통합 인스톨러(`manifest.lua`) 등록
+    - [ ] **TASK-101-6**: CraftOS-PC 단위 테스트 슈트(`tests/0_infra/gac/`) 구축 및 통합 인스톨러(`src/0_development/installer/modules/manifest.lua`) 등록
 
-- [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
+- [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`)
   - 가상 좌표 비콘, 컴퓨터 기준 상대 좌표 오프셋 보정, 동적 항법 센서 자동 바인딩 및 전술 유도 스트리밍 구현
   - **세부 작업 항목**:
     - [ ] **TASK-102-1**: 컴퓨터-패드 중심 상대 오프셋 보정(`relativeOffset`), 동적 센서 자동 탐색/바인딩, 설정 로더(`config.lua`) 및 FSM 상태 머신(`INIT`~`MAINTENANCE`) 구현
@@ -97,22 +97,27 @@
     - [x] **TASK-005-8**: GPS 사양서 메타데이터 `문서 상태`를 `Implemented`로 환원 및 전역 검증(`verify_all_specs.py`, `verify_spec_status.py` 5 Implemented, 7 Approved)
 
 - [x] **TASK-004: 원격 저장소(`origin main`) 푸시 및 인증 완료** (완료일: 2026-11-08)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-004-remote-repository-push.md`
   - GitHub `Aeroneutics_Autopilot` 저장소 확인, Fine-grained PAT Contents Write 권한 갱신 및 원격 초기 커밋 조정(`1ca730b` merge) 후 `git push -u origin main` 완료, 로컬 HEAD와 원격 ref 일치 검증 통과 (커밋 `197172f`)
 - [x] **TASK-003: 런타임 코드 검증 및 사양서 상태 전이 (`Approved` → `Implemented`)** (완료일: 2026-11-08)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-003-spec-status-transition-to-implemented.md`
   - 5대 핵심 사양서(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) `Implemented` 전이 완료 및 `verify_spec_status.py` 12종 전수 검증 통과 (5종 `Implemented`, 7종 `Approved`), 단위 테스트 `42/42 PASS`, 하네스 회귀 `14/14 PASS` (커밋 `dd096e1`, `6daa12d`, `dea477e`)
 - [x] **TASK-002: 코드베이스 40채널·Zone 단위 테스트 및 하네스 루프 통합 검증** (완료일: 2026-11-08)
   - 6개 활성 타겟(`alignment` 7, `gps` 9, `asa` 3, `tca` 7, `vas` 7, `fcp` 9) 전수 `42/42 PASS` 및 하네스 Python 회귀 테스트 `14/14 PASS`로 통합 종결 (멀티노드 E2E 시나리오는 `TASK-109`로 분리)
 - [x] **TASK-001: 기체 5대 핵심 모듈(`src/`) 통신 채널·Zone 런타임 코드 동기화** (완료일: 2026-11-08)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-07-task-001-runtime-40ch-sync.md`
   - $BW=40$ ($Base = 10000 + (N-1) \times 40$) 및 4대 Zone 규격을 `VAS`(`16b8390`, `1db52ed`), `TCA`(`e6be320`, `0f29c5b`), `FCP`(`9da4301`, `34fc867`, `4c1db74`), `Alignment`(`f52cb11`, `c5e8b5a`), `GPS`(`8da2d09`)에 반영 완료 (단위 테스트 `42/42 PASS`, 문법 정적 분석 `7/7 PASS`)
 - [x] **TASK-P0-06: SAS → FCP(Flight Control Program) 전면 명칭 개정 및 디렉토리·식별자 일체화** (완료일: 2026-11-07)
   - 디렉토리/파일명(`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`) 및 런타임 식별자(`source`/`activeSource`='FCP', `hardwareUuid`='FCP-04'), 사양서 12종 및 마스터 ICD 동기화, 단위 테스트 6/6 PASS
 - [x] **TASK-P0-05: CC:Tweaked 하네스 및 단위 테스트 검증 파이프라인 구축** (완료일: 2026-11-07)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-07-universal-unit-test-framework.md`
   - Lua 5.2 문법/금지 모드 정적 분석기(`scratch/validate_lua_syntax.py`), CraftOS-PC 헤드리스 세션·Mock 프레임워크(`harness/unit/`), 멀티 타겟 테스트 러너 CLI(`tools/run_unit_tests.py`) 및 6대 코드베이스 초기 테스트 슈트 구축
 - [x] **TASK-P0-04: 사양서 생명주기 관리 체계 문서 내부화 및 영구 단일 계층 개편** (완료일: 2026-11-07)
   - `docs/specs/{approved,drafts,implemented,archived}/` 디렉토리 분리 제거 및 도메인 직하 단일 계층 평탄화, 12대 규격서 상단 5대 필수 항목 메타데이터 표 도입, `specification-lifecycle-manager`·`skill-workflows.md`·`verify_all_specs.py` 동기화
 - [x] **TASK-P0-03: 사양서 정합성 무결성 검증기 통과** (완료일: 2026-11-07)
   - `scratch/verify_all_specs.py` 전수 검증 (0 Errors, 0 Warnings)
 - [x] **TASK-P0-02: 12대 핵심 사양서 전수 리팩토링 및 10종 승격** (완료일: 2026-11-07)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-07-system-specifications-refactoring.md`
   - 40채널 대역폭, Zero-Fallback 원칙, `ion_thruster` 호환성, 상대 링크 정합성 반영
 - [x] **TASK-P0-01: 기체 통신 40채널($BW=40$) ICD 전면 개편** (완료일: 2026-11-07)
   - `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` 및 `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` 4대 Zone 규격 반영
