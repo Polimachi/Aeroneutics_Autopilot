@@ -22,24 +22,14 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [-] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (`src/0_infra/gcs/`)
-  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현
-  - **하위 작업 내역**:
-    - [-] **TASK-107-1**: GCS 규격서(`GCS_PROGRAM_SPECIFICATION_AND_ICD.md` v1.0.0 Approved) 작성 및 스캐폴딩 설정
-    - [ ] **TASK-107-2**: 40채널 블록 스티키 영속화 관리자(`channel_manager.lua`) 구현
-    - [ ] **TASK-107-3**: 무선 통신 관리자(`network_manager.lua`) 및 CH 50000 / Base+0/1/3 라우팅 구현
-    - [ ] **TASK-107-4**: 원격 비행 C2 명령 생성기(`c2_commander.lua`) 및 E_STOP 직결기 구현
-    - [ ] **TASK-107-5**: 다중 기체 텔레메트리 캐시 및 활성 기체 추적기(`fleet_tracker.lua`) 구현
-    - [ ] **TASK-107-6**: 51x19 분할 TUI 콘솔 화면 렌더러(`ui_renderer.lua`) 구현
-    - [ ] **TASK-107-7**: 메인 데몬 루프(`main.lua`) 및 통합 인스톨러(`manifest.lua`) 등록
-    - [ ] **TASK-107-8**: 종단간(E2E) 시뮬레이션 통합 테스트, 사양서 `Implemented` 승격 및 마일스톤 동기화
+- [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
+  - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
-  - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
+- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발** (Phase 3)
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
@@ -63,6 +53,19 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+
+- [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
+  - **목적 및 성과**: UAFS 항공 생태계 중앙 지상 관제 인프라로서 40채널 블록($N = 1 \sim 1000$, $Base = 10000 + (N-1)\times 40$) 스티키 영속화 관리자(`CH 50000`), 원격 비행 C2 오버라이드(`Base+0`, `GCS_OVERRIDE`), 직결 하드 `E_STOP` 비상차단기(`Base+1`), 실시간 텔레메트리(`Base+3`) 캐시, 51x19 무깜빡임(`term.blit`) 분할 TUI 콘솔 및 메인 데몬 루프 구현 완료. 단위 및 E2E 폐루프 통합 테스트 25/25 PASS (전체 12개 타겟 241/241 PASS), 통합 인스톨러(`manifest.lua`) `gcs` 패키지 등록, 사양서(`GCS_PROGRAM_SPECIFICATION_AND_ICD.md` v1.0.0) `Implemented` 승격 및 정적 무결성(14 SPECS 100% CLEAN, 9 Implemented, 5 Approved) 달성.
+  - **구현 내용**:
+    - [x] **TASK-107-1**: GCS 규격서(`GCS_PROGRAM_SPECIFICATION_AND_ICD.md` v1.0.0) 제정, 설정/레지스트리 스캐폴딩(`gcs_config.json`, `channel_registry.json`) 구성 및 정적 검사기 등록
+    - [x] **TASK-107-2**: 40채널 블록 스티키 영속화 관리자(`channel_manager.lua`, 4/4 PASS) 구현 (`compute_base`, `is_valid_base`, `allocate_block`, `release_block`)
+    - [x] **TASK-107-3**: 무선 통신 관리자(`network_manager.lua`, 5/5 PASS) 구현 (UAFS Envelope v1.9.5, CH 50000, `Base+0/1/3` 동적 개폐 라우팅)
+    - [x] **TASK-107-4**: 원격 비행 C2 명령 생성기(`c2_commander.lua`, 4/4 PASS) 및 하드 비상차단(`E_STOP`) 패킷 생성기 구현
+    - [x] **TASK-107-5**: 다중 기체 텔레메트리 캐시 및 활성 기체 추적기(`fleet_tracker.lua`, 5/5 PASS) 구현 (원형 순환 선택, 5초 타임아웃 플래그)
+    - [x] **TASK-107-6**: 51x19 분할 TUI 콘솔 화면 렌더러(`ui_renderer.lua`, 3/3 PASS) 구현 (`term.blit` 무깜빡임 가상 버퍼)
+    - [x] **TASK-107-7**: 메인 데몬 루프(`main.lua`, 3/3 PASS) 및 통합 인스톨러(`manifest.lua`, 28/28 PASS) `gcs` 패키지 등록
+    - [x] **TASK-107-8**: 종단간(E2E) 시뮬레이션 통합 테스트(`test_gcs_integration.lua`, 1/1 PASS), 사양서 `Implemented` 승격 및 마일스톤 완료 동기화
 
 - [x] **TASK-110: FCP VTOL 제어 고도화** (완료일: 2026-11-08) (`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-110-fcp-vtol-refinement.md`

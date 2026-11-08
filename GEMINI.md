@@ -3,11 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
-- **직전 완료**: `TASK-110` 완료 (VECTORED_VTOL 외루프 3축 Surge/Sway/Heave PID + Anti-windup, CRUISE 모드 15m/s TILT_ASSISTED 피치 슬루율(15°/s), 수평 고정 수직 이륙 및 착륙 패드 2단계 감속 수직 착륙 시퀀스 구현 완료, 단위 테스트 11개 타겟 216/216 PASS, 사양서 `Implemented` 환원).
+- **직전 완료**: `TASK-107` 완료 (GCS CH 50000 40채널 블록 스티키 영속화 관리자, Base+0 원격 C2 오버라이드, Base+1 E_STOP 직결기, Base+3 텔레메트리 캐시, 51x19 TUI 콘솔 및 메인 데몬 루프 구현, 12개 타겟 241/241 PASS, 사양서 `Implemented` 승격, 정적 분석 14 SPECS 100% CLEAN (9 Implemented, 5 Approved)).
 - **다음 착수 후보**:
-  1. `TASK-107`: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현 (`src/0_infra/gcs/`).
-  2. `TASK-111`: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축.
-  3. `TASK-301`: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3).
+  1. `TASK-111`: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축.
+  2. `TASK-301`: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3).
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -23,9 +22,9 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (11개 타겟 216/216 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 241/241 PASS).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (24/24 PASS).
-- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (8 Implemented, 5 Approved).
+- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (9 Implemented, 5 Approved).
 
 ## 4. Gotchas & Invariants
 - **멀티 코드베이스 독립 완결성**: `src/<layer>/<name>/` 간 공용 모듈 직접 참조 금지 (개별 CC 컴퓨터 루트 마운트 단위 캡슐화, 기본 진입점 `main.lua`).
@@ -37,4 +36,5 @@
 - **`ion_thruster` 충돌 조정**: `Create Propulsion: Simulated`의 `ion_thruster` 페리페럴은 허용하며, 금지 규칙은 `kontraption:` 네임스페이스만 차단한다.
 - **온보드 제어기 20Hz 헤드리스 원칙**: VAS/TCA/ASA는 터미널 UI 블로킹 방지를 위해 헤드리스가 기본이며, 디버그 TUI는 `config.json`의 `debug: true` 시 비동기(`parallel`)로만 격리 구동한다.
 - **VECTORED_VTOL 외루프 가이던스**: 3축 Surge/Sway/Heave 완전 PID + Anti-windup, CRUISE 한정 TILT_ASSISTED 15°/s 피치 슬루율, 안전고도 미달 시 수평 차단 수직 이륙 및 패드 0.5m 정렬 2단계 감속 터치다운을 적용한다.
+- **GCS 지상 비행 지휘 콘솔**: `CH 50000` 부트스트랩 스티키 영속화, `Base+0` 원격 C2 오버라이드, `Base+1` 하드 E_STOP 직결 셧다운, `Base+3` 텔레메트리 51x19 무깜빡임 콘솔 모니터링을 적용한다.
 

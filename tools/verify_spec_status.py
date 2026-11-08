@@ -22,6 +22,7 @@ TARGET_IMPLEMENTED = [
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
+    'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
 ]
 
 TARGET_APPROVED = [
@@ -29,7 +30,6 @@ TARGET_APPROVED = [
     'docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
-    'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
 ]
 
