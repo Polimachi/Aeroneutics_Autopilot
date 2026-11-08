@@ -22,7 +22,8 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
+- [-] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (진행 중)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
   - 복수 노드(`GCS`↔`AMM`↔`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션, GCS C2 오버라이드 및 E-STOP 차단 등) 간 다중 틱 교환 시나리오 통합 검증 확장
 
 ---
