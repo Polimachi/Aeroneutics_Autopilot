@@ -5,8 +5,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.1.0` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.2.0` |
 | **최종 수정일 (Date)** | `2026-11-08` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |
 | **주관 도메인 (Domain)** | 중앙 고정밀 GPS 서버 및 분산 노드 군 (GPS Infrastructure) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.2.0` | 2026-11-08 | 독자 `gps/installer.lua` 및 `installer_core.lua` 폐기(`[DEPRECATED]`), 전역 통합 코드베이스 인스톨러(`installer.lua` / `src/0_development/installer/`) 연계 규격화 (직접 업로드, `/disk/installer.lua`, `wget run`, GitHub/Google Drive 이중 소스, `/.version.json` 추적) | 단일 진입점 기반 전역 모듈 일괄 설치 및 버전 관리 체계 확립 |
 | `v2.1.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 반영, 01호기 회신 채널 `Base+5` (`10005`, 구 10045 [DEPRECATED]) 동기화, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
   
 > **연계 규격**: 
@@ -66,8 +67,8 @@
 9. **하이브리드 클라이언트 프로그래밍 API 및 패킷 직접 주입 (`gps/client.lua`)**:
    - 동기식 `gpsClient.locate(alt, timeout)` 편의 함수(기본 500ms 타임아웃, 250ms 경과 시 1회 자동 재전송, 20Hz 비행 제어 루프 내 호출 엄격 금지)와 20Hz 제어루프용 비동기 `request(alt)` / `poll(seq)` 함수를 동시 제공합니다.
    - SAS 등 멀티 채널을 운용하는 상위 항법 스택과의 연동 시 이벤트 큐 오염을 방지하기 위해 외부 수신 패킷 직접 주입 인터페이스(`gpsClient.handleMessage(...)`) 및 관리 모드(`isManaged`)를 제공합니다.
-10. **올인원 디스크 인스톨러 및 기존 데이터 보존 업데이트 (`gps/installer.lua`)**:
-    - 플로피 디스크 또는 공용 저장소에서 1: Server, 2: Swarm Node, 3: Client API를 선택하여 원클릭 설치 및 `startup/00_gps.lua` 분리 등록을 완료하며, 재설치/업데이트 시 기존 `/gps_data/` 설정 파일을 안전하게 보존합니다.
+10. **전역 통합 코드베이스 인스톨러 및 기존 데이터 보존 업데이트 (`installer.lua`, 구 `gps/installer.lua` [DEPRECATED])**:
+    - 플로피 디스크(`/disk/installer.lua`), 웹 다운로드(`wget run`), 또는 루트 직접 업로드(`/installer.lua`) 환경에서 Unified Installer를 통해 3대 GPS 타겟(`gps_server`, `gps_node`, `gps_client`)을 일괄 설치 및 `startup/00_gps.lua` 분리 등록을 완료하며, 재설치/업데이트 시 기존 `/gps_data/` 설정 파일(`nodes.json`, `node_cfg.json`)을 안전하게 보존합니다.
 
 ### 1.2 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서 내에 `[DEPRECATED]` 배지를 부여하고 대체 신규 필드명과 변경 이력을 명시하여 문서상에 보존합니다.
@@ -145,7 +146,7 @@ flowchart TD
 모든 통신 패킷은 상위 엔벨로프 규격을 엄격히 준수하며, `type`에 따라 `payload`의 구조가 결정됩니다.
 
 > [!IMPORTANT]
-> **프로토콜 버전 엄격 일치 정책**: 모든 패킷은 `ver == "1.9.5"` 일치가 강제됩니다. 필수 필드(`altitudeY` 등) 누락 또는 버전 불일치 감지 시 오류 로그를 출력하고, 올인원 인스톨러(`gps/installer.lua`)를 통한 버전 업데이트 및 재부팅을 유도합니다.
+> **프로토콜 버전 엄격 일치 정책**: 모든 패킷은 `ver == "1.9.5"` 일치가 강제됩니다. 필수 필드(`altitudeY` 등) 누락 또는 버전 불일치 감지 시 오류 로그를 출력하고, 통합 인스톨러(`installer.lua`, 구 `gps/installer.lua` [DEPRECATED])를 통한 버전 업데이트 및 재부팅을 유도합니다.
 
 ### 3.1 공통 패킷 엔벨로프 (Common Message Envelope)
 ```lua
@@ -998,15 +999,16 @@ local status = gpsClient.getStatus()
 
 ---
 
-## 9. 올인원 디스크 인스톨러 및 파일 패키징 규격 (`gps/installer.lua`)
+## 9. 통합 코드베이스 인스톨러 배포 및 파일 패키징 규격
 
-플로피 디스크, 엔더 디스크 또는 공용 네트워크 저장소로부터 모든 컴퓨터에 GPS 소프트웨어를 일괄 배포할 수 있도록 단일 인스톨러 스크립트를 제공합니다.
+저장소 전역 통합 코드베이스 인스톨러(`installer.lua`, `src/0_development/installer/`) 체계에 따라 GPS 구성 요소는 통합 인스톨러를 통해 단일 진입점으로 배포 및 관리됩니다.  
+기존 독자 인스톨러인 `gps/installer.lua` 및 `gps/modules/installer_core.lua`는 `[DEPRECATED — Zero-Fallback 제거]` 처리되어 전역 인스톨러 체계로 완전히 통합되었습니다.
 
-### 9.1 소프트웨어 디렉터리 레이아웃 및 4대 역할 번들 (Bundle Roles)
-모듈형 아키텍처 원칙에 따라 순수 알고리즘(`src/modules/`), 하드웨어 추상화 계층(`src/hal/`), 그리고 실행 데몬 진입점으로 엄격히 분리 패키징됩니다.
+### 9.1 소프트웨어 디렉터리 레이아웃 및 분리 원칙
+모듈형 아키텍처 원칙에 따라 순수 알고리즘(`src/0_infra/gps/modules/`), 하드웨어 추상화 계층(`src/0_infra/gps/hal/`), 그리고 실행 데몬 진입점으로 엄격히 분리 패키징됩니다.
 
 ```text
-src/
+src/0_infra/gps/
 ├── modules/                         -- 순수 기능 코어 (Zero-Sleep, 무종속 단위 테스트 전용)
 │   ├── protocol.lua                 -- 패킷 직렬화, 엔벨로프, 검증 및 채널 상수
 │   ├── trilateration.lua            -- 2D WLS, 감쇠 가우스-뉴턴, LOO 잔차 연산
@@ -1014,51 +1016,74 @@ src/
 │   ├── config_store.lua             -- CLI 인수 파싱 및 JSON 스토리지 동기화
 │   ├── client_core.lua              -- 순수 클라이언트 상태 머신 및 타임아웃
 │   ├── commissioning.lua            -- 노드 3초 부팅 FSM 및 5단계 커미셔닝 핸드셰이크
-│   ├── radar_math.lua               -- BBox 기하중심, 1.2x 스팬 및 모니터 격자 투영
-│   └── installer_core.lua           -- 설정 보존 마이그레이션 및 멀티부트 생성기
+│   └── radar_math.lua               -- BBox 기하중심, 1.2x 스팬 및 모니터 격자 투영
 ├── hal/                             -- CC:Tweaked 하드웨어 추상화 계층
 │   ├── storage_hal.lua              -- 원자적 파일 I/O 및 JSON 파서
 │   ├── gps_client.lua               -- 동기/비동기 하이브리드 CC 클라이언트 API
 │   └── wizard_cli.lua               -- 터미널 대화형 셋업 마법사 UI
 ├── server.lua                       -- 중앙 연산 서버 (4탭 모니터 GCS & 3-코루틴 감시자)
 ├── node.lua                         -- 스웜 노드 데몬 (부팅 FSM + 10s 하트비트)
-├── client_entry.lua                 -- 비행체/클라이언트 독립 실행형 측위 CLI
-└── installer.lua                    -- 올인원 대화형 플로피 디스크 인스톨러
+└── client_entry.lua                 -- 비행체/클라이언트 독립 실행형 측위 CLI
 
-/gps_data/                           -- 영구 설정 디렉터리 (재설치 시 원자적 보존)
+(참고: 구 gps/installer.lua, gps/modules/installer_core.lua [DEPRECATED — Zero-Fallback 제거])
+
+/gps_data/                           -- 영구 설정 디렉터리 (재설치/업데이트 시 안전 보존)
 ├── nodes.json                       -- 서버 전용 노드 레지스트리 DB (computerId 바인딩)
 └── node_cfg.json                    -- 스웜 노드 전용 로컬 설정 파일 (좌표 및 역할)
 
 /startup/00_gps.lua                  -- 멀티부트 분리 후크 (기존 startup.lua 보존 공존)
+/.version.json                       -- 설치된 타겟, 버전, 설치 일시, 체크섬 메타데이터 추적
 ```
 
-### 9.2 인스톨러 실행 화면 및 4종 번들 설치 매트릭스
-플로피 디스크(`disk/installer.lua`) 또는 로컬 설치 스크립트 실행 시 역할 선택 메뉴가 표출됩니다.
+### 9.2 배포 경로 3종 및 원격 소스 이중화 규격
+통합 인스톨러는 다양한 CC:Tweaked 실행 환경을 지원하기 위해 3종 배포 경로와 이중 소스 전환을 제공합니다:
+
+1. **로컬 직접 실행 (`/installer.lua`)**: 호스트 디렉터리 마운트 또는 컴퓨터 루트에 업로드된 `installer.lua` 직접 실행.
+2. **플로피/엔더 디스크 (`/disk/installer.lua`)**: 디스크 드라이브 마운트 후 `/disk/installer.lua` 실행을 통한 오프라인 배포.
+3. **웹 원격 실행 (`wget run .../installer.lua`)**: CC:Tweaked HTTP API 활성화 환경에서 원격 인스톨러 스크립트 즉시 다운로드 및 메모리 실행.
+
+**원격 소스 이중화 (Dual Sources)**:
+- **GitHub Raw (`primary`)**: 저장소 메인 브랜치 원격 파일 소스.
+- **Google Drive (`mirror`)**: 대체 미러 저장소 소스.
+- 실행 중 `[S]` 키 토글로 원격 소스를 실시간 전환할 수 있습니다.
+
+**버전 메타데이터 추적 (`/.version.json`)**:
+- 설치 완료 시 `/.version.json`에 `installedTarget`, `version`, `installedAt`, `files` 목록을 기록하여 향후 업데이트 및 무결성 점검에 활용합니다.
+
+### 9.3 통합 인스톨러 CLI 화면 및 3대 GPS 번들 타겟 매트릭스
+인스톨러 실행 시 표출되는 대화형 CLI 레이아웃과 GPS 3대 타겟 번들 구성 매트릭스는 다음과 같습니다:
 
 ```text
-========================================
-   CC-GPS ALL-IN-ONE DISK INSTALLER     
-========================================
-Select installation target:
- [1] Central Server (GCS & Scheduler)
- [2] Swarm Node (Trilateration Beacon)
- [3] Client Library (gps_client API)
- [4] Exit
-----------------------------------------
-Enter choice (1-4): 2
+==================================================
+        UNIFIED CODEBASE INSTALLER v1.0.0         
+   Source: [GitHub Raw] (Press [S] to switch)     
+==================================================
+Select target to install:
+ [1] GPS Central Server   (gps_server)
+ [2] GPS Swarm Node       (gps_node)
+ [3] GPS Client API       (gps_client)
+ [4] Other Targets...
+ [Q] Quit
+--------------------------------------------------
+Enter target: 2
 
-Installing Swarm Node files to /gps/...
-  > Preserving existing customized config in /gps_data/node_cfg.json ... [OK]
-  > Registering multi-boot hook in /startup/00_gps.lua ... [OK]
-[SUCCESS] Swarm Node installed.
+Installing [gps_node] ...
+  > Preserving existing config in /gps_data/node_cfg.json ... [OK]
+  > Preserving existing config in /gps_data/nodes.json ... [OK]
+  > Writing /gps/node.lua ... [OK]
+  > Registering boot hook in /startup/00_gps.lua ... [OK]
+  > Updating /.version.json ... [OK]
+[SUCCESS] Installation complete.
 ```
 
-| 설치 역할 (Role Bundle) | 생성 및 복사 파일 목록 | `startup` 자동 등록 경로 | 설정 보존 및 마이그레이션 정책 |
-| :--- | :--- | :--- | :--- |
-| **1: Server (`server`)** | `/gps/server.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/server.lua")`) | `/gps_data/nodes.json` 완전 보존 |
-| **2: Swarm Node (`node`)**| `/gps/node.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/node.lua")`) | `/gps_data/node_cfg.json` 결번 채우기 마이그레이션 |
-| **3: Client API (`client`)**| `/apis/gps_client.lua` | 자동 실행 등록 없음 (`require("gps_client")`) | 설정 파일 없음 |
-| **4: Installer (`installer`)**| `/disk/installer.lua` | 공용 배포 플로피 디스크 루트 번들 | 원자적 설치기 |
+| 타겟 식별자 (Target ID) | 대상 역할 (Role Bundle) | 배포 및 복사 파일 목록 | `startup` 자동 등록 경로 | 설정 보존 정책 및 비고 |
+| :--- | :--- | :--- | :--- | :--- |
+| `gps_server` | 중앙 연산 서버 (Central Server) | `/gps/server.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/server.lua")`) | `/gps_data/nodes.json` 및 `node_cfg.json` 안전 보존 |
+| `gps_node` | 스웜 측위 비콘 노드 (Swarm Node) | `/gps/node.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/node.lua")`) | `/gps_data/node_cfg.json` 및 `nodes.json` 안전 보존 |
+| `gps_client` | 비행체 클라이언트 API (Client API) | `/apis/gps_client.lua`, `/gps/modules/client_core.lua`, `/gps/modules/protocol.lua` | 자동 실행 등록 없음 (`require("gps_client")`) | 설정 파일 없음 |
+
+> [!NOTE]
+> 구 `gps/installer.lua` 및 `gps/modules/installer_core.lua`는 `[DEPRECATED]` 처리되어 저장소에서 영구 제거(Zero-Fallback)되었으며, 전역 통합 인스톨러(`installer.lua`)가 모든 GPS 구성 요소의 배포와 업데이트를 일원화하여 수행합니다.
 
 ---
 
@@ -1099,7 +1124,7 @@ Installing Swarm Node files to /gps/...
 | **스웜 상호 진단** | **제 3.6절 / 제 5.4절** | `60001 / 60003 / 60004` | `MSG_GPS_DIAG_*` (3단계 상호 핑 및 거리 잔차 모니터링) | 순수 로깅 진단 |
 | **노드 간이 커미셔닝** | **제 3.7절 / 제 6.2절** | `60003 / 60004` | `MSG_GPS_NODE_HELLO` / `OFFER` / `VERIFY_*` / `REG_*` | **컴퓨터ID 영구 바인딩 및 /gps_data/ 통일** |
 | **클라이언트 API 라이브러리** | **제 8절** | API 호출 / handleMessage | `locate()`, `request()`, `poll()`, `handleMessage()` | 하이브리드 프로그래밍 & 큐 가로채기 방지 |
-| **올인원 배포 인스톨러** | **제 9절** | 로컬 디스크 | `gps/installer.lua` (서버/노드/클라이언트 선택 설치) | 원클릭 구성 및 기존 설정 안전 보존 |
+| **통합 배포 인스톨러** | **제 9절** | 로컬/디스크/웹 | `installer.lua` (구 `gps/installer.lua` [DEPRECATED]) | 3대 GPS 타겟(`gps_server`, `gps_node`, `gps_client`) 통합 설치 및 설정 보존 |
 
 ---
 *본 규격서는 CC:Tweaked 자율 비행 시스템의 위치 기반 항법(PNT) 단일 진실 공급원(SSOT)으로 기능합니다.*
