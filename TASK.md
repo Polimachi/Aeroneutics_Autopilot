@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-107 GCS 지상 관제 콘솔 및 40채널 블록 관리자 구현 완료, 차기 과제: TASK-111 E2E 통합 시뮬레이션 / TASK-301 ACRO 수동 조종)
+> **현재 단계**: **Phase 1 & 2** (TASK-111 멀티노드 E2E 통합 시뮬레이션 구축 완료, 차기 과제: TASK-301 ACRO 수동 조종)
 
 ---
 
@@ -22,9 +22,9 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [-] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (진행 중)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
-  - 복수 노드(`GCS`↔`AMM`↔`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션, GCS C2 오버라이드 및 E-STOP 차단 등) 간 다중 틱 교환 시나리오 통합 검증 확장
+- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
+  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
+  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
 
 ---
 
@@ -43,15 +43,24 @@
 - [ ] **[연기] TASK-202: 편대 미션 오케스트레이터 (`src/4_mission/`) 설계 및 구현**
   - Zone 4(`Base+30~39`) 기반 다중 기체 편대 비행 및 임무 분배 총괄 (일정 연기)
 
-### 🛠️ Phase 3 예정 백로그 (Physical Hardware & Manual Control)
-
-- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
-  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
-  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
-
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+
+- [x] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (완료일: 2026-11-08, 커밋 `646d831` ~ `81e584b`) (`harness/simulation/`, `tools/run_e2e_tests.py`, `tests/e2e/`, `tests/harness/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
+  - **목적 및 성과**: 다중 노드 격리 가상 버스(`virtual_bus.lua`), Cobalt Lua 5.2 `_ENV` 기반 게스트 샌드박스(`node_sandbox.lua`), 자동화 E2E 테스트 러너(`tools/run_e2e_tests.py`) 구축 및 6대 핵심 통합 시나리오(부트스트랩/텔레메트리, 웨이포인트 폐루프, GPS 10Hz 스웜 측위, 행거 캘리브레이션/OLS, GCS C2 오버라이드/E-STOP, GAC/패드 3-Tier 전술 착륙) 검증 완료. 전체 6개 E2E 슈트(6/6 PASS, ~490ms), 12개 유닛 타겟(241/241 PASS), Python 하네스 테스트(28/28 PASS), 14개 사양서(100% CLEAN, 9 Implemented, 5 Approved) 달성.
+  - **구현 내용**:
+    - [x] **TASK-111-1**: 가상 RF 네트워크 버스 및 패킷 트레이서(`harness/simulation/virtual_bus.lua`) 구현
+    - [x] **TASK-111-2**: 멀티노드 게스트 격리 샌드박스(`harness/simulation/node_sandbox.lua`) 구현
+    - [x] **TASK-111-3**: E2E 시뮬레이션 CLI 테스트 러너(`tools/run_e2e_tests.py`, `tests/harness/test_e2e_runner.py`) 구축
+    - [x] **TASK-111-4**: 시나리오 1 — GCS 부트스트랩 채널 할당 및 실시간 텔레메트리 다운링크 검증 (`test_e2e_bootstrap_and_telemetry.lua`)
+    - [x] **TASK-111-5**: 시나리오 2 — AMM 웨이포인트 큐 순항 및 FCP/VAS/TCA/ASA 유도 제어 폐루프 검증 (`test_e2e_waypoint_guidance.lua`)
+    - [x] **TASK-111-6**: 시나리오 3 — 고정밀 GPS 10Hz 측위 핑, 스웜 보고 및 FCP 항법 융합 검증 (`test_e2e_gps_triangulation.lua`)
+    - [x] **TASK-111-7**: 시나리오 4 — 격납고 Alignment 센서/제어면 캘리브레이션 세션 및 OLS 동기화 검증 (`test_e2e_hangar_alignment.lua`)
+    - [x] **TASK-111-8**: 시나리오 5 — GCS C2 오버라이드, AMM 무반향 감청 및 하드 E_STOP 직결 차단 검증 (`test_e2e_c2_and_estop.lua`)
+    - [x] **TASK-111-9**: 시나리오 6 — GAC & 착륙패드 3-Tier 스마트 전술 착륙 시퀀스 검증 (`test_e2e_facility_landing.lua`)
+    - [x] **TASK-111-10**: 전체 회귀 검증, 마일스톤 동기화 및 작업 완결
 
 - [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08, 커밋 `e9febe6` ~ `e8c25b3`) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
