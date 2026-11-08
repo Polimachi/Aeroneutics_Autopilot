@@ -3,8 +3,8 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — Phase 0(기반 구축·도구화) 전 과제 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
-- **직전 완료**: `TASK-114-1` 완료 (GAC v1.4.0, 착륙패드 v2.4.1, 도킹암 v1.11.0 전용 시설물 사양서 개정 및 14 SPECS 100% CLEAN 동기화, 8 Implemented, 6 Approved).
-- **현재 활성**: `TASK-111` (멀티노드 E2E 패킷 시퀀스 시뮬레이션 프레임워크 구축 진행 중) / `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기).
+- **직전 완료**: `TASK-111` 완료 (멀티노드 종단간(E2E) 패킷 시퀀스 시뮬레이션 및 테스트 실효성 검증 체계 구축: virtual_bus, node_sandbox, run_e2e_tests.py, run_mutation_tests.py, 20개 돌연변이 살상률 100.0%, 6대 E2E 시나리오 6/6 PASS, 12개 유닛 타겟 248/248 PASS, 하네스 29/29 PASS, 정적 분석 14 SPECS 100% CLEAN).
+- **현재 활성**: `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기) / `TASK-010` (플레이북 체계 구축).
 - **다음 착수 후보**:
   1. `TASK-007`: 구버전 명칭(UAP/SAS/WAP) 전면 척결 및 회귀 방지 테스트 슈트 구축.
   2. `TASK-201`: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성.
@@ -19,16 +19,17 @@
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
 - `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`).
+- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
 - `.agent/`: 온디맨드 이력(`memory/workspace-root.md`), 규칙 3종(`rules/`), 전문 스킬 13종(`skills/`), 안전 훅(`hooks/`).
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 241/241 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 248/248 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (6개 시나리오 6/6 PASS).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (28/28 PASS).
+- **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (20/20 KILLED, 100.0% 살상률).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (29/29 PASS).
 - **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (8 Implemented, 6 Approved).
 
 ## 4. Gotchas & Invariants

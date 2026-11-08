@@ -599,3 +599,25 @@ describe("tca tui_dashboard and async/headless execution", function()
         assert_true(daemon.adapterState.lastSignal == 0, "thrust must be cut on pause/terminate")
     end)
 end)
+
+describe("tca mutation hardening invariants", function()
+    it("verifies packet_protocol rejects unsupported version (MUT-02)", function()
+        local packet_protocol = require("packet_protocol")
+        local ok, err = packet_protocol.verify_packet({
+            ver = "0.9.0", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_THRUST_CMD", payload = {}
+        })
+        assert_false(ok)
+        assert_eq(err, "UNSUPPORTED_VERSION")
+    end)
+
+    it("verifies watchdog_sentinel executes onTimeoutCb when expired (MUT-08)", function()
+        local watchdog_sentinel = require("watchdog_sentinel")
+        local timeoutFired = false
+        local wd = watchdog_sentinel.init(300, function() timeoutFired = true end)
+        wd:feed(1, 1000)
+        assert_false(wd:is_expired(1200))
+        assert_false(timeoutFired)
+        assert_true(wd:is_expired(1350))
+        assert_true(timeoutFired)
+    end)
+end)

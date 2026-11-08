@@ -1,8 +1,8 @@
-# Create_Aeroneutics — Task Management & Roadmap (`TASK.md`)
+# Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-107 GCS 지상 관제 콘솔 및 40채널 블록 관리자 구현 완료, 활성: TASK-111 E2E 통합 시뮬레이션 / TASK-114 GAC 전용 시설물 런타임 구현)
+> **현재 단계**: **Phase 1 & 2** (TASK-111 멀티노드 E2E 통합 시뮬레이션 및 돌연변이 테스트 구축 완료, 활성: TASK-114 GAC 전용 시설물 런타임 구현 / TASK-010 플레이북 체계 구축)
 
 ---
 
@@ -31,10 +31,6 @@
   - [ ] **TASK-010-4**: 온보드 제어 도메인 매뉴얼(`playbook/1_control/vas.md`, `playbook/1_control/tca.md`) 작성
   - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성
   - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증
-
-- [-] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (진행 중)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
-  - 분산 CC:Tweaked 노드(`GCS`, `AMM`, `FCP`, `VAS`, `TCA`, `ASA`, `GPS`, `Alignment`, `Landing Pad`) 대상 격리 샌드박스 및 가상 RF 통신 버스(`VirtualBus`), CLI 러너(`tools/run_e2e_tests.py`), 6대 다중 틱 시나리오 검증
 
 - [ ] **TASK-114: GAC 전용 시설물(Dedicated Facility) 지원 및 2단계 다속성 분배 엔진/TUI 확장**
   - **사양서 상태**: `docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md` (v1.4.0 Approved)
@@ -67,6 +63,10 @@
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
   - Layer 4 (`src/4_mission/amp/`) 온보드/지상 겸용 미션 플래너, 인프라 기동 6종 체계(런치패드, 활주로, 도킹 암) 및 3대 도메인 13개 체크포인트 행동 규격 제정 (`docs/specs/4_mission/amp/AMP_PROGRAM_SPECIFICATION.md`) (구 TASK-202 편대 미션 오케스트레이터 및 지상 관제 디스패처 기능 통합 대체)
 
+- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
+  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
+  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
+
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
@@ -84,15 +84,27 @@
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
 
-### 🛠️ Phase 3 예정 백로그 (Physical Hardware & Manual Control)
-
-- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
-  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
-  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
-
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (완료일: 2026-11-08, 커밋 `646d831` ~ `81e584b`) (`harness/simulation/`, `tools/run_e2e_tests.py`, `tests/e2e/`, `tests/harness/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
+  - **목적 및 성과**: 다중 노드 격리 가상 버스(`virtual_bus.lua`), Cobalt Lua 5.2 `_ENV` 기반 게스트 샌드박스(`node_sandbox.lua`), 자동화 E2E 테스트 러너(`tools/run_e2e_tests.py`), 자동화 돌연변이 테스터(`tools/run_mutation_tests.py`) 구축 및 6대 핵심 통합 시나리오(부트스트랩/텔레메트리, 웨이포인트 폐루프, GPS 10Hz 스웜 측위, 행거 캘리브레이션/OLS, GCS C2 오버라이드/E-STOP, GAC/패드 3-Tier 전술 착륙) 검증 완료. 전체 6개 E2E 슈트(6/6 PASS, ~410ms), 12개 유닛 타겟(248/248 PASS), 돌연변이 살상률 100.0%(20/20 KILLED), Python 하네스 테스트(29/29 PASS), 14개 사양서(100% CLEAN, 8 Implemented, 6 Approved) 달성.
+  - **구현 내용**:
+    - [x] **TASK-111-1**: 가상 RF 네트워크 버스 및 패킷 트레이서(`harness/simulation/virtual_bus.lua`) 구현
+    - [x] **TASK-111-2**: 멀티노드 게스트 격리 샌드박스(`harness/simulation/node_sandbox.lua`) 구현
+    - [x] **TASK-111-3**: E2E 시뮬레이션 CLI 테스트 러너(`tools/run_e2e_tests.py`, `tests/harness/test_e2e_runner.py`) 구축
+    - [x] **TASK-111-4**: 시나리오 1 — GCS 부트스트랩 채널 할당 및 실시간 텔레메트리 다운링크 검증 (`test_e2e_bootstrap_and_telemetry.lua`)
+    - [x] **TASK-111-5**: 시나리오 2 — AMM 웨이포인트 큐 순항 및 FCP/VAS/TCA/ASA 유도 제어 폐루프 검증 (`test_e2e_waypoint_guidance.lua`)
+    - [x] **TASK-111-6**: 시나리오 3 — 고정밀 GPS 10Hz 측위 핑, 스웜 보고 및 FCP 항법 융합 검증 (`test_e2e_gps_triangulation.lua`)
+    - [x] **TASK-111-7**: 시나리오 4 — 격납고 Alignment 센서/제어면 캘리브레이션 세션 및 OLS 동기화 검증 (`test_e2e_hangar_alignment.lua`)
+    - [x] **TASK-111-8**: 시나리오 5 — GCS C2 오버라이드, AMM 무반향 감청 및 하드 E_STOP 직결 차단 검증 (`test_e2e_c2_and_estop.lua`)
+    - [x] **TASK-111-9**: 시나리오 6 — GAC & 착륙패드 3-Tier 스마트 전술 착륙 시퀀스 검증 (`test_e2e_facility_landing.lua`)
+    - [x] **TASK-111-10**: 테스트 실효성 검증 및 20개 돌연변이 테스트 슈트 구축 (`tools/run_mutation_tests.py`, `tests/harness/test_mutation_runner.py`)
+      - 20개 결정론적 돌연변이 자동 주입 및 10대 도메인 살상률 검증 (초기 12/20 -> 단위 테스트 보강 후 20/20 KILLED, 100.0% 살상률 달성).
+      - 6대 E2E 시나리오 프로덕션 디스패처/상태머신 직결 및 음수/침해 경로(도메인 스푸핑, 비인가 버전, 중량 초과, 노드 부족) 검증.
+    - [x] **TASK-111-11**: 전체 회귀 검증, 마일스톤 동기화 및 작업 완결
 
 - [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08, 커밋 `e9febe6` ~ `e8c25b3`) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
@@ -188,10 +200,3 @@
     - [x] **TASK-100-1**: 단위 테스트 하네스(`harness/unit/engine.py`) 공용 `/lib/` 자동 스테이징 및 `test_sdk.lua` 정밀 CC:Avionics 4종 Mock 추가
     - [x] **TASK-100-2**: `src/0_development/sensors/avionics_sensors.lua` 4종 센서 표준 탐색·단건/3축/병렬(`mainThread`) 계측 함수 및 단위 테스트 슈트(`tests/0_development/sensors/`, 9/9 PASS) 구현
     - [x] **TASK-100-3**: 통합 인스톨러(`manifest.lua`, `startup_generator.lua`) `/lib/avionics_sensors.lua` 번들 배포·경로 주입 및 전체 회귀 검증(85/85 PASS)
-
-- [x] **TASK-006: 검증 스크립트 정식 도구화(`scratch/` → `tools/`) 및 하위 문서 구 경로 정리** (완료일: 2026-11-08, 커밋 `8ab621e`, `44ef922`, `c4c4a6e`, `1d3b658`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-006-tooling-and-spec-links-cleanup.md`
-  - **구현 내용**:
-    - [x] **TASK-006-1**: `verify_all_specs.py`·`validate_lua_syntax.py`·`verify_spec_status.py`의 `tools/` 이관, 동적 DLL 탐색 및 90개 Lua 전수 검사 지원, 일회성 `scratch/` 스크립트 정리 및 전용 `scratch/README.md` 구축
-    - [x] **TASK-006-2**: `src/1_control/asa/README.md` 및 `src/0_infra/gac/README.md` 내 폐기된 `docs/specs/approved/...` 링크 제거, 영구 단일 경로 동기화 및 `tools/verify_all_specs.py --check-readmes` 0 error 통과
-    - [x] **TASK-006-1B**: 도구 무결성 자동화 테스트(`tests/harness/test_tools_integrity.py`, 5/5 PASS) 작성, 전체 하네스 회귀(23/23 PASS) 및 루트 문서(`README.md`, `GEMINI.md`, `TASK.md`) 동기화

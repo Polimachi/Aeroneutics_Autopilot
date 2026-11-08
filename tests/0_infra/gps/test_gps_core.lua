@@ -75,6 +75,14 @@ describe("gps trilateration numerical solver", function()
 
         assert_near(solvedX, craftX, 0.05, "solved X should match true craft X")
         assert_near(solvedZ, craftZ, 0.05, "solved Z should match true craft Z")
+
+        -- Full solve status validation (MUT-09)
+        local fullSol, solErr = trilateration.solve(nodes, craftY, { minX = -100, maxX = 100, minZ = -100, maxZ = 100 })
+        assert_nil(solErr)
+        assert_not_nil(fullSol)
+        assert_eq(fullSol.status, "FIX_OK")
+        assert_near(fullSol.x, craftX, 0.1)
+        assert_near(fullSol.z, craftZ, 0.1)
     end)
 end)
 
@@ -204,3 +212,20 @@ describe("gps config_store 4-channel node configuration and standalone gps_clien
     end)
 end)
 
+
+describe("radar_math centroid and bounding box calculations", function()
+    local radar_math = require("radar_math")
+
+    it("computes centroid and span from points accurately (MUT-10)", function()
+        local pts = {
+            { x = 10, z = 20 },
+            { x = 30, z = 40 },
+        }
+        local bounds = radar_math.computeCentroidSpan(pts, 1.0)
+        assert_not_nil(bounds)
+        assert_eq(bounds.centerX, 20)
+        assert_eq(bounds.centerZ, 30)
+        assert_eq(bounds.minX, 10)
+        assert_eq(bounds.maxX, 30)
+    end)
+end)

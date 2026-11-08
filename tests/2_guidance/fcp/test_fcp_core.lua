@@ -125,6 +125,13 @@ describe("channel_sentinel 40-channel validation, bootstrap and rebind", functio
         assert_eq(rb_msg.payload.action, "ROLLBACK")
         assert_nil(state.rebindTx, "rebindTx must be cleared upon ROLLBACK")
     end)
+
+    it("validates on_block_assign candidate base assignment (MUT-03)", function()
+        local state = channel_sentinel.init({ channels = { baseChannel = 10000 } })
+        channel_sentinel.on_block_assign(state, { baseChannel = 10040 })
+        assert_eq(state.candidateBase, 10040, "candidateBase must be assigned to 10040")
+        assert_eq(state.status, "START_PROBE")
+    end)
 end)
 
 describe("network_manager and fcp_runtime 40-channel binding and Base+5 GPS link", function()
