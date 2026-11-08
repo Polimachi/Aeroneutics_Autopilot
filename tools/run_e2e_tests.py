@@ -134,7 +134,7 @@ def run_e2e_cli(
 
         runner_cfg = {
             "test_files": rel_test_files,
-            "filter_substr": args.filter or "",
+            "filter_substr": "",
             "instruction_budget": 500000,
         }
         (harness_dest / "config.json").write_text(
@@ -198,15 +198,13 @@ for _, tf in ipairs(cfg.test_files) do
     end
 end
 
-local rep = R.finalize_and_write_results()
-fs.makeDir("/_harness_out")
-local f = fs.open("/_harness_out/result.json", "w")
-f.write(textutils.serializeJSON(rep))
-f.close()
+R.write_result({
+    suites = R.suites,
+    logs = R.logs or {},
+    errors = R.errors or {},
+})
 
-local flag = fs.open("/_harness_out/done.flag", "w")
-flag.write("DONE")
-flag.close()
+os.shutdown()
 """
         (c0 / "startup.lua").write_text(startup_script, encoding="utf-8")
 
