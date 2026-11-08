@@ -22,7 +22,8 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
+- [-] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (진행 중)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
   - 복수 노드(`GCS`↔`AMM`↔`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션, GCS C2 오버라이드 및 E-STOP 차단 등) 간 다중 틱 교환 시나리오 통합 검증 확장
 
 ---
@@ -52,7 +53,7 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
 
-- [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
+- [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08, 커밋 `e9febe6` ~ `e8c25b3`) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
   - **목적 및 성과**: UAFS 항공 생태계 중앙 지상 관제 인프라로서 40채널 블록($N = 1 \sim 1000$, $Base = 10000 + (N-1)\times 40$) 스티키 영속화 관리자(`CH 50000`), 원격 비행 C2 오버라이드(`Base+0`, `GCS_OVERRIDE`), 직결 하드 `E_STOP` 비상차단기(`Base+1`), 실시간 텔레메트리(`Base+3`) 캐시, 51x19 무깜빡임(`term.blit`) 분할 TUI 콘솔 및 메인 데몬 루프 구현 완료. 단위 및 E2E 폐루프 통합 테스트 25/25 PASS (전체 12개 타겟 241/241 PASS), 통합 인스톨러(`manifest.lua`) `gcs` 패키지 등록, 사양서(`GCS_PROGRAM_SPECIFICATION_AND_ICD.md` v1.0.0) `Implemented` 승격 및 정적 무결성(14 SPECS 100% CLEAN, 9 Implemented, 5 Approved) 달성.
   - **구현 내용**:
@@ -65,7 +66,7 @@
     - [x] **TASK-107-7**: 메인 데몬 루프(`main.lua`, 3/3 PASS) 및 통합 인스톨러(`manifest.lua`, 28/28 PASS) `gcs` 패키지 등록
     - [x] **TASK-107-8**: 종단간(E2E) 시뮬레이션 통합 테스트(`test_gcs_integration.lua`, 1/1 PASS), 사양서 `Implemented` 승격 및 마일스톤 완료 동기화
 
-- [x] **TASK-110: FCP VTOL 제어 고도화** (완료일: 2026-11-08) (`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
+- [x] **TASK-110: FCP VTOL 제어 고도화** (완료일: 2026-11-08, 커밋 `21f4e76` ~ `e6b22c8`) (`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-110-fcp-vtol-refinement.md`
   - **목적 및 성과**: VECTORED_VTOL 기종의 외루프 유도 제어기를 3축(Surge/Sway/Heave) 완전 PID + Anti-windup, CRUISE 모드 한정 15m/s TILT_ASSISTED 피치 슬루율(최대 15°/s) 완화, 수평 고정 수직 이륙 및 착륙 패드 정렬 2단계 감속 수직 착륙 시퀀스로 전면 고도화. 단위 테스트 슈트 보강(FCP 17/17 PASS, 전체 11개 타겟 216/216 PASS), 사양서(`FCP_PROGRAM_SPECIFICATION.md` v1.13.0) `Implemented` 환원 및 정적 무결성(13 SPECS 100% CLEAN) 달성.
   - **구현 내용**:
@@ -74,7 +75,7 @@
     - [x] **TASK-110-3**: TILT_ASSISTED 모드 천이 피치 슬루율(15°/s) 완화 및 CRUISE 외 전 상태 STRICT_LEVEL($0.0^\circ$) 강제 인터록 구현
     - [x] **TASK-110-4**: 수평 이동 차단 수직 이륙 및 착륙 패드 정렬 2단계 감속 수직 착륙 시퀀스 구현 및 회귀 검증 통과
 
-- [x] **TASK-113: 온보드 제어기(VAS, TCA, ASA) 헤드리스 기본 구동 및 `parallel` 비동기 디버그 TUI 분리** (완료일: 2026-11-08) (`docs/specs/1_control/`, `src/1_control/`, `tests/1_control/`)
+- [x] **TASK-113: 온보드 제어기(VAS, TCA, ASA) 헤드리스 기본 구동 및 `parallel` 비동기 디버그 TUI 분리** (완료일: 2026-11-08, 커밋 `b5ee552` ~ `b2c5d5a`) (`docs/specs/1_control/`, `src/1_control/`, `tests/1_control/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-113-headless-parallel-debug-tui.md`
   - **목적 및 성과**: 터미널 렌더링 부하를 제거하여 실시간 20Hz 제어 루프를 보장하고, `debug: true` 설정 시에만 ComputerCraft `parallel` API 기반 비동기 디버그 TUI를 안전하게 구동하는 구조 개편 완료. 단위 테스트 슈트 보강(VAS 23/23, TCA 19/19, ASA 15/15 PASS), 사양서(`VAS_PROGRAM_SPECIFICATION.md` v1.16.0, `TCA_PROGRAM_SPECIFICATION.md` v1.10.0) `Implemented` 환원 및 정적 무결성(13 SPECS 100% CLEAN) 달성.
   - **구현 내용**:
@@ -84,7 +85,7 @@
     - [x] **TASK-113-4**: TCA(`src/1_control/tca/`) 및 ASA(`src/1_control/asa/`) 메인 루프 헤드리스 전환 및 비동기 디버그 뷰 분리
     - [x] **TASK-113-5**: 단위 테스트 슈트 보강(헤드리스/디버그 TUI 격리 동작 검증) 및 사양서 `Implemented` 환원
 
-- [x] **TASK-200: AMM (Aircraft Mission Manager & Cockpit MFD 통합 단말) 구현** (완료일: 2026-11-08) (`docs/specs/3_planning/amm/`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
+- [x] **TASK-200: AMM (Aircraft Mission Manager & Cockpit MFD 통합 단말) 구현** (완료일: 2026-11-08, 커밋 `3b2907a`) (`docs/specs/3_planning/amm/`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amm-mission-manager.md`
   - TASK-106(Cockpit MFD)을 완전 병합하여 51x19 분할 TUI(5Hz 계기판 HUD + 미션 큐 및 C2 관리), 단방향 순차 웨이포인트 큐, JSON 영속화, GCS C2 무반향 감청, 원터치 핫키 및 CLI 대화형 인터페이스 일체화 단말 구현 완료. 사양서 v1.0.0 `Implemented` 승격, 단위/통합 테스트(29/29 PASS) 및 통합 인스톨러(`manifest.lua`) 등록 완료.
   - **구현 내용**:
