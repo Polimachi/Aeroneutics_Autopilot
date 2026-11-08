@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 (진행 중)** (TASK-112 VAS 센서 표준화 완료, TASK-106 Cockpit MFD 대기)
+> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-113 온보드 제어기 헤드리스/비동기 TUI 구현 완료 및 검증 통과, TASK-110 FCP VTOL 제어 고도화 착수 대기)
 
 ---
 
@@ -15,31 +15,29 @@
 - **도메인 경로 매핑 기준**: `docs/specs/`, `src/`, `tests/` 간 1:1 도메인 계층 구조는 [README.md](README.md)의 디렉토리 레이아웃을 따른다.
 - **유저 호출 예시**:
   - `TASK.md 확인하고 다음 남은 작업 진행해줘`
-  - `TASK.md의 TASK-101 작업 계획 세워줘`
-  - `TASK.md의 TASK-102 작업 계획 세워줘`
+  - `TASK.md의 TASK-200 작업 진행해줘`
   - `TASK.md 상태 점검해줘`
 
 ---
 
-## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1)
+## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-- [ ] **TASK-106: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현**
-  - 평시 5Hz(`FCP`) / ACRO 20Hz(`VAS`) `Base+3` HUD 렌더링 및 `Base+0`·`Base+1` C2/비상 선점 송출 구현
+- [ ] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
+  - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
+  - **하위 작업 내역**:
+    - [ ] **TASK-110-1**: FCP 사양서(`FCP_PROGRAM_SPECIFICATION.md`) VTOL 유도 모드 및 천이(Transition) FSM 규격 개정 (`Approved` 전이)
+    - [ ] **TASK-110-2**: 호버링 위치/고도 유지 PID 및 TECS 수직 속도 보정 로직 고도화
+    - [ ] **TASK-110-3**: 수직 이착륙 천이(Transition) 가속/감속 시퀀스 및 틸트 각도/추력 인터록 제어 구현
+    - [ ] **TASK-110-4**: FCP VTOL 단위 테스트 슈트 보강 및 통합 회귀 검증
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-110: FCP VTOL 제어 고도화** (`src/2_guidance/fcp/`)
-  - VTOL 호버링 안정성, 수직 이착륙 천이(Transition) 모드 제어, 정밀 고도 유지 및 외란 보정 알고리즘 고도화
+- [ ] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (`src/0_infra/gcs/`)
+  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현
 - [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
   - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
-- [ ] **TASK-200: Planning 계층 프로그램 사양서 생성** (`docs/specs/3_planning/`)
-  - 3차원 글로벌/로컬 경로 계획, 동적 장애물 회피, 웨이포인트 스케줄링 및 FCP 유도 연동 인터페이스 규격서 작성
-- [ ] **TASK-201: 경로 계획 모듈 (`src/3_planning/`) 설계 및 구현**
-  - 3차원 장애물 회피 및 비행 웨이포인트 스케줄링
-- [ ] **TASK-202: 편대 미션 오케스트레이터 (`src/4_mission/`) 설계 및 구현**
-  - Zone 4(`Base+30~39`) 기반 다중 기체 편대 비행 및 임무 분배 총괄
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
@@ -49,16 +47,47 @@
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
   - 기초 모듈 및 단위 테스트(`3/3 PASS`)를 기반으로 `Base+11` 20Hz 구동 루프, `peripheral.find` 동적 바인딩 및 300ms Safe Glide Trim 본체 엔트리 완성 (일정 연기 — 사양서 `Approved` 유지)
-- [ ] **[연기] TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현**
-  - 기체 40채널 블록(`10000~49999`, $N=1\sim 1000$) 스티키 배정·충돌 중재 및 원격 C2 콘솔 구현 (일정 연기)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
+- [ ] **[연기] TASK-202: 편대 미션 오케스트레이터 (`src/4_mission/`) 설계 및 구현**
+  - Zone 4(`Base+30~39`) 기반 다중 기체 편대 비행 및 임무 분배 총괄 (일정 연기)
+
+### 🛠️ Phase 3 예정 백로그 (Physical Hardware & Manual Control)
+
+- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
+  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
+  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
 
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
 
-- [x] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (완료일: 2026-11-08, 커밋 `1ee16b2` ~ `3c6b3e6`) (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
+- [x] **TASK-113: 온보드 제어기(VAS, TCA, ASA) 헤드리스 기본 구동 및 `parallel` 비동기 디버그 TUI 분리** (완료일: 2026-11-08) (`docs/specs/1_control/`, `src/1_control/`, `tests/1_control/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-113-headless-parallel-debug-tui.md`
+  - **목적 및 성과**: 터미널 렌더링 부하를 제거하여 실시간 20Hz 제어 루프를 보장하고, `debug: true` 설정 시에만 ComputerCraft `parallel` API 기반 비동기 디버그 TUI를 안전하게 구동하는 구조 개편 완료. 단위 테스트 슈트 보강(VAS 23/23, TCA 19/19, ASA 15/15 PASS), 사양서(`VAS_PROGRAM_SPECIFICATION.md` v1.16.0, `TCA_PROGRAM_SPECIFICATION.md` v1.10.0) `Implemented` 환원 및 정적 무결성(13 SPECS 100% CLEAN) 달성.
+  - **구현 내용**:
+    - [x] **TASK-113-1**: VAS/TCA/ASA 사양서(`VAS_PROGRAM_SPECIFICATION.md`, `TCA_...`, `ASA_...`) 헤드리스/디버그 TUI 동작 규격 개정 (`Approved` 전이)
+    - [x] **TASK-113-2**: `config.json` 로더에 `debug` 플래그 스키마 추가 및 기본값(`debug: true` 개발 기본값) 설정
+    - [x] **TASK-113-3**: VAS(`src/1_control/vas/`) 메인 루프 헤드리스 전환 및 `parallel` 기반 비동기 `ui_renderer` 분리
+    - [x] **TASK-113-4**: TCA(`src/1_control/tca/`) 및 ASA(`src/1_control/asa/`) 메인 루프 헤드리스 전환 및 비동기 디버그 뷰 분리
+    - [x] **TASK-113-5**: 단위 테스트 슈트 보강(헤드리스/디버그 TUI 격리 동작 검증) 및 사양서 `Implemented` 환원
+
+- [x] **TASK-200: AMM (Aircraft Mission Manager & Cockpit MFD 통합 단말) 구현** (완료일: 2026-11-08) (`docs/specs/3_planning/amm/`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amm-mission-manager.md`
+  - TASK-106(Cockpit MFD)을 완전 병합하여 51x19 분할 TUI(5Hz 계기판 HUD + 미션 큐 및 C2 관리), 단방향 순차 웨이포인트 큐, JSON 영속화, GCS C2 무반향 감청, 원터치 핫키 및 CLI 대화형 인터페이스 일체화 단말 구현 완료. 사양서 v1.0.0 `Implemented` 승격, 단위/통합 테스트(29/29 PASS) 및 통합 인스톨러(`manifest.lua`) 등록 완료.
+  - **구현 내용**:
+    - [x] **TASK-200-1**: AMM 상세 규격서(`AMM_PROGRAM_SPECIFICATION.md`) 작성 및 Revision History 반영 (`Implemented` 승격)
+    - [x] **TASK-200-2**: AMM 상세 구현 계획서(`2026-11-08-amm-mission-manager.md`) 수립 (8대 Task)
+    - [x] **TASK-200-3**: 사양서 `Approved` 승격, 스캐폴딩 및 설정 모듈(`amm_config.json`, `test_harness_setup.lua`, 1/1 PASS) 구축
+    - [x] **TASK-200-4**: 웨이포인트 FIFO 큐, 2D 도달 거리 판정($d_{2D} \le 15\text{m}$) 및 JSON 영속화 모듈(`waypoint_queue.lua`, `test_waypoint_queue.lua`, 7/7 PASS) 구현
+    - [x] **TASK-200-5**: ICD v1.9.5 엔벨로프 통신 관리자(`network_manager.lua`, `test_network_manager.lua`, 4/4 PASS) 구현 (`Base+0` C2, `Base+1` E-STOP, `Base+3` HUD)
+    - [x] **TASK-200-6**: C2 조종 권한 중재자 및 4대 큐 FSM(`c2_arbiter.lua`, `test_c2_arbiter.lua`, 5/5 PASS) 구현 (GCS 무반향 감청, 이륙-순항 핸드오버, 완주 후 LANDING/LOITER 분기)
+    - [x] **TASK-200-7**: 모달(NAV/CLI) 입력 처리기(`input_handler.lua`, `test_input_handler.lua`, 6/6 PASS) 구현 (`[X]` E-STOP, `[H]` HOLD, `[R]` RTH 등 핫키 및 CLI 커맨드라인)
+    - [x] **TASK-200-8**: 51x19 분할 TUI 렌더러(`ui_renderer.lua`, `test_ui_renderer.lua`, 3/3 PASS) 구현 (`term.blit` 0-깜빡임 버퍼 출력)
+    - [x] **TASK-200-9**: 메인 데몬 루프(`main.lua`) 및 비동기 타이머 연동(`test_main_loop.lua`, 2/2 PASS) 구현
+    - [x] **TASK-200-10**: E2E 폐루프 통합 시뮬레이션(`test_amm_integration.lua`, 1/1 PASS), 통합 인스톨러(`manifest.lua`) 등록 및 전체 회귀 검증 통과
+
+- [x] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (완료일: 2026-11-08, 커밋 `1ee16b2` ~ `95f68f5`) (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-112-vas-sensor-pipeline-avionics.md`
   - VAS 내루프 실시간 동역학 제어용 센서 파이프라인을 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 동기화하고, CC:Avionics 공식 API(`getHeight()`, 1축 스칼라 `getVelocity()` 3축 합성, 짐벌 오일러/각속도/중력/가속도) 정합성 확보
   - **구현 내용**:
