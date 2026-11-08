@@ -69,14 +69,23 @@
 
 ---
 
-## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
+- [ ] **TASK-116: 통합 인스톨러(installer.lua) 기체/시설 역할별 원클릭 프로파일 배포 확장** (`installer.lua`, `src/0_development/installer/`)
+  - **배경 및 필요성**: 온보드/지상 모듈(VAS, TCA, FCP, AMM, GCS, GAC, Landing Pad 등) 확장에 따른 개별 패키지·설정 조합 복잡도 해소
+  - **주요 기능**: 인스톨러 대화형 UI에서 단일 컴퓨터 대상 역할 프리셋(예: `[1] Onboard Flight Core (VAS+FCP)`, `[2] Cockpit Terminal (AMM)`, `[3] Thruster Node (TCA)`, `[4] Ground Control (GCS+GAC)`) 선택 시 패키지 의존성 자동 추출, 맞춤형 설정 스캐폴딩 및 `startup.lua` 원스톱 자동 구성
 
-- [ ] **TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
-  - **사양서 상태**: `docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md` (v1.10.5 Approved)
-  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜
+- [ ] **TASK-117: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축** (`src/0_development/ota/` 또는 installer 확장 모듈)
+  - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
+  - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거
+
+---
+
+## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
+- [ ] **[연기] TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
+  - **사양서 상태**: `docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md` (v1.10.5 Approved)
+  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
