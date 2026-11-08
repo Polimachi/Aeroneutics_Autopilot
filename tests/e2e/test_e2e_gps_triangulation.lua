@@ -108,6 +108,13 @@ describe("Scenario 3: GPS 10Hz Swarm Triangulation & Navigation Fusion", functio
             })
         end
 
+        -- Negative Check: Quorum failure (< 3 nodes) must reject with FAIL_INSUFFICIENT
+        local bad_nodes = { solver_nodes[1], solver_nodes[2] }
+        local bad_sol, bad_err = trilateration.solve(bad_nodes, nav_state.pos.y, { minX = 0, maxX = 500, minZ = 0, maxZ = 500 })
+        assert_nil(bad_sol)
+        assert_eq(bad_err, "FAIL_INSUFFICIENT")
+
+        -- Happy Path: Full 4-node quorum solves high-precision 2D position
         local sol, err = trilateration.solve(solver_nodes, nav_state.pos.y, { minX = 0, maxX = 500, minZ = 0, maxZ = 500 })
         assert_nil(err)
         assert_not_nil(sol)

@@ -45,19 +45,10 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         vas_state.baseChannel = 10000
         vas_state.aircraftDomainId = "AIRCRAFT_01"
 
-        local vas_fsm = {
-            currentState = "NORMAL",
-            arbitrate_c2 = function(self, payload)
-                if payload and payload.action == "E_STOP" then
-                    self.currentState = "E_STOP"
-                    self.reason = payload.reason or "HARD_ESTOP"
-                end
-            end,
-            transition_to = function(self, state, reason)
-                self.currentState = state
-                self.reason = reason
-            end
-        }
+        local state_machine = vas:require("state_machine")
+        local vas_fsm = state_machine.init({}, true)
+        vas_fsm.currentState = "NORMAL"
+        vas_state.wirelessModem = vas.modem
 
         -- Open channels
         amm.modem:open(10000) -- Base+0 (C2 snoop)
@@ -123,6 +114,10 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         assert_true(ok_estop)
         assert_eq(vas_fsm.currentState, "E_STOP")
 
+        -- Negative Check: Hard-latched E_STOP blocks illegal state recovery
+        assert_false(vas_fsm:transition_to("NORMAL", "ATTEMPT_RECOVERY"))
+        assert_eq(vas_fsm.currentState, "E_STOP")
+
         -- VAS cuts all thrusters to 0 and broadcasts emergency command to TCA (Base+10)
         vas.modem:transmit(10010, 10010, {
             ver = "1.9.5",
@@ -138,13 +133,21 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         })
         bus:step(0.05)
 
-        -- Verify TCA receives hard 0 cut
+        -- Verify TCA receives hard 0 cut via real tca_daemon
         local tca_inbox = tca.modem:drain()
         assert_eq(#tca_inbox, 1)
-        local thrust_cmd = tca_inbox[1].payload.payload
-        assert_eq(thrust_cmd.controlState, "E_STOP")
-        for _, val in pairs(thrust_cmd.outputs) do
-            assert_eq(val, 0)
-        end
+        local tca_daemon_mod = tca:require("tca_daemon")
+        local tca_cfg = {
+            groupId = "THR_L",
+            interactionMode = "REDSTONE",
+            channels = { thrustActuation = 10010 },
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+        }
+        local tca_inst = tca_daemon_mod.init(tca_cfg, tca.modem)
+        local ok_tca_estop = tca_inst:handle_thrust_cmd(tca_inbox[1].payload)
+        assert_true(ok_tca_estop)
+        assert_eq(tca_inst.lastControlState, "E_STOP")
+        assert_eq(tca_inst.adapterState.lastSignal or 0, 0)
     end)
 end)

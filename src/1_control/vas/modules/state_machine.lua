@@ -24,6 +24,12 @@ function state_machine.init(systemConfig, isCalibrated)
     fsm.transition_to = function(self, nextState, reason)
         return state_machine.transition_to(self, nextState, reason)
     end
+    fsm.arbitrate_c2 = function(self, cmd)
+        return state_machine.arbitrate_c2(self, cmd)
+    end
+    fsm.handle_arm_command = function(self, cmd)
+        return state_machine.handle_arm_command(self, cmd)
+    end
     return fsm
 end
 
@@ -42,7 +48,7 @@ end
 
 function state_machine.arbitrate_c2(state, cmd)
     if not cmd then return nil end
-    local action = cmd.emergencyAction or (cmd.eStop and "E_STOP")
+    local action = cmd.emergencyAction or (cmd.eStop and "E_STOP") or (cmd.action == "E_STOP" and "E_STOP")
     if action == "E_STOP" then
         state.activeSource = "EMERGENCY_DIRECT"
         state_machine.transition_to(state, "E_STOP", "EMERGENCY_OVERRIDE_E_STOP")

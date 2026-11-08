@@ -27,13 +27,9 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         vas_state.baseChannel = 10000
         vas_state.aircraftDomainId = "AIRCRAFT_01"
 
-        local vas_fsm = {
-            currentState = "IDLE_ARMED",
-            transition_to = function(self, state, reason)
-                self.currentState = state
-                self.reason = reason
-            end
-        }
+        local state_machine = vas:require("state_machine")
+        local vas_fsm = state_machine.init({}, true)
+        vas_state.wirelessModem = vas.modem
 
         -- Alignment console is located in Bay 1 (Base_hangar = 101)
         -- Alignment listens on 101(CMD), 102(TELEM), 104(TAP)
@@ -65,6 +61,32 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         -- VAS processes inbound message on 10000
         local vas_inbox = vas.modem:drain()
         assert_eq(#vas_inbox, 1)
+
+        -- Negative Check 1: Rogue domain spoofing (ROGUE_CRAFT) is rejected by envelope verification
+        local rogue_init_pkt = {
+            ver = "1.9.5",
+            domainId = "ROGUE_CRAFT",
+            seq = 1,
+            type = "MSG_CALIBRATION_INIT",
+            time = 1000,
+            payload = {
+                bayId = 1,
+                stationId = "ALIGN_BAY_01",
+                baseHangarChannel = 101,
+                targetCraftDomain = "AIRCRAFT_01",
+            },
+        }
+        local ok_rogue = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10000, 102, rogue_init_pkt)
+        assert_false(ok_rogue)
+        assert_eq(vas_fsm.currentState, "IDLE_ARMED")
+
+        -- Negative Check 2: Hard E-STOP lock prevents entering CALIBRATION state
+        local estop_fsm = state_machine.init({}, true)
+        estop_fsm.currentState = "E_STOP"
+        assert_false(estop_fsm:transition_to("CALIBRATION", "ILLEGAL_CALIBRATION_ATTEMPT"))
+        assert_eq(estop_fsm.currentState, "E_STOP")
+
+        -- Happy Path: Valid calibration init on Base+0 (10000)
         local ok_init = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10000, vas_inbox[1].replyChannel, vas_inbox[1].payload)
         assert_true(ok_init)
         assert_eq(vas_fsm.currentState, "CALIBRATION")

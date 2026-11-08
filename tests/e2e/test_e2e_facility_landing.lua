@@ -109,6 +109,31 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         -- 7. Step 3: GAC processes check-in, allocates Pad, and issues MSG_ATC_SLOT_ASSIGN on 50202
         local gac_checkin_inbox = gac.modem:drain()
         assert_eq(#gac_checkin_inbox, 1)
+
+        -- Negative Check: Overweight aircraft (50,000kg > 40,000kg maxSupportWeight) is rejected with DENIED / OVERWEIGHT
+        local overweight_pkt = {
+            ver = "1.9.5",
+            domainId = "HEAVY_CARGO_01",
+            seq = 1,
+            type = "MSG_GAC_CHECKIN_REQ",
+            time = 1040,
+            payload = {
+                sectorId = gac_cfg.sectorId,
+                aircraftId = "HEAVY_CARGO_01",
+                craftWeight = 50000,
+                craftRadius = 4.5,
+                currentPos = { x = 1200, y = 80, z = -800 },
+                airframeType = "VECTORED_VTOL",
+            }
+        }
+        local bad_assign, bad_clearance = fsm:handle_aircraft_checkin(overweight_pkt, gac_cfg.surfaceWind)
+        assert_nil(bad_assign)
+        assert_not_nil(bad_clearance)
+        assert_eq(bad_clearance.type, "MSG_GAC_APPROACH_CLEARANCE")
+        assert_eq(bad_clearance.payload.status, "DENIED")
+        assert_eq(bad_clearance.payload.reason, "OVERWEIGHT")
+
+        -- Happy Path: Aircraft check-in within structural limits is accepted and allocated
         local slot_assign, clearance_err = fsm:handle_aircraft_checkin(gac_checkin_inbox[1].payload, gac_cfg.surfaceWind)
         assert_nil(clearance_err)
         assert_not_nil(slot_assign)

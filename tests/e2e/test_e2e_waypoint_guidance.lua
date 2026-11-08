@@ -141,23 +141,50 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         assert_eq(#thr_pkts, 1)
         assert_eq(#srf_pkts, 1)
 
-        -- 6. TCA and ASA reply with status
-        tca.modem:transmit(10010, 10010, {
+        -- 6. Production Handler Hookup & Negative Checks
+        -- ASA negative mapping check
+        local cs_mapper = asa:require("control_surface_mapper")
+        local unk_key, unk_tier = cs_mapper.classify("unknown_actuator_part")
+        assert_nil(unk_key)
+        assert_eq(unk_tier, 99)
+        local elev_key, elev_tier = cs_mapper.classify("Elevator")
+        assert_eq(elev_key, "elevator")
+        assert_eq(elev_tier, 1)
+
+        -- TCA Production Daemon
+        local tca_daemon_mod = tca:require("tca_daemon")
+        local tca_cfg = {
+            groupId = "THR_L",
+            interactionMode = "REDSTONE",
+            channels = { thrustActuation = 10010 },
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            deadband = 1,
+        }
+        local tca_inst = tca_daemon_mod.init(tca_cfg, tca.modem)
+
+        -- Happy path: feed actual thrust command received from VAS
+        local tca_inbox = tca.modem:drain()
+        assert_eq(#tca_inbox, 1)
+        local ok_cmd = tca_inst:handle_thrust_cmd(tca_inbox[1].payload)
+        assert_true(ok_cmd)
+        assert_true((tca_inst.adapterState.lastSignal or 0) > 0)
+        bus:step(0.05)
+
+        -- Negative check: command targeting unknown group ID yields 0 thrust output
+        local ok_bad_grp = tca_inst:handle_thrust_cmd({
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
-            seq = 60,
-            type = "MSG_ACTUATOR_STATUS",
-            time = 1070,
+            seq = 99,
+            type = "MSG_THRUST_CMD",
             payload = {
-                groupId = "GRP_MAIN",
-                interactionMode = "REDSTONE",
-                appliedSignal = 10,
-                isSaturated = false,
-                activeCount = 2,
-                totalCount = 2,
-                healthStatus = "REDSTONE_NOMINAL",
+                watchdogSeq = 2,
+                controlState = "NORMAL",
+                outputs = { UNKNOWN_POD = 15 },
             },
         })
+        assert_true(ok_bad_grp)
+        assert_eq(tca_inst.adapterState.lastSignal or 0, 0)
 
         asa.modem:transmit(10011, 10011, {
             ver = "1.9.5",
@@ -180,8 +207,11 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
 
         local tca_stat = bus:find_packets({ type = "MSG_ACTUATOR_STATUS", channel = 10010 })
         local asa_stat = bus:find_packets({ type = "MSG_SURFACE_STATUS", channel = 10011 })
-        assert_eq(#tca_stat, 1)
-        assert_eq(#asa_stat, 1)
+        assert_true(#tca_stat >= 1)
+        assert_true(#asa_stat >= 1)
+        local last_tca = tca_stat[#tca_stat].payload.payload
+        assert_eq(last_tca.groupId, "THR_L")
+        assert_true(last_tca.appliedSignal > 0)
 
         -- 7. Craft reaches clearance altitude -> FCP transitions to CRUISE -> emits MFD_STATE
         fcp_fsm.transition_to(fsm, "CRUISE")
