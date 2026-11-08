@@ -34,4 +34,6 @@ function offset_transform.calculate_pad_position(compPos, platformYaw, mountingY
     }
 end
 
+offset_transform.calculate_pad_coordinates = offset_transform.calculate_pad_position
+
 return offset_transform
