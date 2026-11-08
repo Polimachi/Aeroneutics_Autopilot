@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 0** (통합 인스톨러 TASK-005 완료 → 검증 스크립트 도구화 TASK-006 대기)
+> **현재 단계**: **Phase 0** (검증 스크립트 도구화 TASK-006 완료 → Landing Pad 제어기 TASK-102 대기)
 
 ---
 
@@ -22,17 +22,13 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 0)
 
-- [ ] **TASK-006: 검증 스크립트 정식 도구화(`scratch/` → `tools/`) 및 하위 문서 구 경로 정리**
-  - **목표**: 상시 사용하는 검증 스크립트를 `tools/`로 정식 이관해 일회성 마이그레이션 스크립트와 분리하고, 하위 모듈 문서의 폐기 경로 잔재를 제거
-  - [ ] **TASK-006-1**: `verify_all_specs.py`·`validate_lua_syntax.py`의 `tools/` 이관, 일회성 `scratch/` 스크립트 정리 및 루트 문서 표준 명령 경로 동기화
-  - [ ] **TASK-006-2**: `src/1_control/asa/README.md` 내 폐기된 `docs/specs/approved/...` 링크를 영구 단일 경로(`docs/specs/1_control/asa/...`)로 수정 및 전수 상대 링크 점검
+- [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
+  - 가상 좌표 비콘, 동역학 요동 인터록 및 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 구현
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (`src/0_infra/landing_pad/`)
-  - 가상 좌표 비콘, 동역학 요동 인터록 및 전술 유도 채널(`Base_sec+10+Idx`) 스트리밍 구현
 - [ ] **TASK-106: Cockpit MFD (Node 03) 조종석 다기능 계기판 및 ACRO 입력 단말 구현**
   - 평시 5Hz(`FCP`) / ACRO 20Hz(`VAS`) `Base+3` HUD 렌더링 및 `Base+0`·`Base+1` C2/비상 선점 송출 구현
 - [ ] **TASK-109: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
@@ -64,6 +60,13 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 30개 유지)
+
+- [x] **TASK-006: 검증 스크립트 정식 도구화(`scratch/` → `tools/`) 및 하위 문서 구 경로 정리** (완료일: 2026-11-08)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-006-tooling-and-spec-links-cleanup.md`
+  - **구현 내용**:
+    - [x] **TASK-006-1**: `verify_all_specs.py`·`validate_lua_syntax.py`·`verify_spec_status.py`의 `tools/` 이관, 동적 DLL 탐색 및 90개 Lua 전수 검사 지원, 일회성 `scratch/` 스크립트 정리 및 전용 `scratch/README.md` 구축
+    - [x] **TASK-006-2**: `src/1_control/asa/README.md` 및 `src/0_infra/gac/README.md` 내 폐기된 `docs/specs/approved/...` 링크 제거, 영구 단일 경로 동기화 및 `tools/verify_all_specs.py --check-readmes` 0 error 통과
+    - [x] **TASK-006-1B**: 도구 무결성 자동화 테스트(`tests/harness/test_tools_integrity.py`, 5/5 PASS) 작성, 전체 하네스 회귀(23/23 PASS) 및 루트 문서(`README.md`, `GEMINI.md`, `TASK.md`) 동기화
 
 - [x] **TASK-005: 통합 코드베이스 설치 프로그램(Unified Installer) 구축 및 구버전 통폐합** (완료일: 2026-11-08)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-005-unified-codebase-installer.md`

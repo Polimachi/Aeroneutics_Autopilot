@@ -72,15 +72,17 @@ Create_Aeroneutics/
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
 │
 ├── tools/                                 # 개발·검증 CLI 도구
-│   └── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
+│   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
+│   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
+│   ├── verify_all_specs.py                # 12대 사양서 전수 무결성 검증기
+│   └── verify_spec_status.py              # 사양서 상태 분포 검증기
 │
 ├── reports/                               # 정적 분석 및 리팩토링 검토 보고서
 │   ├── underReview/                       # 검토 진행 중 보고서
 │   └── reviewCompleted/                   # 검토 완료 보고서
 │
-├── scratch/                               # 보조 검증 스크립트 및 일회성 마이그레이션 도구
-│   ├── verify_all_specs.py                # 12대 사양서 전수 무결성 검증기
-│   └── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
+├── scratch/                               # 개발자 임시 작업 공간 (Scratchpad)
+│   └── README.md                          # 임시 스크립트 격리 정책 안내
 │
 └── .agent/                                # 에이전트 규칙(rules/), 스킬(skills/), 이력(memory/), 안전 훅(hooks/)
 ```
@@ -133,13 +135,23 @@ python -m unittest discover -s tests/harness -p "test_*.py"
 ### 3. 사양서 전수 무결성 검증
 12대 활성 사양서의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
 ```bash
-python scratch/verify_all_specs.py
+python tools/verify_all_specs.py
+```
+- README 상대 링크 정밀 검사 옵션:
+  ```bash
+  python tools/verify_all_specs.py --check-readmes
+  ```
+
+### 4. 사양서 상태 분포 검증
+12대 활성 사양서의 상태 분포(5 Implemented, 7 Approved)를 검사합니다:
+```bash
+python tools/verify_spec_status.py
 ```
 
-### 4. Lua 5.2 문법 및 금지 API 정적 검사
+### 5. Lua 5.2 문법 및 금지 API 정적 검사
 Cobalt 런타임 문법 및 허용/차단 모드 네임스페이스 규칙 준수 여부를 검사합니다:
 ```bash
-python scratch/validate_lua_syntax.py
+python tools/validate_lua_syntax.py
 ```
 
 ---
