@@ -326,3 +326,43 @@ describe("vectored_vtol 3-axis PID and anti-windup integration", function()
         assert_eq(driver_state.heave_i, 0.0, "heave_i reset to 0.0")
     end)
 end)
+
+describe("vectored_vtol tilt slew-rate limiter and strict level interlock", function()
+    local vectored_vtol_driver = require("vectored_vtol_driver")
+    local main = require("main")
+    local cfg = main.load_config()
+    cfg.guidance.vectored_vtol.envelopeMode = "TILT_ASSISTED"
+
+    it("smoothly slews pitch in CRUISE at high speed without step jump", function()
+        local nav = {
+            pos = { x = 0.0, y = 64.0, z = 0.0 },
+            vel = { x = 20.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 20.0,
+        }
+        local target = { x = 0.0, y = 64.0, z = -100.0 }
+        local driver_state = { current_pitch = 0.0 }
+
+        local out1 = vectored_vtol_driver.compute(cfg, nav, target, "CRUISE", 0.05, driver_state)
+        assert_not_nil(out1)
+        assert_true(out1.targetPitch >= -0.76 and out1.targetPitch <= -0.74, "targetPitch slewed by 0.75 deg")
+        assert_eq(driver_state.current_pitch, out1.targetPitch)
+    end)
+
+    it("enforces STRICT_LEVEL pitch 0.0 in non-CRUISE modes even at high speed", function()
+        local nav = {
+            pos = { x = 0.0, y = 64.0, z = 0.0 },
+            vel = { x = 20.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 20.0,
+        }
+        local target = { x = 0.0, y = 64.0, z = -100.0 }
+        local driver_state = { current_pitch = -5.0 }
+
+        local out_to = vectored_vtol_driver.compute(cfg, nav, target, "TAKEOFF", 1.0, driver_state)
+        assert_eq(out_to.targetPitch, 0.0, "TAKEOFF must enforce strict level 0.0 pitch")
+
+        local out_land = vectored_vtol_driver.compute(cfg, nav, target, "APPROACH_LAND", 1.0, driver_state)
+        assert_eq(out_land.targetPitch, 0.0, "APPROACH_LAND must enforce strict level 0.0 pitch")
+    end)
+end)

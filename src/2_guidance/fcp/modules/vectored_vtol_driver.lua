@@ -46,20 +46,30 @@ function vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_heading
     return (prev_h + step + 360.0) % 360.0
 end
 
-function vectored_vtol_driver.compute_envelope_attitude(cfg, fsm_state, ground_speed, surge_raw)
+function vectored_vtol_driver.compute_envelope_attitude(cfg, fsm_state, ground_speed, surge_raw, dt, driver_state)
     local g = cfg and cfg.guidance and cfg.guidance.vectored_vtol or {}
     local mode = g.envelopeMode or "STRICT_LEVEL"
-    if mode ~= "TILT_ASSISTED" or fsm_state ~= "CRUISE" then
-        return 0.0, 0.0
+    local prev_p = driver_state and driver_state.current_pitch or 0.0
+    local delta_t = dt or 0.05
+    local slew_rate = g.tiltSlewRateDegPerSec or 15.0
+    local max_step = slew_rate * delta_t
+
+    local target_pitch = 0.0
+    if mode == "TILT_ASSISTED" and fsm_state == "CRUISE" then
+        local thresh = g.tiltAssistedThresholdSpeedMps or 15.0
+        local max_pitch = g.tiltAssistedMaxPitchDeg or 10.0
+        local s_raw = surge_raw or 0.0
+        if (ground_speed or 0.0) > thresh or math.abs(s_raw) >= 0.95 then
+            target_pitch = clamp(-s_raw * max_pitch, -max_pitch, max_pitch)
+        end
     end
-    local thresh = g.tiltAssistedThresholdSpeedMps or 15.0
-    local max_pitch = g.tiltAssistedMaxPitchDeg or 10.0
-    local s_raw = surge_raw or 0.0
-    if (ground_speed or 0.0) > thresh or math.abs(s_raw) >= 0.95 then
-        local pitch = clamp(-s_raw * max_pitch, -max_pitch, max_pitch)
-        return pitch, 0.0
+
+    local diff = clamp(target_pitch - prev_p, -max_step, max_step)
+    local new_pitch = prev_p + diff
+    if driver_state then
+        driver_state.current_pitch = new_pitch
     end
-    return 0.0, 0.0
+    return new_pitch, 0.0
 end
 
 local function compute_emergency(nav, hover_thr)
@@ -84,6 +94,7 @@ function vectored_vtol_driver.reset_integrals(driver_state)
     driver_state.surge_i = 0.0
     driver_state.sway_i = 0.0
     driver_state.heave_i = 0.0
+    driver_state.current_pitch = 0.0
 end
 
 function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_state)
@@ -130,7 +141,7 @@ function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_st
     local throttle = clamp(hover_thr + heave * 0.35, 0.0, 1.0)
 
     local gs = nav.groundSpeed or math.sqrt(vel.x * vel.x + vel.z * vel.z)
-    local pitch, roll = vectored_vtol_driver.compute_envelope_attitude(cfg, fsm_state, gs, surge)
+    local pitch, roll = vectored_vtol_driver.compute_envelope_attitude(cfg, fsm_state, gs, surge, delta_t, driver_state)
     local prev_h = driver_state and driver_state.prev_heading or head
     local cmd_h = vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_h)
 
