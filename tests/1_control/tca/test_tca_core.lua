@@ -33,6 +33,41 @@ describe("tca config and channel allocation", function()
         assert_nil(loaded.channels.calibration)
     end)
 
+    it("defaults debug flag to true when omitted in config JSON", function()
+        local test_path = sdk.temp_path("test_tca_nodebug.json")
+        local raw_cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftIndexN = 1,
+            baseChannel = 10000
+        }
+        config_manager.save(test_path, raw_cfg)
+        local loaded, err = config_manager.load(test_path)
+        assert_not_nil(loaded)
+        assert_eq(err, "OK")
+        assert_true(loaded.debug, "loaded.debug must default to true")
+    end)
+
+    it("preserves debug flag when explicitly set to false in config JSON", function()
+        local test_path = sdk.temp_path("test_tca_debug_false.json")
+        local raw_cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            debug = false
+        }
+        config_manager.save(test_path, raw_cfg)
+        local loaded, err = config_manager.load(test_path)
+        assert_not_nil(loaded)
+        assert_eq(err, "OK")
+        assert_false(loaded.debug, "loaded.debug must preserve explicit false")
+    end)
+
+    it("provides default config with debug enabled", function()
+        assert_not_nil(config_manager.default_cfg)
+        assert_true(config_manager.default_cfg.debug)
+    end)
+
+
     it("validates compute_base bounds and migrates legacy 20-channel configs", function()
         assert_eq(config_manager.compute_base(1), 10000)
         assert_eq(config_manager.compute_base(1000), 49960)

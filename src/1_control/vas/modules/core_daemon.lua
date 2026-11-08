@@ -67,6 +67,25 @@ function core_daemon.init(configDirOrTable)
         cfg = load_configs(dir)
     end
     cfg = cfg or {}
+    cfg.system = cfg.system or {}
+
+    if cfg.system.debug == nil and cfg.debug ~= nil then
+        cfg.system.debug = cfg.debug
+    end
+
+    if cfg.system.debug == nil and fs and fs.exists and fs.exists("config.json") then
+        local rootCfg = load_json("config.json")
+        if rootCfg and rootCfg.debug ~= nil then
+            cfg.system.debug = (rootCfg.debug == true)
+        end
+    end
+
+    if cfg.system.debug == nil then
+        cfg.system.debug = true
+    else
+        cfg.system.debug = (cfg.system.debug == true)
+    end
+
     local sensors = sensor_pipeline.init(cfg.sensors)
     local fsm = state_machine.init(cfg.system)
     local net = network_manager.init(cfg.system)

@@ -55,3 +55,70 @@ describe("1_control/asa control_surface_mapper", function()
         assert_not_nil(mapped.rudder)
     end)
 end)
+
+describe("1_control/asa config_manager", function()
+    local config_manager = require("config_manager")
+
+    it("computes 40-channel base and validates index bounds", function()
+        assert_eq(config_manager.compute_base(1), 10000)
+        assert_eq(config_manager.compute_base(2), 10040)
+        assert_eq(config_manager.compute_base(1000), 49960)
+
+        local b0, err0 = config_manager.compute_base(0)
+        assert_nil(b0)
+        assert_eq(err0, "ERR_INDEX_OUT_OF_RANGE")
+
+        local b1001, err1001 = config_manager.compute_base(1001)
+        assert_nil(b1001)
+        assert_eq(err1001, "ERR_INDEX_OUT_OF_RANGE")
+    end)
+
+    it("generates default_config with debug=true and standard channel assignments", function()
+        local def = config_manager.default_config()
+        assert_not_nil(def)
+        assert_true(def.debug, "default_config must have debug = true")
+        assert_eq(def.aircraftIndexN, 1)
+        assert_eq(def.baseChannel, 10000)
+        assert_not_nil(def.channels)
+        assert_eq(def.channels.surfaceActuation, 10011)
+        assert_eq(def.watchdogTimeoutMs, 300)
+        assert_eq(def.aircraftDomainId, "AIRCRAFT_01")
+        assert_not_nil(def.ports)
+        assert_eq(def.ports.modemSide, "top")
+        assert_eq(def.ports.redstoneSide, "bottom")
+    end)
+
+    it("loads and saves config JSON while guaranteeing debug=true default", function()
+        local test_path = sdk.temp_path("test_asa_nodebug.json")
+        local raw = {
+            podId = "WAP_L",
+            aircraftIndexN = 1,
+            baseChannel = 10000
+        }
+        local okSave = config_manager.save(test_path, raw)
+        assert_true(okSave)
+
+        local loaded, err = config_manager.load(test_path)
+        assert_not_nil(loaded)
+        assert_eq(err, "OK")
+        assert_true(loaded.debug, "loaded.debug must default to true when omitted")
+        assert_eq(loaded.channels.surfaceActuation, 10011)
+    end)
+
+    it("preserves debug=false when explicitly configured", function()
+        local test_path = sdk.temp_path("test_asa_debug_false.json")
+        local raw = {
+            podId = "WAP_L",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            debug = false
+        }
+        config_manager.save(test_path, raw)
+
+        local loaded, err = config_manager.load(test_path)
+        assert_not_nil(loaded)
+        assert_eq(err, "OK")
+        assert_false(loaded.debug, "loaded.debug must preserve explicit false")
+    end)
+end)
+

@@ -555,3 +555,46 @@ describe("vas asa exclusion for vectored_vtol and drone", function()
         assert_true(sentAero, "MSG_AERO_CMD must be transmitted for WINGED_VTOL")
     end)
 end)
+
+describe("vas core daemon debug config defaults", function()
+    local core_daemon = require("core_daemon")
+
+    it("defaults system.debug to true when omitted", function()
+        local daemonState = core_daemon.init({
+            system = { vehicleType = "FIXED_WING", aircraftDomainId = "AIRCRAFT_01" },
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        })
+        assert_not_nil(daemonState.cfg)
+        assert_not_nil(daemonState.cfg.system)
+        assert_true(daemonState.cfg.system.debug, "system.debug must default to true when omitted")
+    end)
+
+    it("defaults system.debug to true when system table is empty or missing", function()
+        local daemonState = core_daemon.init({
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        })
+        assert_not_nil(daemonState.cfg)
+        assert_not_nil(daemonState.cfg.system)
+        assert_true(daemonState.cfg.system.debug, "system.debug must default to true when system table missing")
+    end)
+
+    it("preserves system.debug when explicitly set to false", function()
+        local daemonState = core_daemon.init({
+            system = { vehicleType = "FIXED_WING", debug = false },
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        })
+        assert_not_nil(daemonState.cfg)
+        assert_not_nil(daemonState.cfg.system)
+        assert_false(daemonState.cfg.system.debug, "system.debug must remain false when explicitly set")
+    end)
+end)
+

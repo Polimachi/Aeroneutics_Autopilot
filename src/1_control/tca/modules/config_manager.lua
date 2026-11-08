@@ -6,6 +6,31 @@ config_manager.CRAFT_BASE_MAX = 49960
 config_manager.CRAFT_BANDWIDTH = 40
 config_manager.ACTUATION_OFFSET = 10
 
+config_manager.default_cfg = {
+    schemaVersion = "1.2.0",
+    groupId = "THR_MAIN_L",
+    interactionMode = "REDSTONE",
+    aircraftIndexN = 1,
+    baseChannel = 10000,
+    channels = { thrustActuation = 10010 },
+    watchdogTimeoutMs = 300,
+    nominalActuatorCount = 4,
+    aircraftDomainId = "AIRCRAFT_01",
+    ports = {
+        modemSide = "top",
+        redstoneSide = "bottom",
+        apiSides = { "left", "right", "front", "back" }
+    },
+    deadband = 0,
+    debug = true
+}
+
+function config_manager.default_config()
+    local def = {}
+    for k, v in pairs(config_manager.default_cfg) do def[k] = v end
+    return def
+end
+
 --- Master ICD Base formula: Base = 10000 + (N - 1) * 40
 function config_manager.compute_base(n)
     local idx = tonumber(n)
@@ -77,6 +102,12 @@ function config_manager.load(path)
         cfg.ports.apiSides = cfg.ports.apiSides or { "left", "right", "front", "back" }
     end
 
+    if cfg.debug == nil then
+        cfg.debug = true
+    else
+        cfg.debug = (cfg.debug == true)
+    end
+
     return cfg, "OK"
 end
 
@@ -85,6 +116,11 @@ function config_manager.save(path, cfg)
     path = path or "config.json"
     if not cfg or type(cfg) ~= "table" then return false, "INVALID_CONFIG_DATA" end
     if not fs or not textutils then return false, "ENVIRONMENT_UNSUPPORTED" end
+    if cfg.debug == nil then
+        cfg.debug = true
+    else
+        cfg.debug = (cfg.debug == true)
+    end
     local ser = textutils.serializeJSON or textutils.serialiseJSON
     if not ser then return false, "SERIALIZER_UNAVAILABLE" end
     local content = ser(cfg)
