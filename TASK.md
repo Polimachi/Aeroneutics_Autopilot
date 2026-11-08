@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-110 FCP VTOL 제어 고도화 구현 완료 및 검증 통과, TASK-107 GCS 구현 착수 대기)
+> **현재 단계**: **Phase 1 & 2 (진행 중)** (TASK-107 GCS 지상 관제 콘솔 및 40채널 블록 관리자 구현 완료, 차기 과제: TASK-111 E2E 통합 시뮬레이션 / TASK-301 ACRO 수동 조종)
 
 ---
 
@@ -23,13 +23,11 @@
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
 - [ ] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축**
-  - 복수 노드(`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션 등) 간 다중 틱 교환 시나리오 검증 확장
+  - 복수 노드(`GCS`↔`AMM`↔`FCP`↔`VAS`↔`TCA`/`ASA`, `FCP`↔`GPS` 10Hz 주기적 절대좌표 측위/융합, `Alignment` 교정 세션, GCS C2 오버라이드 및 E-STOP 차단 등) 간 다중 틱 교환 시나리오 통합 검증 확장
 
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
-
-- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발** (Phase 3)
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 

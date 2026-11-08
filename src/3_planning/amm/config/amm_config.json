@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "domainId": "AIRCRAFT_01",
+  "baseChannel": 10000,
+  "defaultAlt": 150.0,
+  "defaultSpeed": 18.0,
+  "arrivalRadius": 15.0
+}
