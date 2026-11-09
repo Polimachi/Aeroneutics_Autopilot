@@ -38,7 +38,7 @@
 **ASA (Aerodynamic Surface Adapter / Program)**은 고정익(`FIXED_WING`) 및 날개형 VTOL(`WINGED_VTOL`) 비행체의 공력 조종면(에일러론, 승강타, 방향타, 에일러본)과 고양력 장치(플랩)를 직접 물리 구동하는 **제3계층(Layer 3) 독립 분산형 공력 구동계 제어기(Distributed Aerodynamic Surface Controller)**입니다.
 
 UAFS 단일 3계층 비행 제어 아키텍처 개편에 따라, ASA는 **VAS (Node 01)** 산하 분산 액추에이터 계층으로 완전 편입되었습니다.
-상위 자율 항법 컴퓨터인 **FCP (Node 04)**는 순수 기구학적 자세/방위/승강률 지령과 플랩 요구율(`flapTarget`)만을 `Base + 1`을 통해 VAS-Core에 하달하며, 조종면에 직접 관여하지 않습니다.
+상위 자율 항법 컴퓨터인 **FCP (Node 04)**는 순수 기구학적 자세/방위/승강률 지령과 플랩 요구율(`flapTarget`)만을 `Base + 1`을 통해 VAS에 하달하며, 조종면에 직접 관여하지 않습니다.
 비행 제어 코어인 **VAS (Node 01)**는 2계층 내루프 통합 믹싱기에서 동압 스케일링($\frac{1}{2}\rho V^2$), 타면 포화 방지(`satCombined`), 단일 실속 가드($V \le 10\text{ m/s}$) 및 플랩 전개 속도 제한($V > 15\text{ m/s}$)을 거쳐 공력 타각을 최종 확정하고, 전용 무선 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 통해 ASA 클러스터(`Node 06-L, 06-R, 06-T`)로 20Hz `MSG_AERO_CMD`를 송출하여 지휘합니다.
 
 ```mermaid
@@ -89,7 +89,7 @@ flowchart TD
 3. **듀얼 구동 모드 및 자동 폴백 (`API` vs `REDSTONE`)**:
    - Create: Avionics 조종면/플랩 페리페럴 발견 시 정밀 API 모드(`setDeflection(deg)`)로 구동하며, 페리페럴이 없는 기계식 링크 환경에서는 선호 면의 $0 \sim 15$ 아날로그 레드스톤(RS) 모드로 자동 폴백합니다.
 4. **전용 무선 채널 분리 (`Base + 11` (구 `Base + 7` [DEPRECATED]))**:
-   - 추진기 버스(`Base + 6`) 및 상위 유도 명령 버스(`Base + 1`)와의 무선 간섭을 원천 차단하기 위해 기체별 전용 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 단독 점유하여 VAS-Core와 통신합니다.
+   - 추진기 버스(`Base + 6`) 및 상위 유도 명령 버스(`Base + 1`)와의 무선 간섭을 원천 차단하기 위해 기체별 전용 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 단독 점유하여 VAS와 통신합니다.
 5. **동적 타이머 기반 300ms 안전 활공 트림 (Safe Glide Trim Sentinel)**:
    - VAS 지령(`MSG_AERO_CMD`)이 300ms(6틱) 이상 두절될 경우, 스핀/스파이럴 다이브를 방지하기 위해 에일러론 0.0, 방향타 0.0, 승강타 +0.1(약 $+3.0^\circ$ 미세 기수 유지 완만 활공), 플랩 0.0으로 즉시 강제 클램프합니다.
 6. **비동기 진단 뷰 및 헤드리스 백그라운드 데몬 (Asynchronous Diagnostic View & Headless Daemon)**:
@@ -241,7 +241,7 @@ end
 - **사양서 Deprecated 이력**: 구버전 `MSG_SURFACE_CMD`는 **`[DEPRECATED]`** 되었으며, 신규 아키텍처는 `MSG_AERO_CMD`로 일원화합니다.
 
 ```lua
--- VAS-Core가 20Hz 브로드캐스트하는 MSG_AERO_CMD 예시
+-- VAS가 20Hz 브로드캐스트하는 MSG_AERO_CMD 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -270,7 +270,7 @@ end
 - **사양서 Deprecated 이력**: 구버전 `MSG_SURFACE_STATUS`는 **`[DEPRECATED]`** 되었으며, `MSG_AERO_STATUS`로 통합 대체되었습니다.
 
 ```lua
--- ASA 노드가 상태 변동 시 VAS-Core로 발신하는 MSG_AERO_STATUS 예시
+-- ASA 노드가 상태 변동 시 VAS로 발신하는 MSG_AERO_STATUS 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -292,7 +292,7 @@ end
 
 ### 4.3 부팅 및 시동 검증 핸드셰이크 (`MSG_SURFACE_DISCOVER_REQ/ACK`)
 - **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 11` (구 `Base + 7` [DEPRECATED]))
-- **질의 (`MSG_SURFACE_DISCOVER_REQ`)**: [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) 시동(`ARMING`) 단계 또는 시스템 무결성 점검 시 VAS-Core가 브로드캐스트.
+- **질의 (`MSG_SURFACE_DISCOVER_REQ`)**: [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) 시동(`ARMING`) 단계 또는 시스템 무결성 점검 시 VAS가 브로드캐스트.
 - **응답 (`MSG_SURFACE_DISCOVER_ACK`)**: 온라인 상태인 각 ASA 노드가 관할 조종면 목록, 바인딩 포트 및 헬스 상태를 1:1 회신.
 
 ```lua
@@ -317,14 +317,14 @@ end
 
 ### 4.4 격납고 정적/동적 프로파일링 바인딩 (`MSG_CALIB_BAY_BIND`, Core $\rightarrow$ ASA, Base + 11, 구 Base + 7 [DEPRECATED])
 - **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 11` (구 `Base + 7` [DEPRECATED]))
-- **전송 조건**: 기체가 정비 격납고에 입고되어 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이에 결합될 때 VAS-Core가 수신한 `MSG_CALIB_BAY_BIND`를 중계 전파.
+- **전송 조건**: 기체가 정비 격납고에 입고되어 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이에 결합될 때 VAS가 수신한 `MSG_CALIB_BAY_BIND`를 중계 전파.
 - **수신 동작**:
   1. ASA는 지정된 격납고 베이스 채널 $Base_{\text{hangar}} + 0$ (명령) 및 $Base_{\text{hangar}} + 3$ (측위/응답)을 동적 개방.
-  2. VAS-Align의 12대 시험 항목 중 공력면 스위프 시험(`AERO_ASSISTED_PASS`) 시 각 조종면의 물리 편향 각도와 응답 지연을 측정하여 무결성을 검증.
-  3. 교정 완료 후 VAS-Core의 격납고 이탈 신호 수신 시 해당 격납고 채널을 즉시 닫고 비행 채널(`Base + 11` (구 `Base + 7` [DEPRECATED]))로 복귀.
+  2. Alignment의 12대 시험 항목 중 공력면 스위프 시험(`AERO_ASSISTED_PASS`) 시 각 조종면의 물리 편향 각도와 응답 지연을 측정하여 무결성을 검증.
+  3. 교정 완료 후 VAS의 격납고 이탈 신호 수신 시 해당 격납고 채널을 즉시 닫고 비행 채널(`Base + 11` (구 `Base + 7` [DEPRECATED]))로 복귀.
 
 ```lua
--- VAS-Core가 Base+11로 중계하는 격납고 베이 바인딩 지령 패킷
+-- VAS가 Base+11로 중계하는 격납고 베이 바인딩 지령 패킷
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -341,7 +341,7 @@ end
 
 ### 4.5 계층적 동적 채널 재바인딩 핸들러 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ ASA, oldBase + 11, 구 oldBase + 7 [DEPRECATED])
 - **통신 채널**: `CH_SURFACE_ACTUATION` (`oldBase + 11`, 구 `oldBase + 7` [DEPRECATED])
-- **전송 조건**: GCS가 fcp에 기체 Base 채널 재할당을 발령하고, VAS-Core가 이를 수신하여 하위 액추에이터 버스로 중계 전파할 때 수신.
+- **전송 조건**: GCS가 fcp에 기체 Base 채널 재할당을 발령하고, VAS가 이를 수신하여 하위 액추에이터 버스로 중계 전파할 때 수신.
 - **2단계 트랜잭션 수신 시퀀스**:
   1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 `newBase + 11` 채널 (구 newBase + 7 [DEPRECATED])을 백그라운드 수신 상태로 대기 개방하고 `oldBase + 7`로 ACK 회신.
   2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 11` 채널을 닫고 `newBase + 11`을 주 통신 소켓으로 공식 확정.

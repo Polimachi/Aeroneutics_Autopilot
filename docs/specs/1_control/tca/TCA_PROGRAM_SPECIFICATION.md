@@ -42,7 +42,7 @@
 > **구현 및 배포 현황 요약 (Status: IMPLEMENTED & CLOUD DEPLOYED)**
 > TCA 소프트웨어는 `projects/tap` 환경에서 11대 과제 및 24개 마이크로슬라이스(IS-01.1 ~ IS-11.2) 전수가 구현 완료되어 최신 버전 **v1.2.20** (빌드 해시 `edc8bd267264`)으로 공식 빌드되었습니다.
 > 하네스 Gate 0 ~ Gate 6 전 게이트 검증을 100% PASS(2,473.95 ms)하였으며, 단일 번들(`tap_bundle.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/tap/tap_bundle.lua`)로 공식 동기화되었습니다.
-> 또한 VAS-Core와의 실환경 폐루프 시뮬레이션 및 `discovery_handler.lua` 모듈을 통한 `Base+10` (구 `Base+10` [DEPRECATED]) 실시간 구동 및 지상 교정 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 바인딩(구버전 `1001` 및 `Base+4` 상시 개방 폐지 [DEPRECATED]), 2-Phase 채널 재바인딩 트랜잭션, 20Hz 실시간 구동, 단선 시 $N_{total}/N_{active}$ 비례 손실 보상, 동적 타이머 기반 300ms 워치독 차단 및 핫플러그 감지가 완벽히 검증되었습니다. (상세 내역은 [제7장](#7-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
+> 또한 VAS와의 실환경 폐루프 시뮬레이션 및 `discovery_handler.lua` 모듈을 통한 `Base+10` (구 `Base+10` [DEPRECATED]) 실시간 구동 및 지상 교정 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 바인딩(구버전 `1001` 및 `Base+4` 상시 개방 폐지 [DEPRECATED]), 2-Phase 채널 재바인딩 트랜잭션, 20Hz 실시간 구동, 단선 시 $N_{total}/N_{active}$ 비례 손실 보상, 동적 타이머 기반 300ms 워치독 차단 및 핫플러그 감지가 완벽히 검증되었습니다. (상세 내역은 [제7장](#7-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
 
 TAP은 상위 비행 컴퓨터인 **VAS (Node 01)**로부터 20Hz(50ms) 주기로 브로드캐스트되는 디지털 추력 지령(`MSG_THRUST_CMD`)을 수신하여, 개별 추진기 상호작용 모드(`API` 또는 `REDSTONE`)에 부합하는 하드웨어 제어 신호로 변환·인가하며 다음과 같은 핵심 역할을 완결합니다:
 
@@ -55,7 +55,7 @@ TAP은 상위 비행 컴퓨터인 **VAS (Node 01)**로부터 20Hz(50ms) 주기�
    - **기본 구동 모드 (`debug: true`)**: `config.json` 내 `debug: true`(기본값) 가동 시 ComputerCraft `parallel.waitForAny`를 통해 메인 이벤트 데몬(`run_daemon`)과 비동기 단말 진단 뷰(`tui_dashboard.run_loop`)를 상호 독립된 코루틴으로 분리 실행하여 터미널 I/O가 50ms 제어 루프를 블로킹하지 않도록 격리합니다.
    - **순수 헤드리스 모드 (`debug: false`)**: `debug: false` 명시 시 터미널 화면(TUI) 렌더링을 완전히 배제하고 순수 비차단(Non-blocking) 이벤트 데몬으로 직결 가동되어 50ms 틱당 처리 시간을 $\le 0.5\text{ ms}$ 이내로 극소화합니다.
 4. **이벤트 기반 예외 텔레메트리 피드백 (Event-driven On-Change Feedback)**:
-   - 평시 20Hz 실시간 비행 제어 채널의 트래픽을 0으로 유지하다가, 추진기 단선/파손(`activeCount` 변동), 런타임 상호작용 모드 전환(`interactionMode`), 또는 추력 포화(`isSaturated == true/false`) 발생 시 즉시 VAS-Core로 `MSG_ACTUATOR_STATUS`를 송신하여 닫힌 루프(Closed-loop) 안전망을 구축합니다.
+   - 평시 20Hz 실시간 비행 제어 채널의 트래픽을 0으로 유지하다가, 추진기 단선/파손(`activeCount` 변동), 런타임 상호작용 모드 전환(`interactionMode`), 또는 추력 포화(`isSaturated == true/false`) 발생 시 즉시 VAS로 `MSG_ACTUATOR_STATUS`를 송신하여 닫힌 루프(Closed-loop) 안전망을 구축합니다.
 5. **동적 타이머 기반 300ms 고신뢰성 하드웨어 페일세이프 (Watchdog Sentinel)**:
    - `os.startTimer` 기반 동적 타이머 루프를 가동하여 300ms(6틱) 이상 상위 비행 제어 지령이 수신되지 않을 경우 즉각 전 추진 출력을 0으로 강제 차단(`cut_thrust()`)하고 상호작용 모드별 타임아웃 상태(`REDSTONE_TIMEOUT` 또는 `API_TIMEOUT`)를 발신합니다.
 6. **런타임 하드웨어 핫플러그(Hot-plug) 자동 대응 및 대화형 CLI 마법사 (`tap_setup.lua`)**:
@@ -90,7 +90,7 @@ flowchart TD
 ### 2.1 포트별 물리 역할 명세
 | 포트 위치 | 물리 장치 | 지원 통신/신호 | 상호작용 모드 (`interactionMode`) | 상세 설명 |
 | :---: | :---: | :---: | :---: | :--- |
-| **`top`** | 무선/유선 모뎀 (`modem`) | CC Rednet / Raw Modem | 공통 | VAS 및 VAS-Align과의 무선 통신 전용 포트. `Base + 10` (구 `Base + 6` [DEPRECATED]) 상시 개방, 지상 교정 모드 진입 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 개방 (구버전 `1001` 및 `Base + 4` [DEPRECATED]) |
+| **`top`** | 무선/유선 모뎀 (`modem`) | CC Rednet / Raw Modem | 공통 | VAS 및 Alignment과의 무선 통신 전용 포트. `Base + 10` (구 `Base + 6` [DEPRECATED]) 상시 개방, 지상 교정 모드 진입 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 개방 (구버전 `1001` 및 `Base + 4` [DEPRECATED]) |
 | **`bottom`** | Create 변속기 / 레드스톤 링크 | 아날로그 레드스톤 ($0 \sim 15$) | `REDSTONE` | 컴퓨터 바로 아래 블록에 직결된 Create Rotation Speed Controller 또는 Clutch 구동 (`ports.redstoneSide`) |
 | **`left`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$, 2D Gimbal) | `API` | Create Propulsion: Simulated의 고정/벡터 추진기(`vector_thruster`) API (`setPower`, `setVector`) 호출 포트 (`ports.apiSides`) |
 | **`right`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | 추진기 페리페럴 제어 포트 (`ports.apiSides`) |
@@ -289,7 +289,7 @@ end
 ### 4.2 모듈 2: `group_allocator` (그룹 출력 추출, 불감대 및 추력 손실 비례 보상)
 
 #### 1) 모듈 역할
-VAS-Core의 전체 추진기 출력 테이블(`payload.outputs`)에서 자선의 `groupId`에 해당하는 신호를 추출하고 불감대를 적용하며, API 상호작용 모드 운용 중 추진기 파손 발생 시 잔여 추진기를 비례 증폭하는 수치 연산을 전담합니다.
+VAS의 전체 추진기 출력 테이블(`payload.outputs`)에서 자선의 `groupId`에 해당하는 신호를 추출하고 불감대를 적용하며, API 상호작용 모드 운용 중 추진기 파손 발생 시 잔여 추진기를 비례 증폭하는 수치 연산을 전담합니다.
 
 #### 2) 핵심 인터페이스 시그니처
 ```lua
@@ -301,7 +301,7 @@ function group_allocator.calculate_api_boosted_signal(reqSignal, activeCount, to
 ```
 
 #### 3) 추력 손실 비례 보상 수학 공식 (Proportional Compensation Mathematics)
-API 상호작용 모드에서 해당 그룹의 공칭 총 추진기 수를 $N_{total}$, 현재 정상 작동 중인 활성 추진기 수를 $N_{active}$, VAS-Core의 요구 신호를 $S_{req} \in [0, 15]$라 할 때:
+API 상호작용 모드에서 해당 그룹의 공칭 총 추진기 수를 $N_{total}$, 현재 정상 작동 중인 활성 추진기 수를 $N_{active}$, VAS의 요구 신호를 $S_{req} \in [0, 15]$라 할 때:
 
 $$ratio = \begin{cases} 
 0.0 & (N_{active} \le 0) \\ 
@@ -441,15 +441,15 @@ function config_manager.save(path, cfg) -> boolean, err
 
 #### 1) 격납고 베이 동적 바인딩 (`MSG_CALIB_BAY_BIND`, Core $\rightarrow$ TCA, Base + 10, 구 Base + 6 [DEPRECATED])
 - **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10` (구 `Base + 6` [DEPRECATED]))
-- **전송 조건**: 기체가 정비 격납고에 입고되어 VAS-Core가 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이 바인딩 명령을 중계 전파할 때 수신.
+- **전송 조건**: 기체가 정비 격납고에 입고되어 VAS가 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이 바인딩 명령을 중계 전파할 때 수신.
 - **수신 동작**:
   1. `bayBaseChannel` ($101 \sim 200$)을 파싱하여 $Base_{\text{hangar}} + 0$ (Hangar C2) 및 $Base_{\text{hangar}} + 3$ (Hangar Telemetry / 펄스 시험) 채널을 동적 개방.
-  2. VAS-Align으로부터 직접 수신되는 `MSG_ACTUATOR_DISCOVER_REQ` 및 `MSG_CALIB_PULSE`에 응답.
+  2. Alignment으로부터 직접 수신되는 `MSG_ACTUATOR_DISCOVER_REQ` 및 `MSG_CALIB_PULSE`에 응답.
   3. 교정 완료 시 해당 격납고 채널을 닫고 비행 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]))로 복귀.
 
 #### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
 - **통신 채널**: `CH_THRUST_ACTUATION` (`oldBase + 10`, 구 `oldBase + 6` [DEPRECATED])
-- **전송 조건**: GCS 발령에 따라 FCP $\to$ VAS-Core를 거쳐 하달되는 채널 재바인딩 트랜잭션.
+- **전송 조건**: GCS 발령에 따라 FCP $\to$ VAS를 거쳐 하달되는 채널 재바인딩 트랜잭션.
 - **2단계 트랜잭션 수신 시퀀스**:
   1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 6`으로 ACK 회신.
   2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 10` 채널을 닫고 `newBase + 10`을 (구 oldBase/newBase + 6 [DEPRECATED]) 주 통신 채널로 영속 확정.
@@ -586,8 +586,8 @@ end
 | 감지 결함 상황 | 감지 주체 및 판정식 | TCA 노드 자체 동작 | VAS 및 상위 시스템 반응 |
 | :--- | :--- | :--- | :--- |
 | **통신 두절 (Watchdog)** | `watchdog_sentinel.is_expired()` ($\Delta t > 300\text{ ms}$) | `cut_thrust()` 즉각 집행 (RS=0, API=0.0 차단) 및 `REDSTONE_TIMEOUT` / `API_TIMEOUT` 보고 | VAS 측 텔레메트리 누락 감지, 기체 균형 상실 방지를 위해 FCP 호버 홀드 전환 |
-| **단선/파손 발생 (API 모드)** | `detect_api_peripherals()` 결과 $0 < N_{active} < N_{total}$ | 잔여 추진기 $N_{total}/N_{active}$ 비례 증폭 및 `API_DEGRADED` 즉시 보고 | VAS-Core가 참 `dynamicLoad` 재산출, MFD에 추진 경고 표출 |
-| **핫플러그 분리/결속** | `os.pullEvent("peripheral*")` | `scan_api_peripherals()` 즉시 재스캔 및 온-체인지 피드백 발신 | VAS-Core가 변경된 액추에이터 상태 수신 즉시 닫힌 루프 게인 재산출 |
+| **단선/파손 발생 (API 모드)** | `detect_api_peripherals()` 결과 $0 < N_{active} < N_{total}$ | 잔여 추진기 $N_{total}/N_{active}$ 비례 증폭 및 `API_DEGRADED` 즉시 보고 | VAS가 참 `dynamicLoad` 재산출, MFD에 추진 경고 표출 |
+| **핫플러그 분리/결속** | `os.pullEvent("peripheral*")` | `scan_api_peripherals()` 즉시 재스캔 및 온-체인지 피드백 발신 | VAS가 변경된 액추에이터 상태 수신 즉시 닫힌 루프 게인 재산출 |
 | **추력 포화 (Saturation)** | $S_{req} \cdot \frac{N_{total}}{N_{active}} > 15.0$ | 출력 15 클램핑 및 `isSaturated=true` 즉각 송출 | 해당 축 내루프 PID I-Gain(적분항) 즉시 동결 (안티 와인드업) |
 | **전체 상실 (`API_TOTAL_LOSS`)** | $N_{active} == 0$ (API 모드) | 출력 0 차단, `healthStatus="API_TOTAL_LOSS"` 즉각 송출 | 1차: 6-DoF 믹서 재할당 시도<br/>2차: 주 추진/양력 축 상실 시 FCP 비상 착륙 강제 발동 |
 | **E-STOP 지령 수신** | `controlState == "E_STOP"` | **2단계 안전 분기 집행**:<br/>1. 공중 완충 지령(`outputs[groupId] > 0`): 쿠션 추력 인가 유지(`CUSHION_HOLD`)로 자유낙하 방지<br/>2. 지상 접지 후 0 지령(`outputs == 0`) 또는 `HARD_CUT`: 즉각 전 출력 0 차단(`cut_thrust()`) | 공중 완충 강하 유도 후 지상 안착 시 전 기체 셧다운 시퀀스 돌입 |
@@ -654,7 +654,7 @@ end
 | **번들 직접 다운로드 URL** | `https://drive.google.com/uc?export=download&id=1KYcCfPY_viMTl0tFP0tFV0BGu3qGqRaO` |
 | **버전 확인 직접 다운로드 URL** | `https://drive.google.com/uc?export=download&id=1Wdq-EgyHfLixj0CE2Pp9Dh8zFZhS8utH` |
 
-### 7.4 VAS 연동 실환경 폐루프 통합 시험 검증 (`VAC_TAP_Integration`)
+### 7.4 VAS 연동 실환경 폐루프 통합 시험 검증 (`VAS_TCA_Integration`)
 실제 분산 멀티 컴퓨터 환경에서 `VAS` (VICD-Spec Layer 3 `actuator_adapter_tca`, 최신 실측 v1.1.5)와의 상호작용 검증 결과:
 1. **Node 1 (`REDSTONE` 상호작용 모드)**:
    - Core의 20Hz 추력 지령(신호: 10) 수신 즉시 하단(`ports.redstoneSide`, `bottom`) 아날로그 변속기에 레드스톤 신호 10 정상 인가.

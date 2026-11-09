@@ -39,8 +39,8 @@
 
 > [!NOTE]
 > **구현 및 배포 현황 요약 (Status: IMPLEMENTED & CLOUD DEPLOYED)**
-> Alignment 소프트웨어는 `projects/vac_align` 환경에서 11대 과제 및 21대 마이크로슬라이스(IS-01.1 ~ IS-11.1) 전수가 결함 0건으로 구현 완료(최신 실측 빌드 **v2.3.4**, 빌드 해시 `4c7e15bdf467218d9e0e08ad19234299757caacabcd2fa40d89f70b556681c3a`)되었습니다.
-> 하네스 Gate 0 ~ Gate 6 전 게이트 검증을 100% PASS(1,812.17 ms, G4는 지상 콘솔 단일 노드 특성상 SKIP)하였으며, 단일 실행 번들(`startup.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/vac_align/vac_align_bundle.lua`)로 공식 동기화되었습니다. (상세 내역은 [제11장](#11-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
+> Alignment 소프트웨어는 `src/0_development/alignment` 환경에서 11대 과제 및 21대 마이크로슬라이스(IS-01.1 ~ IS-11.1) 전수가 결함 0건으로 구현 완료(최신 실측 빌드 **v2.3.4**, 빌드 해시 `4c7e15bdf467218d9e0e08ad19234299757caacabcd2fa40d89f70b556681c3a`)되었습니다.
+> 하네스 Gate 0 ~ Gate 6 전 게이트 검증을 100% PASS(1,812.17 ms, G4는 지상 콘솔 단일 노드 특성상 SKIP)하였으며, 단일 실행 번들(`startup.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/alignment/alignment_bundle.lua`)로 공식 동기화되었습니다. (상세 내역은 [제11장](#11-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
 
 ```mermaid
 flowchart LR
@@ -76,7 +76,7 @@ flowchart LR
 
 ## 2. 하드웨어 배치 및 네트워크 토폴로지 (Hardware & Network Topology)
 
-VAS-Align은 격납고/정비 시험장 데스크에 설치된 CC:Tweaked Advanced Computer에서 구동되며, 상단에 장착된 무선 엔더 모뎀(Ender Modem)과 전방에 벽면 부착된 3x2 대형 Advanced Monitor를 활용합니다.
+Alignment은 격납고/정비 시험장 데스크에 설치된 CC:Tweaked Advanced Computer에서 구동되며, 상단에 장착된 무선 엔더 모뎀(Ender Modem)과 전방에 벽면 부착된 3x2 대형 Advanced Monitor를 활용합니다.
 
 ```mermaid
 flowchart TD
@@ -125,13 +125,13 @@ flowchart TD
 
 > [!IMPORTANT]
 > **전역 채널 완전 해제 원칙 (Strict Channel Release Rule)**:  
-> VAS-Align은 비행체 시험 세션(`HANDSHAKE` ~ `SYNCING`/`ABORTING`) 동안에만 해당 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 개방하며, 정상 완료 또는 비상 중단 시 즉각 기체에 `MSG_CALIBRATION_CLOSE`를 발송하고 콘솔 모뎀에서도 `modem.close()`를 호출하여 채널을 완전히 해제합니다. 기체 전용 채널을 점유한 채로 대기하지 않습니다.
+> Alignment은 비행체 시험 세션(`HANDSHAKE` ~ `SYNCING`/`ABORTING`) 동안에만 해당 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 개방하며, 정상 완료 또는 비상 중단 시 즉각 기체에 `MSG_CALIBRATION_CLOSE`를 발송하고 콘솔 모뎀에서도 `modem.close()`를 호출하여 채널을 완전히 해제합니다. 기체 전용 채널을 점유한 채로 대기하지 않습니다.
 
 ---
 
 ## 3. 14단계 유한 상태 머신 (FSM Lifecycle)
 
-VAS-Align은 격납고 상주 대기부터 기체 Base+0 바인딩, 인터록 핸드셰이크, 추진기 탐색, 펄스 인가, 적분, 정착, 회귀, 이상치 일시정지, 권능 진단, 승인 대기, 동기화, 비상 중단, 세션 종료 해제까지 총 14단계의 명확한 상태 전이 체계를 가집니다.
+Alignment은 격납고 상주 대기부터 기체 Base+0 바인딩, 인터록 핸드셰이크, 추진기 탐색, 펄스 인가, 적분, 정착, 회귀, 이상치 일시정지, 권능 진단, 승인 대기, 동기화, 비상 중단, 세션 종료 해제까지 총 14단계의 명확한 상태 전이 체계를 가집니다.
 
 ```mermaid
 stateDiagram-v2
@@ -185,7 +185,7 @@ stateDiagram-v2
 | :--- | :--- | :--- | :--- |
 | **`STANDBY`** | 격납고 대기 | 콘솔 부팅 또는 이전 세션 클린업 완료. 모든 베이 채널 닫힘 유지. 대형 모니터에 Standby HUD 표출. | 기체 번호 $N$ 입력 및 [바인딩 시작] $\rightarrow$ **`TUNING`** |
 | **`TUNING`** | 바인딩 및 조율 | 베이 채널($Base_{\text{hangar}}+0, +1, +3$) 동적 개방 및 기체 `Base+0`으로 `MSG_CALIBRATION_INIT` 송출. | 기체 `MSG_CALIBRATION_INIT_ACK` (READY) 수신 $\rightarrow$ **`HANDSHAKE`**<br/>3초 타임아웃 $\rightarrow$ **`CLEANUP`** |
-| **`HANDSHAKE`** | 인터록 교신 | VAS-Core로 `MSG_CALIB_START` 송출($Base_{\text{hangar}}+0$). VAS-Core가 `CALIBRATION` 상태로 진입하고 정상 출력을 0으로 동결했는지 감시. | Core ACK 수신 $\rightarrow$ **`DISCOVERY`**<br/>3초 타임아웃 $\rightarrow$ **`CLEANUP`** |
+| **`HANDSHAKE`** | 인터록 교신 | VAS로 `MSG_CALIB_START` 송출($Base_{\text{hangar}}+0$). VAS가 `CALIBRATION` 상태로 진입하고 정상 출력을 0으로 동결했는지 감시. | Core ACK 수신 $\rightarrow$ **`DISCOVERY`**<br/>3초 타임아웃 $\rightarrow$ **`CLEANUP`** |
 | **`DISCOVERY`** | 추진기/조종면 탐색 | $Base_{\text{hangar}}+3$으로 `MSG_ACTUATOR_DISCOVER_REQ` 및 `MSG_SURFACE_DISCOVER_REQ` 브로드캐스트. 온라인 TCA 클러스터 및 ASA 조종면 제원 동시 수집 및 시험 순서 큐 생성. | 필수 노드 ACK 수신 $\rightarrow$ **`PULSE_EXEC`**<br/>노드 부재/결함 $\rightarrow$ **`ANOMALY_PAUSE`** |
 | **`PULSE_EXEC`** | 펄스 인가 | 현재 추진기 및 단계($S \in \{4, 8, 12\}$)에 맞춰 `MSG_CALIB_PULSE`($Base_{\text{hangar}}+0$) 송출. 300ms 고정밀 타이머 가동. | 펄스 송출 즉시 $\rightarrow$ **`INTEGRATING`** |
 | **`INTEGRATING`** | 충격량 적분 | 20Hz 텔레메트리($Base_{\text{hangar}}+1$) 수신 즉시 시간 영역 사다리꼴 적분 수행. 기준선 차분 각/선충격량 누적. | 300ms 경과 $\rightarrow$ **`SETTLING`**<br/>틸트 $>12^\circ$ or 워치독 두절 $\rightarrow$ **`ABORTING`** |
@@ -195,7 +195,7 @@ stateDiagram-v2
 | **`AUTHORITY_CHECK`**| 6-DoF 권능 진단 | Surge, Pitch, Roll, Yaw, Heave 5대 필수 축 제어 권능 종합 판정. 진단 리포트 생성. | 판정 완료 $\rightarrow$ **`SYNC_APPROVAL`** |
 | **`SYNC_APPROVAL`** | 동기화 승인 대기| 로컬 디스크(`profiles/<profileId>.json`)에 자동 백업. HUD에 최종 종합 결과 표출 및 승인 대기. | `[Y]` (Pass 시) $\rightarrow$ **`SYNCING`**<br/>`OVERRIDE` (Fail 시) $\rightarrow$ **`SYNCING`**<br/>`[N]` $\rightarrow$ **`CLEANUP`** |
 | **`SYNCING`** | 프로파일 전송 | $Base_{\text{hangar}}+0$으로 `MSG_PROFILE_SYNC` 송출. VAS 프로파일 저장 및 $Base_{\text{hangar}}+1$로 `MSG_CALIB_ACK` 수신 확인. | 동기화 완료 $\rightarrow$ **`CLEANUP`** |
-| **`ABORTING`** | 비상 안전 중단 | TAP에 펄스 0 차단 송출($Base_{\text{hangar}}+0$), VAS-Core에 `action="ABORT_CALIBRATION"` 송출. 안전 딜레이 0.5초. | 통보 완료 $\rightarrow$ **`CLEANUP`** |
+| **`ABORTING`** | 비상 안전 중단 | TAP에 펄스 0 차단 송출($Base_{\text{hangar}}+0$), VAS에 `action="ABORT_CALIBRATION"` 송출. 안전 딜레이 0.5초. | 통보 완료 $\rightarrow$ **`CLEANUP`** |
 | **`CLEANUP`** | 채널 완전 해제 | 기체로 `MSG_CALIBRATION_CLOSE` 송출 및 ACK 수신 후 모뎀의 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 `modem.close()`로 완전 해제. 세션 텔레메트리 메모리 소각. | 클린업 완료 $\rightarrow$ **`STANDBY`** |
 
 ---
@@ -291,7 +291,7 @@ flowchart TD
 4. **추진기 무반응 및 과도 불감대 진단**:
    신호 12에서도 반응이 전무하거나 $S_{deadband} > 6.0$인 경우 기계적 파손/동력 단선 경보를 부여하고 일시정지합니다.
 5. **Core 120초 비상 복귀 인터록**:
-   격납고 컴퓨터가 불의의 사고로 다운되더라도, VAS-Core는 120초 동안 추가 패킷이 없으면 자동으로 `calibrated = false` 상태를 유지한 채 `IDLE_ARMED`로 복귀하여 비행체 락아웃을 방지합니다.
+   격납고 컴퓨터가 불의의 사고로 다운되더라도, VAS는 120초 동안 추가 패킷이 없으면 자동으로 `calibrated = false` 상태를 유지한 채 `IDLE_ARMED`로 복귀하여 비행체 락아웃을 방지합니다.
 
 ---
 
@@ -312,7 +312,7 @@ $$\text{Authority}(축, \pm) = \sum_{i \in \text{추진기}} \max(0, \pm k_{norm
 
 - **`AERO_ASSISTED_PASS` 판정 규약**:
   - `FIXED_WING` 또는 `WINGED_VTOL` 기체에서 단일 중심선 엔진 탑재 등으로 추진기 자체 롤/피치 권능이 상기 기준에 미달하더라도, $Base_{\text{hangar}} + 3$ 디스커버리를 통해 유효한 공력 조종면(`AIL_L/R`, `ELEV`, `RUDD`)이 탐색되고 정적 스위프 시험을 통과한 경우 **`AERO_ASSISTED_PASS`**로 조건부 완결합니다.
-  - 프로파일 내에 `discoveredSurfaces` 맵을 첨부하여 VAS-Core가 순항 시 공력 타각 동압 스케일링으로 제어 모멘트를 보장하도록 인가합니다.
+  - 프로파일 내에 `discoveredSurfaces` 맵을 첨부하여 VAS가 순항 시 공력 타각 동압 스케일링으로 제어 모멘트를 보장하도록 인가합니다.
 
 종합 판정 결과는 `FULL_6DOF_PASS`, `AERO_ASSISTED_PASS`, `PARTIAL_RESTRICTED`, `FAIL_INSUFFICIENT_AUTHORITY` 중 하나로 부여됩니다.
 
@@ -329,7 +329,7 @@ $$\text{Authority}(축, \pm) = \sum_{i \in \text{추진기}} \max(0, \pm k_{norm
 ## 7. 지상 관제소 3x2 대형 모니터 HUD 및 터미널 명세 (Display & HUD Specifications)
 
 ### 7.1 3x2 어드밴스드 모니터 HUD 4분할 레이아웃
-VAS-Align은 부팅 시 인접한 3x2 블록(폭 $\approx 79$, 높이 $\approx 36$ 문자) Advanced Monitor 페리페럴을 자동 탐색하여 관제소 전용 고해상도 그래픽 HUD를 독립 10Hz 비차단 타이머로 렌더링합니다.
+Alignment은 부팅 시 인접한 3x2 블록(폭 $\approx 79$, 높이 $\approx 36$ 문자) Advanced Monitor 페리페럴을 자동 탐색하여 관제소 전용 고해상도 그래픽 HUD를 독립 10Hz 비차단 타이머로 렌더링합니다.
 
 ```
 +-----------------------------------------------------------------------------+
@@ -755,7 +755,7 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
 ```
 
 ### 10.6 프로파일 반영 확인 회신 (`MSG_CALIB_ACK`, CH: Base_hangar+1, VAS $\rightarrow$ Alignment, 구버전 1001, Base+4 [DEPRECATED])
-VAS-Core가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)에 영구 반영을 완결한 직후 회신하는 패킷입니다.
+VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)에 영구 반영을 완결한 직후 회신하는 패킷입니다.
 ```lua
 {
     ver = "1.9.5",
@@ -806,7 +806,7 @@ VAS-Core가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.j
 ## 11. 소프트웨어 구현 현황, 배포 및 통합 검증 결과 (Implementation & Verification Status)
 
 ### 11.1 11대 과제 및 21대 마이크로슬라이스 구현 완료 내역
-`Alignment` 프로젝트(`projects/vac_align`)는 11대 작업 과제(TS-01 ~ TS-11) 및 21대 세부 마이크로슬라이스(`IS-01.1` ~ `IS-11.1`)를 결함 0건으로 100% 구현 완료(v2.3.4)하였습니다:
+`Alignment` 프로젝트(`src/0_development/alignment`)는 11대 작업 과제(TS-01 ~ TS-11) 및 21대 세부 마이크로슬라이스(`IS-01.1` ~ `IS-11.1`)를 결함 0건으로 100% 구현 완료(v2.3.4)하였습니다:
 
 | 슬라이스 ID | 과제 식별자 | 구현 및 검증 핵심 내용 | 대상 소스 / 테스트 모듈 | 결과 |
 | :---: | :---: | :--- | :--- | :---: |
@@ -846,11 +846,11 @@ VAS-Core가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.j
 
 | 항목 | 상세 값 |
 | :--- | :--- |
-| **패키지 식별자 (Package ID)** | `vac_align` |
+| **패키지 식별자 (Package ID)** | `alignment` |
 | **배포 버전 (Version)** | `v2.3.4` |
 | **빌드 해시 (Build Hash)** | `4c7e15bdf467218d9e0e08ad19234299757caacabcd2fa40d89f70b556681c3a` |
-| **배포 번들 경로** | `dist/computers/main/startup.lua`<br/>`dist_gdrive/vac_align/vac_align_bundle.lua` |
-| **노드 역할** | `vac_align_station` (격납고 시험 베이 지상 콘솔) |
+| **배포 번들 경로** | `dist/computers/main/startup.lua`<br/>`dist_gdrive/alignment/alignment_bundle.lua` |
+| **노드 역할** | `alignment_station` (격납고 시험 베이 지상 콘솔) |
 
 ---
 

@@ -72,7 +72,7 @@ CC:Tweaked Rednet 및 모뎀 전송의 직렬화 오버헤드를 최소화하고
   - 위치: 블록/미터 (Blocks / Meters)
   - 속도: m/s (블록/초, 1 block/tick = 20 m/s)
   - 중력 및 가속도: $\text{m/s}^2$ (기본 중력가속도 $g = 11.0\text{ m/s}^2$, 마인크래프트 월드 연직 하방 $a_y = -11.0\text{ m/s}^2$)
-  - 외루프 스로틀 지령: $0.0 \sim 1.0$ 정규화 실수 (최대 출력 대비 무차원 비율. TAP이 REDSTONE 모드 시 VAS-Core가 $0 \sim 15$ 정수 신호로 변환)
+  - 외루프 스로틀 지령: $0.0 \sim 1.0$ 정규화 실수 (최대 출력 대비 무차원 비율. TAP이 REDSTONE 모드 시 VAS가 $0 \sim 15$ 정수 신호로 변환)
   - 6-DoF 미세 바이어스: $-1.0 \sim +1.0$ 정규화 실수 (`surge, sway, heave`)
   - 추진기 구동 신호: 추진기 상호작용 모드 — Create 아날로그 변속기 $0 \sim 15$ 정수 (REDSTONE 모드) 또는 $0.0 \sim 1.0$ 정규화 실수 (API 모드)
 
@@ -226,7 +226,7 @@ flowchart TD
   - **급기동 모드 (`RATE_COMMAND`)**: 3축 목표 각속도(deg/s) 직접 하달 (조종석 MFD 직결 전용).
   - **독립 승강축 유도 (`targetClimbRate`)**: 피치 각도와 물리적으로 독립된 내루프 수직 Heave PI 제어 구동 ($V_y = -5.0 \sim +5.0\text{ m/s}$).
   - **단일 스로틀 추진 의미 (`targetThrottle`)**: 전방(Surge) 주 추진기 출력 비율 ($0.0 \sim 1.0$). 순수 회전익 기종의 MFD 수동 급기동(`RATE_COMMAND`) 시에만 수직 컬렉티브로 매핑.
-  - **외루프 플랩 연동 (`flapTarget`)**: $0.0 \sim 1.0$ (FCP가 비행 국면에 맞추어 지시하며, VAS-Core가 $V_{fe}$ 한계 속도 가드 후 ASA으로 배분).
+  - **외루프 플랩 연동 (`flapTarget`)**: $0.0 \sim 1.0$ (FCP가 비행 국면에 맞추어 지시하며, VAS가 $V_{fe}$ 한계 속도 가드 후 ASA으로 배분).
 
 #### 필드 명세 테이블
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
@@ -396,7 +396,7 @@ flowchart TD
 
 #### 3. 하드 비상 차단 직결 명령 (`MSG_EMERGENCY_OVERRIDE`, MFD/GCS $\rightarrow$ VAS on Base+1)
 - **전송 조건**: 조종석 MFD(`PILOT_PRIMARY`) 또는 지상 통제소 GCS(`GCS_OVERRIDE`)에서 추진기 즉시 컷오프 및 물리 구동계 강제 비상 정지(`E_STOP`)를 발동할 때 `Base + 1`(`CH_FLIGHT_GUIDANCE`) 채널로 직결 송출.
-- **수신 반응**: VAS-Core는 Base+1 선점 중재 최상위 순위(`EMERGENCY_DIRECT`)로 즉시 `controlState = "E_STOP"` 상태로 전이하여 추진기 출력을 0으로 즉시 차단(`cut_thrust()`)하고 ASA 조종면을 중립(0.0)으로 락아웃합니다.
+- **수신 반응**: VAS는 Base+1 선점 중재 최상위 순위(`EMERGENCY_DIRECT`)로 즉시 `controlState = "E_STOP"` 상태로 전이하여 추진기 출력을 0으로 즉시 차단(`cut_thrust()`)하고 ASA 조종면을 중립(0.0)으로 락아웃합니다.
 - **비상착륙/긴급홀드 제외 원칙 (FCP 경유)**:
   > [!IMPORTANT]
   > `HOVER_HOLD(긴급홀드)`와 `EMERGENCY_LAND(비상착륙)`는 기종별 외루프 기동(선회 체공, 역천이 감속, 플랩 전개, 활공각 유지, 위치 드리프트 억제)이 수반되어야 하므로 `Base + 1` 직결 통로에서 완전 배제되며, 예외 없이 `FCP`(`Base + 0`)로 진입하여 수행됩니다. VAS 자체 홀드/착륙은 오직 FCP 통신 두절 워치독 만료(1,500ms) 시에만 최후 내부 페일세이프로 작동합니다.
@@ -444,7 +444,7 @@ flowchart TD
 | `payload.outputs` | table | `{ [groupId] = number \| { thrust: number, gimbalX: number, gimbalY: number } }` | 필수 | 추진기 그룹 ID별 구동 지령 (다형성 지원). 고정 추진기: $0 \sim 15$ 정수 추력. 벡터 추진기(2D 짐벌): `{ thrust = 0~15, gimbalX = -1.0~1.0, gimbalY = -1.0~1.0 }` 테이블 |
 
 ```lua
--- VAS-Core가 20Hz 브로드캐스트하는 MSG_THRUST_CMD 예시 (다형성 outputs 지원)
+-- VAS가 20Hz 브로드캐스트하는 MSG_THRUST_CMD 예시 (다형성 outputs 지원)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -468,7 +468,7 @@ flowchart TD
 
 #### 2. 이벤트 기반 예외 상태 피드백 (`MSG_ACTUATOR_STATUS`, TCA $\rightarrow$ VAS)
 - **전송 조건**: 추진기 파손/단선(`activeCount` 변동), 추진기 상호작용 모드(`REDSTONE` $\leftrightarrow$ `API`) 전환, 추력 포화(`isSaturated == true/false`) 진입/해제 시 즉시 송출.
-- **수신 반응**: VAS-Core는 보고된 실인가값(`appliedSignal`)을 바탕으로 참 동적 부하율 $\text{dynamicLoad} = \frac{\sum_{i=1}^M S_{applied, i}}{15 \cdot M}$을 실시간 갱신하고, `isSaturated == true` 발생 시 해당 추진기가 기여하는 축($|\text{coeff}| > 0.01$)에 한해 선택적 PID I-Gain 적분(Anti-Windup)을 즉각 동결.
+- **수신 반응**: VAS는 보고된 실인가값(`appliedSignal`)을 바탕으로 참 동적 부하율 $\text{dynamicLoad} = \frac{\sum_{i=1}^M S_{applied, i}}{15 \cdot M}$을 실시간 갱신하고, `isSaturated == true` 발생 시 해당 추진기가 기여하는 축($|\text{coeff}| > 0.01$)에 한해 선택적 PID I-Gain 적분(Anti-Windup)을 즉각 동결.
 
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
@@ -550,7 +550,7 @@ flowchart TD
   - 입고된 기체(VAS)는 `Base + 0` 수신 즉시 `controlState = "CALIBRATION"` 상태로 전이하여 정상 비행 출력을 동결하고, 지정된 베이 채널($Base_{\text{hangar}} + 0, +1, +3$)을 동적으로 개방(`modem.open`)한 뒤 $Base_{\text{hangar}}+1$ 채널을 통해 콘솔로 **`MSG_CALIBRATION_INIT_ACK`**를 회신합니다.
   - 교정 정상 완료 또는 엔지니어 종료 지령 시 콘솔이 $Base_{\text{hangar}}+0$으로 **`MSG_CALIBRATION_CLOSE`**를 발송하면, 기체는 베이 채널들을 즉각 완전히 닫고(`modem.close()`) 지상 안전 대기 상태(`IDLE_ARMED` 또는 `STANDBY`)로 복귀하며 **`MSG_CALIBRATION_CLOSE_ACK`**를 회신합니다.
   - 기체 내부 `Base + 4` 채널은 `CH_NAV_SENSOR`(온보드 항법 센서 버스)로 재편되었으며(구 교정채널 [DEPRECATED]), 온보드 확장 예비 대역으로 영구 보존됩니다.
-- **전역 인터록**: 교정 개시 시 VAS-Align이 `MSG_CALIB_START`를 전송하면 VAS-Core가 `controlState = "CALIBRATION"`을 브로드캐스트하여 정상 비행 출력을 동결·차단한 상태에서만 TCA 클러스터가 시험 펄스를 수락하며, 교정 정상 완료(`MSG_PROFILE_SYNC` $\rightarrow$ `MSG_CALIB_ACK`) 시 프로파일을 저장하고 `calibrated = true`로 설정한 뒤 지상 안전 대기 상태(`IDLE_ARMED`, 출력 0, 이륙 잠금 해제)로 복귀하며, 타임아웃(120초) 또는 비상 중단 시에는 `calibrated = false`를 유지한 채 `IDLE_ARMED`(출력 0, 이륙 잠금 유지)로 복귀.
+- **전역 인터록**: 교정 개시 시 Alignment이 `MSG_CALIB_START`를 전송하면 VAS가 `controlState = "CALIBRATION"`을 브로드캐스트하여 정상 비행 출력을 동결·차단한 상태에서만 TCA 클러스터가 시험 펄스를 수락하며, 교정 정상 완료(`MSG_PROFILE_SYNC` $\rightarrow$ `MSG_CALIB_ACK`) 시 프로파일을 저장하고 `calibrated = true`로 설정한 뒤 지상 안전 대기 상태(`IDLE_ARMED`, 출력 0, 이륙 잠금 해제)로 복귀하며, 타임아웃(120초) 또는 비상 중단 시에는 `calibrated = false`를 유지한 채 `IDLE_ARMED`(출력 0, 이륙 잠금 유지)로 복귀.
 - **패킷 타입 목록**:
   1. `MSG_CALIBRATION_INIT`: Alignment (Node 05) $\rightarrow$ VAS (기체 Base+0, 격납고 바인딩 개시 지령)
   2. `MSG_CALIBRATION_INIT_ACK`: VAS (Node 01) $\rightarrow$ Alignment (Base_hangar+1, 바인딩 수락 및 준비 완료)
@@ -572,7 +572,7 @@ flowchart TD
 | `payload.targetCraftDomain` | string | 도메인 ID | 선택 | 대상 기체 도메인 ID (생략 시 수신 기체 전체 바인딩 허용) |
 
 ```lua
--- VAS-Align이 기체 Base+0 포트로 발송하는 MSG_CALIBRATION_INIT 예시
+-- Alignment이 기체 Base+0 포트로 발송하는 MSG_CALIBRATION_INIT 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -598,7 +598,7 @@ flowchart TD
 | `payload.airframeType` | string | 기체 타입 | 필수 | 6대 표준 기체 식별자 (`"WINGED_VTOL"`, `"ADVANCED_VTOL"` 등) |
 
 ```lua
--- VAS-Core가 Base_hangar+1 포트로 회신하는 MSG_CALIBRATION_INIT_ACK 예시
+-- VAS가 Base_hangar+1 포트로 회신하는 MSG_CALIBRATION_INIT_ACK 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -629,7 +629,7 @@ flowchart TD
 | `payload.bayCalibrationCmd`| uint16 | $Base_{\text{hangar}} + 0$ | 필수 | 격납고 공용 지령 채널 (예: 101) |
 
 ```lua
--- VAS-Core가 TCA/ASA로 전파하는 MSG_CALIB_BAY_BIND 예시
+-- VAS가 TCA/ASA로 전파하는 MSG_CALIB_BAY_BIND 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -656,7 +656,7 @@ flowchart TD
 | `payload.timeoutSec` | integer | 초 ($10 \sim 300$) | 필수 | 교정 모드 최대 제한 시간 (미완료 시 안전 복귀) |
 
 ```lua
--- VAS-Align이 VAS(Base_hangar+0)에 송신하는 MSG_CALIB_START 예시
+-- Alignment이 VAS(Base_hangar+0)에 송신하는 MSG_CALIB_START 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -682,7 +682,7 @@ flowchart TD
 | `payload.safetyMaxTiltDeg`| float | 도 ($12.0^\circ$) | 필수 | 최대 허용 틸트각 한계 (초과 시 펄스 즉각 차단) |
 
 ```lua
--- VAS-Align이 TCA 노드(Base_hangar+0)로 송출하는 MSG_CALIB_PULSE 예시
+-- Alignment이 TCA 노드(Base_hangar+0)로 송출하는 MSG_CALIB_PULSE 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -759,7 +759,7 @@ flowchart TD
 ```
 
 #### 7. 동역학 프로파일 반영 완료 확인 응답 (`MSG_CALIB_ACK`, VAS $\rightarrow$ Alignment)
-- **전송 시점**: VAS-Core가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)에 영구 저장(`save_json`)하고 추진기 어댑터에 반영을 완결한 즉시 Alignment($Base_{\text{hangar}}+1$)으로 단발 회신.
+- **전송 시점**: VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)에 영구 저장(`save_json`)하고 추진기 어댑터에 반영을 완결한 즉시 Alignment($Base_{\text{hangar}}+1$)으로 단발 회신.
 
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
@@ -998,9 +998,9 @@ flowchart TD
 
 #### 2. MFD 계기판 화면 갱신 패킷 (`MSG_MFD_STATE`, Base+3)
 - **전송 주체 및 주파수 정책**:
-  - **평시 (Normal Flight)**: **FCP 단독 송출 (5Hz 다운샘플링, 매 4틱마다 1회)**. FCP가 외루프 항법 데이터와 Core 텔레메트리를 계층 통합하여 송출하며, VAS-Core는 `Base + 3`에서 완전 침묵(Silence)합니다.
-  - **급기동 (`ACRO`) 진입 시**: FCP는 `Base + 3` 송출을 즉각 일시 중단(Pause)하고, **VAS-Core가 20Hz 고속 초저지연 HUD 스트림으로 직접 인계**하여 조종사에게 실시간 자세 반응성을 제공합니다.
-  - **FCP 두절 페일세이프**: 비행 중 FCP가 1,500ms 이상 통신 두절되면 VAS-Core가 임시 5Hz 폴백 HUD를 송출하여 MFD 계기판 블랙아웃을 방지합니다.
+  - **평시 (Normal Flight)**: **FCP 단독 송출 (5Hz 다운샘플링, 매 4틱마다 1회)**. FCP가 외루프 항법 데이터와 Core 텔레메트리를 계층 통합하여 송출하며, VAS는 `Base + 3`에서 완전 침묵(Silence)합니다.
+  - **급기동 (`ACRO`) 진입 시**: FCP는 `Base + 3` 송출을 즉각 일시 중단(Pause)하고, **VAS가 20Hz 고속 초저지연 HUD 스트림으로 직접 인계**하여 조종사에게 실시간 자세 반응성을 제공합니다.
+  - **FCP 두절 페일세이프**: 비행 중 FCP가 1,500ms 이상 통신 두절되면 VAS가 임시 5Hz 폴백 HUD를 송출하여 MFD 계기판 블랙아웃을 방지합니다.
 
 ```lua
 -- 1. 평시 FCP 송출 계층 통합 HUD 패킷 예시 (5Hz 실시간 다운샘플링, Base+3)
@@ -1255,7 +1255,7 @@ flowchart TD
 | `payload.dynamicPressureFactor` | float | $0.1 \sim 1.0$ | 선택 | 대기속도 동압 스케줄링 계수 ($\text{clamp}(V_{ref}^2 / V^2, 0.1, 1.0)$) |
 
 ```lua
--- VAS-Core가 20Hz 브로드캐스트하는 MSG_SURFACE_CMD 예시
+-- VAS가 20Hz 브로드캐스트하는 MSG_SURFACE_CMD 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1280,7 +1280,7 @@ flowchart TD
 
 #### 2. 이벤트 기반 예외 상태 피드백 (`MSG_SURFACE_STATUS`, ASA $\rightarrow$ VAS)
 - **전송 조건**: 타각 포화(`isSaturated`), 기구 고착/단선(`isJammed`), 런타임 핫플러그 바인딩 변경 시 즉시 발신.
-- **수신 반응**: VAS-Core는 `isSaturated == true` 시 해당 축 PID 적분기를 동결(Anti-Windup)하며, `isJammed == true` 또는 `TOTAL_LOSS` 감지 시 TCA 차동 추력으로 비상 자세 제어를 즉각 대체하고 fcp에 상태를 전파하여 `FAILSAFE_RTH`를 유도합니다.
+- **수신 반응**: VAS는 `isSaturated == true` 시 해당 축 PID 적분기를 동결(Anti-Windup)하며, `isJammed == true` 또는 `TOTAL_LOSS` 감지 시 TCA 차동 추력으로 비상 자세 제어를 즉각 대체하고 fcp에 상태를 전파하여 `FAILSAFE_RTH`를 유도합니다.
 
 ```lua
 -- ASA 노드가 상태 변동 시 발신하는 MSG_SURFACE_STATUS 예시
@@ -1349,11 +1349,11 @@ flowchart TD
 ### 5.1 온보드 및 관제 핵심 프로그램 구현 현황
 | 프로그램 명 | 노드 ID | 구현 버전 | 하네스 게이트 | 배포 산출물 | 상태 |
 | :--- | :---: | :---: | :---: | :--- | :---: |
-| **VAS** | Node 01 | `v1.1.5` (사양: `v1.11.0`) | G0 ~ G6 **PASS** | `dist_gdrive/vac_core/vac_core_bundle.lua` (16개 슬라이스, 66개 단위 테스트 전원 통과, 해시 948bcbb3...) | **완료 (VERIFIED)** |
+| **VAS** | Node 01 | `v1.1.5` (사양: `v1.11.0`) | G0 ~ G6 **PASS** | `dist_gdrive/vas/vas_bundle.lua` (16개 슬라이스, 66개 단위 테스트 전원 통과, 해시 948bcbb3...) | **완료 (VERIFIED)** |
 | **TCA 클러스터** | Node 02-xx | `v1.2.20` (사양: `v1.8.0`) | G0 ~ G6 **PASS** | `dist_gdrive/tap/tap_bundle.lua` (24개 슬라이스, 해시 edc8bd26..., GDrive 싱크) | **완료 (DEPLOYED)** |
 | **ASA 클러스터** | Node 06-xx | `v1.0.0` (사양: `v1.2.1`) | 규격 확정 | VAS 산하 3구역 노드(06-L/R/T), Base+11 전용 버스(구 Base+7 [DEPRECATED]), 동적 탐색 및 활공 트림 확정 | **설계 확정** |
 | **FCP** | Node 04 | `v1.2.2` (사양: `v1.9.0`) | G0 ~ G6 **PASS** | `dist_gdrive/fcp/fcp_bundle.lua` (13개 과제, 31개 슬라이스 전수 통과, 해시 f669ee83...) | **완료 (DEPLOYED)** |
-| **Alignment** | Node 05 | `v2.3.4` (사양: `v2.4.0`) | G0 ~ G6 **PASS (G4 SKIP)** | `dist_gdrive/vac_align/vac_align_bundle.lua` (11개 과제, 21개 슬라이스 전수 통과, 해시 4c7e15bd...) | **완료 (DEPLOYED)** |
+| **Alignment** | Node 05 | `v2.3.4` (사양: `v2.4.0`) | G0 ~ G6 **PASS (G4 SKIP)** | `dist_gdrive/alignment/alignment_bundle.lua` (11개 과제, 21개 슬라이스 전수 통과, 해시 4c7e15bd...) | **완료 (DEPLOYED)** |
 | **GAC (지상구역관제)** | Node 07 | 미배포 (사양: `v1.1.3`) | 규격 확정 | 3-Tier 계층 관제, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 확정 | **설계 확정** |
 
 ### 5.2 VAS & TCA 폐루프 클러스터 통합 시험 결과 (`VAC_TAP_Integration`)

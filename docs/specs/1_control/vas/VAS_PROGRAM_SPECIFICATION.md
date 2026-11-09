@@ -43,8 +43,8 @@
 
 > [!NOTE]
 > **구현 및 검증 현황 요약 (Status: IMPLEMENTED & VERIFIED)**
-> VAS 소프트웨어는 `projects/vac_core` 환경에서 7대 핵심 과제 및 16개 마이크로슬라이스(IS-00.1 ~ IS-05.6) 전수가 성공적으로 구현 완료(최신 실측 빌드 **v1.1.5**, 빌드 해시 `948bcbb3f2da4188502f951fcfc225d9ff0785de4abc921980a1c895b5a0a407`)되었습니다.
-> 엄격한 CC 하네스 검증(Gate 0 ~ Gate 6 전 게이트 PASS, 단위 테스트 전원 통과, 단일 함수 $\le 50$줄 엄격 준수, Zero-Sleep 보장, 51x19 HUD 터미널 검증, 멀티 노드 클러스터 폐루프 시뮬레이션 및 HIL 스모크 테스트 통과, 총 소요시간 4,950.07 ms)을 획득하였습니다. 단일 배포 번들(`vac_core_bundle.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/vac_core/vac_core_bundle.lua`)로 공식 동기화되었습니다. (상세 내역은 [제12장](#12-소프트웨어-구현-현황-및-하네스통합-검증-결과-implementation--verification-status) 참조)
+> VAS 소프트웨어는 `src/1_control/vas` 환경에서 7대 핵심 과제 및 16개 마이크로슬라이스(IS-00.1 ~ IS-05.6) 전수가 성공적으로 구현 완료(최신 실측 빌드 **v1.1.5**, 빌드 해시 `948bcbb3f2da4188502f951fcfc225d9ff0785de4abc921980a1c895b5a0a407`)되었습니다.
+> 엄격한 CC 하네스 검증(Gate 0 ~ Gate 6 전 게이트 PASS, 단위 테스트 전원 통과, 단일 함수 $\le 50$줄 엄격 준수, Zero-Sleep 보장, 51x19 HUD 터미널 검증, 멀티 노드 클러스터 폐루프 시뮬레이션 및 HIL 스모크 테스트 통과, 총 소요시간 4,950.07 ms)을 획득하였습니다. 단일 배포 번들(`vas_bundle.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/vas/vas_bundle.lua`)로 공식 동기화되었습니다. (상세 내역은 [제12장](#12-소프트웨어-구현-현황-및-하네스통합-검증-결과-implementation--verification-status) 참조)
 
 1. **비행 동역학 센서 계측 및 3D 기하 보정**: 3축 자세(Gimbal), 고도(Altimeter), 3차원 속도(Velocity) 실측, 3D 레버암 회전 유도 속도/고도 보정 및 단위 쿼터니언($\mathbf{q} \in SO(3)$) 변환.
 2. **연료/에너지 잔량 계측 (`fuel`)**: Create 유체 탱크(`FLUID_TANK`) 및 축전지/배터리(`BATTERY`)의 최대 용량 대비 잔여량($0.0 \sim 1.0$) 정규화.
@@ -58,7 +58,7 @@
      - **`actuator_adapter_tca`**: TCA 클러스터 제어 할당 행렬($0 \sim 15$ 이산 정수 스케일링, 불감대 확장), dynamicLoad 실시간 산출, 채널 `Base+10` (구 `Base+6` [DEPRECATED]) 20Hz `MSG_THRUST_CMD` 송출.
      - **`actuator_adapter_asa`**: ASA 공력 조종면(Aileron, Elevator, Rudder, Flap) 제어 할당, 동적압($V^2$) 역비례 게인 스케일링($\eta_q$), 채널 `Base+11` (구 `Base+7` [DEPRECATED]) 20Hz `MSG_AERO_CMD` 송출.
      - 양 구동계의 역방향 포화 상태(`axisSaturatedPos`, `axisSaturatedNeg`)를 Layer 1으로 통합 피드백하여 방향성 적분 동결 집행.
-6. **비동기 51x19 HUD 대시보드 (`ui_renderer`) 및 런타임 분리**: 설정 파일(`config/system.json`)의 `debug: true`(기본값) 가동 시 ComputerCraft `parallel.waitForAny` 기반으로 20Hz 실시간 제어 코어 루프와 5Hz 비동기 HUD 렌더러 루틴을 상호 독립적인 코루틴으로 분리 격리하여 터미널 I/O로 인한 제어 지연을 방지합니다. 오일러 각도 변환은 제어 루프 내부가 아닌 디스플레이 경계에서만 한정 수행되며, `term.blit` 무깜빡임 고속 TUI 게이지를 표출합니다. `debug: false` 설정 시 TUI 렌더링을 완전히 배제하고 0% 오버헤드의 순수 헤드리스 모드로 직결 구동됩니다. (일반 비행 시 MFD는 FCP 5Hz 통합 패킷을 수신하며, 조종석 수동 급기동 ACRO 진입 시에만 VAS-Core가 `Base+3`으로 20Hz 직접 저지연 송출을 인계)
+6. **비동기 51x19 HUD 대시보드 (`ui_renderer`) 및 런타임 분리**: 설정 파일(`config/system.json`)의 `debug: true`(기본값) 가동 시 ComputerCraft `parallel.waitForAny` 기반으로 20Hz 실시간 제어 코어 루프와 5Hz 비동기 HUD 렌더러 루틴을 상호 독립적인 코루틴으로 분리 격리하여 터미널 I/O로 인한 제어 지연을 방지합니다. 오일러 각도 변환은 제어 루프 내부가 아닌 디스플레이 경계에서만 한정 수행되며, `term.blit` 무깜빡임 고속 TUI 게이지를 표출합니다. `debug: false` 설정 시 TUI 렌더링을 완전히 배제하고 0% 오버헤드의 순수 헤드리스 모드로 직결 구동됩니다. (일반 비행 시 MFD는 FCP 5Hz 통합 패킷을 수신하며, 조종석 수동 급기동 ACRO 진입 시에만 VAS가 `Base+3`으로 20Hz 직접 저지연 송출을 인계)
 
 ```mermaid
 flowchart TD
@@ -143,7 +143,7 @@ v1.0.22에서는 기체 조립 시 포트 장착 방향 오설정 또는 반전�
 
 ## 3. 고정밀 센서 획득 및 수치해석 파이프라인 (Sensor Processing Pipeline)
 
-VAS-Core는 매 50ms 틱 시작 시 다음 정밀 파이프라인을 거쳐 센서 신호, 단위 쿼터니언($SO(3)$) 자세 및 내부 동역학 메트릭을 산출합니다.
+VAS는 매 50ms 틱 시작 시 다음 정밀 파이프라인을 거쳐 센서 신호, 단위 쿼터니언($SO(3)$) 자세 및 내부 동역학 메트릭을 산출합니다.
 
 ### 3.1 Step 1: `pcall` 논블로킹 일괄 샘플링 및 통합 헬스 평가 (Fault-Tolerant Polling)
 1. **0틱 논블로킹 보호 호출**:
@@ -216,7 +216,7 @@ $$\mathbf{q}_{att} = \text{quat.from\_euler}(\theta, \phi, \psi)$$
    - `BATTERY`: $\text{fuel} = \frac{\sum_{j=1}^K \text{batt}_j.\text{getEnergyStored()}}{\max(1.0, \sum_{j=1}^K \text{batt}_j.\text{getMaxEnergyStored()})}$
 2. **추력기 동적 부하율 (`dynamicLoad`) 연속 산출 및 피드백 보정**:
    - TCA 노드의 `MSG_ACTUATOR_STATUS`는 상태 변화(포화, 활성 개수 변동, 상호작용 모드 전환) 시에만 이벤트성으로 송출됩니다.
-   - 따라서 VAS-Core의 `actuator_adapter_tca`은 각 추진기 그룹 $i$의 최신 상태(`interactionMode`, `activeCount`, `totalCount`, `healthStatus`)를 메모리에 유지하고, 매 20Hz 틱마다 인가 명령 $S_{cmd, i} \in [0, 15]$에 대한 **유효 인가 추정치 $S_{eff, i}$**를 연속 계산하여 참 `dynamicLoad`를 도출합니다:
+   - 따라서 VAS의 `actuator_adapter_tca`은 각 추진기 그룹 $i$의 최신 상태(`interactionMode`, `activeCount`, `totalCount`, `healthStatus`)를 메모리에 유지하고, 매 20Hz 틱마다 인가 명령 $S_{cmd, i} \in [0, 15]$에 대한 **유효 인가 추정치 $S_{eff, i}$**를 연속 계산하여 참 `dynamicLoad`를 도출합니다:
      $$S_{eff, i} = \begin{cases} 0.0 & (\text{healthStatus}_i \in \{\text{"API\_TOTAL\_LOSS"}, \text{"API\_TIMEOUT"}, \text{"REDSTONE\_TIMEOUT"}, \text{"TOTAL\_LOSS"}\}) \\ \min\left(15.0, S_{cmd, i} \times \frac{\text{totalCount}_i}{\text{activeCount}_i}\right) & (\text{interactionMode}_i == \text{"API"} \land \text{activeCount}_i > 0) \\ S_{cmd, i} & (\text{그 외 REDSTONE\_NOMINAL 또는 기본 상태}) \end{cases}$$
      *(참고: 구버전 필드 `mode`는 `[DEPRECATED]` 상태이며, 코드베이스는 무폴백 원칙에 따라 `interactionMode`만 단일 판별함)*
      $$\text{dynamicLoad} = \frac{\sum_{i=1}^M S_{eff, i}}{15.0 \times \max(1, M)} \quad (0.0 \sim 1.0)$$
@@ -225,7 +225,7 @@ $$\mathbf{q}_{att} = \text{quat.from\_euler}(\theta, \phi, \psi)$$
 
 ## 4. 실시간 제어 루프 실행 생명주기 (20Hz Execution Lifecycle)
 
-VAS-Core는 CC:Tweaked 타이머 이벤트를 통해 매 50ms마다 깨어나며, VICD-Spec 3계층 디커플링 파이프라인을 정밀 시간 예산 내에 완결합니다.
+VAS는 CC:Tweaked 타이머 이벤트를 통해 매 50ms마다 깨어나며, VICD-Spec 3계층 디커플링 파이프라인을 정밀 시간 예산 내에 완결합니다.
 
 ```mermaid
 sequenceDiagram
@@ -286,7 +286,7 @@ sequenceDiagram
 
 ## 5. 12대 핵심 소프트웨어 모듈 아키텍처 (Modular Architecture & Signatures)
 
-VAS-Core의 소프트웨어는 관심사 분리(SoC), 단일 책임 원칙(SRP) 및 VICD-Spec 3계층 아키텍처에 따라 **12개의 독립 모듈**로 구성됩니다.
+VAS의 소프트웨어는 관심사 분리(SoC), 단일 책임 원칙(SRP) 및 VICD-Spec 3계층 아키텍처에 따라 **12개의 독립 모듈**로 구성됩니다.
 
 ```mermaid
 flowchart TD
@@ -692,7 +692,7 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 ### 7.1 9대 제어 상태 정의
 > [!IMPORTANT]
 > **전 상태 20Hz `MSG_THRUST_CMD` 및 `MSG_AERO_CMD` 상시 브로드캐스트 및 출력 마스킹 규칙**  
-> VAS-Core는 아래 9개 전 상태에서 매 50ms마다 `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])) 및 `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])) 패킷을 중단 없이 송출합니다.
+> VAS는 아래 9개 전 상태에서 매 50ms마다 `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])) 및 `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])) 패킷을 중단 없이 송출합니다.
 > - **비행 가능 상태 (`isFlight = true`)**: `NORMAL`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `AIRBORNE_EMERGENCY`에서는 계산된 제어 출력이 인가됩니다.
 > - **비비행 안전 차단 상태**: `DISARMED`, `ARMING`, `IDLE_ARMED`, `CALIBRATION`에서는 모든 액추에이터 출력이 `0`으로 강제 마스킹됩니다.
 > - **비상 정지 (`E_STOP`) 쿠션 스로틀**: 기체가 공중(`isAirborne == true`)에 있을 때 `E_STOP`이 발동되면, 자유낙하 추락 충격을 완화하기 위해 바닥 접지 전까지 쿠션 스로틀($\lfloor \text{hoverBaseThrottle} \times 0.6 + 0.5 \rfloor$, 기본값 $5$)을 인가한 뒤 접지 시 0으로 차단합니다.
@@ -979,8 +979,8 @@ stateDiagram-v2
 - **교정 텔레메트리 채널**: $Base_{\text{hangar}} + 1$ (`CH_CALIBRATION_TELEM`, 교정 모드 시 동적 개방, 구버전 `1002` 및 `Base + 2` [DEPRECATED])
 - **교정 세션 수명주기 (기체 Base+0 직결 바인딩 및 하위 노드 전파)**:
   1. **바인딩 개시**: Alignment 콘솔이 기체 고유 포트 `Base + 0`으로 `MSG_CALIBRATION_INIT` 발송 $\rightarrow$ VAS 수신 즉시 FSM `CALIBRATION` 전이 및 베이 채널($Base_{\text{hangar}}+0, +1, +3$) 동적 개방, 하위 구동계 TCA(`Base+10` (구 `Base+6` [DEPRECATED])) 및 ASA(`Base+11` (구 `Base+7` [DEPRECATED]))으로 `MSG_CALIB_BAY_BIND` 중계 전파 후 $Base_{\text{hangar}}+1$로 `MSG_CALIBRATION_INIT_ACK` 회신.
-  2. **교정 제어/프로파일 동기화**: 콘솔이 $Base_{\text{hangar}}+0$으로 `MSG_CALIB_START`, `MSG_PROFILE_SYNC` 송출 $\rightarrow$ VAS-Core가 $Base_{\text{hangar}}+1$로 20Hz `MSG_FLIGHT_TELEMETRY` 및 반영 완료 `MSG_CALIB_ACK` 회신.
-  3. **바인딩 종료**: 콘솔이 $Base_{\text{hangar}}+0$으로 `MSG_CALIBRATION_CLOSE` 발송 $\rightarrow$ VAS-Core가 베이 채널 즉시 해제(`modem.close()`) 및 지상 대기(`IDLE_ARMED`) 복귀 후 $Base_{\text{hangar}}+1$로 `MSG_CALIBRATION_CLOSE_ACK` 회신.
+  2. **교정 제어/프로파일 동기화**: 콘솔이 $Base_{\text{hangar}}+0$으로 `MSG_CALIB_START`, `MSG_PROFILE_SYNC` 송출 $\rightarrow$ VAS가 $Base_{\text{hangar}}+1$로 20Hz `MSG_FLIGHT_TELEMETRY` 및 반영 완료 `MSG_CALIB_ACK` 회신.
+  3. **바인딩 종료**: 콘솔이 $Base_{\text{hangar}}+0$으로 `MSG_CALIBRATION_CLOSE` 발송 $\rightarrow$ VAS가 베이 채널 즉시 해제(`modem.close()`) 및 지상 대기(`IDLE_ARMED`) 복귀 후 $Base_{\text{hangar}}+1$로 `MSG_CALIBRATION_CLOSE_ACK` 회신.
 
 ```lua
 -- 1. 격납고 교정 바인딩 개시 (MSG_CALIBRATION_INIT, Alignment -> VAS Base+0)
@@ -1189,8 +1189,8 @@ stateDiagram-v2
 ### 8.7 [Interface I-6] 조종석 MFD 상태 피드 (`VAS` $\rightarrow$ `Cockpit MFD`)
 - **채널**: `CH_MFD_STATE` (`Base + 3`)
 - **다운링크 인계 규칙**:
-  - **일반 비행 모드 (NORMAL, FAILSAFE, EMERGENCY_LAND 등)**: FCP가 `Base+3`으로 5Hz 통합 비행/항법 패킷 송출을 전담하며, VAS-Core는 송출을 유예(Silence)합니다.
-  - **수동 급기동 모드 (ACRO)**: 조종석 MFD가 `acroActive = true`를 선점 인가하는 즉시, VAS-Core가 `Base+3`을 독점 인계하여 20Hz 고속 저지연 HUD 프레임을 직접 송출합니다.
+  - **일반 비행 모드 (NORMAL, FAILSAFE, EMERGENCY_LAND 등)**: FCP가 `Base+3`으로 5Hz 통합 비행/항법 패킷 송출을 전담하며, VAS는 송출을 유예(Silence)합니다.
+  - **수동 급기동 모드 (ACRO)**: 조종석 MFD가 `acroActive = true`를 선점 인가하는 즉시, VAS가 `Base+3`을 독점 인계하여 20Hz 고속 저지연 HUD 프레임을 직접 송출합니다.
 
 ```lua
 {
@@ -1258,7 +1258,7 @@ stateDiagram-v2
 
 ### 8.9 [Interface I-4] 동역학 프로파일 수신 확인 응답 (`VAS` $\rightarrow$ `Alignment`)
 - **채널**: $Base_{\text{hangar}} + 1$ (`CH_CALIBRATION_TELEM`, 구버전 `1001`, `1002` 및 `Base + 4` [DEPRECATED])
-- **전송 시점**: VAS-Align의 `MSG_PROFILE_SYNC` 수신 후 디스크 저장(`save_json`) 및 어댑터 리로드 완료 즉시 1회 회신.
+- **전송 시점**: Alignment의 `MSG_PROFILE_SYNC` 수신 후 디스크 저장(`save_json`) 및 어댑터 리로드 완료 즉시 1회 회신.
 
 ```lua
 {
@@ -1494,10 +1494,10 @@ stateDiagram-v2
 
 ## 10. 소프트웨어 모듈 레이아웃 및 배포 구조 (Module Layout)
 
-실제 `VAS` 프로젝트(`projects/vac_core`)에 구현 및 빌드 완료된 표준 모듈 레이아웃과 배포 산출물 구조입니다:
+실제 `VAS` 프로젝트(`src/1_control/vas`)에 구현 및 빌드 완료된 표준 모듈 레이아웃과 배포 산출물 구조입니다:
 
 ```
-projects/vac_core/
+src/1_control/vas/
 ├── src/
 │   ├── main.lua                       # 진입점: core_daemon.run("config/")
 │   ├── config/
@@ -1535,11 +1535,11 @@ projects/vac_core/
 │   ├── test_core_daemon.lua           # 메인 데몬 루프 및 수명주기 단위 테스트
 │   └── test_ui_renderer.lua           # 51x19 HUD 렌더러 단위 테스트
 ├── dist/                              # 하네스 Gate 5 자동 번들링 산출물
-│   ├── computers/vac_core/startup.lua # Node 01 컴퓨터 바인딩 실행 번들
+│   ├── computers/vas/startup.lua # Node 01 컴퓨터 바인딩 실행 번들
 │   └── sourcemap.json                 # 디버깅용 역방향 SourceMap
 └── dist_gdrive/                       # 배포 아티팩트
-    └── vac_core/
-        ├── vac_core_bundle.lua        # 버전 v1.0.22 올인원 자가추출 번들
+    └── vas/
+        ├── vas_bundle.lua        # 버전 v1.0.22 올인원 자가추출 번들
         ├── version.json               # Google Drive 동기화 및 릴리즈 메타데이터
         └── autoupdate.lua             # 부팅 시 스테이징 자체 갱신 모듈 (수동 재부팅 모드)
 ```
@@ -1603,12 +1603,12 @@ projects/vac_core/
 
 - **소프트웨어 버전**: `v1.1.5`
 - **빌드 해시**: `948bcbb3f2da4188502f951fcfc225d9ff0785de4abc921980a1c895b5a0a407`
-- **배포 번들 경로**: `dist/computers/vac_core/startup.lua`<br/>`dist_gdrive/vac_core/vac_core_bundle.lua`
+- **배포 번들 경로**: `dist/computers/vas/startup.lua`<br/>`dist_gdrive/vas/vas_bundle.lua`
 - **총 소요 시간**: 4,950.07 ms
 - **검증 상태**: `status = "PASS"`, `failures = []`
 
-### 12.3 VAS & TCA 폐루프 통합 검증 (`VAC_TAP_Integration`)
-실제 3개 독립 컴퓨터 노드를 연동한 폐루프 통합 테스트(`VAC_TAP_Integration`)를 통해 비행 제어 및 추진 구동계의 닫힌 루프 안정성을 입증하였습니다:
+### 12.3 VAS & TCA 폐루프 통합 검증 (`VAS_TCA_Integration`)
+실제 3개 독립 컴퓨터 노드를 연동한 폐루프 통합 테스트(`VAS_TCA_Integration`)를 통해 비행 제어 및 추진 구동계의 닫힌 루프 안정성을 입증하였습니다:
 
 | 검증 단계 (Phase) | 검증 항목 | 기대 동작 | 실제 측정 결과 | 판정 |
 | :---: | :--- | :--- | :--- | :---: |

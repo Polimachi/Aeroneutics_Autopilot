@@ -57,10 +57,10 @@
 1. **외루프 유도 제어 (Outer-Loop Guidance Control)**:
    - 비선형 L1 유도 법칙을 통한 수평 궤적 및 웨이포인트 추종, 협조 선회 뱅크각 산출.
    - 고도 및 속도 제어: VTOL 모드에서는 수직 스로틀 PI 및 목표 승강률(`targetClimbRate`) 도출, 고정익 모드에서는 총 에너지 제어 시스템(TECS) 기반 에너지 분배.
-   - 순수 운동학 유도 목표(자세 각도, 목표 승강률, 주 추진 스로틀, 플랩 전개 요구율 `flapTarget`, 2단계 시동 플래그 `flightActive`)를 20Hz 주기로 VAS-Core에 하달(`MSG_ATTITUDE_CMD`, `Base + 1`).
+   - 순수 운동학 유도 목표(자세 각도, 목표 승강률, 주 추진 스로틀, 플랩 전개 요구율 `flapTarget`, 2단계 시동 플래그 `flightActive`)를 20Hz 주기로 VAS에 하달(`MSG_ATTITUDE_CMD`, `Base + 1`).
 2. **구동계 분리 및 간접 유도 (Actuator Decoupling)**:
    - 공력 조종면 구동계 ASA(Node 06-xx)은 VAS Layer 3(`actuator_adapter_asa`, `Base+11 (구 Base+7 [DEPRECATED])`)으로 완전 편입되었으며, FCP는 조종면 타각 직접 산출 및 `Base+11 (구 Base+7 [DEPRECATED])` 소켓을 보유하지 않음. (구버전 직접 제어 모듈 `aerodynamic_controller.lua` 및 `MSG_SURFACE_CMD` [DEPRECATED]).
-   - FCP는 중복 연산(실속 방지 가드 등)을 배제하고 순수 유도 목표와 비행 단계별 플랩 목표(`flapTarget`)만을 인가하며, 동적압($V^2$) 역비례 게인 스케일링, 실속 방어 및 조종면 배분은 VAS-Core가 일괄 전담.
+   - FCP는 중복 연산(실속 방지 가드 등)을 배제하고 순수 유도 목표와 비행 단계별 플랩 목표(`flapTarget`)만을 인가하며, 동적압($V^2$) 역비례 게인 스케일링, 실속 방어 및 조종면 배분은 VAS가 일괄 전담.
 3. **외루프 비행 모드 FSM 및 2단계 시동 주도권 총괄**:
    - 13대 상태 머신(`BOOT_INIT`, `BOOTSTRAP`, `PROBE_CHANNEL`, `ARMING_LOCKED`, `DISARMED`, `ARMING`, `IDLE_ARMED`, `TAKEOFF`, `CRUISE`, `LOITER`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `FAILSAFE_RTH`, `EMERGENCY_LAND`, `PASSIVE_TRACKING`) 운용.
    - FCP 전담 2단계 시동: FCP가 채널 무결성, VAS 센서 헬스 및 하위 액추에이터 준비를 확인한 후 `arm = true, flightActive = false`로 지상 대기(`IDLE_ARMED`)를 수립하고, 이륙 허가 시 `flightActive = true`를 하달하여 활성 비행(`NORMAL`) 전환.
@@ -214,7 +214,7 @@ FCP의 모든 항법 및 유도 알고리즘은 항공 역학 표준인 **NED (N
 - **속도**: 초당 미터 ($\text{m/s}$, 1 block/tick = 20.0 m/s).
 - **가속도**: $\text{m/s}^2$ (기본 중력가속도 $g = 11.0\text{ m/s}^2$, 마인크래프트 월드 연직 하방 $a_y = -11.0\text{ m/s}^2$).
 - **시간**: 밀리초 ($\text{ms}$, `os.epoch("utc")`).
-- **스로틀 명령**: $0.0 \sim 1.0$ 정규화 실수 (최대 출력 대비 무차원 비율. TAP이 REDSTONE 모드일 경우 VAS-Core가 $0 \sim 15$ 정수로 변환 인가).
+- **스로틀 명령**: $0.0 \sim 1.0$ 정규화 실수 (최대 출력 대비 무차원 비율. TAP이 REDSTONE 모드일 경우 VAS가 $0 \sim 15$ 정수로 변환 인가).
 - **미세 병진 바이어스**: $-1.0 \sim +1.0$ 정규화 실수 (`surge`, `sway`, `heave`).
 
 ---
@@ -281,7 +281,7 @@ sequenceDiagram
             N->>M: Base+3 채널로 5Hz MSG_MFD_STATE 통합 텔레메트리 송출
         end
     else 조종석 수동 ACRO 활성 (PASSIVE_TRACKING 모드)
-        Note over G,N: Base+1 지령 및 Base+3 MFD 다운링크 송출 완전 유예 (Silence)<br/>(VAS-Core가 Base+3 20Hz 직결 HUD 인계)
+        Note over G,N: Base+1 지령 및 Base+3 MFD 다운링크 송출 완전 유예 (Silence)<br/>(VAS가 Base+3 20Hz 직결 HUD 인계)
         Note over NV: 백그라운드 GPS 및 DR 항법 융합 유지 (Bumpless 복귀 준비)
     end
     Note over T: 잔여 슬랙 버퍼 유지 후 50ms 틱 완료 대기
@@ -406,11 +406,11 @@ flowchart TD
 - **차동 추력 보조 요 모멘트 ($r_{FF}$ 연동)**:
   미익 부재에 따른 방향타 결손을 보완하기 위해, 선회율 피드포워드 $r_{FF} = \frac{11.0}{V}\tan(\phi_{cmd})$에 비례하는 좌우 차동 추력 보정량 $\Delta T_{diff}$를 계산합니다:
   $$\Delta T_{diff} = K_{diff} \cdot r_{FF} \quad (K_{diff} \approx 0.015)$$
-  하위 VAS-Core의 추진기 믹서로 하달 시 요 요구 모멘트($u_{yaw}$)로 직접 투영됩니다.
+  하위 VAS의 추진기 믹서로 하달 시 요 요구 모멘트($u_{yaw}$)로 직접 투영됩니다.
 
 #### 2) TECS 종방향 에너지 관리 및 순수 운동학 유도
 - 총 에너지 $E_{tot} = 11.0 \cdot h + \frac{1}{2}V^2$ 및 에너지 분배율 $E_{bal} = 11.0 \cdot h - \frac{1}{2}V^2$을 추종합니다.
-- FCP는 순수 운동학 목표치(목표 피치각 $\theta_{cmd}$, 주 추진 스로틀 $T_{tecs}$, 목표 승강률 $v_{y,cmd}$)를 산출하여 VAS-Core에 하달합니다.
+- FCP는 순수 운동학 목표치(목표 피치각 $\theta_{cmd}$, 주 추진 스로틀 $T_{tecs}$, 목표 승강률 $v_{y,cmd}$)를 산출하여 VAS에 하달합니다.
 - **실속 방지 단일화 원칙**: 실속 방어 인터록(대기속도 $\le 10.0\text{ m/s}$ 시 피치 하향 $\le 0.0^\circ$ 및 스로틀 부스트)은 VAS Layer 2A에서 단일 완결되며, FCP는 저수준 실속 클램프를 중복 연산하지 않습니다.
 
 #### 3) 비행 단계별 플랩 스케줄링 (`flapTarget`)
@@ -681,12 +681,12 @@ flowchart TD
 #### 2) 독립 헤딩(Yaw) 및 수직 고도 제어
 - 고정익의 협조 선회(BTT)와 달리, 수평 가속도와 기체 헤딩이 완전히 독립 제어됩니다. 헤딩($\psi_{cmd}$)은 조종사 입력 또는 다음 웨이포인트를 정면으로 응시하도록 설정됩니다.
 - 고도는 수직 추력 직결형 PI 제어기로 연산되어 주 스로틀(`targetThrottle`) 및 승강 바이어스(`translationBias.heave`)로 인가됩니다.
-- **4-T 및 6-T 차별화 원칙**: FCP는 동일한 `angleTargets`, `targetThrottle`을 송출하며, 6-T의 높은 추력 여유도와 6모터 분산 기여도는 VAS-Core가 로드한 `config/thrusters.json` 프로파일에 의해 하위 하드웨어 계층에서 자연스럽게 완결됩니다.
+- **4-T 및 6-T 차별화 원칙**: FCP는 동일한 `angleTargets`, `targetThrottle`을 송출하며, 6-T의 높은 추력 여유도와 6모터 분산 기여도는 VAS가 로드한 `config/thrusters.json` 프로파일에 의해 하위 하드웨어 계층에서 자연스럽게 완결됩니다.
 
 ---
 
 ### 5.8 6-DoF 미세 병진 바이어스 제어
-정밀 착륙패드 진입, 도킹암 포트 정합 및 호버링 정박 시 자세 기울임 없이 직접 병진력을 인가하기 위해 VAS-Core로 `translationBias`를 하달합니다.
+정밀 착륙패드 진입, 도킹암 포트 정합 및 호버링 정박 시 자세 기울임 없이 직접 병진력을 인가하기 위해 VAS로 `translationBias`를 하달합니다.
 - `surge` (전후진): $X_{body}$ 축 미세 변위 정규화 보정 ($-1.0 \sim +1.0$)
 - `sway` (좌우횡): $Y_{body}$ 축 미세 횡변위 정규화 보정 ($-1.0 \sim +1.0$)
 - `heave` (수직승강): $Z_{body}$ 축 미세 승강 정규화 보정 ($-1.0 \sim +1.0$)
@@ -819,8 +819,8 @@ GPS 수신 간격(100~200ms) 사이의 공백기 또는 일시적 신호 두절 
 | **`BOOTSTRAP`** | GCS 채널 블록 배정 | CH 50000으로 `MSG_BLOCK_REQUEST` 송출 후 `MSG_BLOCK_ASSIGN` 대기 (1,000ms 타임아웃). |
 | **`PROBE_CHANNEL`** | 채널 선점 충돌 탐색 | `Base + 0` 포트로 `MSG_CHANNEL_PROBE` 송출 후 200ms 침묵 대기. |
 | **`ARMING_LOCKED`** | 채널 충돌 안전 잠금 | 채널 선점 충돌 감지 시 비행 출력 강제 동결, MFD 적색 경보 및 부저 가동. |
-| **`DISARMED`** | 비행 시동 대기 | 지상 대기 상태. VAS-Core로 `arm = false, flightActive = false` 유지, 추진기 출력 0 차단. |
-| **`ARMING`** | 2단계 시동 핸드셰이크 (1단계) | 조종사/임무 시동 지령 접수. VAS-Core로 `arm = true, flightActive = false` 송출 및 센서/추진기 헬스(`actuatorHealth.allOk == true`) 검증. |
+| **`DISARMED`** | 비행 시동 대기 | 지상 대기 상태. VAS로 `arm = false, flightActive = false` 유지, 추진기 출력 0 차단. |
+| **`ARMING`** | 2단계 시동 핸드셰이크 (1단계) | 조종사/임무 시동 지령 접수. VAS로 `arm = true, flightActive = false` 송출 및 센서/추진기 헬스(`actuatorHealth.allOk == true`) 검증. |
 | **`IDLE_ARMED`** | 지상 시동 완료 (아이들 대기) | VAS 시동 확인 완료. 스로틀 0 및 조종면 중립 유지, 이륙 지령 대기. |
 | **`TAKEOFF`** | 자동 이륙 기동 (2단계 활성화) | 이륙 지령 수신 시 `flightActive = true` 인가. VTOL: 수직 상승 목표 고도 도달 / 고정익: 활주 가속 후 기수 인상 및 상승률 유지. |
 | **`CRUISE`** | 궤적 순항 항법 | L1 수평 유도, TECS 고도/속도 유지, 지정 웨이포인트 연속 추종. |
@@ -1019,22 +1019,22 @@ Phase 3 초정밀 접근 구간($d \le 5\text{ m}$)에서 기상 급변, 후류 
 ---
 
 ### 7.6 VAS 내루프 FSM과의 연동 규약
-FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지휘하며, 2단계 시동 및 조종사 MFD ACRO 선점에 대응하는 연동 프로토콜을 집행합니다:
+FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하며, 2단계 시동 및 조종사 MFD ACRO 선점에 대응하는 연동 프로토콜을 집행합니다:
 
 1. **2단계 시동 시퀀스 (2-Stage Arming Protocol)**:
-   - **1단계 시동 준비 (`arm = true, flightActive = false`)**: FCP가 시동 지령 접수 시 VAS-Core로 `arm = true, flightActive = false`를 하달합니다. VAS-Core는 `ARMING` 상태로 진입하여 TCA/ASA 구동계 디스커버리 및 센서 상태를 점검하고, 준비 완료 시 `controlState = "IDLE_ARMED"`, `actuatorHealth.allOk = true`를 텔레메트리로 보고합니다. 이 상태에서 추진기 스로틀 0 및 조종면 중립이 유지됩니다.
-   - **2단계 비행 활성화 (`arm = true, flightActive = true`)**: 조종사 또는 임무 계획에 의해 이륙 지령(`CMD_TAKEOFF`)이 하달되면 FCP는 `flightActive = true`를 송출합니다. VAS-Core는 비행 믹싱을 인가하여 `NORMAL` 상태로 전이하고 본격적인 비행 출력을 집행합니다.
-   - **시동 차단 (`arm = false, flightActive = false`)**: FCP가 시동 해제를 송출하면 VAS-Core는 즉시 전 구동계 출력을 0으로 차단하고 `DISARMED` 상태로 강제 복귀합니다.
+   - **1단계 시동 준비 (`arm = true, flightActive = false`)**: FCP가 시동 지령 접수 시 VAS로 `arm = true, flightActive = false`를 하달합니다. VAS는 `ARMING` 상태로 진입하여 TCA/ASA 구동계 디스커버리 및 센서 상태를 점검하고, 준비 완료 시 `controlState = "IDLE_ARMED"`, `actuatorHealth.allOk = true`를 텔레메트리로 보고합니다. 이 상태에서 추진기 스로틀 0 및 조종면 중립이 유지됩니다.
+   - **2단계 비행 활성화 (`arm = true, flightActive = true`)**: 조종사 또는 임무 계획에 의해 이륙 지령(`CMD_TAKEOFF`)이 하달되면 FCP는 `flightActive = true`를 송출합니다. VAS는 비행 믹싱을 인가하여 `NORMAL` 상태로 전이하고 본격적인 비행 출력을 집행합니다.
+   - **시동 차단 (`arm = false, flightActive = false`)**: FCP가 시동 해제를 송출하면 VAS는 즉시 전 구동계 출력을 0으로 차단하고 `DISARMED` 상태로 강제 복귀합니다.
 
 2. **조종석 MFD ACRO 모드 선점 및 FCP 추종 프로토콜**:
    - 조종사가 조종석 MFD 콘솔에서 ACRO 모드를 활성화하면, MFD는 `Base + 1` 채널로 20Hz 직결 각속도 지령(`MFD_ACRO`)을 직접 주입합니다.
-   - VAS-Core는 다중 송신원 중재 규칙에 따라 FCP 지령 대신 MFD 지령을 최우선 채택하고, 텔레메트리의 `activeSource`를 `"MFD_ACRO"`로 변경하여 보고합니다.
+   - VAS는 다중 송신원 중재 규칙에 따라 FCP 지령 대신 MFD 지령을 최우선 채택하고, 텔레메트리의 `activeSource`를 `"MFD_ACRO"`로 변경하여 보고합니다.
    - FCP는 `telemetry.activeSource == "MFD_ACRO"`를 감지하는 즉시 FSM을 `PASSIVE_TRACKING`으로 전이합니다:
      - `Base + 1`로의 20Hz `MSG_ATTITUDE_CMD` 송출을 즉각 전면 중단(Silence)하여 버스 경합을 방지합니다.
-     - `Base + 3`으로의 5Hz `MSG_MFD_STATE` 송출을 중단하여 MFD HUD가 VAS-Core의 20Hz 직결 다운링크를 직접 표출하도록 양보합니다.
+     - `Base + 3`으로의 5Hz `MSG_MFD_STATE` 송출을 중단하여 MFD HUD가 VAS의 20Hz 직결 다운링크를 직접 표출하도록 양보합니다.
      - L1 크로스트랙 및 TECS 에너지 적분기를 현재 값으로 동결(Freeze)합니다.
      - 백그라운드 GPS/DR 센서 융합 및 비행 위치 추적은 20Hz로 지속 유지합니다.
-   - 조종사가 ACRO 모드를 해제하면 VAS-Core는 텔레메트리의 `activeSource`를 `"FCP"`로 원복합니다.
+   - 조종사가 ACRO 모드를 해제하면 VAS는 텔레메트리의 `activeSource`를 `"FCP"`로 원복합니다.
    - FCP는 이를 감지하여 `CRUISE`로 복귀하고, 2.0초 무급변 선형 램핑(Bumpless Ramp)을 통해 현재 기체 자세로부터 유도 자세 지령으로 점진 보간하여 제어 충격을 차단합니다.
 
 ### 7.7 페일세이프 복구 시 범프리스(Bumpless) 램핑 및 적분기 리셋 규격
@@ -1198,7 +1198,7 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 #### 8.2.3 [송출] 비상 오버라이드 킬스위치 (`MSG_EMERGENCY_OVERRIDE`, MFD / GCS / FCP $\rightarrow$ Core)
 - **전송 채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`)
 - **전송 조건**: 치명적 결함, 공중 충돌 임박 또는 기체 폭주 시 구동계를 즉각 셧다운(`E_STOP`)하거나 쿠션 착지(`CUSHION_STOP`)를 집행할 때 송출.
-- **아키텍처 규칙**: 비상착륙(`EMERGENCY_LAND`) 및 긴급홀드(`HOVER_HOLD`)는 FCP가 외루프 유도로 VAS-Core를 조작하여 수행하며, 본 패킷은 하드웨어 비상 차단(Kill-Switch) 용도로 엄격히 한정됩니다.
+- **아키텍처 규칙**: 비상착륙(`EMERGENCY_LAND`) 및 긴급홀드(`HOVER_HOLD`)는 FCP가 외루프 유도로 VAS를 조작하여 수행하며, 본 패킷은 하드웨어 비상 차단(Kill-Switch) 용도로 엄격히 한정됩니다.
 - **패킷 타입**: `MSG_EMERGENCY_OVERRIDE`
 
 | 필드 경로 | 타입 | 단위 | 설명 |
@@ -1317,8 +1317,8 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 #### 8.4.2 [송출] MFD 계기 통합 다운링크 브로드캐스트 (`MSG_MFD_STATE`, FCP $\rightarrow$ MFD, Base + 3)
 - **통신 채널**: `CH_MFD_INSTRUMENT` (`Base + 3`)
 - **전송 주기**: 5Hz (200ms)
-- **계층적 다운링크 원칙**: 평시 비행 시 FCP가 VAS-Core의 텔레메트리, GPS/DR 항법 정보, FSM 상태, 경보 및 구동계 헬스를 통합하여 MFD HUD로 5Hz 브로드캐스트합니다 (이때 VAS-Core는 `Base + 3` 송출을 침묵).
-- **ACRO 모드 자동 인계**: 조종사가 MFD ACRO 모드로 진입하면 FCP는 즉시 `PASSIVE_TRACKING`으로 전이되어 `Base + 3` 송출을 중단(Silence)하며, VAS-Core가 20Hz 저지연 계기 패킷을 직접 송출하여 MFD HUD를 구동합니다.
+- **계층적 다운링크 원칙**: 평시 비행 시 FCP가 VAS의 텔레메트리, GPS/DR 항법 정보, FSM 상태, 경보 및 구동계 헬스를 통합하여 MFD HUD로 5Hz 브로드캐스트합니다 (이때 VAS는 `Base + 3` 송출을 침묵).
+- **ACRO 모드 자동 인계**: 조종사가 MFD ACRO 모드로 진입하면 FCP는 즉시 `PASSIVE_TRACKING`으로 전이되어 `Base + 3` 송출을 중단(Silence)하며, VAS가 20Hz 저지연 계기 패킷을 직접 송출하여 MFD HUD를 구동합니다.
 
 ```lua
 -- FCP가 Base+3으로 송출하는 5Hz MFD 계기 통합 다운링크 패킷
@@ -1422,15 +1422,15 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 > [!IMPORTANT]
 > **ASA 액추에이터 계층의 VAS 산하 완전 편입 (ICD 개정)**
 > 종래 FCP와 ASA 클러스터(Node 06-L, 06-R, 06-T) 간 직접 교신하던 `MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, `MSG_SURFACE_DISCOVER_REQ/ACK` 인터페이스는 **`[DEPRECATED]`** 처리되었습니다.
-> 공력 조종면(ASA)은 [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) 산하 제3계층(Layer 3) 분산 액추에이터 노드로 공식 이관되었으며, `Base + 11` 채널(구 `Base + 7` [DEPRECATED])을 통해 VAS-Core의 `actuator_adapter_asa` 모듈과 전담 통신(`MSG_AERO_CMD` / `MSG_AERO_STATUS`)합니다.
+> 공력 조종면(ASA)은 [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) 산하 제3계층(Layer 3) 분산 액추에이터 노드로 공식 이관되었으며, `Base + 11` 채널(구 `Base + 7` [DEPRECATED])을 통해 VAS의 `actuator_adapter_asa` 모듈과 전담 통신(`MSG_AERO_CMD` / `MSG_AERO_STATUS`)합니다.
 > 
-> FCP는 공력 조종면의 물리적 편향각을 직접 계산하지 않으며, 외루프 유도 연산 결과 도출된 플랩 전개 요구율 **`flapTarget` ($0.0 \sim 1.0$)**을 `Base + 1`의 `MSG_ATTITUDE_CMD` 페이로드에 실어 VAS-Core에 하달합니다. 동압 스케일링($\frac{1}{2}\rho V^2$), 타면 포화(`satCombined`), 고착 격리 및 실속 방어는 하위 VAS-Core가 통합 집행합니다.
+> FCP는 공력 조종면의 물리적 편향각을 직접 계산하지 않으며, 외루프 유도 연산 결과 도출된 플랩 전개 요구율 **`flapTarget` ($0.0 \sim 1.0$)**을 `Base + 1`의 `MSG_ATTITUDE_CMD` 페이로드에 실어 VAS에 하달합니다. 동압 스케일링($\frac{1}{2}\rho V^2$), 타면 포화(`satCombined`), 고착 격리 및 실속 방어는 하위 VAS가 통합 집행합니다.
 
 #### 1. [DEPRECATED] 구버전 직결 조종면 지령 (`MSG_SURFACE_CMD`)
-- 구버전 호환 명세로 보존되며, 신규 아키텍처에서는 FCP가 이를 송출하지 않고 VAS-Core가 `MSG_AERO_CMD`로 대체 집행합니다.
+- 구버전 호환 명세로 보존되며, 신규 아키텍처에서는 FCP가 이를 송출하지 않고 VAS가 `MSG_AERO_CMD`로 대체 집행합니다.
 
 #### 2. [DEPRECATED] 구버전 조종면 상태 피드백 (`MSG_SURFACE_STATUS`)
-- ASA는 상태를 VAS-Core로 직접 보고하며, FCP는 `Base + 2`의 `MSG_FLIGHT_TELEMETRY.payload.actuatorHealth.asa`을 통해 간접 수신합니다.
+- ASA는 상태를 VAS로 직접 보고하며, FCP는 `Base + 2`의 `MSG_FLIGHT_TELEMETRY.payload.actuatorHealth.asa`을 통해 간접 수신합니다.
 
 ---
 
@@ -1438,8 +1438,8 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 - **통신 채널**: `CH_FLIGHT_GUIDANCE` (`oldBase + 1`)
 - **전송 주기**: GCS로부터 기체 Base 채널 재할당(`MSG_BLOCK_ASSIGN`) 수신 시 트랜잭션 집행
 - **캐스케이드 전파 규약**:
-  1. **Phase 1 (PREPARE)**: FCP가 `action = "PREPARE"`, `newBaseChannel`을 VAS-Core에 송출. VAS-Core는 이를 수신하여 하위 TCA(`oldBase + 10`) 및 ASA(`oldBase + 11`) (구 oldBase+6/7 [DEPRECATED])으로 동시 중계 전파.
-  2. **ACK 수집**: TCA/ASA가 새 채널 수신 대기를 완료하고 ACK를 회신하면, VAS-Core는 종합 판단 후 FCP로 ACK 회신.
+  1. **Phase 1 (PREPARE)**: FCP가 `action = "PREPARE"`, `newBaseChannel`을 VAS에 송출. VAS는 이를 수신하여 하위 TCA(`oldBase + 10`) 및 ASA(`oldBase + 11`) (구 oldBase+6/7 [DEPRECATED])으로 동시 중계 전파.
+  2. **ACK 수집**: TCA/ASA가 새 채널 수신 대기를 완료하고 ACK를 회신하면, VAS는 종합 판단 후 FCP로 ACK 회신.
   3. **Phase 2 (COMMIT)**: FCP가 최종 `action = "COMMIT"`을 송출하고 자신의 모뎀 채널(`newBase + 0 ~ 5`)을 재바인딩. VAS 및 TCA/ASA도 일제히 소켓을 절체하여 통신 연속성을 유지.
   4. **타임아웃 롤백**: 500ms 이내에 응답이 누락될 경우 FCP는 `action = "ROLLBACK"`을 송출하여 이전 채널로 원복.
 
@@ -1630,7 +1630,7 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
 | **I-7: GPS 측위 응답 (Base+5)** | **5,000ms** | FCP (`nav_engine`) | **추측항법 전환 & LOITER**: 반경 30m 체공 (fuel < 20% 시 `RTH`, < 10% 시 `EMERGENCY_LAND`) |
 | **I-5: 동적 시설물 유도 ($Base_{\text{sec}}+10+\text{Idx}$)**| **300ms** | FCP (`facility_client`) | **전술 복행(GO_AROUND)**: 최대 상승 스로틀 인가, 1~2회 30초 대기 재접근, 3회 시 `RTH` 회항 |
 | **I-8: GCS 부트스트랩 (50000)** | **1,000ms** | FCP (`channel_sentinel`)| **로컬 캐시 폴백**: 이전 확정 Base 로드 후 `Base+0` 충돌 프로브 단계로 전환 |
-| **I-10: 코어 구동계 상태 감시 (Base+2)** | **500ms** | FCP (`nav_engine`) | `actuatorHealth.asa == false` 감지 시 잔여 구동계 차동 추력 극대화 및 즉각 `FAILSAFE_RTH` 전환 (ASA 로컬 300ms 타임아웃은 하위 VAS-Core가 직접 완결) |
+| **I-10: 코어 구동계 상태 감시 (Base+2)** | **500ms** | FCP (`nav_engine`) | `actuatorHealth.asa == false` 감지 시 잔여 구동계 차동 추력 극대화 및 즉각 `FAILSAFE_RTH` 전환 (ASA 로컬 300ms 타임아웃은 하위 VAS가 직접 완결) |
 
 ### 10.2 복행(Go-Around) 강제 판단 기준 및 3회 제한
 스마트 활주로, 패드 또는 함선 착륙 진입(`APPROACH_LAND`) 중 다음 조건 중 하나라도 충족되면 FCP는 즉각 유도를 중단하고 복행을 선언합니다:
@@ -2139,7 +2139,7 @@ end
 | **IS-10.1 ~ 10.2** | TS-10 | 14-State 외루프 FSM 및 2단계 시동 주도권 엔진 | `flight_fsm.lua` / `test_flight_fsm.lua` | **PASS** |
 | **IS-11.1 ~ 11.2** | TS-11 | TUI 진단 렌더러 및 터미널 프레임버퍼 표출기 | `ui_renderer.lua` / `test_ui_renderer.lua` | **PASS** |
 | **IS-11.3 ~ 11.4** | TS-11 | 20Hz 병렬 메인 런타임 루프 및 상주형 데몬 엔트리포인트 | `main.lua` / `test_main_loop.lua` | **PASS** |
-| **IS-12.1** | TS-12 | FCP 및 VAS HIL 클러스터 노드 엔트리포인트 | `node_fcp.lua`, `node_vac_core.lua` | **PASS** |
+| **IS-12.1** | TS-12 | FCP 및 VAS HIL 클러스터 노드 엔트리포인트 | `node_fcp.lua`, `node_vas.lua` | **PASS** |
 | **IS-12.2** | TS-12 | ASA 및 외부 인프라(GAC/GPS) HIL 클러스터 노드 엔트리포인트 | `node_asa.lua`, `node_infra.lua` | **PASS** |
 | **IS-13.1 ~ 13.2** | TS-13 | ASA 디커플링 & `Base+11 (구 Base+7 [DEPRECATED])` 소켓 완전 배제 및 채널 바인딩 | `network_manager.lua` / `test_asa_decoupling.lua` | **PASS** |
 | **IS-13.3 ~ 13.4** | TS-13 | 가용(FREE) 착륙 시설물 동적 선정 및 RTH FSM 전이 로직 | `facility_client.lua`, `flight_fsm.lua` | **PASS** |

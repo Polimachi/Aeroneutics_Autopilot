@@ -508,7 +508,7 @@ sequenceDiagram
         C->>T: MSG_CALIB_BAY_BIND (Base+10) [action: "CLOSE"]
         C->>W: MSG_CALIB_BAY_BIND (Base+11) [action: "CLOSE"]
     end
-    Note over C,W: 기체 온보드 modem.close(Base_hangar+0, +1, +3) 즉시 해제<br/>VAS-Core는 IDLE_ARMED 복귀, Alignment 콘솔은 STANDBY 복귀
+    Note over C,W: 기체 온보드 modem.close(Base_hangar+0, +1, +3) 즉시 해제<br/>VAS는 IDLE_ARMED 복귀, Alignment 콘솔은 STANDBY 복귀
     C-->>A: MSG_CALIBRATION_CLOSE_ACK (Base_hangar + 1) [status: "CLOSED"]
 ```
 
