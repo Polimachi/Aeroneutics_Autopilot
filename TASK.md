@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-09  
-> **현재 단계**: **Phase 1 & 2** (TASK-008 구버전 잔존 명칭 정비 완료, 활성: TASK-009 GDrive 파일 관리 개선 / TASK-010 플레이북 체계 구축 / TASK-114 GAC 전용 시설물 / TASK-116 인스톨러 TUI 개편 / TASK-117 무선 OTA 서버 / TASK-201 AMP 사양서 초안 / TASK-202 FCP 전술 행동 연동 / TASK-203 AMM 미션 시퀀서 확장)
+> **현재 단계**: **Phase 1 & 2** (TASK-009 GDrive 파일 관리 개선 완료, 활성: TASK-010 플레이북 체계 구축 / TASK-114 GAC 전용 시설물 / TASK-116 인스톨러 TUI 개편 / TASK-117 무선 OTA 서버 / TASK-201 FCP 외루프 유도 프리미티브 확장 / TASK-202 UAFS 통합 미션 시퀀서 & AMM 단말 연동)
 
 ---
 
@@ -21,12 +21,6 @@
 ---
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
-
-- [ ] **TASK-009: GDrive 업로드용 디렉토리 재지정 및 파일 관리 방식 개선**
-  - **주요 내용**: 인게임 컴퓨터 환경 및 원격 배포(`installer.lua` GDrive 다운로드 연동 등)에 필요한 배포용/산출물 파일 관리 구조 체계화 및 로컬/클라우드 동기화 디렉토리 명확화
-  - [ ] **TASK-009-1**: GDrive 업로드/동기화 대상 디렉토리 구조 재정의 및 파일 분류 기준 수립
-  - [ ] **TASK-009-2**: 배포 아티팩트 및 GDrive 매핑 파일(`--bootstrap-gdrive-map`, 파일 ID 메타데이터 등) 관리 체계 개선
-  - [ ] **TASK-009-3**: 동기화/업로드 관련 스크립트 정비 및 운영 가이드라인 문서화
 
 - [ ] **TASK-010: 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md`
@@ -56,27 +50,22 @@
   - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
   - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거
 
-- [ ] **TASK-201: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성**
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
-  - Layer 4 (`src/4_mission/amp/`) 온보드/지상 겸용 미션 플래너, 인프라 기동 6종 체계(런치패드, 활주로, 도킹 암) 및 3대 도메인 13개 체크포인트 행동 규격 제정 (`docs/specs/4_mission/amp/AMP_PROGRAM_SPECIFICATION.md`) (구 TASK-202 편대 미션 오케스트레이터 및 지상 관제 디스패처 기능 통합 대체)
+- [ ] **TASK-201: FCP 외루프 유도 프리미티브(LOITER 선회 반경 제어 & POI_HOLD 관심점 지향) 확장**
+  - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Approved 대기), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.24.0 Approved 대기)
+  - **배경 및 목적**: 고수준 미션/편대/레이더 오염을 FCP에서 원천 배제(구 TASK-202 다이어트)하고, 상위 AMM의 전술 기동을 뒷받침할 2종 순수 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 정밀 호버/조준)와 `MSG_OPERATOR_CMD`(`Base+0`) 인터페이스 확장
+  - [ ] **TASK-201-1**: FCP 사양서(v1.16.0 Approved) 및 마스터 ICD(v1.24.0 Approved) 유도 프리미티브 명세 개정
+  - [ ] **TASK-201-2**: FCP `guidance_controller.lua` 및 기종별 드라이버에 `LOITER`(선회 반경/방향 속도 제어) 및 `POI_HOLD`(관심 좌표 지속 지향) 제어 루프 구현
+  - [ ] **TASK-201-3**: `operator_handler.lua` `MSG_OPERATOR_CMD` 신규 모드 수신 및 범프리스 전환 인터록 구현
+  - [ ] **TASK-201-4**: FCP 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원
 
-- [ ] **TASK-202: FCP 전술 행동(Tactical Behavior) 아키텍처 도입 및 상위 AMM 계획 계층 연동**
-  - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Approved 대기), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (v1.1.0 Approved 대기), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.24.0 Approved 대기)
-  - [ ] **TASK-202-1**: 전술 행동 및 AMM 연동 다중 사양서 개정·동기화 (FCP v1.16.0 Approved, AMM v1.1.0 Approved, 마스터 ICD v1.24.0 Approved, 14 SPECS 100% CLEAN 검증 완료)
-  - [ ] **TASK-202-2**: 행동(Behavior) 관리자 코어 및 범프리스 전환 인터록 구현 (`src/2_guidance/fcp/modules/behavior_manager.lua`, `behaviors/`)
-  - [ ] **TASK-202-3**: 체공 분리(LOITER 선회 & POI_HOLD 정밀 호버) 및 6대 기종별 안전 가드 구현 (`src/2_guidance/fcp/modules/behaviors/behavior_loiter.lua`, `behavior_poi_hold.lua`)
-  - [ ] **TASK-202-4**: 타 비행체 호위(FORMATION_ESCORT) 및 CC:Radar 표적 감시(TRACK_SURVEILLANCE) 행동 구현 (`src/2_guidance/fcp/modules/behaviors/behavior_formation_escort.lua`, `behavior_track_surveillance.lua`)
-  - [ ] **TASK-202-5**: AMM 상위 제어 연동, 3자 C2 권한 중재 및 조종석 TUI 모니터링 확장 (`src/2_guidance/fcp/modules/operator_handler.lua`, `src/3_planning/amm/modules/`)
-  - [ ] **TASK-202-6**: CraftOS-PC 단위 테스트 확장 및 E2E 시뮬레이션(Gate 0~6) 검증 (전술 행동 라이프사이클/폴백 검증, 사양서 3종 Implemented 환원)
-
-- [ ] **TASK-203: AMM 전술 행동(Behavior) 기반 미션 시퀀서 및 조종석 C2 단말 확장**
-  - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (v1.1.0 Approved 대기), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.24.0 Approved)
-  - [ ] **TASK-203-1**: 전술 행동 미션 시퀀서 및 C2 인터페이스 사양서 개정·동기화 (AMM v1.1.0 Approved, 마스터 ICD v1.24.0 Approved, 14 SPECS 100% CLEAN 검증 완료)
-  - [ ] **TASK-203-2**: 6대 다형성 행동 큐 및 3대 스텝 전이(Advancement) 엔진 구현 (`src/3_planning/amm/modules/mission_queue.lua`, `config/missions/*.json`)
-  - [ ] **TASK-203-3**: C2 지령 패킷 빌더 확장 및 무반향 GCS 감청·상태 피드백 동기화 (`src/3_planning/amm/modules/c2_arbiter.lua`, `network_manager.lua`)
-  - [ ] **TASK-203-4**: 51x19 TUI 미션 뷰 포맷팅 및 HUD 행동/타이머/경보 배너 시각화 (`src/3_planning/amm/modules/ui_renderer.lua`)
-  - [ ] **TASK-203-5**: 테이블 디스패처 기반 CLI 전술 명령어 파서 및 [H] 원터치 핫키 확장 (`src/3_planning/amm/modules/input_handler.lua`)
-  - [ ] **TASK-203-6**: CraftOS-PC 단위 테스트 확장 및 E2E 시뮬레이션 검증 (다형성 큐 전이/예외 폴백 검증, 사양서 Implemented 환원)
+- [ ] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201 + 203 완전 통합)**
+  - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (v1.1.0 Approved 대기), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.24.0 Approved)
+  - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 단일 미션 엔진(`src/3_planning/amm/modules/mission_engine.lua`)으로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 향후 무인기/지상 관제(AMP)에서도 헤드리스로 재사용 가능하도록 모듈화
+  - [ ] **TASK-202-1**: AMM 사양서(v1.1.0 Approved) 및 마스터 ICD 통합 미션 스키마 개정
+  - [ ] **TASK-202-2**: 13종 체크포인트 스키마 및 `completeWhen`/`abortWhen` 복합 조건 평가 엔진 구현 (`src/3_planning/amm/modules/mission_engine.lua`)
+  - [ ] **TASK-202-3**: `missions/*.json` 다형성 시퀀스 파일 로더 및 스텝 자동 전이 FSM 구현
+  - [ ] **TASK-202-4**: AMM 51x19 TUI 미션 뷰 시각화 및 CLI 명령어(`mission run/stop/status`) 확장
+  - [ ] **TASK-202-5**: AMM 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원
 
 ---
 
@@ -101,6 +90,16 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-009: GDrive 업로드용 디렉토리 재지정 및 파일 관리 방식 개선** (완료일: 2026-11-09) (`dist_gdrive/`, `config/gdrive_mapping.json`, `tools/sync_gdrive.py`, `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-009-gdrive-deployment-framework.md`
+  - **목적 및 성과**: 인게임 CC:Tweaked 및 원격 배포(`installer.lua` Google Drive 다운로드 연동)에 필요한 격리 스테이징 구조(`dist_gdrive/`), 단일 진실 공급원 매핑 파일(`config/gdrive_mapping.json`), 자동화 CLI 도구(`tools/sync_gdrive.py`) 및 운영 가이드라인 구축 완료. Google Drive 공식 폴더(`1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9`, `Antigravity_Playground`)로의 부트스트랩 7종, 인스톨러, 센서 공유 라이브러리 실시간 업로드 및 파일 ID 매핑 연동. 인스톨러 `--bootstrap-gdrive-map` 구조적 JSON 파싱 확장, 단위 테스트 294/294 PASS, 하네스 41/41 PASS, E2E 6/6 PASS, 돌연변이 20/20 KILLED(100.0%), 14대 사양서 100% CLEAN 달성.
+  - **구현 내용**:
+    - [x] **TASK-009-1**: GDrive 업로드/동기화 대상 디렉토리 구조(`dist_gdrive/`) 재정의 및 4대 파일 분류 기준 수립
+    - [x] **TASK-009-2**: 배포 아티팩트 및 GDrive 매핑 파일(`config/gdrive_mapping.json`, `--bootstrap-gdrive-map` 구조화 지원) 관리 체계 개선
+    - [x] **TASK-009-3**: 동기화/업로드 CLI 도구(`tools/sync_gdrive.py`) 개발, 하네스 무결성 테스트 구축 및 운영 가이드라인(`docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`) 문서화
+    - [x] **TASK-009-4**: Google Drive 공식 폴더 동기화 및 부트스트랩 파일 ID 프리셋 내장
+    - [x] **TASK-009-5**: 전계층 회귀 검증 및 마일스톤 동기화
 
 - [x] **TASK-008: 구버전 잔존 명칭(VAS-Core, VAS-Align, VAC-Align) 전면 검수·치환 및 회귀 방지 정비** (완료일: 2026-11-09) (`tests/harness/test_terminology_guard.py`, `tools/verify_all_specs.py`, `src/`, `tests/`, `docs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-008-legacy-terminology-purge.md`
@@ -159,7 +158,3 @@
 - [x] **TASK-112: VAS 센서 파이프라인의 CC:Avionics 표준 API(`avionics_sensors`) 동기화 및 3축 속도/고도 정합화** (완료일: 2026-11-08, 커밋 `1ee16b2` ~ `95f68f5`) (`docs/specs/1_control/vas/`, `src/1_control/vas/modules/sensor_pipeline.lua`, `tests/1_control/vas/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-112-vas-sensor-pipeline-avionics.md`
   - VAS 내루프 실시간 동역학 제어용 센서 파이프라인을 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 동기화하고, CC:Avionics 공식 API(`getHeight()`, 1축 스칼라 `getVelocity()` 3축 합성, 짐벌 오일러/각속도/중력/가속도) 정합성 확보.
-
-- [x] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (완료일: 2026-11-08, 커밋 `47b98bb` ~ `c064823`) (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`, `tests/0_infra/landing_pad/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-102-landing-pad-controller.md`
-  - Landing Pad 사양서 v2.4.2 Implemented 승격, 설정 영속화, 3D 바디 오프셋 변환, 갑판 요동 판정, GPS 클라이언트, 전술 유도 스트리머, 패드 FSM, 5단계 셋업 마법사, 51x19 TUI 뷰, 20Hz 메인 데몬 루프 구현 완료.

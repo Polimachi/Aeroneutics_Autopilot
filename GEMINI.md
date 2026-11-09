@@ -2,16 +2,17 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 1 & 2** — Phase 0 전 과제, 구버전 용어 척결(TASK-007, TASK-008) 및 TASK-115 ADVANCED_VTOL 연동 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
-- **직전 완료**: `TASK-008` 완료 (구버전 명칭 `VAS-Core`, `VAS-Align`, `VAC-Align`, `VAC-Core`, TCA `VAC` 전면 척결 완료: 회귀 방지 테스트 7/7 PASS, verify_all_specs Rule 8 확장, 런타임/테스트/7대 사양서 전수 치환, 293/293 유닛 PASS, 6/6 E2E PASS, 20/20 돌연변이 100.0%, 36/36 하네스 PASS, 14대 사양서 8 Implemented, 6 Approved 100% CLEAN).
-- **현재 활성**: `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기) / `TASK-010` (플레이북 체계 구축) / `TASK-201` (AMP 사양서 초안).
+- **현재 단계**: **Phase 1 & 2** — Phase 0 전 과제, 구버전 용어 척결(TASK-007, TASK-008), TASK-115 ADVANCED_VTOL 연동 및 TASK-009 GDrive 배포 체계 구축 완료, 지상 인프라 및 온보드 유도/제어기 확장 진행 중.
+- **직전 완료**: `TASK-009` 완료 (GDrive 격리 스테이징 `dist_gdrive/`, 매핑 SSOT `config/gdrive_mapping.json`, CLI 도구 `tools/sync_gdrive.py`, 운영 가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md` 구축, 공식 폴더 `1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9` 부트스트랩 7종/인스톨러/센서 라이브러리 동기화 및 ID 임베딩, 인스톨러 구조적 JSON 파싱 지원, 294/294 유닛 PASS, 41/41 하네스 PASS, 6/6 E2E PASS, 20/20 돌연변이 100.0%, 14대 사양서 100% CLEAN).
+- **현재 활성**: `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기) / `TASK-010` (플레이북 체계 구축) / `TASK-201` (FCP 유도 프리미티브 확장) / `TASK-202` (통합 미션 시퀀서 & AMM 단말).
 - **다음 착수 후보**:
-  1. `TASK-116`: 통합 인스톨러 역할/도메인별 TUI 폴더 탐색 구조 개편 (`installer.lua`, `src/0_development/installer/`).
-  2. `TASK-117`: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축 (`src/0_development/ota/`).
-  3. `TASK-201`: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성.
-  4. `TASK-103`: Runway 활주로 제어기 구현 (`src/0_infra/runway/`, 사양서 v1.10.6 Approved).
-  5. `TASK-301`: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3).
-  6. `TASK-105`: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성.
+  1. `TASK-201`: FCP 외루프 유도 프리미티브(`LOITER` & `POI_HOLD`) 확장 (`src/2_guidance/fcp/`, 사양서 v1.16.0 Approved 대기).
+  2. `TASK-202`: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (`src/3_planning/amm/`, 사양서 v1.1.0 Approved 대기).
+  3. `TASK-116`: 통합 인스톨러 역할/도메인별 TUI 폴더 탐색 구조 개편 (`installer.lua`, `src/0_development/installer/`).
+  4. `TASK-117`: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축 (`src/0_development/ota/`).
+  5. `TASK-103`: Runway 활주로 제어기 구현 (`src/0_infra/runway/`, 사양서 v1.10.6 Approved).
+  6. `TASK-301`: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3).
+  7. `TASK-105`: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -27,10 +28,10 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 293/293 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 294/294 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (6개 시나리오 6/6 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (20/20 KILLED, 100.0% 살상률).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (36/36 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (41/41 PASS).
 - **사양서·문법 정적 검사**: `python tools/verify_all_specs.py`, `python tools/validate_lua_syntax.py`, `python tools/verify_spec_status.py` (8 Implemented, 6 Approved).
 
 ## 4. Gotchas & Invariants
