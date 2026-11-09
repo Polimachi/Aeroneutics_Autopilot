@@ -11,6 +11,10 @@ class TestTerminologyGuard(unittest.TestCase):
     UAP_PATTERN = re.compile(r'(?<![A-Za-z0-9])uap(?![A-Za-z0-9])', re.IGNORECASE)
     SAS_PATTERN = re.compile(r'(?<![A-Za-z0-9])SAS(?![A-Za-z0-9])')
     WAP_PATTERN = re.compile(r'(?<![A-Za-z0-9])wap(?![A-Za-z0-9])', re.IGNORECASE)
+    VAS_CORE_PATTERN = re.compile(r'(?<![A-Za-z0-9])VAS[-_]Core(?![A-Za-z0-9])', re.IGNORECASE)
+    VAS_ALIGN_PATTERN = re.compile(r'(?<![A-Za-z0-9])VAS[-_]Align(?![A-Za-z0-9])', re.IGNORECASE)
+    VAC_ALIGN_PATTERN = re.compile(r'(?<![A-Za-z0-9])VAC[-_]Align(?![A-Za-z0-9])', re.IGNORECASE)
+    VAC_CORE_PATTERN = re.compile(r'(?<![A-Za-z0-9])VAC[-_]Core(?![A-Za-z0-9])', re.IGNORECASE)
 
     def _collect_violations(self, base_dir: Path, pattern: re.Pattern, extensions: list[str]) -> list[str]:
         violations = []
@@ -62,6 +66,34 @@ class TestTerminologyGuard(unittest.TestCase):
                     if p.name in banned_filenames:
                         found.append(str(p.relative_to(REPO_ROOT)))
         self.assertEqual(found, [], f"Legacy WAP files found: {found}")
+
+    def test_no_vas_core_in_entire_repository(self):
+        """docs/, src/, tests/ 전역에서 VAS-Core 잔존을 검출한다."""
+        violations = []
+        for folder in ['docs', 'src', 'tests']:
+            d = REPO_ROOT / folder
+            if d.exists():
+                violations.extend(self._collect_violations(d, self.VAS_CORE_PATTERN, ['.md', '.lua', '.json']))
+        self.assertEqual(violations, [], f"Found {len(violations)} VAS-Core occurrences:\n" + "\n".join(violations[:10]))
+
+    def test_no_vas_align_in_entire_repository(self):
+        """docs/, src/, tests/ 전역에서 VAS-Align 잔존을 검출한다."""
+        violations = []
+        for folder in ['docs', 'src', 'tests']:
+            d = REPO_ROOT / folder
+            if d.exists():
+                violations.extend(self._collect_violations(d, self.VAS_ALIGN_PATTERN, ['.md', '.lua', '.json']))
+        self.assertEqual(violations, [], f"Found {len(violations)} VAS-Align occurrences:\n" + "\n".join(violations[:10]))
+
+    def test_no_vac_align_or_core_in_entire_repository(self):
+        """docs/, src/, tests/ 전역에서 VAC-Align 및 VAC-Core 잔존을 검출한다."""
+        violations = []
+        for folder in ['docs', 'src', 'tests']:
+            d = REPO_ROOT / folder
+            if d.exists():
+                violations.extend(self._collect_violations(d, self.VAC_ALIGN_PATTERN, ['.md', '.lua', '.json']))
+                violations.extend(self._collect_violations(d, self.VAC_CORE_PATTERN, ['.md', '.lua', '.json']))
+        self.assertEqual(violations, [], f"Found {len(violations)} VAC-Align/VAC-Core occurrences:\n" + "\n".join(violations[:10]))
 
 
 if __name__ == '__main__':

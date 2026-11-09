@@ -216,6 +216,10 @@ def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
         uap_pat = re.compile(r'(?<![A-Za-z0-9])uap(?![A-Za-z0-9])', re.IGNORECASE)
         sas_pat = re.compile(r'(?<![A-Za-z0-9])SAS(?![A-Za-z0-9])')
         wap_pat = re.compile(r'(?<![A-Za-z0-9])wap(?![A-Za-z0-9])', re.IGNORECASE)
+        vas_core_pat = re.compile(r'(?<![A-Za-z0-9])VAS[-_]Core(?![A-Za-z0-9])', re.IGNORECASE)
+        vas_align_pat = re.compile(r'(?<![A-Za-z0-9])VAS[-_]Align(?![A-Za-z0-9])', re.IGNORECASE)
+        vac_align_pat = re.compile(r'(?<![A-Za-z0-9])VAC[-_]Align(?![A-Za-z0-9])', re.IGNORECASE)
+        vac_core_pat = re.compile(r'(?<![A-Za-z0-9])VAC[-_]Core(?![A-Za-z0-9])', re.IGNORECASE)
 
         term_violations = []
         for i, line in enumerate(lines, 1):
@@ -225,6 +229,14 @@ def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
                 term_violations.append((i, 'SAS', line.strip()))
             if wap_pat.search(line):
                 term_violations.append((i, 'WAP', line.strip()))
+            if vas_core_pat.search(line):
+                term_violations.append((i, 'VAS-Core', line.strip()))
+            if vas_align_pat.search(line):
+                term_violations.append((i, 'VAS-Align', line.strip()))
+            if vac_align_pat.search(line):
+                term_violations.append((i, 'VAC-Align', line.strip()))
+            if vac_core_pat.search(line):
+                term_violations.append((i, 'VAC-Core', line.strip()))
 
         if term_violations:
             print(f"   [FAIL] Found {len(term_violations)} legacy terminology violation(s):")
@@ -234,7 +246,7 @@ def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
                 print(f"      ... and {len(term_violations) - 5} more")
             total_errors += len(term_violations)
         else:
-            print(f"   [PASS] Legacy terminology hygiene clean (zero UAP/SAS/WAP)")
+            print(f"   [PASS] Legacy terminology hygiene clean (zero legacy terminology)")
 
         print("")
 
