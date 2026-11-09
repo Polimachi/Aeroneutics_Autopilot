@@ -6,7 +6,7 @@
 - **직전 완료**: `TASK-115` 완료 (ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동 완료: TCA vector_thruster 2D 편향·페일세이프, Alignment $B^\dagger$ 산출기, VAS 6-DoF 의사역행렬 믹서·안티와인드업, FCP 3축 비결합 가이던스, GAC v1.4.1 전용슬롯·패드·GCS·인스톨러 통합, 293/293 유닛 PASS, 6/6 E2E PASS, 20/20 돌연변이 100.0%, 33/33 하네스 PASS, 14대 사양서 8 Implemented, 6 Approved 100% CLEAN).
 - **현재 활성**: `TASK-114` (GAC 전용 시설물 런타임 코드 `src/0_infra/gac/` 및 단위 테스트 구현 대기) / `TASK-010` (플레이북 체계 구축) / `TASK-201` (AMP 사양서 초안).
 - **다음 착수 후보**:
-  1. `TASK-116`: 통합 인스톨러 역할별 원클릭 프로파일 배포 확장 (`installer.lua`, `src/0_development/installer/`).
+  1. `TASK-116`: 통합 인스톨러 역할/도메인별 TUI 폴더 탐색 구조 개편 (`installer.lua`, `src/0_development/installer/`).
   2. `TASK-117`: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축 (`src/0_development/ota/`).
   3. `TASK-201`: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성.
   4. `TASK-103`: Runway 활주로 제어기 구현 (`src/0_infra/runway/`, 사양서 v1.10.6 Approved).

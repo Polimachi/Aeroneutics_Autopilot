@@ -48,9 +48,11 @@
   - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
   - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
 
-- [ ] **TASK-116: 통합 인스톨러(installer.lua) 기체/시설 역할별 원클릭 프로파일 배포 확장** (`installer.lua`, `src/0_development/installer/`)
-  - **배경 및 필요성**: 온보드/지상 모듈(VAS, TCA, FCP, AMM, GCS, GAC, Landing Pad 등) 확장에 따른 개별 패키지·설정 조합 복잡도 해소
-  - **주요 기능**: 인스톨러 대화형 UI에서 단일 컴퓨터 대상 역할 프리셋(예: `[1] Onboard Flight Core (VAS+FCP)`, `[2] Cockpit Terminal (AMM)`, `[3] Thruster Node (TCA)`, `[4] Ground Control (GCS+GAC)`) 선택 시 패키지 의존성 자동 추출, 맞춤형 설정 스캐폴딩 및 `startup.lua` 원스톱 자동 구성
+- [ ] **TASK-116: 통합 인스톨러(installer.lua) 역할/도메인별 TUI 폴더 탐색 구조 개편** (`installer.lua`, `src/0_development/installer/`)
+  - **배경 및 필요성**: 온보드/지상 모듈(FCS, VAS, ASA, TCA, GPS, GCS, Runway 등) 확장에 따라 전체 패키지 목록이 길어져 발생하는 TUI 내 패키지 탐색 복잡도 해소
+  - **주요 기능**: 인스톨러 대화형 TUI에서 개별 패키지를 주요 역할/도메인별 폴더(카테고리) 단위로 그룹화하여 계층적으로 탐색·선택할 수 있도록 UI 개편 (단일 컴퓨터용 복합 패키지 프리셋 기능은 제외하며, 순수 카테고리 분류 및 탐색 편의성 개선에 집중)
+    - 예: `A.infra` 선택 시 `gps` / `gcs` / `runway` 등 표시
+    - 예: `B.flight` 선택 시 `fcs` / `vas` / `asa` / `tca` 등 표시
 
 - [ ] **TASK-117: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축** (`src/0_development/ota/` 또는 installer 확장 모듈)
   - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
@@ -132,6 +134,3 @@
 - [x] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 제어기/TUI 구현** (완료일: 2026-11-08, 커밋 `0787649` ~ `e5aa176`) (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`, `tests/0_infra/gac/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-101-gac-ground-apron-controller.md`
   - GAC 사양서 v1.4.1 Approved, 설정 영속화, 관할 패드 인벤토리, 2단계 다속성 최적 분배, 1Hz 섹터 대표 비콘/디스패치, 섹터 FSM 및 핸드오프/국지 복행 중재, 듀얼 디스플레이 3-Tab TUI 관제 콘솔 구현 완료.
-
-- [x] **TASK-109: ASA 관할 범위 축소 (VECTORED_VTOL, 드론 기체 배제 및 FCP/VAS 비활성화)** (완료일: 2026-11-08) (`docs/specs/`, `src/1_control/vas/`, `src/2_guidance/fcp/`, `tests/`)
-  - VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체에서 ASA 동작 배제, FCP 외루프 flapTarget 지령 차단, VAS 내루프 ASA 타면 할당 및 Base+11 MSG_AERO_CMD 송출 비활성화 구현 완료.

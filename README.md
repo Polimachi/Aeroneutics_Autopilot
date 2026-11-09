@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — E2E 다중노드 시뮬레이션 및 돌연변이 테스트 체계(`TASK-111`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료, 단위 테스트(`248/248 PASS, 12개 타겟`), E2E 시뮬레이션(`6/6 PASS`), 돌연변이 살상률(`20/20 KILLED, 100.0%`), 하네스 회귀(`29/29 PASS`), 14대 사양서 무결성(`8 Implemented, 6 Approved`) 확보
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), E2E 다중노드 시뮬레이션 및 돌연변이 테스트 체계(`TASK-111`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료, 단위 테스트(`293/293 PASS, 12개 타겟`), E2E 시뮬레이션(`6/6 PASS`), 돌연변이 살상률(`20/20 KILLED, 100.0%`), 하네스 회귀(`33/33 PASS`), 14대 사양서 무결성(`8 Implemented, 6 Approved`) 확보
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm` 일정 보류)
@@ -174,7 +174,7 @@ python tools/verify_spec_status.py
 ```
 
 ### 7. Lua 5.2 문법 및 금지 API 정적 검사
-전체 Lua 소스(124개 파일)의 Cobalt 런타임 문법 및 허용/차단 모드 네임스페이스 규칙 준수 여부를 검사합니다:
+전체 Lua 소스(126개 파일)의 Cobalt 런타임 문법 및 허용/차단 모드 네임스페이스 규칙 준수 여부를 검사합니다:
 ```bash
 python tools/validate_lua_syntax.py
 ```
