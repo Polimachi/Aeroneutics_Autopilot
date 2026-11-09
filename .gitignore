@@ -19,3 +19,8 @@ recordings/
 .worktrees
 worktrees/
 worktrees
+
+# Google Drive distribution staging
+dist_gdrive/*
+!dist_gdrive/.gitkeep
+!dist_gdrive/gdrive_mapping.json
