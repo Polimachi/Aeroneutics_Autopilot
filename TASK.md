@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-09  
-> **현재 단계**: **Phase 1 & 2** (TASK-115 ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동 완료, 활성: TASK-114 GAC 전용 시설물 런타임 구현 / TASK-010 플레이북 체계 구축)
+> **현재 단계**: **Phase 1 & 2** (TASK-115 ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동 완료, 활성: TASK-008 구버전 잔존 명칭 정비 / TASK-009 GDrive 파일 관리 개선 / TASK-010 플레이북 체계 구축 / TASK-114 GAC 전용 시설물)
 
 ---
 
@@ -21,6 +21,24 @@
 ---
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
+
+- [ ] **TASK-008: 구버전 잔존 명칭(VAS-Core, VAS-Align, VAC-Align) 전면 검수·치환 및 회귀 방지 정비**
+  - **전환 대상 명칭**:
+    - `VAS-Core` $\to$ `VAS` 전환
+    - `VAS-Align` $\to$ `Alignment` 전환
+    - `VAC-Align` $\to$ `Alignment` 전환
+  - **주요 작업**:
+    - [ ] **TASK-008-1**: 회귀 방지 테스트(`tests/harness/test_terminology_guard.py`)에 `VAS-Core`, `VAS-Align`, `VAC-Align` 금지 패턴 등록 및 Red 검증
+    - [ ] **TASK-008-2**: 사양서 무결성 검증 도구(`tools/verify_all_specs.py` Rule 8) 용어 위생 검사 규칙 확장
+    - [ ] **TASK-008-3**: 전체 사양서(`docs/specs/0_development/alignment/`, `docs/specs/1_control/`, `docs/system/` 등) 내 잔존 식별자 전수 치환
+    - [ ] **TASK-008-4**: 런타임 소스(`src/`) 및 테스트 코드(`tests/`) 내 주석·식별자 치환
+    - [ ] **TASK-008-5**: 단위 테스트(293/293), E2E(6/6), 돌연변이(20/20) 및 사양서 무결성 검증기 일괄 통과 검증
+
+- [ ] **TASK-009: GDrive 업로드용 디렉토리 재지정 및 파일 관리 방식 개선**
+  - **주요 내용**: 인게임 컴퓨터 환경 및 원격 배포(`installer.lua` GDrive 다운로드 연동 등)에 필요한 배포용/산출물 파일 관리 구조 체계화 및 로컬/클라우드 동기화 디렉토리 명확화
+  - [ ] **TASK-009-1**: GDrive 업로드/동기화 대상 디렉토리 구조 재정의 및 파일 분류 기준 수립
+  - [ ] **TASK-009-2**: 배포 아티팩트 및 GDrive 매핑 파일(`--bootstrap-gdrive-map`, 파일 ID 메타데이터 등) 관리 체계 개선
+  - [ ] **TASK-009-3**: 동기화/업로드 관련 스크립트 정비 및 운영 가이드라인 문서화
 
 - [ ] **TASK-010: 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md`
