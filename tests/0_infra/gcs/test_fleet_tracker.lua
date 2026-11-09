@@ -110,4 +110,26 @@ describe("GCS fleet tracker and multi-craft telemetry cache", function()
         assert_true(fleet_tracker.unregister_craft(state, "AIRCRAFT_02"))
         assert_nil(fleet_tracker.get_active_craft(state))
     end)
+
+    it("tracks ADVANCED_VTOL airframe with label and icon in telemetry and fleet summary", function()
+        local state = fleet_tracker.init(cfg)
+        fleet_tracker.register_craft(state, "ADV_01", 10000, 1, "ADVANCED_VTOL")
+
+        assert_eq(fleet_tracker.get_airframe_label("ADVANCED_VTOL"), "ADV_VTOL")
+        assert_eq(fleet_tracker.get_airframe_icon("ADVANCED_VTOL"), "^V^")
+
+        fleet_tracker.update_telemetry(state, "ADV_01", {
+            fsmState = "CRUISE",
+            airframeType = "ADVANCED_VTOL",
+        }, 1000)
+
+        local craft = fleet_tracker.get_craft(state, "ADV_01")
+        assert_eq(craft.airframeType, "ADVANCED_VTOL")
+
+        local summary = fleet_tracker.get_fleet_summary(state)
+        assert_eq(#summary, 1)
+        assert_eq(summary[1].airframeType, "ADVANCED_VTOL")
+        assert_eq(summary[1].airframeLabel, "ADV_VTOL")
+        assert_eq(summary[1].airframeIcon, "^V^")
+    end)
 end)

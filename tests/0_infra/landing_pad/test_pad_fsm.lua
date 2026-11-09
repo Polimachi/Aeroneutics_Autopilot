@@ -185,4 +185,57 @@ describe("Landing pad finite state machine and local backbone protocol", functio
         assert_not_nil(updatePkt)
         assert_eq(updatePkt.payload.status, "FREE")
     end)
+
+    it("accepts ADVANCED_VTOL in MSG_ATC_SLOT_ASSIGN", function()
+        local streamer = tactical_streamer.create(dummyCfg)
+        local fsm = pad_fsm.create(dummyCfg, streamer, true)
+
+        local assignMsg = {
+            ver = "1.9.5",
+            type = "MSG_ATC_SLOT_ASSIGN",
+            domainId = "GAC_APRON_01",
+            seq = 502,
+            time = 1000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                aircraftId = "ADV_CRAFT_01",
+                airframeType = "ADVANCED_VTOL",
+                slotDurationSec = 120,
+                tacticalChannel = 50211
+            }
+        }
+
+        local packets = fsm:handle_backbone_message(assignMsg, 10.0)
+        assert_eq(fsm:get_state(), "APPROACH_DYNAMIC")
+        assert_eq(fsm:get_current_craft(), "ADV_CRAFT_01")
+        assert_eq(fsm:get_current_airframe(), "ADVANCED_VTOL")
+        assert_eq(#packets, 1)
+        assert_eq(packets[1].payload.status, "ACCEPTED")
+    end)
+
+    it("rejects incompatible airframe FIXED_WING in MSG_ATC_SLOT_ASSIGN", function()
+        local streamer = tactical_streamer.create(dummyCfg)
+        local fsm = pad_fsm.create(dummyCfg, streamer, true)
+
+        local assignMsg = {
+            ver = "1.9.5",
+            type = "MSG_ATC_SLOT_ASSIGN",
+            domainId = "GAC_APRON_01",
+            seq = 503,
+            time = 1000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                aircraftId = "PLANE_01",
+                airframeType = "FIXED_WING",
+                slotDurationSec = 120,
+                tacticalChannel = 50211
+            }
+        }
+
+        local packets = fsm:handle_backbone_message(assignMsg, 10.0)
+        assert_eq(fsm:get_state(), "IDLE")
+        assert_eq(#packets, 1)
+        assert_eq(packets[1].payload.status, "REJECTED")
+        assert_eq(packets[1].payload.rejectReason, "INCOMPATIBLE_AIRFRAME")
+    end)
 end)

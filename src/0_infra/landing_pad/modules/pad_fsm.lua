@@ -6,6 +6,14 @@ local pad_fsm = {}
 local UNSTABLE_ABORT_THRESHOLD_SEC = 3.0
 local GO_AROUND_TIMEOUT_SEC = 10.0
 
+local DEFAULT_COMPATIBLE_AIRFRAMES = {
+    ADVANCED_VTOL = true,
+    VECTORED_VTOL = true,
+    WINGED_VTOL   = true,
+    QUADROTOR     = true,
+    HEXAROTOR     = true,
+}
+
 function pad_fsm.create(config, streamer, initialSensorHealthy)
     if not config then error("config table required", 2) end
     if not streamer then error("streamer required", 2) end
@@ -19,6 +27,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
     local state = {
         currentState = initialState,
         currentCraft = nil,
+        currentAirframe = nil,
         slotExpiresAt = 0.0,
         unstableStartSec = nil,
         goAroundStartSec = nil,
@@ -41,6 +50,10 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
         return state.currentCraft
     end
 
+    function fsm:get_current_airframe()
+        return state.currentAirframe
+    end
+
     function fsm:get_fault_code()
         return state.faultCode
     end
@@ -57,6 +70,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 state.currentState = "MAINTENANCE"
                 state.faultCode = "SENSOR_UNAVAILABLE"
                 state.currentCraft = nil
+                state.currentAirframe = nil
                 table.insert(out, streamer:build_facility_update(next_seq(), "MAINTENANCE", nil, state.faultCode))
                 return out
             elseif state.currentState == "IDLE" then
@@ -83,8 +97,30 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 return {}
             end
 
+            -- Validate airframe compatibility
+            local af = payload.airframeType
+            local isAirframeCompatible = true
+            if af then
+                if config.supportedAirframeTypes then
+                    local found = false
+                    for _, supported in ipairs(config.supportedAirframeTypes) do
+                        if supported == af then found = true; break end
+                    end
+                    isAirframeCompatible = found
+                elseif DEFAULT_COMPATIBLE_AIRFRAMES[af] == nil then
+                    isAirframeCompatible = false
+                end
+            end
+
+            if not isAirframeCompatible then
+                local ack = streamer:build_slot_ack(next_seq(), payload.aircraftId, "REJECTED", "INCOMPATIBLE_AIRFRAME")
+                table.insert(out, ack)
+                return out
+            end
+
             if state.currentState == "IDLE" then
                 state.currentCraft = payload.aircraftId
+                state.currentAirframe = payload.airframeType
                 local duration = tonumber(payload.slotDurationSec) or 120
                 state.slotExpiresAt = t + duration
                 state.unstableStartSec = nil
@@ -111,6 +147,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 if payload.status == "FREE" then
                     state.currentState = isSensorHealthy and "IDLE" or "MAINTENANCE"
                     state.currentCraft = nil
+                    state.currentAirframe = nil
                     state.unstableStartSec = nil
                     state.goAroundStartSec = nil
                 end
@@ -179,6 +216,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 state.currentState = "IDLE"
                 table.insert(out, streamer:build_abort_approach(next_seq(), state.currentCraft, "TIMEOUT", 100.0))
                 state.currentCraft = nil
+                state.currentAirframe = nil
                 table.insert(out, streamer:build_facility_update(next_seq(), "FREE", nil, nil))
                 return out
             end
@@ -187,6 +225,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 state.currentState = "IDLE"
                 table.insert(out, streamer:build_abort_approach(next_seq(), state.currentCraft, "TIMEOUT", 100.0))
                 state.currentCraft = nil
+                state.currentAirframe = nil
                 table.insert(out, streamer:build_facility_update(next_seq(), "FREE", nil, nil))
                 return out
             end
@@ -194,6 +233,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
             if state.goAroundStartSec and (t - state.goAroundStartSec) >= GO_AROUND_TIMEOUT_SEC then
                 state.currentState = isSensorHealthy and "IDLE" or "MAINTENANCE"
                 state.currentCraft = nil
+                state.currentAirframe = nil
                 state.goAroundStartSec = nil
             end
         end
@@ -204,6 +244,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
     function fsm:force_free()
         state.currentState = isSensorHealthy and "IDLE" or "MAINTENANCE"
         state.currentCraft = nil
+        state.currentAirframe = nil
         state.unstableStartSec = nil
         state.goAroundStartSec = nil
         return streamer:build_facility_update(next_seq(), "FREE", nil, nil)

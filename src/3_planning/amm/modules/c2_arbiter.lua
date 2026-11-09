@@ -11,6 +11,7 @@ function c2_arbiter.new(queue, net, config)
         authority = "PILOT_PRIMARY",
         fsmState = "DISARMED",
         activeSource = "FCP",
+        airframeType = cfg.airframeType or nil,
         lastBanner = "SYSTEM_READY",
         fcpTakeoffActive = false,
         latest_mfd_payload = nil,
@@ -48,6 +49,7 @@ function c2_arbiter:handle_mfd_state(packet)
     self.latest_mfd_payload = p
     self.fsmState = p.fsmState or self.fsmState
     self.activeSource = p.activeSource or self.activeSource
+    self.airframeType = p.airframeType or p.airframe or self.airframeType
 
     if self.fcpTakeoffActive and self.fsmState == "CRUISE" then
         self.fcpTakeoffActive = false

@@ -186,6 +186,7 @@ manifest.MODULES = {
             { repoPath = "src/2_guidance/fcp/modules/thruster_profile.lua", dest = "/modules/thruster_profile.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/vectored_vtol_driver.lua", dest = "/modules/vectored_vtol_driver.lua", gdriveId = nil },
+            { repoPath = "src/2_guidance/fcp/modules/advanced_vtol_driver.lua", dest = "/modules/advanced_vtol_driver.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/drivers/drone_driver.lua", dest = "/modules/drivers/drone_driver.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/drivers/fixed_wing_driver.lua", dest = "/modules/drivers/fixed_wing_driver.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/drivers/helicopter_driver.lua", dest = "/modules/drivers/helicopter_driver.lua", gdriveId = nil },
@@ -492,6 +493,7 @@ manifest.MODULES = {
             { repoPath = "src/3_planning/amm/modules/c2_arbiter.lua", dest = "/modules/c2_arbiter.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/input_handler.lua", dest = "/modules/input_handler.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/mission_controller.lua", dest = "/modules/mission_controller.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
@@ -576,6 +578,73 @@ function manifest.resolveUrl(sourceType, fileEntry, gdriveOverrides)
     else
         return nil, "UNKNOWN_SOURCE_TYPE: " .. tostring(sourceType)
     end
+end
+
+
+manifest.AIRFRAME_PRESETS = {
+    ADVANCED_VTOL = {
+        airframeType = "ADVANCED_VTOL",
+        name = "Advanced Vectored VTOL",
+        description = "High-agility 2D gimbal thruster VTOL with pseudo-inverse allocation",
+        requiredModules = { "vas", "tca", "fcp", "alignment" },
+        configTemplate = {
+            system = {
+                domainId = "AIRCRAFT_01",
+                airframeType = "ADVANCED_VTOL",
+                loopFrequencyHz = 20,
+                primaryModemSide = "top",
+                infraModemSide = "back",
+            },
+            channels = {
+                bootstrapChannel = 50000,
+                baseChannel = 10000,
+                bandwidth = 40,
+                mfdInstrumentChannel = 10003,
+                facilityBeaconChannel = 50003,
+                atcCommChannel = 50001,
+                gpsPingChannel = 60001,
+                gpsServiceChannel = 60002,
+            },
+        },
+    },
+    VECTORED_VTOL = {
+        airframeType = "VECTORED_VTOL",
+        name = "Standard Vectored VTOL",
+        description = "6-DoF multi-directional fixed thruster VTOL",
+        requiredModules = { "vas", "tca", "fcp" },
+        configTemplate = {
+            system = {
+                domainId = "AIRCRAFT_01",
+                airframeType = "VECTORED_VTOL",
+                loopFrequencyHz = 20,
+                primaryModemSide = "top",
+                infraModemSide = "back",
+            },
+            channels = {
+                bootstrapChannel = 50000,
+                baseChannel = 10000,
+                bandwidth = 40,
+                mfdInstrumentChannel = 10003,
+                facilityBeaconChannel = 50003,
+                atcCommChannel = 50001,
+                gpsPingChannel = 60001,
+                gpsServiceChannel = 60002,
+            },
+        },
+    },
+}
+
+function manifest.getAirframePreset(airframeType)
+    return manifest.AIRFRAME_PRESETS[airframeType]
+end
+
+function manifest.listAirframePresets()
+    local list = {}
+    for _, preset in pairs(manifest.AIRFRAME_PRESETS) do
+        table.insert(list, preset)
+    end
+    table.sort(list, function(a, b) return tostring(a.airframeType) < tostring(b.airframeType) end)
+    return list
 end
 
 return manifest
