@@ -38,7 +38,21 @@ end
 local function handle_actuator_ack(self, payload)
     local gid = payload.groupId
     if not gid or self.actuatorMap[gid] then return false end
-    self.actuatorMap[gid] = payload
+    self.actuatorMap[gid] = {
+        groupId = gid,
+        interactionMode = payload.interactionMode,
+        activeCount = payload.activeCount,
+        totalCount = payload.totalCount,
+        isVectorCapable = (payload.isVectorCapable == true),
+        gimbalLimits = payload.gimbalLimits,
+        healthStatus = payload.healthStatus,
+        actuatorType = payload.actuatorType
+    }
+    for k, v in pairs(payload) do
+        if self.actuatorMap[gid][k] == nil then
+            self.actuatorMap[gid][k] = v
+        end
+    end
     table.insert(self.actuatorQueue, gid)
     return true
 end
@@ -62,9 +76,34 @@ function Client:process_ack(packet)
     return false
 end
 
+function Client:is_vector_capable(groupId)
+    local act = self.actuatorMap[groupId]
+    return (act and act.isVectorCapable == true) or false
+end
+
+function Client:get_actuator(groupId)
+    return self.actuatorMap[groupId]
+end
+
+function Client:get_actuator_map()
+    local res = {}
+    for k, v in pairs(self.actuatorMap) do res[k] = v end
+    return res
+end
+
 function Client:get_actuator_queue()
     local res = {}
     for _, gid in ipairs(self.actuatorQueue) do table.insert(res, gid) end
+    return res
+end
+
+function Client:get_vector_actuators()
+    local res = {}
+    for _, gid in ipairs(self.actuatorQueue) do
+        if self:is_vector_capable(gid) then
+            table.insert(res, gid)
+        end
+    end
     return res
 end
 

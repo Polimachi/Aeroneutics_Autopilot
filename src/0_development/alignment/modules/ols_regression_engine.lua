@@ -96,4 +96,62 @@ function ols_engine.calculate_regression(signals, impulseList, dominantAxis)
     }
 end
 
+local function compute_axis_slopes(signals, impulses)
+    local slopes = {}
+    for _, axis in ipairs(AXES) do
+        local values = {}
+        for _, imp in ipairs(impulses) do
+            table.insert(values, imp[axis] or 0.0)
+        end
+        local k = solve_ols(signals, values)
+        slopes[axis] = k
+    end
+    return slopes
+end
+
+function ols_engine.compute_vector_slopes(pulseResults)
+    if not pulseResults or type(pulseResults) ~= "table" then
+        return nil, "INVALID_PULSE_RESULTS"
+    end
+
+    local throttleData = pulseResults.throttle or pulseResults.THROTTLE or {}
+    local gxData = pulseResults.gimbalX or pulseResults.GIMBAL_X or {}
+    local gyData = pulseResults.gimbalY or pulseResults.GIMBAL_Y or {}
+
+    local dThrust, dGimbalX, dGimbalY
+
+    if #pulseResults > 0 and (throttleData.signals == nil) then
+        local tSig, tImp = {}, {}
+        local gxSig, gxImp = {}, {}
+        local gySig, gyImp = {}, {}
+        for _, step in ipairs(pulseResults) do
+            local ph = step.phase or "THROTTLE"
+            local imp = step.impulse or step.result or {}
+            if ph == "THROTTLE" then
+                table.insert(tSig, step.pulseLevel or step.signal or 0)
+                table.insert(tImp, imp)
+            elseif ph == "GIMBAL_X" then
+                table.insert(gxSig, step.gimbalX or step.signal or 0)
+                table.insert(gxImp, imp)
+            elseif ph == "GIMBAL_Y" then
+                table.insert(gySig, step.gimbalY or step.signal or 0)
+                table.insert(gyImp, imp)
+            end
+        end
+        dThrust = compute_axis_slopes(tSig, tImp)
+        dGimbalX = compute_axis_slopes(gxSig, gxImp)
+        dGimbalY = compute_axis_slopes(gySig, gyImp)
+    else
+        dThrust = compute_axis_slopes(throttleData.signals or {}, throttleData.impulses or {})
+        dGimbalX = compute_axis_slopes(gxData.signals or {}, gxData.impulses or {})
+        dGimbalY = compute_axis_slopes(gyData.signals or {}, gyData.impulses or {})
+    end
+
+    return {
+        dThrust = dThrust,
+        dGimbalX = dGimbalX,
+        dGimbalY = dGimbalY
+    }
+end
+
 return ols_engine

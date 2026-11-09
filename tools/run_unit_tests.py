@@ -30,6 +30,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Target codebase to test (e.g. '1_control/tca' or short name 'tca'). Default runs all.",
     )
     parser.add_argument(
+        "--test-target",
+        dest="test_target",
+        type=str,
+        default=None,
+        help="Alias for --target.",
+    )
+    parser.add_argument(
+        "--test-file",
+        dest="test_file",
+        type=str,
+        default=None,
+        help="Path to specific test file to target.",
+    )
+    parser.add_argument(
         "--filter",
         "-f",
         type=str,
@@ -81,8 +95,26 @@ def run_cli(
             print(f"[FAIL] {exc}")
         return 1, err_payload
 
+    target_query = args.target or getattr(args, "test_target", None)
+    test_filter = args.filter
+    if getattr(args, "test_file", None):
+        tf = Path(args.test_file).as_posix()
+        parts = [p for p in tf.split("/") if p and p != "tests"]
+        if len(parts) >= 2:
+            target_query = target_query or f"{parts[0]}/{parts[1]}"
+        elif len(parts) == 1:
+            target_query = target_query or parts[0]
+        stem = Path(tf).stem
+        if stem.startswith("test_"):
+            stem = stem[5:]
+        for prefix in ("alignment_", "tca_", "vas_", "fcp_", "gac_", "gcs_", "gps_"):
+            if stem.startswith(prefix):
+                stem = stem[len(prefix):]
+        if not test_filter:
+            test_filter = stem
+
     try:
-        targets = discover_codebase_targets(root, target_query=args.target)
+        targets = discover_codebase_targets(root, target_query=target_query)
     except ValueError as exc:
         err_payload = {
             "overall_status": "FAIL",
@@ -120,7 +152,7 @@ def run_cli(
             target=tgt,
             craftos_paths=craftos_paths,
             sessions_root=sessions_root,
-            test_filter=args.filter,
+            test_filter=test_filter,
             require_tests=args.require_tests,
         )
         rep_dict = rep.to_dict()
