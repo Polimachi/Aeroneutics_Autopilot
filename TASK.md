@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-09  
-> **현재 단계**: **Phase 1 & 2** (TASK-115 ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동 완료, 활성: TASK-008 구버전 잔존 명칭 정비 / TASK-009 GDrive 파일 관리 개선 / TASK-010 플레이북 체계 구축 / TASK-114 GAC 전용 시설물)
+> **현재 단계**: **Phase 1 & 2** (TASK-008 구버전 잔존 명칭 정비 완료, 활성: TASK-009 GDrive 파일 관리 개선 / TASK-010 플레이북 체계 구축 / TASK-114 GAC 전용 시설물 / TASK-116 인스톨러 TUI 개편 / TASK-117 무선 OTA 서버 / TASK-201 AMP 사양서 초안 / TASK-202 FCP 전술 행동 연동 / TASK-203 AMM 미션 시퀀서 확장)
 
 ---
 
@@ -21,18 +21,6 @@
 ---
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
-
-- [ ] **TASK-008: 구버전 잔존 명칭(VAS-Core, VAS-Align, VAC-Align) 전면 검수·치환 및 회귀 방지 정비**
-  - **전환 대상 명칭**:
-    - `VAS-Core` $\to$ `VAS` 전환
-    - `VAS-Align` $\to$ `Alignment` 전환
-    - `VAC-Align` $\to$ `Alignment` 전환
-  - **주요 작업**:
-    - [ ] **TASK-008-1**: 회귀 방지 테스트(`tests/harness/test_terminology_guard.py`)에 `VAS-Core`, `VAS-Align`, `VAC-Align` 금지 패턴 등록 및 Red 검증
-    - [ ] **TASK-008-2**: 사양서 무결성 검증 도구(`tools/verify_all_specs.py` Rule 8) 용어 위생 검사 규칙 확장
-    - [ ] **TASK-008-3**: 전체 사양서(`docs/specs/0_development/alignment/`, `docs/specs/1_control/`, `docs/system/` 등) 내 잔존 식별자 전수 치환
-    - [ ] **TASK-008-4**: 런타임 소스(`src/`) 및 테스트 코드(`tests/`) 내 주석·식별자 치환
-    - [ ] **TASK-008-5**: 단위 테스트(293/293), E2E(6/6), 돌연변이(20/20) 및 사양서 무결성 검증기 일괄 통과 검증
 
 - [ ] **TASK-009: GDrive 업로드용 디렉토리 재지정 및 파일 관리 방식 개선**
   - **주요 내용**: 인게임 컴퓨터 환경 및 원격 배포(`installer.lua` GDrive 다운로드 연동 등)에 필요한 배포용/산출물 파일 관리 구조 체계화 및 로컬/클라우드 동기화 디렉토리 명확화
@@ -58,23 +46,37 @@
   - [ ] **TASK-114-4**: 3-Tab TUI 콘솔 `DED` 표기 및 시설물 등록/관리 화면 확장 (`src/0_infra/gac/modules/tui_view.lua`, `main.lua`)
   - [ ] **TASK-114-5**: CraftOS-PC 단위 테스트 확장(전용 패드 격리/비상 징발 시나리오 검증, 사양서 `Implemented` 환원)
 
-- [ ] **TASK-201: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성**
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
-  - Layer 4 (`src/4_mission/amp/`) 온보드/지상 겸용 미션 플래너, 인프라 기동 6종 체계(런치패드, 활주로, 도킹 암) 및 3대 도메인 13개 체크포인트 행동 규격 제정 (`docs/specs/4_mission/amp/AMP_PROGRAM_SPECIFICATION.md`) (구 TASK-202 편대 미션 오케스트레이터 및 지상 관제 디스패처 기능 통합 대체)
-
-- [ ] **TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
-  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동
-  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
-
 - [ ] **TASK-116: 통합 인스톨러(installer.lua) 역할/도메인별 TUI 폴더 탐색 구조 개편** (`installer.lua`, `src/0_development/installer/`)
-  - **배경 및 필요성**: 온보드/지상 모듈(FCS, VAS, ASA, TCA, GPS, GCS, Runway 등) 확장에 따라 전체 패키지 목록이 길어져 발생하는 TUI 내 패키지 탐색 복잡도 해소
+  - **배경 및 필요성**: 온보드/지상 모듈(FCP, VAS, ASA, TCA, GPS, GCS, Runway 등) 확장에 따라 전체 패키지 목록이 길어져 발생하는 TUI 내 패키지 탐색 복잡도 해소
   - **주요 기능**: 인스톨러 대화형 TUI에서 개별 패키지를 주요 역할/도메인별 폴더(카테고리) 단위로 그룹화하여 계층적으로 탐색·선택할 수 있도록 UI 개편 (단일 컴퓨터용 복합 패키지 프리셋 기능은 제외하며, 순수 카테고리 분류 및 탐색 편의성 개선에 집중)
     - 예: `A.infra` 선택 시 `gps` / `gcs` / `runway` 등 표시
-    - 예: `B.flight` 선택 시 `fcs` / `vas` / `asa` / `tca` 등 표시
+    - 예: `B.flight` 선택 시 `fcp` / `vas` / `asa` / `tca` 등 표시
 
 - [ ] **TASK-117: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축** (`src/0_development/ota/` 또는 installer 확장 모듈)
   - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
   - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거
+
+- [ ] **TASK-201: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성**
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
+  - Layer 4 (`src/4_mission/amp/`) 온보드/지상 겸용 미션 플래너, 인프라 기동 6종 체계(런치패드, 활주로, 도킹 암) 및 3대 도메인 13개 체크포인트 행동 규격 제정 (`docs/specs/4_mission/amp/AMP_PROGRAM_SPECIFICATION.md`) (구 TASK-202 편대 미션 오케스트레이터 및 지상 관제 디스패처 기능 통합 대체)
+
+- [ ] **TASK-202: FCP 전술 행동(Tactical Behavior) 아키텍처 도입 및 상위 AMM 계획 계층 연동**
+  - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Approved 대기), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (v1.1.0 Approved 대기), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.24.0 Approved 대기)
+  - [ ] **TASK-202-1**: 전술 행동 및 AMM 연동 다중 사양서 개정·동기화 (FCP v1.16.0 Approved, AMM v1.1.0 Approved, 마스터 ICD v1.24.0 Approved, 14 SPECS 100% CLEAN 검증 완료)
+  - [ ] **TASK-202-2**: 행동(Behavior) 관리자 코어 및 범프리스 전환 인터록 구현 (`src/2_guidance/fcp/modules/behavior_manager.lua`, `behaviors/`)
+  - [ ] **TASK-202-3**: 체공 분리(LOITER 선회 & POI_HOLD 정밀 호버) 및 6대 기종별 안전 가드 구현 (`src/2_guidance/fcp/modules/behaviors/behavior_loiter.lua`, `behavior_poi_hold.lua`)
+  - [ ] **TASK-202-4**: 타 비행체 호위(FORMATION_ESCORT) 및 CC:Radar 표적 감시(TRACK_SURVEILLANCE) 행동 구현 (`src/2_guidance/fcp/modules/behaviors/behavior_formation_escort.lua`, `behavior_track_surveillance.lua`)
+  - [ ] **TASK-202-5**: AMM 상위 제어 연동, 3자 C2 권한 중재 및 조종석 TUI 모니터링 확장 (`src/2_guidance/fcp/modules/operator_handler.lua`, `src/3_planning/amm/modules/`)
+  - [ ] **TASK-202-6**: CraftOS-PC 단위 테스트 확장 및 E2E 시뮬레이션(Gate 0~6) 검증 (전술 행동 라이프사이클/폴백 검증, 사양서 3종 Implemented 환원)
+
+- [ ] **TASK-203: AMM 전술 행동(Behavior) 기반 미션 시퀀서 및 조종석 C2 단말 확장**
+  - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (v1.1.0 Approved 대기), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.24.0 Approved)
+  - [ ] **TASK-203-1**: 전술 행동 미션 시퀀서 및 C2 인터페이스 사양서 개정·동기화 (AMM v1.1.0 Approved, 마스터 ICD v1.24.0 Approved, 14 SPECS 100% CLEAN 검증 완료)
+  - [ ] **TASK-203-2**: 6대 다형성 행동 큐 및 3대 스텝 전이(Advancement) 엔진 구현 (`src/3_planning/amm/modules/mission_queue.lua`, `config/missions/*.json`)
+  - [ ] **TASK-203-3**: C2 지령 패킷 빌더 확장 및 무반향 GCS 감청·상태 피드백 동기화 (`src/3_planning/amm/modules/c2_arbiter.lua`, `network_manager.lua`)
+  - [ ] **TASK-203-4**: 51x19 TUI 미션 뷰 포맷팅 및 HUD 행동/타이머/경보 배너 시각화 (`src/3_planning/amm/modules/ui_renderer.lua`)
+  - [ ] **TASK-203-5**: 테이블 디스패처 기반 CLI 전술 명령어 파서 및 [H] 원터치 핫키 확장 (`src/3_planning/amm/modules/input_handler.lua`)
+  - [ ] **TASK-203-6**: CraftOS-PC 단위 테스트 확장 및 E2E 시뮬레이션 검증 (다형성 큐 전이/예외 폴백 검증, 사양서 Implemented 환원)
 
 ---
 
@@ -92,10 +94,23 @@
   - TASK-113의 기본 프레임워크(헤드리스/비동기 TUI, `Base+11` 수신 루프, 300ms Safe Glide Trim, 단위 테스트 15/15 PASS)를 기반으로 물리 액추에이터(Avionics API/RS) 각도 인가, `MSG_AERO_STATUS` 상태 피드백 송출 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 핸드셰이크 완성 (일정 연기 — 사양서 `Approved` 유지)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
+- [ ] **[연기] TASK-301: 물리 하드웨어 기반 ACRO 수동 급기동 조종 인터페이스 개발 (Phase 3)**
+  - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동 (일정 연기)
+  - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
 
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-008: 구버전 잔존 명칭(VAS-Core, VAS-Align, VAC-Align) 전면 검수·치환 및 회귀 방지 정비** (완료일: 2026-11-09) (`tests/harness/test_terminology_guard.py`, `tools/verify_all_specs.py`, `src/`, `tests/`, `docs/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-008-legacy-terminology-purge.md`
+  - **목적 및 성과**: 비행 제어 및 교정 지상 콘솔 관련 구버전 잔존 명칭(`VAS-Core` $\to$ `VAS`, `VAS-Align` $\to$ `Alignment`, `VAC-Align` $\to$ `Alignment`, `VAC-Core` $\to$ `VAS`, TCA 내 잔존 `VAC` 링크 스트림 명칭) 전면 소급 척결 및 단일 표준화 완료. 회귀 방지 테스트(`test_terminology_guard.py` 7/7 PASS) 및 사양서 무결성 검증기(`verify_all_specs.py` Rule 8) 확장으로 전역 무오염 영구 보장. 런타임 모듈(`preflight_bit.lua`, `channel_rebind_handler.lua`, `tca_daemon.lua`, `tui_dashboard.lua`, `node_core_sim.lua`) 및 7대 사양서 전수 치환 완료. 12개 타겟 단위 테스트 293/293 PASS, E2E 시뮬레이션 6/6 PASS, 돌연변이 살상률 100.0%(20/20 KILLED), 하네스 36/36 PASS, 14대 사양서 100% CLEAN 달성.
+  - **구현 내용**:
+    - [x] **TASK-008-1**: 회귀 방지 테스트(`tests/harness/test_terminology_guard.py`)에 `VAS-Core`, `VAS-Align`, `VAC-Align`, `VAC-Core` 금지 패턴 등록 및 Red 검증
+    - [x] **TASK-008-2**: 사양서 무결성 검증 도구(`tools/verify_all_specs.py` Rule 8) 용어 위생 검사 규칙 확장
+    - [x] **TASK-008-3**: 전체 사양서(`ALIGNMENT`, `ASA`, `TCA`, `VAS`, `FCP`, `SYSTEM_ARCHITECTURE`, `SYSTEM_PACKET`) 내 잔존 식별자 전수 치환
+    - [x] **TASK-008-4**: 런타임 소스(`src/1_control/`) 및 테스트 코드(`tests/1_control/tca/`) 내 주석·식별자 치환
+    - [x] **TASK-008-5**: 단위 테스트(293/293), E2E(6/6), 돌연변이(20/20) 및 사양서 무결성 검증기 일괄 통과 검증
 
 - [x] **TASK-115: ADVANCED_VTOL 짐벌 벡터 추진기 기체 아키텍처 및 전계층 연동 구현** (완료일: 2026-11-09) (`src/`, `docs/`, `tests/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-115-advanced-vtol-architecture-and-implementation.md`
@@ -148,7 +163,3 @@
 - [x] **TASK-102: Landing Pad 지상 착륙 패드 제어기 구현** (완료일: 2026-11-08, 커밋 `47b98bb` ~ `c064823`) (`docs/specs/0_infra/landing_pad/`, `src/0_infra/landing_pad/`, `tests/0_infra/landing_pad/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-102-landing-pad-controller.md`
   - Landing Pad 사양서 v2.4.2 Implemented 승격, 설정 영속화, 3D 바디 오프셋 변환, 갑판 요동 판정, GPS 클라이언트, 전술 유도 스트리머, 패드 FSM, 5단계 셋업 마법사, 51x19 TUI 뷰, 20Hz 메인 데몬 루프 구현 완료.
-
-- [x] **TASK-101: GAC (Ground Area Controller) 지상 구역 관제사 사양서 개편 및 제어기/TUI 구현** (완료일: 2026-11-08, 커밋 `0787649` ~ `e5aa176`) (`docs/specs/0_infra/gac/`, `src/0_infra/gac/`, `tests/0_infra/gac/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-101-gac-ground-apron-controller.md`
-  - GAC 사양서 v1.4.1 Approved, 설정 영속화, 관할 패드 인벤토리, 2단계 다속성 최적 분배, 1Hz 섹터 대표 비콘/디스패치, 섹터 FSM 및 핸드오프/국지 복행 중재, 듀얼 디스플레이 3-Tab TUI 관제 콘솔 구현 완료.
