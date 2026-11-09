@@ -1,4 +1,4 @@
--- Simulator for VAC-Core and VAC-Align (Node 0) - Raw Modem ICD v1.9.5 (v1.4.0)
+-- Simulator for VAS and Alignment (Node 0) - Raw Modem ICD v1.9.5 (v1.4.0)
 local packet_protocol = require("packet_protocol")
 
 local modem = peripheral and peripheral.wrap and peripheral.wrap("top")

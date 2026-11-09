@@ -6,7 +6,7 @@ local channel_rebind_handler = {}
 local ACTUATION_OFFSET = 10
 channel_rebind_handler.ACTUATION_OFFSET = ACTUATION_OFFSET
 
---- Handle dynamic hangar bay binding from VAC-Core
+--- Handle dynamic hangar bay binding from VAS
 function channel_rebind_handler.handle_bay_bind(modem, pkt, state)
     local p = pkt and pkt.payload
     if not p or not state then return false, "INVALID_PAYLOAD" end

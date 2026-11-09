@@ -85,7 +85,7 @@ function tui_dashboard.get_diagnostic_lines(groupId, busChannel, isOk)
     }
 end
 
---- Render full TUI dashboard with VAC link status and live log stream
+--- Render full TUI dashboard with VAS link status and live log stream
 function tui_dashboard.render_full_screen(cfg, daemon, surfOrW, h)
     local surf = term
     local width = 51
@@ -117,8 +117,8 @@ function tui_dashboard.render_full_screen(cfg, daemon, surfOrW, h)
         [4] = string.format("MODE: %-8s | DEV: %d/%d | ACT CH: %d", mode, act, tot, actChan),
         [5] = "THRUST   : " .. tui_dashboard.render_bar(sig, 15, 12),
         [6] = "+-- [CONTROLS] " .. string.rep("-", math.max(0, width - 17)) .. "+",
-        [7] = "[S] Setup/Profile   [D] Ping VAC   [T] Terminate",
-        [8] = "+-- [VAC LINK LOG STREAM (LAST 5)] " .. string.rep("-", math.max(0, width - 37)) .. "+"
+        [7] = "[S] Setup/Profile   [D] Ping VAS   [T] Terminate",
+        [8] = "+-- [VAS LINK LOG STREAM (LAST 5)] " .. string.rep("-", math.max(0, width - 37)) .. "+"
     }
     local logInner = math.max(10, width - 4)
     for i = 1, 5 do

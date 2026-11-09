@@ -187,7 +187,7 @@ function preflight_bit.checkCentralCore(options)
     passed = preflight_bit.checkActuatorsByVehicleType(opts, warnings, passed, passedTags)
 
     local result = preflight_bit.evaluateStatus(errors, warnings, passed, passedTags)
-    result.node = "VAS_CORE"
+    result.node = "VAS"
     return result
 end
 

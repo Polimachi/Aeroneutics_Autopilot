@@ -25,7 +25,7 @@ function tca_daemon.init(cfg, modem, adapterState)
     local inst = setmetatable({
         cfg = cfg, modem = modem, adapterState = state, reporter = rep,
         lastControlState = "DISARMED", linkStatus = "IDLE", isDirty = true,
-        logBuffer = { "TCA Daemon initialized", "Awaiting VAC telemetry..." }
+        logBuffer = { "TCA Daemon initialized", "Awaiting VAS telemetry..." }
     }, tca_daemon)
     inst.sentinel = watchdog_sentinel.init(cfg.watchdogTimeoutMs or 300, function() inst:handle_watchdog_timeout() end)
     return inst
