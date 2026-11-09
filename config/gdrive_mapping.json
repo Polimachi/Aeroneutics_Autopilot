@@ -2,7 +2,99 @@
   "version": "1.0.0",
   "folderId": "1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
   "folderUrl": "https://drive.google.com/drive/folders/1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
-  "lastSync": null,
-  "files": {},
-  "bootstrapMap": {}
+  "lastSync": "2026-11-09T23:30:00Z",
+  "files": {
+    "src/0_development/installer/installer_app.lua": {
+      "id": "1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx",
+      "name": "installer_app.lua",
+      "repoPath": "src/0_development/installer/installer_app.lua",
+      "category": "bootstrap",
+      "sizeBytes": 16190,
+      "sha256": "d71f9f75048dd64201cf1217c8b9d764257e25ce822ed61f1dd8924e49a33365",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx&export=download&confirm=t"
+    },
+    "src/0_development/installer/modules/manifest.lua": {
+      "id": "1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX",
+      "name": "manifest.lua",
+      "repoPath": "src/0_development/installer/modules/manifest.lua",
+      "category": "bootstrap",
+      "sizeBytes": 32188,
+      "sha256": "e0d28b02cfd8f63daec7fd361765662246ee1ce08d8de8902fbd1c5da164a06b",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX&export=download&confirm=t"
+    },
+    "src/0_development/installer/modules/version_registry.lua": {
+      "id": "1jognQdVANYbEWefN8ET31YHgKUtNOQUO",
+      "name": "version_registry.lua",
+      "repoPath": "src/0_development/installer/modules/version_registry.lua",
+      "category": "bootstrap",
+      "sizeBytes": 4805,
+      "sha256": "4ad0d5f45147c9f53a2aed2653ee06848cd72f62218ad8d4a17e0f5d65e94a8e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1jognQdVANYbEWefN8ET31YHgKUtNOQUO&export=download&confirm=t"
+    },
+    "src/0_development/installer/modules/migration_engine.lua": {
+      "id": "1YcYOmM3qK2cd9HXmPXHUvxTMkfvL9kKk",
+      "name": "migration_engine.lua",
+      "repoPath": "src/0_development/installer/modules/migration_engine.lua",
+      "category": "bootstrap",
+      "sizeBytes": 5758,
+      "sha256": "93de7dabd88c4a7350ef8fe16898a5bab16b697e7d43e6b93eee29edaa38a151",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1YcYOmM3qK2cd9HXmPXHUvxTMkfvL9kKk&export=download&confirm=t"
+    },
+    "src/0_development/installer/modules/startup_generator.lua": {
+      "id": "1RLN2cvyI7_1X1HTo5tGcOWx66dYkfhII",
+      "name": "startup_generator.lua",
+      "repoPath": "src/0_development/installer/modules/startup_generator.lua",
+      "category": "bootstrap",
+      "sizeBytes": 8616,
+      "sha256": "aed00823176b6023887f8d8b708053d554dcf436f2995a8a9cc375067e9241eb",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1RLN2cvyI7_1X1HTo5tGcOWx66dYkfhII&export=download&confirm=t"
+    },
+    "src/0_development/installer/modules/downloader.lua": {
+      "id": "1EIS_Ife6L12eCijlDPDKx8Z5GVdnYU4F",
+      "name": "downloader.lua",
+      "repoPath": "src/0_development/installer/modules/downloader.lua",
+      "category": "bootstrap",
+      "sizeBytes": 13031,
+      "sha256": "1b68a7bbb7fdbbcabf9ff0d4d6e1298a1f9675ccbbaedd2036a19a2c3280fd79",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1EIS_Ife6L12eCijlDPDKx8Z5GVdnYU4F&export=download&confirm=t"
+    },
+    "src/0_development/installer/modules/tui_view.lua": {
+      "id": "1O6TC-Teg0_VIifb-DzcsfCyeGrBylzRt",
+      "name": "tui_view.lua",
+      "repoPath": "src/0_development/installer/modules/tui_view.lua",
+      "category": "bootstrap",
+      "sizeBytes": 9104,
+      "sha256": "ace9d358cfd0acb77803ac41bad514c867821c8eab01b525c694f9409e091c56",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1O6TC-Teg0_VIifb-DzcsfCyeGrBylzRt&export=download&confirm=t"
+    },
+    "installer.lua": {
+      "id": "1FSk8Fya18HXyPdL8lhhfBGqIV500D5UN",
+      "name": "installer.lua",
+      "repoPath": "installer.lua",
+      "category": "installer",
+      "sizeBytes": 14945,
+      "sha256": "9d4ff2e18b5d3cc1e350960e40697edae5ec79bc3e7a1418910b73f8c65ea3cf",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1FSk8Fya18HXyPdL8lhhfBGqIV500D5UN&export=download&confirm=t"
+    },
+    "src/0_development/sensors/avionics_sensors.lua": {
+      "id": "1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL",
+      "name": "avionics_sensors.lua",
+      "repoPath": "src/0_development/sensors/avionics_sensors.lua",
+      "category": "shared",
+      "sizeBytes": 37994,
+      "sha256": "0f42f55e68d4867bd20ffa825d6f4f529abeff2aca7d43937fad56626533af11",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL&export=download&confirm=t"
+    }
+  },
+  "bootstrapMap": {
+    "src/0_development/installer/installer_app.lua": "1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx",
+    "src/0_development/installer/modules/manifest.lua": "1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX",
+    "src/0_development/installer/modules/version_registry.lua": "1jognQdVANYbEWefN8ET31YHgKUtNOQUO",
+    "src/0_development/installer/modules/migration_engine.lua": "1YcYOmM3qK2cd9HXmPXHUvxTMkfvL9kKk",
+    "src/0_development/installer/modules/startup_generator.lua": "1RLN2cvyI7_1X1HTo5tGcOWx66dYkfhII",
+    "src/0_development/installer/modules/downloader.lua": "1EIS_Ife6L12eCijlDPDKx8Z5GVdnYU4F",
+    "src/0_development/installer/modules/tui_view.lua": "1O6TC-Teg0_VIifb-DzcsfCyeGrBylzRt",
+    "installer.lua": "1FSk8Fya18HXyPdL8lhhfBGqIV500D5UN",
+    "src/0_development/sensors/avionics_sensors.lua": "1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL"
+  }
 }

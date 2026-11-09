@@ -8,13 +8,13 @@ bootstrapper.DEFAULT_GITHUB_BASE = "https://raw.githubusercontent.com/Polimachi/
 bootstrapper.DEFAULT_GDRIVE_BASE = "https://drive.usercontent.google.com/download?id="
 
 bootstrapper.BOOTSTRAP_FILES = {
-    { repoPath = "src/0_development/installer/installer_app.lua", cacheRelPath = "installer_app.lua", gdriveId = nil },
-    { repoPath = "src/0_development/installer/modules/manifest.lua", cacheRelPath = "modules/manifest.lua", gdriveId = nil },
-    { repoPath = "src/0_development/installer/modules/version_registry.lua", cacheRelPath = "modules/version_registry.lua", gdriveId = nil },
-    { repoPath = "src/0_development/installer/modules/migration_engine.lua", cacheRelPath = "modules/migration_engine.lua", gdriveId = nil },
-    { repoPath = "src/0_development/installer/modules/startup_generator.lua", cacheRelPath = "modules/startup_generator.lua", gdriveId = nil },
-    { repoPath = "src/0_development/installer/modules/downloader.lua", cacheRelPath = "modules/downloader.lua", gdriveId = nil },
-    { repoPath = "src/0_development/installer/modules/tui_view.lua", cacheRelPath = "modules/tui_view.lua", gdriveId = nil },
+    { repoPath = "src/0_development/installer/installer_app.lua", cacheRelPath = "installer_app.lua", gdriveId = "1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx" },
+    { repoPath = "src/0_development/installer/modules/manifest.lua", cacheRelPath = "modules/manifest.lua", gdriveId = "1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX" },
+    { repoPath = "src/0_development/installer/modules/version_registry.lua", cacheRelPath = "modules/version_registry.lua", gdriveId = "1jognQdVANYbEWefN8ET31YHgKUtNOQUO" },
+    { repoPath = "src/0_development/installer/modules/migration_engine.lua", cacheRelPath = "modules/migration_engine.lua", gdriveId = "1YcYOmM3qK2cd9HXmPXHUvxTMkfvL9kKk" },
+    { repoPath = "src/0_development/installer/modules/startup_generator.lua", cacheRelPath = "modules/startup_generator.lua", gdriveId = "1RLN2cvyI7_1X1HTo5tGcOWx66dYkfhII" },
+    { repoPath = "src/0_development/installer/modules/downloader.lua", cacheRelPath = "modules/downloader.lua", gdriveId = "1EIS_Ife6L12eCijlDPDKx8Z5GVdnYU4F" },
+    { repoPath = "src/0_development/installer/modules/tui_view.lua", cacheRelPath = "modules/tui_view.lua", gdriveId = "1O6TC-Teg0_VIifb-DzcsfCyeGrBylzRt" },
 }
 
 --- Detects the runtime execution context from program invocation path.
