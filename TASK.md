@@ -1,8 +1,8 @@
 # Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
-> **최종 갱신일**: 2026-11-08  
-> **현재 단계**: **Phase 1 & 2** (TASK-007 구버전 명칭 전면 척결 완료, 활성: TASK-114 GAC 전용 시설물 런타임 구현 / TASK-010 플레이북 체계 구축 / TASK-115 ADVANCED_VTOL 아키텍처)
+> **최종 갱신일**: 2026-11-09  
+> **현재 단계**: **Phase 1 & 2** (TASK-115 ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동 완료, 활성: TASK-114 GAC 전용 시설물 런타임 구현 / TASK-010 플레이북 체계 구축)
 
 ---
 
@@ -40,22 +40,6 @@
   - [ ] **TASK-114-4**: 3-Tab TUI 콘솔 `DED` 표기 및 시설물 등록/관리 화면 확장 (`src/0_infra/gac/modules/tui_view.lua`, `main.lua`)
   - [ ] **TASK-114-5**: CraftOS-PC 단위 테스트 확장(전용 패드 격리/비상 징발 시나리오 검증, 사양서 `Implemented` 환원)
 
-- [-] **TASK-115: ADVANCED_VTOL 짐벌 벡터 추진기 기체 아키텍처 및 전계층 연동 구현** (진행 중)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-115-advanced-vtol-architecture-and-implementation.md`
-  - **격리 워크트리**: `.worktrees/task-advanced-vtol` (브랜치: `task-advanced-vtol`)
-  - **진행 상황**:
-    - [x] **환경 격리 및 브랜치 생성**: `.worktrees/task-advanced-vtol` 워크트리 생성 및 기본 테스트 환경 검증 완료
-    - [x] **설계 인터뷰 및 아키텍처 확정 (/grill-me, /brainstorming)**: 2~4기 짐벌 벡터 통합 구동, `Base+10` 다형성 테이블 스키마, 의사역행렬($B^\dagger$) 기반 6-DoF 믹서, Alignment 짐벌 펄스 캘리브레이션 및 FCP 전용 드라이버 설계 합의
-    - [x] **구현 계획서 작성 및 최신 변경점 점검 반영 (/writing-plans)**: TASK-007 구버전 용어 척결, 사양서 6종 버전 최신화, E2E/돌연변이 테스트넷 확장 반영한 최신 계획서(`2026-11-09-task-115-advanced-vtol-architecture-and-implementation.md`) 확정
-    - [x] **TASK-115-0**: 워크트리 최신화 및 Rebase (`main` 브랜치 최신 커밋 반영 및 베이스라인 정렬)
-    - [x] **TASK-115-1**: 사양서 6종 개정 (ICD v1.25.0, System Diagram v2.11.0, TCA v1.11.0, VAS v1.18.0, FCP v1.15.0, Alignment v2.6.0) 및 100% CLEAN 동기화
-    - [x] **TASK-115-2**: TCA `vector_thruster` 페리페럴 래핑 및 다형성 추력/짐벌 출력 구동 (`src/1_control/tca/`)
-    - [x] **TASK-115-3**: Alignment 짐벌 X/Y 펄스 시퀀서 및 제어 효과 의사역행렬 추출기 (`src/0_development/alignment/`)
-    - [x] **TASK-115-4**: VAS ADVANCED_VTOL 정책, 의사역행렬 6-DoF 렌치 믹서 및 짐벌 포화 안티와인드업 (`src/1_control/vas/`)
-    - [x] **TASK-115-5**: FCP 외루프 `advanced_vtol_driver.lua` 및 가이던스 컨트롤러 연동 (`src/2_guidance/fcp/`)
-    - [x] **TASK-115-6**: 지상 인프라 및 미션 시스템 기종 호환성 확장 (GAC, Landing Pad, GCS, Installer)
-    - [x] **TASK-115-7**: 전계층 단위 테스트, E2E 6/6, 돌연변이 20/20, 하네스 33/33 회귀 검증 100% PASS 및 사양서 `Implemented` 전이
-
 - [ ] **TASK-201: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성**
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
   - Layer 4 (`src/4_mission/amp/`) 온보드/지상 겸용 미션 플래너, 인프라 기동 6종 체계(런치패드, 활주로, 도킹 암) 및 3대 도메인 13개 체크포인트 행동 규격 제정 (`docs/specs/4_mission/amp/AMP_PROGRAM_SPECIFICATION.md`) (구 TASK-202 편대 미션 오케스트레이터 및 지상 관제 디스패처 기능 통합 대체)
@@ -92,6 +76,19 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-115: ADVANCED_VTOL 짐벌 벡터 추진기 기체 아키텍처 및 전계층 연동 구현** (완료일: 2026-11-09) (`src/`, `docs/`, `tests/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-115-advanced-vtol-architecture-and-implementation.md`
+  - **목적 및 성과**: 2D 짐벌 벡터 추진기(`vector_thruster`, `liquid_vector_thruster`, `creative_vector_thruster`)를 탑재한 신규 고기동 기종 `ADVANCED_VTOL` 설계 및 전계층 구현 완료. TCA 노즐 편향(`setVector`) 및 워치독/E_STOP 페일세이프 노즐 중립 `(0, 0)` 복귀, Alignment 3단계 펄스 시퀀스(Throttle, Gimbal X/Y) 및 가우스-조던 소거법 기반 Moore-Penrose 의사역행렬($B^\dagger$) 산출 프로파일 내보내기, VAS 6-DoF 렌치 할당기 및 짐벌 포화 방향성 안티 와인드업/비공력 정책(`flapTarget = 0.0`, ASA 바이패스), FCP `advanced_vtol_driver.lua` 3축 비결합 수평/수직 가이던스(2.0/s 짐벌 슬루율, `STRICT_LEVEL`/`TILT_ASSISTED`, 15m 안전고도 수직 이륙 및 2단계 연착륙), GAC v1.4.1 전용 슬롯 매칭 및 Landing Pad/GCS/Installer 통합. 전체 단위 테스트 293/293 PASS(12개 타겟), E2E 시뮬레이션 6/6 PASS, 돌연변이 살상률 100.0%(20/20 KILLED), 하네스 회귀 33/33 PASS, 14대 사양서 100% CLEAN (8 Implemented, 6 Approved).
+  - **구현 내용**:
+    - [x] **TASK-115-0**: 워크트리 Rebase 및 `main` 베이스라인 정렬
+    - [x] **TASK-115-1**: 사양서 6종 개정 (ICD v1.25.0, 구조도 v2.11.0, TCA v1.11.0, VAS v1.18.0, FCP v1.15.0, Alignment v2.6.0)
+    - [x] **TASK-115-2**: TCA `vector_thruster` 래퍼 및 다형성 추력/짐벌 출력 구동 (`src/1_control/tca/`)
+    - [x] **TASK-115-3**: Alignment 짐벌 X/Y 펄스 시퀀서 및 $B^\dagger$ 추출기 (`src/0_development/alignment/`)
+    - [x] **TASK-115-4**: VAS ADVANCED_VTOL 정책, 6-DoF 의사역행렬 믹서 및 안티와인드업 (`src/1_control/vas/`)
+    - [x] **TASK-115-5**: FCP 외루프 `advanced_vtol_driver.lua` 및 가이던스 연동 (`src/2_guidance/fcp/`)
+    - [x] **TASK-115-6**: 지상 인프라 및 미션 시스템 호환 (GAC, Landing Pad, GCS, Installer)
+    - [x] **TASK-115-7**: 전계층 검증(293/293 unit, 6/6 E2E, 20/20 mutation, 33/33 harness), 사양서 4종 `Implemented` 승격
 
 - [x] **TASK-007: 구버전 명칭(UAP/SAS/WAP) 전면 척결 및 회귀 방지 테스트 슈트 구축** (완료일: 2026-11-08) (`tests/harness/test_terminology_guard.py`, `tools/verify_all_specs.py`, `src/`, `tests/`, `docs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-legacy-terminology-elimination-and-test-suite.md`
