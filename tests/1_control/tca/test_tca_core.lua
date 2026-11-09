@@ -356,14 +356,14 @@ describe("tca tui_dashboard and async/headless execution", function()
         local mockModem = mock.modem()
         local daemon = tca_daemon.init(cfg, mockModem)
         daemon.linkStatus = "CONNECTED"
-        daemon:push_log("VAC LINK NOMINAL")
+        daemon:push_log("VAS LINK NOMINAL")
 
         tui_dashboard.render_full_screen(cfg, daemon, termMock)
         assert_true(termMock:_contains("TCA CONSOLE"))
         assert_true(termMock:_contains("THR_MAIN_L"))
         assert_true(termMock:_contains("AIRCRAFT_01"))
         assert_true(termMock:_contains("THRUST"))
-        assert_true(termMock:_contains("VAC LINK NOMINAL"))
+        assert_true(termMock:_contains("VAS LINK NOMINAL"))
 
         for y = 1, 19 do
             assert_true(#(termMock._lines[y]) <= 51, "line length must not exceed terminal width")
