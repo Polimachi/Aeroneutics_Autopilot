@@ -235,4 +235,42 @@ describe("bootstrapper local core resolution and execution", function()
         assert_true(ok)
         assert_true(runnerCalled)
     end)
+
+    it("parses structured gdrive_mapping.json with nested file IDs", function()
+        local pcRoot = sdk.temp_path("pc_root_structured_gdrive")
+        fs.makeDir(pcRoot)
+
+        local mapPath = pcRoot .. "/structured_map.json"
+        local structuredMap = {
+            version = "1.0.0",
+            folderId = "1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
+            files = {
+                ["src/0_development/installer/installer_app.lua"] = { id = "TEST_STRUCTURED_ID_01" },
+            },
+            bootstrapMap = {
+                ["src/0_development/installer/modules/manifest.lua"] = "TEST_STRUCTURED_ID_02",
+            }
+        }
+        writeFile(mapPath, textutils.serialiseJSON(structuredMap))
+
+        local capturedOverrides = nil
+        local mockHttp = createMockHttp(nil, "-- mock file")
+        local ok, err = bootstrapper.bootstrapAndRun({
+            runningProgram = "/installer.lua",
+            targetRoot = pcRoot,
+            cliArgs = { "--bootstrap-gdrive-map", mapPath },
+            http = mockHttp,
+            fs = fs,
+            localCoreDir = false,
+            appRunner = function(opts)
+                capturedOverrides = opts.gdriveOverrides
+                return true, nil
+            end,
+        })
+
+        assert_true(ok)
+        assert_not_nil(capturedOverrides)
+        assert_eq(capturedOverrides["src/0_development/installer/installer_app.lua"], "TEST_STRUCTURED_ID_01")
+        assert_eq(capturedOverrides["src/0_development/installer/modules/manifest.lua"], "TEST_STRUCTURED_ID_02")
+    end)
 end)

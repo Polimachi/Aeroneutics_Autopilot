@@ -274,7 +274,27 @@ function bootstrapper.bootstrapAndRun(opts)
                 if type(map) == "table" then
                     gdriveOverrides = gdriveOverrides or {}
                     for k, v in pairs(map) do
-                        gdriveOverrides[k] = v
+                        if type(v) == "string" then
+                            gdriveOverrides[k] = v
+                        elseif type(v) == "table" and type(v.id) == "string" then
+                            gdriveOverrides[k] = v.id
+                        end
+                    end
+                    if type(map.files) == "table" then
+                        for k, v in pairs(map.files) do
+                            if type(v) == "string" then
+                                gdriveOverrides[k] = v
+                            elseif type(v) == "table" and type(v.id) == "string" then
+                                gdriveOverrides[k] = v.id
+                            end
+                        end
+                    end
+                    if type(map.bootstrapMap) == "table" then
+                        for k, v in pairs(map.bootstrapMap) do
+                            if type(v) == "string" then
+                                gdriveOverrides[k] = v
+                            end
+                        end
                     end
                 end
             end
