@@ -1,4 +1,4 @@
--- On-Change Actuator Status Reporter for TCA v1.4.0
+-- On-Change Actuator Status Reporter for TCA v1.11.0
 local packet_protocol = require("packet_protocol")
 
 local status_reporter = {}
@@ -27,7 +27,8 @@ function status_reporter.check_and_send(reporter, currentStatus, force)
     local changed = (last.activeCount ~= currentStatus.activeCount) or
                     (last.interactionMode ~= currentStatus.interactionMode) or
                     (last.isSaturated ~= currentStatus.isSaturated) or
-                    (last.healthStatus ~= currentStatus.healthStatus)
+                    (last.healthStatus ~= currentStatus.healthStatus) or
+                    (last.gimbalSaturated ~= currentStatus.gimbalSaturated)
 
     if not changed and not force then
         return false
@@ -45,6 +46,15 @@ function status_reporter.check_and_send(reporter, currentStatus, force)
         healthStatus = tostring(currentStatus.healthStatus or "REDSTONE_NOMINAL")
     }
 
+    if currentStatus.appliedGimbal ~= nil then
+        local gx = (type(currentStatus.appliedGimbal) == "table" and tonumber(currentStatus.appliedGimbal.x)) or 0.0
+        local gy = (type(currentStatus.appliedGimbal) == "table" and tonumber(currentStatus.appliedGimbal.y)) or 0.0
+        payload.appliedGimbal = { x = gx, y = gy }
+    end
+    if currentStatus.gimbalSaturated ~= nil then
+        payload.gimbalSaturated = currentStatus.gimbalSaturated == true
+    end
+
     local pkt = packet_protocol.encode_envelope(
         reporter.domainId,
         "MSG_ACTUATOR_STATUS",
@@ -60,7 +70,8 @@ function status_reporter.check_and_send(reporter, currentStatus, force)
         activeCount = payload.activeCount,
         interactionMode = payload.interactionMode,
         isSaturated = payload.isSaturated,
-        healthStatus = payload.healthStatus
+        healthStatus = payload.healthStatus,
+        gimbalSaturated = payload.gimbalSaturated
     }
     return true
 end

@@ -1,4 +1,4 @@
--- Actuator Discovery Dual-Binding Engine for TCA (Master ICD v1.15.0 & TCA v1.4.0)
+-- Actuator Discovery Dual-Binding Engine for TCA (Master ICD v1.20.0 & TCA v1.11.0)
 local packet_protocol = require("packet_protocol")
 
 local discovery_handler = {}
@@ -32,6 +32,13 @@ function discovery_handler.resolve_counts(cfg, adapterState, dispatchedCount)
     return act, tot, "API"
 end
 
+--- Resolve vector capability and nozzle gimbal deflection limits
+function discovery_handler.resolve_vector_capability(adapterState)
+    local isVec = (adapterState and adapterState.isVectorCapable == true) or false
+    local limits = { minX = -1.0, maxX = 1.0, minY = -1.0, maxY = 1.0 }
+    return isVec, limits
+end
+
 --- Compute health status from interaction mode, active count, and timeout status
 function discovery_handler.compute_health_status(interactionMode, activeCount, totalCount, isTimeout)
     local mode = interactionMode or "REDSTONE"
@@ -52,6 +59,7 @@ end
 function discovery_handler.create_ack(reqPkt, cfg, adapterState)
     local act, tot, mode = discovery_handler.resolve_counts(cfg, adapterState)
     local hStat = discovery_handler.compute_health_status(mode, act, tot, false)
+    local isVec, gLimits = discovery_handler.resolve_vector_capability(adapterState)
     local domainId = (cfg and cfg.aircraftDomainId) or "AIRCRAFT_01"
     local seq = (reqPkt and tonumber(reqPkt.seq)) or 0
 
@@ -60,7 +68,9 @@ function discovery_handler.create_ack(reqPkt, cfg, adapterState)
         interactionMode = mode,
         activeCount = act,
         totalCount = tot,
-        healthStatus = hStat
+        healthStatus = hStat,
+        isVectorCapable = isVec,
+        gimbalLimits = gLimits
     })
 end
 

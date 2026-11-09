@@ -1,4 +1,4 @@
--- Non-blocking TCA Daemon State Machine & Safety Supervisor (v1.7.0)
+-- Non-blocking TCA Daemon State Machine & Safety Supervisor (v1.11.0)
 local packet_protocol = require("packet_protocol")
 local actuator_adapter = require("actuator_adapter")
 local watchdog_sentinel = require("watchdog_sentinel")
@@ -39,7 +39,8 @@ function tca_daemon.handle_watchdog_timeout(inst)
     local hStat = discovery_handler.compute_health_status(mode, act, tot, true)
     inst.reporter:check_and_send({
         groupId = inst.cfg.groupId, interactionMode = mode, appliedSignal = 0,
-        appliedRatio = 0.0, activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat
+        appliedRatio = 0.0, activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat,
+        appliedGimbal = { x = 0.0, y = 0.0 }, gimbalSaturated = false
     })
 end
 
@@ -61,7 +62,8 @@ local function handle_safed_output(inst, mode, act, tot)
     local hStat = discovery_handler.compute_health_status(mode, act, tot, false)
     inst.reporter:check_and_send({
         groupId = inst.cfg.groupId, interactionMode = mode, appliedSignal = 0,
-        appliedRatio = 0.0, activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat
+        appliedRatio = 0.0, activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat,
+        appliedGimbal = { x = 0.0, y = 0.0 }, gimbalSaturated = false
     })
     return true
 end
@@ -78,7 +80,8 @@ function tca_daemon.handle_thrust_cmd(inst, pkt)
     end
     if inst.lastControlState == "CALIBRATION" and inst.sentinel:is_pulse_active() then return true end
     local raw = group_allocator.extract_group_output(p.outputs, inst.cfg.groupId, inst.cfg.deadband)
-    if inst.lastControlState == "E_STOP" and raw <= 0 then
+    local rawVal = (type(raw) == "table" and raw.thrust) or raw or 0
+    if inst.lastControlState == "E_STOP" and rawVal <= 0 then
         return handle_safed_output(inst, mode, act, tot)
     end
     local isSat = group_allocator.is_saturated(raw, mode, act, tot)
@@ -87,9 +90,11 @@ function tca_daemon.handle_thrust_cmd(inst, pkt)
     inst.reporter:check_and_send({
         groupId = inst.cfg.groupId, interactionMode = mode,
         appliedSignal = inst.adapterState.lastSignal or 0, appliedRatio = inst.adapterState.lastRatio or 0.0,
-        activeCount = act, totalCount = tot, isSaturated = isSat, healthStatus = hStat
+        activeCount = act, totalCount = tot, isSaturated = isSat, healthStatus = hStat,
+        appliedGimbal = inst.adapterState.lastGimbal or { x = 0.0, y = 0.0 },
+        gimbalSaturated = inst.adapterState.isGimbalSaturated == true
     })
-    inst:push_log(string.format("RX CMD seq=%d sig=%d", p.watchdogSeq or 0, raw))
+    inst:push_log(string.format("RX CMD seq=%d sig=%d", p.watchdogSeq or 0, rawVal))
     return true
 end
 
@@ -103,7 +108,9 @@ function tca_daemon.handle_hardware_change(inst)
     inst.reporter:check_and_send({
         groupId = inst.cfg.groupId, interactionMode = mode,
         appliedSignal = inst.adapterState.lastSignal or 0, appliedRatio = inst.adapterState.lastRatio or 0.0,
-        activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat
+        activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat,
+        appliedGimbal = inst.adapterState.lastGimbal or { x = 0.0, y = 0.0 },
+        gimbalSaturated = inst.adapterState.isGimbalSaturated == true
     })
 end
 
@@ -121,7 +128,9 @@ function tca_daemon.send_manual_ping(inst)
     inst.reporter:check_and_send({
         groupId = inst.cfg.groupId, interactionMode = mode,
         appliedSignal = inst.adapterState.lastSignal or 0, appliedRatio = inst.adapterState.lastRatio or 0.0,
-        activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat
+        activeCount = act, totalCount = tot, isSaturated = false, healthStatus = hStat,
+        appliedGimbal = inst.adapterState.lastGimbal or { x = 0.0, y = 0.0 },
+        gimbalSaturated = inst.adapterState.isGimbalSaturated == true
     }, true)
     local rx = inst.lastRxMs and string.format("%dms ago", now_ms() - inst.lastRxMs) or "never"
     inst:push_log(string.format("TX PING ch%d | last RX %s", inst.reporter.channel or 0, rx))
