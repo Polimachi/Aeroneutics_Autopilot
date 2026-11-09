@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.10.1` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.11.0` |
+| **최종 수정일 (Date)** | `2026-11-09` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.11.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진기(vector_thruster) 구동 지원: setVector(x, y) 짐벌 편향 및 setPower(t) 추력 제어, 워치독/E_STOP 페일세이프 노즐 중립(0, 0) 복귀, discovery_handler 내 isVectorCapable 플래그 및 gimbalLimits 브로드캐스트, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 반영 | 2D 짐벌 벡터 액추에이터 통합 구동 및 안전 규격 수립 |
 | `v1.10.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.10.0` | 2026-11-08 | 비동기 디버그 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 데몬 + TUI 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 디버그 가시성 제공 및 헤드리스 런타임 호환성 확보 |
 | `v1.9.1` | 2026-11-08 | 설정 파라미터 표 내 baseChannel 수식($* 40$) 및 기체 인덱스 범위($N=1\sim 1000$) 잔재 정합 동기화 | 사양서 간 수치 정합성 확립 |
@@ -91,7 +92,7 @@ flowchart TD
 | :---: | :---: | :---: | :---: | :--- |
 | **`top`** | 무선/유선 모뎀 (`modem`) | CC Rednet / Raw Modem | 공통 | VAS 및 VAS-Align과의 무선 통신 전용 포트. `Base + 10` (구 `Base + 6` [DEPRECATED]) 상시 개방, 지상 교정 모드 진입 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 개방 (구버전 `1001` 및 `Base + 4` [DEPRECATED]) |
 | **`bottom`** | Create 변속기 / 레드스톤 링크 | 아날로그 레드스톤 ($0 \sim 15$) | `REDSTONE` | 컴퓨터 바로 아래 블록에 직결된 Create Rotation Speed Controller 또는 Clutch 구동 (`ports.redstoneSide`) |
-| **`left`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | Create: Aeronautics 등 외부 추진기 블록 API 호출 포트 (`ports.apiSides`) |
+| **`left`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$, 2D Gimbal) | `API` | Create Propulsion: Simulated의 고정/벡터 추진기(`vector_thruster`) API (`setPower`, `setVector`) 호출 포트 (`ports.apiSides`) |
 | **`right`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | 추진기 페리페럴 제어 포트 (`ports.apiSides`) |
 | **`front`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | 추진기 페리페럴 제어 포트 (`ports.apiSides`) |
 | **`back`** | 추진기 페리페럴 모듈 | Peripheral API ($0.0 \sim 1.0$) | `API` | 추진기 페리페럴 제어 포트 (`ports.apiSides`) |
@@ -189,6 +190,7 @@ flowchart TD
 ```lua
 -- 지원되는 페리페럴 제어 메서드 목록
 actuator_adapter.SUPPORTED_METHODS = {"setPower", "setThrust", "setAnalogOutput", "setOutput", "setSpeed", "setTargetSpeed"}
+actuator_adapter.VECTOR_THRUSTER_TYPES = {"vector_thruster", "liquid_vector_thruster", "creative_vector_thruster"}
 
 -- 어댑터 상태 초기화 및 API 페리페럴 스캔
 function actuator_adapter.init(defaultInteractionMode, configPath, ports) -> stateTable
@@ -204,11 +206,12 @@ function actuator_adapter.detect_api_peripherals(state) -> peripheralList
 -- 개별 상호작용 모드별 물리 신호 인가 집행
 function actuator_adapter.apply_redstone_thrust(state, rawSignal) -> status, appliedSignal
 function actuator_adapter.apply_api_thrust(state, rawSignal, activeCount, totalCount) -> status, appliedRatio, count, isSaturated
+function actuator_adapter.apply_vector_thrust(state, rawSignal, activeCount, totalCount) -> status, appliedRatio, count, isSaturated, appliedGimbal, gimbalSaturated
 
--- 통합 상호작용 모드 라우팅 인가 집행
+-- 통합 상호작용 모드 라우팅 인가 집행 (다형성 rawSignal: number | { thrust, gimbalX, gimbalY })
 function actuator_adapter.apply_thrust(state, rawSignal, activeCount, totalCount) -> status, appliedValue, extra
 
--- 비상 전비행 추력 0 즉시 차단
+-- 비상 전비행 추력 0 즉시 차단 및 짐벌 노즐 중립 (0, 0) 복귀 (Fail-Safe)
 function actuator_adapter.cut_thrust(state) -> boolean
 
 -- 상호작용 모드 설정 영속화 저장/로드
@@ -256,8 +259,28 @@ function actuator_adapter.apply_thrust(state, rawSignal, activeCount, totalCount
     if mode == "REDSTONE" then
         return actuator_adapter.apply_redstone_thrust(state, rawSignal)
     else
-        return actuator_adapter.apply_api_thrust(state, rawSignal, activeCount, totalCount)
+        -- 다형성 지원: 2D 짐벌 벡터 추진기 명령 분기
+        if state.isVectorCapable or type(rawSignal) == "table" then
+            return actuator_adapter.apply_vector_thrust(state, rawSignal, activeCount, totalCount)
+        else
+            return actuator_adapter.apply_api_thrust(state, rawSignal, activeCount, totalCount)
+        end
     end
+end
+
+function actuator_adapter.cut_thrust(state)
+    -- 추력 즉시 차단 (Power = 0)
+    for _, item in ipairs(state.peripherals or {}) do
+        pcall(item.wrapped.setPower, 0)
+        -- 2D 짐벌 벡터 노즐 중립 (0, 0) 복귀: 워치독 타임아웃 및 E_STOP 시 기체 뒤집힘 원천 방지
+        if item.isVectorCapable then
+            pcall(item.wrapped.setVector, 0.0, 0.0)
+        end
+    end
+    for _, side in ipairs(actuator_adapter.ACTUATOR_SIDES) do
+        rs.setAnalogOutput(side, 0)
+    end
+    return true
 end
 ```
 
@@ -272,7 +295,7 @@ VAS-Core의 전체 추진기 출력 테이블(`payload.outputs`)에서 자선의
 ```lua
 function group_allocator.clamp_signal(signal) -> integer [0, 15]
 function group_allocator.apply_deadband(signal, deadband) -> integer [0, 15]
-function group_allocator.extract_group_output(outputs, groupId, deadband) -> integer [0, 15]
+function group_allocator.extract_group_output(outputs, groupId, deadband) -> number | table ({ thrust, gimbalX, gimbalY })
 function group_allocator.process_redstone_signal(reqSignal, deadband) -> integer [0, 15]
 function group_allocator.calculate_api_boosted_signal(reqSignal, activeCount, totalCount) -> boostedSignal, ratio, isSaturated
 ```
@@ -354,7 +377,7 @@ function packet_protocol.verify_packet(pkt, expectedDomain) -> isValid, errStrin
 ### 4.5 모듈 5: `status_reporter` (온-체인지 예외 텔레메트리 리포터)
 
 #### 1) 모듈 역할
-평시 20Hz 비행 중에는 무선 대역폭을 0으로 보존하다가, 추진기 단선/파손(`activeCount`), 상호작용 모드 전환(`interactionMode`), 포화 진입·해제(`isSaturated`), 또는 헬스 상태(`healthStatus`) 변동 시에만 `Base + 10` (구 `Base + 6` [DEPRECATED]) 채널로 `MSG_ACTUATOR_STATUS`를 즉시 송출합니다.
+평시 20Hz 비행 중에는 무선 대역폭을 0으로 보존하다가, 추진기 단선/파손(`activeCount`), 상호작용 모드 전환(`interactionMode`), 포화 진입·해제(`isSaturated`), 짐벌 포화(`gimbalSaturated`), 2D 노즐 편향(`appliedGimbal`), 또는 헬스 상태(`healthStatus`) 변동 시에만 `Base + 10` (구 `Base + 6` [DEPRECATED]) 채널로 `MSG_ACTUATOR_STATUS`를 즉시 송출합니다.
 
 #### 2) 핵심 인터페이스 시그니처
 ```lua
@@ -368,6 +391,10 @@ function status_reporter.check_and_send(reporter, currentStatus) -> sentBoolean
 
 #### 1) 모듈 역할 및 듀얼 바인딩 (Dual-Channel Binding)
 기체 시동(Arming) 시 비행 제어 코어(VAS) 또는 지상 캘리브레이션 시 프로파일러(Alignment)로부터 유입되는 `MSG_ACTUATOR_DISCOVER_REQ`를 수신하고, 담당 추진기 그룹 제원 및 액추에이터 상태를 `MSG_ACTUATOR_DISCOVER_ACK`로 즉각 회신합니다.
+- **벡터 추진기 탐색 플래그 (`isVectorCapable` & `gimbalLimits`)**:
+  - `vector_thruster` 감지 시 `isVectorCapable = true` 및 `gimbalLimits = { minX = -1.0, maxX = 1.0, minY = -1.0, maxY = 1.0 }`를 ACK에 포함.
+  - 부팅 스캔 직후 모든 벡터 노즐을 즉시 중립 $(0, 0)$으로 초기화.
+  - 단일 축(피치/요) 짐벌 편향 실패 감지 시 `healthStatus = "API_DEGRADED"` 통보.
 - **수신 바인딩 채널 1 (`Base + 10` (구 `Base + 6` [DEPRECATED]), `CH_THRUST_ACTUATION`)**: VAS 시동 및 암링 시퀀스 탐색 요청 수신
 - **수신 바인딩 채널 2 ($Base_{\text{hangar}}+3$, `CH_CALIBRATION_TAP`)**: Alignment 지상 6-DoF 프로파일링 및 펄스 시험 수신 (교정 모드 시 동적 개방, 구버전 `1001` 및 `Base + 4` [DEPRECATED])
 - **회신 원칙**: 요청이 수신된 채널(또는 `replyChannel`)로 동일하게 응답 패킷을 발송하여 요청 주체와의 세션을 격리 보장합니다.

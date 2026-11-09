@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.17.0` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.18.0` |
+| **최종 수정일 (Date)** | `2026-11-09` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.18.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 지원: 제어 효율성 행렬(Control Effectiveness Matrix B) 및 Moore-Penrose 의사역행렬(B†) 기반 동적 렌치 믹싱, 다형성 MSG_THRUST_CMD 출력(outputs[groupId] = {thrust, gimbalX, gimbalY}), 짐벌 포화 피드백 기반 방향성 안티 와인드업, 비공력 특성(flapTarget=0.0, ASA 바이패스) 규격화 | 6-DoF 짐벌 추력 분배 믹서 알고리즘 및 비공력 자세 제어 확립 |
 | `v1.17.0` | 2026-11-08 | ASA 어댑터를 ASA 어댑터로 정식 일원화, FCP 타임아웃 사유 및 텔레메트리 헬스 키 동기화, 구 명칭 전면 척결 | 용어 무결성 및 ASA/FCP 표준화 |
 | `v1.16.0` | 2026-11-08 | 비동기 디버그 TUI(`system.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 20Hz 제어 코어 + 5Hz HUD 렌더러 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
 | `v1.15.0` | 2026-11-08 | CC:Avionics 센서 공용 표준 라이브러리(`/lib/avionics_sensors.lua`) 연동 명세 반영, altitude_sensor 공식 `getHeight()` 및 velocity_sensor 3축 합성(`read_vector3`), gimbal_sensor `getAngularRates()` 공식 API 정합화 | 공식 CC:Avionics 센서 API 규격 일원화 및 정밀 동역학 계측 무결성 확립 |
@@ -495,6 +496,7 @@ flowchart TD
 
 ### 5.7 모듈 7: `vehicle_policy` [Layer 2] (기종별 포락선 보호 / Stall Guard / Flap Guard / 트림 주입 / 천이 블렌더)
 - **역할**: Layer 1을 감싸는 샌드위치 래퍼로, Pre-Filter(대기속도 유효 기반 단일화 Stall Guard 10m/s, 플랩 구조 한계 Vfe 15m/s 가드, 틸트 한계 클램프, 미교정 감쇄 모드 20도 제한, 오일러 $\to$ 쿼터니언 변환)와 Post-Mixer(적분기 왜곡 없는 피치 트림 및 반토크 피드포워드 주입), 천이 블렌딩을 집행합니다.
+- **기종별 정책 (Airframe Policy)**: `ADVANCED_VTOL`은 `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR`와 함께 비공력 순수 추력형 기종으로 분류되어 `transitionAlpha = 0.0`, `resolve_flap_target = 0.0`, Stall Guard 및 Flap Guard가 바이패스되며 독립 3축 수평 병진 제어가 활성화됩니다.
 - **핵심 시그니처**:
   ```lua
   function vehicle_policy.init(policyConfig) -> policyState
@@ -639,10 +641,27 @@ $$\mathbf{W}_{composite} = (1.0 - \alpha) \cdot \mathbf{W}_{hover} + \alpha \cdo
 각 추진기 그룹 $i$의 기여도 계수 벡터 $\mathbf{M}_i$와 6-DoF 합성 렌치 $\mathbf{W}$의 내적 $S_{raw, i} = \mathbf{M}_i \cdot \mathbf{W}$에 대해 불감대($deadband$) 선형 확장을 적용하여 $0 \sim 15$ 이산 정수 신호를 생성합니다:
 $$S_{cmd, i} = \begin{cases} 0 & (S_{raw, i} \le 0.05) \\ \text{clamp}\left(\lceil \text{deadband}_i \rceil, \; \text{maxThrust}_i, \; \left\lfloor \text{deadband}_i + (15 - \text{deadband}_i) \cdot \frac{\min(15.0, S_{raw, i})}{15.0} + 0.5 \right\rfloor\right) & (S_{raw, i} > 0.05) \end{cases}$$
 
+#### 6.4.1 ADVANCED_VTOL 의사역행렬 제어 할당 (`thrust_mixer.allocate_vector_vtol`)
+2D 짐벌 벡터 추진기를 탑재한 `ADVANCED_VTOL` 기체는 노즐 편향$(gx, gy)$과 스칼라 추력 $T$의 동시 배분을 위해 **제어 효율성 행렬(Control Effectiveness Matrix) $B$ ($6 	imes 3N$)** 및 **Moore-Penrose 의사역행렬 $B^\dagger = B^T (B B^T)^{-1}$**을 사용합니다:
+
+1. **6-DoF 렌치 요구 벡터**:
+   $$\vec{w} = [\text{surge}, \text{sway}, \text{heave}, \text{rollTorque}, \text{pitchTorque}, \text{yawTorque}]^T$$
+2. **제어 입력 벡터 산출**:
+   $$\vec{u} = B^\dagger \cdot \vec{w} \quad (\vec{u} \in \mathbb{R}^{3N})$$
+3. **그룹별 다형성 지령 매핑**:
+   각 벡터 추진기 그룹 $i$ ($i=1 \dots N$)에 대해:
+   - 추력 지령: $S_i = \text{clamp}(\lfloor u_{3i-2} + 0.5 \rfloor, 0, 15)$
+   - 2D 노즐 편향 지령: $gx_i = \text{clamp}(u_{3i-1}, -1.0, 1.0)$, $gy_i = \text{clamp}(u_{3i}, -1.0, 1.0)$
+   - 출력 테이블: `outputs[groupId] = { thrust = S_i, gimbalX = gx_i, gimbalY = gy_i }`
+4. **결측 폴백 (Missing Pseudo-Inverse Fallback)**:
+   기체 프로파일에 `pseudoInverseMatrix`가 부재할 경우 시스템 중단을 방지하기 위해 경고 로그를 남기고 선형 스칼라 믹서(`decoupled linear mixer`)로 안전 전환합니다.
+5. **짐벌 포화 및 방향성 안티 와인드업 (Directional Anti-Windup)**:
+   노즐 편향이 물리적 한계 $|gx| \ge 1.0$ 또는 $|gy| \ge 1.0$에 도달하거나 TCA 피드백 패킷에 `gimbalSaturated = true`가 수신되면, 기여 축의 적분기(`axisSaturatedPos`, `axisSaturatedNeg`)를 즉각 동결하여 적분 누적으로 인한 제어 지연 및 오버슈트를 원천 차단합니다.
+
 ### 6.5 Layer 3 Platform Actuator Adapter: ASA 조종면 할당 & 동적압($V^2$) 스케일링 (`actuator_adapter_asa`)
 > **기종별 가동 정책 (Airframe Gating Rule)**:
 > - 본 모듈은 공력 날개/타면을 보유한 `FIXED_WING` 및 `WINGED_VTOL` 기체에서만 활성화됩니다.
-> - `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 비행체에서는 본 모듈 할당 연산 및 `Base+11` `MSG_AERO_CMD` 송출이 원천 배제(Bypass)되며, 포화 비트맵 및 텔레메트리 헬스 진단 시 ASA을 평가하지 않습니다.
+> - `VECTORED_VTOL`, `ADVANCED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 비행체에서는 본 모듈 할당 연산 및 `Base+11` `MSG_AERO_CMD` 송출이 원천 배제(Bypass)되며, 포화 비트맵 및 텔레메트리 헬스 진단 시 ASA을 평가하지 않습니다.
 
 공력 조종면(에일러론, 엘리베이터, 러더)의 공력 효과는 대기속도 동적압($q = \frac{1}{2}\rho V^2$)에 비례하므로, 고속 시에는 작은 타각으로 충분한 조종 모멘트가 발생하고 저속 시에는 큰 타각이 필요합니다. 따라서 기준 속도 $V_{ref} = 20.0\text{ m/s}$를 기준으로 동적압 역비례 스케일링 계수 $\eta_q$를 적용합니다:
 $$\eta_q = \text{clamp}\left(0.25, \; 2.50, \; \left(\frac{V_{ref}}{\max(5.0, V_{air})}\right)^2\right)$$
