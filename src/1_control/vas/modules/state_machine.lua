@@ -150,15 +150,35 @@ function state_machine.apply_output_safety_rule(state, rawOutputs, isAsa)
     if curr == "E_STOP" then
         if state.isAirborne and not isAsa then
             local cushionT = math.floor((state.hoverBaseThrottle or 7.5) * 0.6 + 0.5)
-            for k, _ in pairs(rawOutputs or {}) do safe[k] = cushionT end
+            for k, v in pairs(rawOutputs or {}) do
+                if type(v) == "table" then
+                    safe[k] = { thrust = cushionT, gimbalX = 0.0, gimbalY = 0.0 }
+                else
+                    safe[k] = cushionT
+                end
+            end
             return safe
         end
-        for k, _ in pairs(rawOutputs or {}) do safe[k] = 0 end
+        for k, v in pairs(rawOutputs or {}) do
+            if type(v) == "table" then
+                safe[k] = { thrust = 0, gimbalX = 0.0, gimbalY = 0.0 }
+            else
+                safe[k] = 0
+            end
+        end
         return safe
     end
     local isFlight = (curr == "NORMAL" or curr == "FAILSAFE_HOLD" or curr == "EMERGENCY_LAND" or curr == "AIRBORNE_EMERGENCY")
     for k, v in pairs(rawOutputs or {}) do
-        safe[k] = isFlight and (tonumber(v) or 0) or 0
+        if type(v) == "table" then
+            safe[k] = {
+                thrust = isFlight and (tonumber(v.thrust) or 0) or 0,
+                gimbalX = isFlight and (tonumber(v.gimbalX) or 0.0) or 0.0,
+                gimbalY = isFlight and (tonumber(v.gimbalY) or 0.0) or 0.0
+            }
+        else
+            safe[k] = isFlight and (tonumber(v) or 0) or 0
+        end
     end
     return safe
 end

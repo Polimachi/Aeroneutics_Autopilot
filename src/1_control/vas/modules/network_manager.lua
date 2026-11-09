@@ -218,7 +218,7 @@ local function handle_calibration_packet(state, fsm, mixer, rawPacket)
         return true
     elseif msgType == "MSG_PROFILE_SYNC" then
         if mixer and mixer.reload_coefficients then
-            mixer.reload_coefficients(mixer, rawPacket.payload and rawPacket.payload.thrusterCoefficients, false)
+            mixer.reload_coefficients(mixer, rawPacket.payload, false)
         end
         if fsm and fsm.transition_to then fsm.transition_to(fsm, "IDLE_ARMED", "CALIB_COMPLETE") end
         if state.on_profile_sync then state.on_profile_sync(rawPacket.payload) end
