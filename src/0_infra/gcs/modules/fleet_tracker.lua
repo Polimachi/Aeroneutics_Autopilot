@@ -6,6 +6,36 @@ local fleet_tracker = {}
 
 local DEFAULT_TIMEOUT_MS = 5000
 
+fleet_tracker.AIRFRAME_LABELS = {
+    ADVANCED_VTOL = "ADV_VTOL",
+    VECTORED_VTOL = "VEC_VTOL",
+    WINGED_VTOL   = "WNG_VTOL",
+    FIXED_WING    = "FIX_WING",
+    QUADROTOR     = "QUAD_ROT",
+    HEXAROTOR     = "HEXA_ROT",
+    UNKNOWN       = "UNKNOWN",
+}
+
+fleet_tracker.AIRFRAME_ICONS = {
+    ADVANCED_VTOL = "^V^",
+    VECTORED_VTOL = ">V<",
+    WINGED_VTOL   = "-V-",
+    FIXED_WING    = "-=-",
+    QUADROTOR     = "+X+",
+    HEXAROTOR     = "*X*",
+    UNKNOWN       = "<?>",
+}
+
+function fleet_tracker.get_airframe_label(airframeType)
+    if not airframeType then return "UNKNOWN" end
+    return fleet_tracker.AIRFRAME_LABELS[airframeType] or tostring(airframeType)
+end
+
+function fleet_tracker.get_airframe_icon(airframeType)
+    if not airframeType then return "<?>" end
+    return fleet_tracker.AIRFRAME_ICONS[airframeType] or "<!>"
+end
+
 function fleet_tracker.init(config)
     local ui_cfg = (config and config.ui) or {}
     local timeout_sec = ui_cfg.telemetryTimeoutSec or 5.0
@@ -17,7 +47,7 @@ function fleet_tracker.init(config)
     }
 end
 
-function fleet_tracker.register_craft(state, domain_id, base_channel, block_id)
+function fleet_tracker.register_craft(state, domain_id, base_channel, block_id, airframe_type)
     if not state or not domain_id then return false end
 
     if not state.crafts[domain_id] then
@@ -28,6 +58,7 @@ function fleet_tracker.register_craft(state, domain_id, base_channel, block_id)
         domainId = domain_id,
         baseChannel = base_channel,
         blockId = block_id,
+        airframeType = airframe_type,
         telemetry = nil,
         lastSeenMs = 0,
         isStale = true
@@ -100,6 +131,9 @@ function fleet_tracker.update_telemetry(state, domain_id, mfd_state_payload, now
     if not craft then return false end
 
     craft.telemetry = mfd_state_payload
+    if mfd_state_payload and (mfd_state_payload.airframeType or mfd_state_payload.airframe or mfd_state_payload.mode) then
+        craft.airframeType = mfd_state_payload.airframeType or mfd_state_payload.airframe or mfd_state_payload.mode
+    end
     craft.lastSeenMs = now_ms or 0
     craft.isStale = false
     return true
@@ -122,11 +156,15 @@ function fleet_tracker.get_fleet_summary(state)
     for _, id in ipairs(state.craft_order) do
         local c = state.crafts[id]
         if c then
+            local af = c.airframeType or (c.telemetry and (c.telemetry.airframeType or c.telemetry.airframe or c.telemetry.mode)) or "UNKNOWN"
             table.insert(list, {
                 domainId = c.domainId,
                 baseChannel = c.baseChannel,
                 blockId = c.blockId,
                 fsmState = (c.telemetry and c.telemetry.fsmState) or "UNKNOWN",
+                airframeType = af,
+                airframeLabel = fleet_tracker.get_airframe_label(af),
+                airframeIcon = fleet_tracker.get_airframe_icon(af),
                 isStale = c.isStale,
                 lastSeenMs = c.lastSeenMs
             })

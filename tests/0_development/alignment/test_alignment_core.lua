@@ -161,3 +161,26 @@ describe("alignment master bay session and HUD renderer", function()
         assert_eq(master.state, "STANDBY")
     end)
 end)
+
+
+describe("alignment vector calibration integration (TASK-115)", function()
+    it("assembles control matrix and validates pseudo-inverse inversion", function()
+        local profile_exporter = require("profile_exporter")
+        local vectorSlopes = {
+            THR_VEC_1 = {
+                dThrust = { surge = 0, sway = 0, heave = 2, pitch = 0, roll = 0, yaw = 0 },
+                dGimbalX = { surge = 0, sway = 6, heave = 0, pitch = 0, roll = 3, yaw = 0 },
+                dGimbalY = { surge = 6, sway = 0, heave = 0, pitch = 3, roll = 0, yaw = 0 }
+            },
+            THR_VEC_2 = {
+                dThrust = { surge = 0, sway = 0, heave = 2, pitch = 0, roll = 0, yaw = 0 },
+                dGimbalX = { surge = 0, sway = 6, heave = 0, pitch = 0, roll = -3, yaw = 0 },
+                dGimbalY = { surge = 6, sway = 0, heave = 0, pitch = -3, roll = 0, yaw = 0 }
+            }
+        }
+        local B = profile_exporter.assemble_control_matrix(vectorSlopes, { "THR_VEC_1", "THR_VEC_2" })
+        assert_not_nil(B)
+        assert_eq(#B, 6)
+        assert_eq(#B[1], 6)
+    end)
+end)

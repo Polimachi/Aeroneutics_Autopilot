@@ -22,6 +22,11 @@ function vehicle_policy.init(policyConfig)
     }
 end
 
+function vehicle_policy.is_aerodynamic(policyOrType)
+    local vType = (type(policyOrType) == "table" and policyOrType.vehicleType) or policyOrType
+    return vType == "FIXED_WING" or vType == "WINGED_VTOL"
+end
+
 function vehicle_policy.resolve_guidance_targets(cmd)
     local targetQ = cmd.targetOrientation
     if type(targetQ) == "table" then
@@ -46,7 +51,7 @@ end
 function vehicle_policy.compute_transition_weights(policy, airspeed)
     local vType = policy.vehicleType
     if vType == "FIXED_WING" then return 1.0 end
-    if vType == "QUADROTOR" or vType == "HEXAROTOR" or vType == "VTOL" then return 0.0 end
+    if vType == "QUADROTOR" or vType == "HEXAROTOR" or vType == "VTOL" or vType == "VECTORED_VTOL" or vType == "ADVANCED_VTOL" then return 0.0 end
     local v = tonumber(airspeed) or 0.0
     if v < 8.0 then return 0.0
     elseif v > 18.0 then return 1.0
@@ -54,7 +59,7 @@ function vehicle_policy.compute_transition_weights(policy, airspeed)
 end
 
 function vehicle_policy.resolve_flap_target(policy, rawCmd, airspeed, health)
-    local isAero = (policy and (policy.vehicleType == "FIXED_WING" or policy.vehicleType == "WINGED_VTOL"))
+    local isAero = vehicle_policy.is_aerodynamic(policy)
     if not isAero then
         return 0.0
     end
@@ -71,7 +76,7 @@ function vehicle_policy.apply_stall_guard(policy, telem, conditionedCmd)
     local health = telem.sensorHealth or {}
     local airspeed = telem.airspeed or 0.0
     local isVValid = (health.velocity ~= false) and (health.isVelocityValid ~= false) and (health.isAirspeedValid ~= false)
-    local isAero = (policy.vehicleType == "FIXED_WING" or policy.vehicleType == "WINGED_VTOL")
+    local isAero = vehicle_policy.is_aerodynamic(policy)
     if isVValid and isAero and airspeed < policy.stallSpeed then
         conditionedCmd.targetThrottle = math.max(conditionedCmd.targetThrottle or 0.0, policy.minStallThrottle)
         local eul = quat.to_euler(conditionedCmd.targetOrientation)
@@ -108,12 +113,16 @@ function vehicle_policy.combine_saturation(satTap, satAsa, alpha)
 
     return {
         axisSaturatedPos = {
+            surge = tapPos.surge == true,
+            sway = tapPos.sway == true,
             pitch = merge_axis(tapPos.pitch, asaPos.pitch),
             roll = merge_axis(tapPos.roll, asaPos.roll),
             yaw = merge_axis(tapPos.yaw, asaPos.yaw),
             heave = tapPos.heave == true
         },
         axisSaturatedNeg = {
+            surge = tapNeg.surge == true,
+            sway = tapNeg.sway == true,
             pitch = merge_axis(tapNeg.pitch, asaNeg.pitch),
             roll = merge_axis(tapNeg.roll, asaNeg.roll),
             yaw = merge_axis(tapNeg.yaw, asaNeg.yaw),

@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.14.0` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v1.15.0` |
+| **최종 수정일 (Date)** | `2026-11-09` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 외루프 유도 및 자율 임무 컴퓨터 (FCP / Node 04) |
 
@@ -29,6 +29,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.15.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 전용 외루프 유도 제어기(advanced_vtol_driver.lua) 명세 신설: 3축 독립 병진 제어(Surge/Sway/Heave 완전 PID + Anti-windup), STRICT_LEVEL(θ=φ=0°) 무경사 기동 및 TILT_ASSISTED 모드, 짐벌 물리 슬루율 제한, 안전고도 기반 수직 이륙 및 패드 0.5m 정렬 2단계 감속 터치다운 시퀀스, flapTarget=0.0 고정 | 2D 짐벌 벡터 추진 VTOL 외루프 유도 알고리즘 표준화 |
 | `v1.14.0` | 2026-11-08 | 구 명칭(FCP/FCP/ASA) 소급 전면 척결, 40채널 대역폭 및 채널 할당 공식 정비 | 용어 무결성 및 40채널 표준 동기화 |
 | `v1.13.0` | 2026-11-08 | VECTORED_VTOL 외루프 제어기 3축 완전 PID + Anti-windup, TILT_ASSISTED 피치 슬루율(15°/s), 수평 고정 수직 이륙 및 2단계 감속 수직 착륙 시퀀스 상세 규격 반영 (`Implemented` $\to$ `Approved`) | TASK-110 VTOL 제어 고도화 사양 개정 |
 | `v1.11.0` | 2026-11-07 | 구 명칭을 FCP(Flight Control Program)로 전면 개정, 디렉토리/파일명(`fcp/`) 및 런타임 식별자(`FCP`) 동기화, 구 FCP 명칭 [DEPRECATED] 이력 명시 | 시스템 명칭 통일 및 식별자 표준화 |
@@ -327,21 +328,22 @@ flowchart LR
    VAS 내루프 PID의 추종 지연을 선제적으로 상쇄하기 위한 요 각속도 피드포워드:
    $$r_{FF} = \frac{11.0}{V} \tan(\phi_{cmd}) \quad [\text{deg/s}]$$
 
-### 5.3 5대 기체 타입 분류 및 외루프 유도 아키텍처 매트릭스
+### 5.3 6대 기체 타입 분류 및 외루프 유도 아키텍처 매트릭스
 
-비행체의 물리적 공력 특성, 추진기 배치, 그리고 임무 프로파일에 따라 외루프 유도 제어기와 비행 상태 머신(FSM)은 5대 표준 기종(`airframeType` Enum)으로 명확히 분류되어 가동됩니다.
+비행체의 물리적 공력 특성, 추진기 배치, 그리고 임무 프로파일에 따라 외루프 유도 제어기와 비행 상태 머신(FSM)은 6대 표준 기종(`airframeType` Enum)으로 명확히 분류되어 가동됩니다.
 
 | 기체 식별자 (`airframeType`) | 대표 기종 및 메커니즘 | 수평 유도 제어 방식 | 종방향(고도/속도) 제어 | 선회 및 방위(Yaw) 제어 | 비행 모드 천이(Transition) | 주 운용 시설물 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`FIXED_WING`** | 편익기 (전익기/무미익기) | L1 비선형 유도 $\to$ BTT ($\phi_{cmd}$) | TECS (총 에너지 제어 시스템) | BTT + 차동 추력(Differential) 보조 | 불필요 (실속 속도 $V_{stall}$ 방어) | 활주로 (`RUNWAY`) |
 | **`WINGED_VTOL`** | 장거리 고정익 하이브리드 | L1 BTT (순항) / 호버 PI | 저속 수직 PI $\leftrightarrow$ 고속 TECS | 순항 BTT 협조 선회 | 3구간 속도 가중 블렌딩 ($8 \sim 18\text{ m/s}$) | 패드 (`PAD`) & 활주로 (`RWY`) 듀얼 |
 | **`VECTORED_VTOL`** | 고기동 다축 벡터드 VTOL | 완전 6-DoF 무경사 3축 바이어스 | 전 영역 수직 추력 PI + Heave | 다중 헤딩 (`FACE_PATH` / `TARGET_LOCK`) | 무천이 (0초 즉각 전영역 기동) | 착륙패드 (`PAD`) & 도킹암 (`ARM`) |
+| **`ADVANCED_VTOL`** | 고기동 2D 짐벌 벡터 VTOL | 완전 6-DoF 3축 바이어스 + 짐벌 슬루율 제한 | 전 영역 수직 추력 PI + Heave | 다중 헤딩 (`FACE_PATH` / `TARGET_LOCK`) | 무천이 (0초 즉각 전영역 기동) | 착륙패드 (`PAD`) & 도킹암 (`ARM`) |
 | **`QUADROTOR`** | 4-T 쿼드콥터 드론 | 2D 캐스케이드 $\to$ Tilt-to-Accelerate | 수직 추력 직결 PI ($T_{hover} + K_p \Delta h$) | 진행방향/지정방위 독립 제어 | 불필요 (순수 멀티로터 FSM) | 착륙패드 (`PAD`) |
 | **`HEXAROTOR`** | 6-T 헥사콥터 드론 | 2D 캐스케이드 $\to$ Tilt-to-Accelerate | 수직 추력 직결 PI ($T_{hover} + K_p \Delta h$) | 진행방향/지정방위 독립 제어 | 불필요 (QUADROTOR FSM 완전 동일) | 착륙패드 (`PAD`) |
 
 > **ASA 공력 구동계 연동 여부 규격**:
 > - `FIXED_WING`, `WINGED_VTOL`: ASA 활성화 (비행 단계별 플랩 스케줄링 `flapTarget` 산출 및 VAS 내루프 공력 제어 연동).
-> - `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR`: ASA 원천 배제 (플랩 지령 `flapTarget = 0.0` 강제 고정, 공력 조종면 연산 비활성화).
+> - `VECTORED_VTOL`, `ADVANCED_VTOL`, `QUADROTOR`, `HEXAROTOR`: ASA 원천 배제 (플랩 지령 `flapTarget = 0.0` 강제 고정, 공력 조종면 연산 비활성화).
 
 ---
 
@@ -599,7 +601,33 @@ FCP는 부팅 및 캘리브레이션 단계에서 [ALIGNMENT_PROGRAM_SPECIFICATI
 
 ---
 
-### 5.7 QUADROTOR & HEXAROTOR (멀티로터 드론) 외루프 제어 흐름도
+### 5.7 ADVANCED_VTOL (고기동 2D 짐벌 벡터 VTOL) 외루프 제어기 (`advanced_vtol_driver.lua`)
+
+`ADVANCED_VTOL`은 2D 노즐 편향이 가능한 `vector_thruster`를 탑재하여 공력 조종면 없이 노즐 짐벌 각도 및 차동 추력만으로 6-DoF 비행 역학을 완결하는 최상위 고기동 기종입니다. 외루프 유도 계층에서는 `advanced_vtol_driver.lua` 모듈이 전담 가동됩니다.
+
+#### 1) 핵심 유도 메커니즘 및 3축 완전 PID
+1. **3축 독립 병진 제어기**:
+   - Surge, Sway, Heave 3축에 대해 위치/속도 오차 기반 독립 PID 제어 및 적분기 Anti-windup을 적용합니다:
+     $$surge = \text{clamp}(K_{p,s} \cdot e_{surge} - K_{d,s} \cdot v_{surge} + I_{surge}, \; -1.0, \; 1.0)$$
+     $$sway = \text{clamp}(K_{p,w} \cdot e_{sway} - K_{d,w} \cdot v_{sway} + I_{sway}, \; -1.0, \; 1.0)$$
+     $$heave = \text{clamp}(K_{p,h} \cdot (y_{tgt} - y) - K_{d,h} \cdot v_y + I_{heave}, \; -1.0, \; 1.0)$$
+2. **짐벌 물리 슬루율 제한 (Gimbal Slew Rate Limiter)**:
+   - 2D 노즐의 물리적 편향 속도 한계를 반영하여 병진 바이어스 신호의 틱당 변화율을 제한($\text{slewRate} \le 2.0/\text{s}$)함으로써 급격한 짐벌 회전으로 인한 자세 불안정 및 과도한 관성 모멘트를 방지합니다.
+3. **비행 포락선 모드 (`STRICT_LEVEL` vs `TILT_ASSISTED`)**:
+   - `STRICT_LEVEL`: 호버, 이착륙, 정밀 도킹 시 $\theta_{cmd} = 0.0^\circ, \phi_{cmd} = 0.0^\circ$ 수평 자세를 엄격히 유지.
+   - `TILT_ASSISTED`: 고속 순항($V > 15\text{ m/s}$) 시 최대 $\pm 10.0^\circ$ 범위에서 $15.0^\circ/\text{s}$ 슬루율로 피치 틸트를 보조 인가하여 순항 속도를 극대화.
+4. **비공력 특성 보장**:
+   - 공력 조종면 및 플랩이 존재하지 않으므로 플랩 지령은 영구히 `flapTarget = 0.0`으로 고정 하달되며, ASA 액추에이터 통신은 바이패스됩니다.
+
+#### 2) 이착륙 FSM 시퀀스
+- **수직 이륙 (`TAKEOFF`)**: 지상 장애물 회피를 위해 안전 고도(15.0m) 도달 전까지 수평 이동을 강제 차단($surge=0, sway=0$)하고 $targetClimbRate = +2.5\text{ m/s}$로 수직 상승.
+- **정밀 2단계 착륙 (`APPROACH_LAND`)**:
+  - $d_{2D} > 0.5\text{ m}$: 수평 정렬을 유지하며 $targetClimbRate = -1.5\text{ m/s}$ 강하.
+  - $d_{2D} \le 0.5\text{ m}$: 2단계 터치다운 감속 $targetClimbRate = -0.5\text{ m/s}$로 부드러운 접지 집행.
+
+---
+
+### 5.8 QUADROTOR & HEXAROTOR (멀티로터 드론) 외루프 제어 흐름도
 
 4-T Drone(`QUADROTOR`)과 6-T Drone(`HEXAROTOR`)은 회전익의 차동 추력 및 자세 경사각을 활용하여 수평 가속도를 생성하는 전형적인 멀티로터 비행체입니다. FCP 외루프 계층에서는 **2D 위치/속도 캐스케이드 PID $\to$ Tilt-to-Accelerate 사상 구조** 및 비행 상태 머신(FSM)을 완전히 동일하게 공유하며, 추력기 개수(4개 vs 6개)와 6-DoF 믹싱 행렬 및 비상 결손 제어는 하위 [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md)의 믹서 프로파일에 위임합니다.
 
@@ -1443,7 +1471,7 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
     "domainId": "AIRCRAFT_01",
     "hardwareUuid": "FCP-NODE-04-4402",
     "airframeType": "WINGED_VTOL",
-    "_airframeType_comment": "5대 표준: FIXED_WING | WINGED_VTOL | VECTORED_VTOL | QUADROTOR | HEXAROTOR",
+    "_airframeType_comment": "6대 표준: FIXED_WING | WINGED_VTOL | VECTORED_VTOL | ADVANCED_VTOL | QUADROTOR | HEXAROTOR",
     "loopFrequencyHz": 20,
     "primaryModemSide": "top",
     "infraModemSide": "back"
@@ -1520,6 +1548,25 @@ FCP는 상위 오케스트레이터로서 VAS-Core의 하위 FSM을 원격 지�
         "minSwayAccelMps2": 2.0,
         "requireFull6DofPass": true
       }
+    },
+    "advanced_vtol": {
+      "envelopeMode": "STRICT_LEVEL",
+      "tiltAssistedThresholdSpeedMps": 15.0,
+      "tiltAssistedMaxPitchDeg": 10.0,
+      "tiltSlewRateDegPerSec": 15.0,
+      "gimbalSlewRatePerSec": 2.0,
+      "headingMode": "FACE_PATH",
+      "surgeKp": 0.15,
+      "surgeKi": 0.02,
+      "surgeKd": 0.08,
+      "swayKp": 0.15,
+      "swayKi": 0.02,
+      "swayKd": 0.08,
+      "heaveKp": 0.12,
+      "heaveKi": 0.02,
+      "heaveKd": 0.15,
+      "hoverThrottle": 0.635,
+      "maxIntegral": 0.20
     },
     "multirotor": {
       "posKp": 0.8,

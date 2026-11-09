@@ -47,7 +47,7 @@ end
 function aerodynamic_controller.handle_surface_status(pkt, airframe_type)
     local p = (pkt and pkt.payload) or {}
     local health = p.healthStatus or "NOMINAL"
-    local is_vtol = (airframe_type == "VECTORED_VTOL" or airframe_type == "QUADROTOR" or airframe_type == "HEXAROTOR")
+    local is_vtol = (airframe_type == "VECTORED_VTOL" or airframe_type == "ADVANCED_VTOL" or airframe_type == "QUADROTOR" or airframe_type == "HEXAROTOR")
     if health == "DEGRADED" then
         return {
             action = "WARN",

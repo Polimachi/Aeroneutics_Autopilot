@@ -1,6 +1,11 @@
 -- src/modules/flight_fsm.lua
 local flight_fsm = {}
 
+function flight_fsm.is_vtol(airframe_type)
+    local af = airframe_type or "VECTORED_VTOL"
+    return (af == "VECTORED_VTOL" or af == "ADVANCED_VTOL" or af == "QUADROTOR" or af == "HEXAROTOR" or af == "WINGED_VTOL")
+end
+
 function flight_fsm.init(config)
     local cfg = config or {}
     local sys = cfg.system or {}

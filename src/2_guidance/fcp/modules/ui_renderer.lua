@@ -23,7 +23,8 @@ local function render_section_1(win, state)
     local ch = state and state.channel and state.channel.baseChannel or 10000
     local ch_st = state and state.channel and state.channel.status or "INIT"
     local fsm_st = state and state.fsm and state.fsm.current_state or "BOOT_INIT"
-    draw_row(win, 1, string.format("FCP NODE-04 | VECTORED_VTOL | CH:%d [%s]", ch, ch_st), "0", "7")
+    local af = (state and (state.airframeType or state.airframe or (state.config and state.config.system and state.config.system.airframeType))) or "VECTORED_VTOL"
+    draw_row(win, 1, string.format("FCP NODE-04 | %s | CH:%d [%s]", af, ch, ch_st), "0", "7")
     draw_row(win, 2, "---------------------------------------------------", "8", "f")
     draw_row(win, 3, string.format("STATE: %s | ENV: %s", fsm_st, state and state.envelope or "STRICT_LEVEL"), "0", "f")
 end

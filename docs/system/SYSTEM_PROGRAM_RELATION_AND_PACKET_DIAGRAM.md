@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.10.1` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v2.11.0` |
+| **최종 수정일 (Date)** | `2026-11-09` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 시스템 프로그램 관계망 및 채널 토폴로지 구조도 (Architecture Map) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.11.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 기체 아키텍처 노드 및 패킷 흐름도 반영, 다형성 MSG_THRUST_CMD(스칼라/짐벌 테이블) 및 확장 MSG_ACTUATOR_STATUS(appliedGimbal/gimbalSaturated) 요약 매핑 | 2D 짐벌 벡터 추진 VTOL 시스템 관계망 및 패킷 인터페이스 확립 |
 | `v2.10.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.10.0` | 2026-11-08 | ASA 구동계 매핑 범위 축소: VECTORED_VTOL, 드론 기체에서 Base+11 ASA 배제 및 FCP/VAS 비활성화 명시 | 비공력 순수 추력형 기체에서 공력 버스 분리 |
 | `v2.9.0` | 2026-11-08 | 착륙패드(v2.4.0) TUI 셋업 마법사, 동적 패드 1Hz 위치 동기화 및 섹터 시설물 전용 GPS 응답 채널(`CH_SECTOR_GPS_REPLY` = $Base_{\text{sec}}+5$) 전역 토폴로지 동기화 | 지상 구역 관제 및 착륙패드 정밀 시운전·항법 체계 통합 |
@@ -172,20 +173,22 @@ flowchart TD
 
 ---
 
-### 2.1 5대 표준 기체 타입별 유도-내루프-액추에이터 제어 흐름 구조도
+### 2.1 6대 표준 기체 타입별 유도-내루프-액추에이터 제어 흐름 구조도
 
-비행체의 물리적 공력 및 추진기 배치에 따라 FCP(외루프) $\leftrightarrow$ VAS(내루프) $\leftrightarrow$ {TCA, ASA}(액추에이터) 간의 제어 신호 인가 방식과 시설물 상호작용은 다음의 5대 기종별 특화 흐름도로 규정됩니다.
+비행체의 물리적 공력 및 추진기 배치에 따라 FCP(외루프) $\leftrightarrow$ VAS(내루프) $\leftrightarrow$ {TCA, ASA}(액추에이터) 간의 제어 신호 인가 방식과 시설물 상호작용은 다음의 6대 기종별 특화 흐름도로 규정됩니다.
 
 ```mermaid
 flowchart TD
-    subgraph KINEMATICS["5대 표준 기체 타입 (airframeType Enum)"]
+    subgraph KINEMATICS["6대 표준 기체 타입 (airframeType Enum)"]
         FW["1. FIXED_WING (편익기)<br/>- L1 BTT (Bank-to-Turn) 롤 제어<br/>- 차동 추력(Diff Thrust) 요 보조<br/>- TECS 총 에너지 종방향 제어<br/>- 활주로(RUNWAY) CTOL FSM<br/>- VAS: 전방추력(TCA) + 3축 공력면(ASA) V² 통합 제어"]
         
         W_VTOL["2. WINGED_VTOL (장거리 고정익 하이브리드)<br/>- 3구간(8~18m/s) 가속 천이 블렌딩 (VAS 통합 주관)<br/>- 저속 호버 PI <==> 고속 TECS 순항<br/>- 착륙패드(PAD) & 활주로(RWY) 듀얼 모드<br/>- VAS: 리프트팬/순항추력(TCA) + 조종면(ASA)"]
         
         V_VTOL["3. VECTORED_VTOL (고기동 다축 벡터드 VTOL)<br/>- 듀얼 포락선: STRICT_LEVEL (θ=φ=0°) / TILT_ASSISTED (최대 ±10° 피치 보조)<br/>- 3축 병진 바이어스 (Surge/Sway/Heave) & Alignment 프로파일 연동<br/>- 3대 전술 헤딩: FACE_PATH / TARGET_LOCK (스트레이핑) / ORBIT_POINT (선회감시)<br/>- 도킹암 4단계 공차 (|ey|,|ez| <= 0.15m) & 비상 역추진 (Surge = -0.8) Abort"]
         
-        DRONES["4. QUADROTOR & 5. HEXAROTOR (멀티로터 드론)<br/>- 2D 수평 위치/속도 캐스케이드 PID -> Tilt-to-Accelerate<br/>- 수직 추력 직결 PI 고도 제어 & 독립 헤딩<br/>- 공통 멀티로터 FSM (4-T / 6-T 차이는 VAS 믹서에 위임)<br/>- 착륙패드(PAD) 수직 이착륙"]
+        ADV_VTOL["4. ADVANCED_VTOL (2D 짐벌 벡터 추진 VTOL)<br/>- 2D 노즐 편향(±1.0) & 차동 추력 6-DoF 통합 제어<br/>- Moore-Penrose 의사역행렬 B† 기반 동적 분배<br/>- 공력 조종면 불요 (flapTarget=0.0, ASA 바이패스)<br/>- 착륙패드(PAD) & 도킹암(ARM) 고기동 운용"]
+        
+        DRONES["5. QUADROTOR & 6. HEXAROTOR (멀티로터 드론)<br/>- 2D 수평 위치/속도 캐스케이드 PID -> Tilt-to-Accelerate<br/>- 수직 추력 직결 PI 고도 제어 & 독립 헤딩<br/>- 공통 멀티로터 FSM (4-T / 6-T 차이는 VAS 믹서에 위임)<br/>- 착륙패드(PAD) 수직 이착륙"]
     end
 
     subgraph INNER_LOOP["온보드 실시간 3계층 폐루프 (Base + 1, Base + 2, Base + 10, Base + 11)"]
@@ -204,6 +207,7 @@ flowchart TD
     FW ==>|"Base+1: BTT φ_cmd, targetClimbRate, targetThrottle, flapTarget"| CORE_NODE
     W_VTOL ==>|"Base+1: 3-Stage Blended Cmd, targetClimbRate"| CORE_NODE
     V_VTOL ==>|"Base+1: STRICT/TILT-ASSIST, Surge/Sway/Heave Bias"| CORE_NODE
+    ADV_VTOL ==>|"Base+1: Decoupled 3-Axis Translation & Gimbal Slew"| CORE_NODE
     DRONES ==>|"Base+1: Pitch/Roll Tilt, targetClimbRate"| CORE_NODE
 
     CORE_NODE ==>|"Base+10: MSG_THRUST_CMD (20Hz, 구 Base+6 [DEPRECATED])"| TAP_NODE
@@ -217,6 +221,8 @@ flowchart TD
     W_VTOL <==>|"CH 50001 / Base_sec+10+Idx (선택)"| FAC_RWY
     V_VTOL <==>|"CH 50001 / Base_sec+10+Idx (도킹암 4단계 공차 & Abort 역추진)"| FAC_ARM
     V_VTOL <==>|"CH 50001 / Base_sec+10+Idx"| FAC_PAD_NODE
+    ADV_VTOL <==>|"CH 50001 / Base_sec+10+Idx"| FAC_PAD_NODE
+    ADV_VTOL <==>|"CH 50001 / Base_sec+10+Idx"| FAC_ARM
     DRONES <==>|"CH 50001 / Base_sec+10+Idx"| FAC_PAD_NODE
 ```
 
@@ -232,10 +238,10 @@ flowchart TD
 | **I-2** | `MSG_ATTITUDE_CMD` | `FCP` (Node 04)<br>`MFD` (급기동 시) | `VAS` (Node 01) | `Base + 1`<br>(`CH_FLIGHT_GUIDANCE`) | 20Hz (50ms) | `source` (`"FCP"`/`"MFD_DIRECT"`), `arm`, `flightActive`, `flightMode`, `commandType`, `angleTargets`, `rateTargets`, `targetClimbRate` ($-5.0\sim +5.0\text{ m/s}$ Heave PI 구동), `targetThrottle` (전방 서지 추진), `flapTarget` ($0.0\sim 1.0$), `acroActive`, `translationBias` |
 | **I-2** | `MSG_EMERGENCY_ALERT` | `VAS` (Node 01) | `FCP` (Node 04) | `Base + 1`<br>(`CH_FLIGHT_GUIDANCE`) | 공중 셧다운 시 즉시 | `reason` (사유 문자열), `isAirborne` (`true`), `fsmState` (발생 시점 FSM), `altitude` (발생 시점 CoM 고도) |
 | **I-2** | `MSG_EMERGENCY_OVERRIDE` | `Cockpit MFD` (Node 03)<br>`GCS Console` | `VAS` (Node 01) | `Base + 1`<br>(`CH_FLIGHT_GUIDANCE`) | 하드 킬스위치 발동 시 | `action` (`"E_STOP"` 하드 비상차단), `authKey` (`"ESTOP_CONFIRM_KEY"`), `source` (`"MFD"`/`"GCS"`). *(비상착륙/긴급홀드는 FCP Base+0 진입)* |
-| **I-3** | `MSG_THRUST_CMD` | `VAS` (Node 01) | `TCA 클러스터` (Node 02-xx) | `Base + 10`<br>(`CH_THRUST_ACTUATION`, 구 `Base+6` `[DEPRECATED]`) | 20Hz (50ms)<br>*(폐루프 검증 PASS)* | `watchdogSeq`, `controlState` (`DISARMED`, `ARMING`, `IDLE_ARMED`, `NORMAL`, `CALIBRATION`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `E_STOP`), `outputs` (`[groupId] = 0~15`) |
-| **I-3** | `MSG_ACTUATOR_STATUS` | `TCA 클러스터` (Node 02-xx) | `VAS` (Node 01) | `Base + 10`<br>(`CH_THRUST_ACTUATION`, 구 `Base+6` `[DEPRECATED]`) | 이벤트 발생 시 즉시<br>*(폐루프 검증 PASS)* | `groupId`, `interactionMode` (`mode` `[DEPRECATED]`), `appliedSignal`, `isSaturated`, `activeCount`, `totalCount`, `healthStatus` (`REDSTONE_NOMINAL`/`API_NOMINAL` 등) |
+| **I-3** | `MSG_THRUST_CMD` | `VAS` (Node 01) | `TCA 클러스터` (Node 02-xx) | `Base + 10`<br>(`CH_THRUST_ACTUATION`, 구 `Base+6` `[DEPRECATED]`) | 20Hz (50ms)<br>*(폐루프 검증 PASS)* | `watchdogSeq`, `controlState` (`DISARMED`, `ARMING`, `IDLE_ARMED`, `NORMAL`, `CALIBRATION`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `E_STOP`), `outputs` (`[groupId] = 0~15` | `{ thrust, gimbalX, gimbalY }`) |
+| **I-3** | `MSG_ACTUATOR_STATUS` | `TCA 클러스터` (Node 02-xx) | `VAS` (Node 01) | `Base + 10`<br>(`CH_THRUST_ACTUATION`, 구 `Base+6` `[DEPRECATED]`) | 이벤트 발생 시 즉시<br>*(폐루프 검증 PASS)* | `groupId`, `interactionMode` (`mode` `[DEPRECATED]`), `appliedSignal`, `appliedRatio`, `appliedGimbal`, `gimbalSaturated`, `isSaturated`, `activeCount`, `totalCount`, `healthStatus` (`REDSTONE_NOMINAL`/`API_NOMINAL` 등) |
 | **I-3** / **I-4** | `MSG_ACTUATOR_DISCOVER_REQ` | `VAS` (Node 01)<br>`Alignment` (Node 05) | `TCA 클러스터` (Node 02-xx) | `Base + 10` /<br>$Base_{\text{hangar}} + 3$ | 부팅/Arming/교정 전 1회<br>*(폐루프 검증 PASS)* | `targetGroup` (`"ALL"` 또는 특정 `groupId`) |
-| **I-3** / **I-4** | `MSG_ACTUATOR_DISCOVER_ACK` | `TCA 클러스터` (Node 02-xx) | `VAS` (Node 01)<br>`Alignment` (Node 05) | 요청자 채널 (`Base+10` / $Base_{\text{hangar}}+3$) | 요청 수신 즉시 (1:1)<br>*(폐루프 검증 PASS)* | `groupId`, `interactionMode` (`mode` `[DEPRECATED]`), `activeCount`, `totalCount`, `healthStatus` (`REDSTONE_NOMINAL`/`API_NOMINAL` 등) |
+| **I-3** / **I-4** | `MSG_ACTUATOR_DISCOVER_ACK` | `TCA 클러스터` (Node 02-xx) | `VAS` (Node 01)<br>`Alignment` (Node 05) | 요청자 채널 (`Base+10` / $Base_{\text{hangar}}+3$) | 요청 수신 즉시 (1:1)<br>*(폐루프 검증 PASS)* | `groupId`, `interactionMode` (`mode` `[DEPRECATED]`), `activeCount`, `totalCount`, `isVectorCapable`, `gimbalLimits`, `healthStatus` (`REDSTONE_NOMINAL`/`API_NOMINAL` 등) |
 | **I-4** | `MSG_CALIBRATION_INIT` | `Alignment` (Node 05) | `VAS` (Node 01) | 기체 `Base + 0`<br>(`CH_OPERATOR_C2`) | 엔지니어 바인딩 실행 시 | `stationId`, `bayId` (1~10), `baseHangarChannel` ($101 + (\text{BayID}-1)\times 10$), `targetCraftDomain` (`envelope.domainId = "AIRCRAFT_01"`) |
 | **I-4** | `MSG_CALIBRATION_INIT_ACK` | `VAS` (Node 01) | `Alignment` (Node 05) | $Base_{\text{hangar}} + 1$<br>(`CH_CALIBRATION_TELEM`) | 바인딩 수신 즉시 (1:1) | `aircraftDomainId`, `hardwareUuid`, `bayId`, `status` (`"READY"` / `"BUSY"`), `airframeType` |
 | **I-4** | `MSG_CALIB_BAY_BIND` | `VAS` (Node 01) | `TCA & ASA 클러스터` | `Base + 10` / `Base + 11` (구 `Base+6/7` `[DEPRECATED]`) | 교정 개시 및 종료 시 | `action` (`"OPEN"`/`"CLOSE"`), `stationId`, `bayId`, `baseHangarChannel`, `bayCalibrationTap`, `bayCalibrationCmd` |

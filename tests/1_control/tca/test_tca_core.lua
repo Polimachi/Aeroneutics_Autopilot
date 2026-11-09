@@ -620,4 +620,22 @@ describe("tca mutation hardening invariants", function()
         assert_true(wd:is_expired(1350))
         assert_true(timeoutFired)
     end)
+
+    it("verifies vector_thruster types and polymorphic output extraction (TASK-115)", function()
+        local actuator_adapter = require("actuator_adapter")
+        assert_not_nil(actuator_adapter.VECTOR_THRUSTER_TYPES)
+        local hasVec = false
+        for _, vt in ipairs(actuator_adapter.VECTOR_THRUSTER_TYPES) do
+            if vt == "vector_thruster" then hasVec = true end
+        end
+        assert_true(hasVec, "VECTOR_THRUSTER_TYPES must include vector_thruster")
+
+        local extracted = group_allocator.extract_group_output({
+            THR_VTOL_1 = { thrust = 15, gimbalX = -0.5, gimbalY = 0.5 }
+        }, "THR_VTOL_1")
+        assert_eq(type(extracted), "table")
+        assert_eq(extracted.thrust, 15)
+        assert_near(extracted.gimbalX, -0.5, 1e-6)
+        assert_near(extracted.gimbalY, 0.5, 1e-6)
+    end)
 end)

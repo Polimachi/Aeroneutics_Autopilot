@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.5.2` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v2.6.0` |
+| **최종 수정일 (Date)** | `2026-11-09` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
@@ -25,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.6.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진기 다단 펄스 교정 및 의사역행렬 산출 규격 추가: Throttle 및 Gimbal X/Y 펄스 시퀀스, 6축 미분 OLS 회귀 기울기, Control Effectiveness Matrix B (6 x 3N) 조립 및 Moore-Penrose 의사역행렬 B† = B^T (B B^T)^-1 가우스-조던 소거법 추출, 프로파일 내보내기 규격화 | 2D 짐벌 벡터 추진기 시스템 식별 및 의사역행렬 생성 프로토콜 확립 |
 | `v2.5.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.5.1` | 2026-11-08 | 네트워크 토폴로지 다이어그램 내 수용 기체 수 범위를 40채널 기준($N = 1 \sim 1000$)으로 정합 동기화 | 사양서 간 수치 정합성 확립 |
 | `v2.5.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$) 반영, 01호기 직결 바인딩 채널 `Base+0` (`10000`, 구 1000 [DEPRECATED]) 동기화, TCA/ASA 동적 바인딩 `Base+10/11` 반영, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
@@ -422,7 +423,7 @@ Alignment/
 └── src/
     ├── align_master.lua           # 10단계 FSM 및 동적 채널 바인딩/해제 오케스트레이터
     ├── discovery_client.lua       # Base_hangar+3 TCA 추진기 탐색 및 헬스 체크
-    ├── multi_pulse_sequencer.lua  # 다단 펄스(4, 8, 12, 300ms) 정밀 타이밍 제어기
+    ├── multi_pulse_sequencer.lua  # 다단 펄스(Throttle 5/10/15 & Gimbal X/Y) 정밀 타이밍 제어기
     ├── impulse_integrator.lua     # 20Hz 사다리꼴 수치 적분기
     ├── settling_guard.lua         # 동적 정착 감시 및 동적 기준선 재계측기
     ├── ols_regression_engine.lua  # 주 작용축 선정, 참 기울기, 불감대, R² 산출기
@@ -518,6 +519,12 @@ function integratorObject:integrate_step(telemetrySample, dt) -> currentImpulse
 function integratorObject:get_total_impulse() -> impulseVector { surge, sway, heave, pitch, roll, yaw }
 ```
 
+#### 2.1) `multi_pulse_sequencer.lua` 벡터 추진기 펄스 시퀀스 (Vector Pulse Sequencing)
+벡터 추진기(`isVectorCapable == true`) 노드에 대해 다음 3단계 캘리브레이션 펄스를 스케줄링합니다:
+1. **Phase 1: Throttle 펄스** (노즐 중립 $gx=0, gy=0$): 신호 레벨 $S \in \{5, 10, 15\}$ (각 300ms) $\to \frac{\partial \vec{W}}{\partial T}$ 도출.
+2. **Phase 2: Gimbal X 펄스** (기저 스로틀 $S=8$): 짐벌 편향 $gx \in \{-0.5, 0.5, 1.0\}$ $\to \frac{\partial \vec{W}}{\partial g_x}$ 도출.
+3. **Phase 3: Gimbal Y 펄스** (기저 스로틀 $S=8$): 짐벌 편향 $gy \in \{-0.5, 0.5, 1.0\}$ $\to \frac{\partial \vec{W}}{\partial g_y}$ 도출.
+
 #### 3) `ols_regression_engine.lua` (주 작용축 선정 및 OLS 회귀기)
 ```lua
 -- ols_regression_engine.lua
@@ -549,7 +556,26 @@ function ols_engine.calculate_regression(signals, impulseList, dominantAxis) -> 
         normalizedCoefficients = normCoeffs
     }
 end
+
+function ols_engine.compute_vector_slopes(pulseResults) -> vectorSlopes
+    -- 6축 각각에 대한 추력 및 짐벌 편향 민감도 편미분 행렬 도출
+    -- dW/dT, dW/dgx, dW/dgy (각각 6차원 벡터)
+    return {
+        dThrust = { surge=k_ts, sway=k_tw, heave=k_th, roll=k_tr, pitch=k_tp, yaw=k_ty },
+        dGimbalX = { surge=k_xs, sway=k_xw, heave=k_xh, roll=k_xr, pitch=k_xp, yaw=k_xy },
+        dGimbalY = { surge=k_ys, sway=k_yw, heave=k_yh, roll=k_yr, pitch=k_yp, yaw=k_yy }
+    }
+end
 ```
+
+#### 3.1) `profile_exporter.lua` 의사역행렬 산출 엔진 (Moore-Penrose Pseudo-Inverse)
+1. **Control Effectiveness Matrix $B$ ($6 \times 3N$) 조립**:
+   - $N$개 벡터 추진기 그룹의 열 벡터 $[\frac{\partial \vec{W}}{\partial T_i}, \frac{\partial \vec{W}}{\partial gx_i}, \frac{\partial \vec{W}}{\partial gy_i}]$을 결합하여 $6 \times 3N$ 행렬 $B$ 구성.
+2. **가우스-조던 소거법(Gauss-Jordan Elimination) 역행렬 연산**:
+   - $6 \times 6$ 정방행렬 $M = B \cdot B^T$를 구성하고 부분 피보팅(Partial Pivoting)을 적용하여 $M^{-1} = (B B^T)^{-1}$ 산출.
+3. **의사역행렬 $B^\dagger$ ($3N \times 6$) 추출**:
+   $$B^\dagger = B^T (B B^T)^{-1}$$
+   - $B \cdot B^\dagger \approx I_6$ 조건 검증 완료 후 기체 프로파일에 `pseudoInverseMatrix`로 저장 및 동기화.
 
 #### 4) `hud_renderer.lua` (대형 모니터 10Hz 비동기 렌더러)
 ```lua
@@ -677,9 +703,15 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
     time = 1729845060000,
     payload = {
         profileId = "PROF-20261031-AIRCRAFT_01",
+        airframeType = "ADVANCED_VTOL",
+        isVectorVtol = true,
         calibratedBy = "HANGAR_BAY_01",
         totalDryMass = 12500.0,
-        controllabilityStatus = "AERO_ASSISTED_PASS", -- FULL_6DOF_PASS, AERO_ASSISTED_PASS, PARTIAL_RESTRICTED, FAIL
+        controllabilityStatus = "FULL_6DOF_PASS", -- FULL_6DOF_PASS, AERO_ASSISTED_PASS, PARTIAL_RESTRICTED, FAIL
+        pseudoInverseMatrix = {
+            -- 3N x 6 Moore-Penrose Pseudo-Inverse Matrix (B†)
+            -- [u_1, u_2, ..., u_3N]^T = B† * [surge, sway, heave, roll, pitch, yaw]^T
+        },
         thrusterCoefficients = {
             ["THR_MAIN_L"] = {
                 surge = 1.0, sway = 0.0, heave = 0.0,

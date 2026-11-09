@@ -8,7 +8,110 @@ local DEFAULT_W2 = 0.35
 local DEFAULT_W3 = 0.15
 local DEFAULT_D_NORM = 200.0
 
-function allocation_engine.filter_candidates(facilities, craftWeight, craftRadius)
+function allocation_engine.is_facility_compatible(facilityType, airframeType)
+    if not facilityType or not airframeType then
+        return true
+    end
+    local facType = string.upper(tostring(facilityType))
+    local afType = string.upper(tostring(airframeType))
+
+    if facType == "LANDING_PAD" then
+        return afType == "ADVANCED_VTOL"
+            or afType == "VECTORED_VTOL"
+            or afType == "WINGED_VTOL"
+            or afType == "QUADROTOR"
+            or afType == "HEXAROTOR"
+    elseif facType == "DOCKING_ARM" then
+        return afType == "ADVANCED_VTOL"
+            or afType == "VECTORED_VTOL"
+            or afType == "WINGED_VTOL"
+    elseif facType == "RUNWAY" then
+        return afType == "FIXED_WING"
+            or afType == "WINGED_VTOL"
+    end
+    return true
+end
+
+local function list_contains(listOrVal, val)
+    if not listOrVal or not val then return false end
+    if type(listOrVal) == "string" then
+        return listOrVal == val
+    end
+    if type(listOrVal) == "table" then
+        for _, item in ipairs(listOrVal) do
+            if item == val then return true end
+        end
+    end
+    return false
+end
+
+function allocation_engine.is_dedicated_for_craft(pad, craftReq)
+    if not pad or not craftReq then return false end
+    if craftReq.aircraftId and list_contains(pad.dedicatedCraftIds, craftReq.aircraftId) then
+        return true
+    end
+    if craftReq.airframeType and list_contains(pad.dedicatedAirframeTypes, craftReq.airframeType) then
+        return true
+    end
+    return false
+end
+
+function allocation_engine.isEligible(pad, craftReq, allFacilities)
+    if not pad then return false end
+    if not craftReq then return true end
+
+    -- Check facility type compatibility
+    local facType = pad.facilityType or pad.type or "LANDING_PAD"
+    if craftReq.airframeType and not allocation_engine.is_facility_compatible(facType, craftReq.airframeType) then
+        return false
+    end
+
+    local hasDedicatedCraft = pad.dedicatedCraftIds and (
+        (type(pad.dedicatedCraftIds) == "table" and #pad.dedicatedCraftIds > 0) or
+        (type(pad.dedicatedCraftIds) == "string" and pad.dedicatedCraftIds ~= "")
+    )
+    local hasDedicatedAirframe = pad.dedicatedAirframeTypes and (
+        (type(pad.dedicatedAirframeTypes) == "table" and #pad.dedicatedAirframeTypes > 0) or
+        (type(pad.dedicatedAirframeTypes) == "string" and pad.dedicatedAirframeTypes ~= "")
+    )
+
+    -- Case 1: PUBLIC facility
+    if not hasDedicatedCraft and not hasDedicatedAirframe then
+        return true
+    end
+
+    -- Case 2: Matching dedicated craftId or airframeType
+    if allocation_engine.is_dedicated_for_craft(pad, craftReq) then
+        return true
+    end
+
+    -- Case 3: Emergency override when no public pads are free
+    if craftReq.isEmergency and allFacilities then
+        local anyPublicFree = false
+        for _, other in pairs(allFacilities) do
+            local otherHasCraft = other.dedicatedCraftIds and (
+                (type(other.dedicatedCraftIds) == "table" and #other.dedicatedCraftIds > 0) or
+                (type(other.dedicatedCraftIds) == "string" and other.dedicatedCraftIds ~= "")
+            )
+            local otherHasAf = other.dedicatedAirframeTypes and (
+                (type(other.dedicatedAirframeTypes) == "table" and #other.dedicatedAirframeTypes > 0) or
+                (type(other.dedicatedAirframeTypes) == "string" and other.dedicatedAirframeTypes ~= "")
+            )
+            if not otherHasCraft and not otherHasAf and other.status == "FREE" then
+                anyPublicFree = true
+                break
+            end
+        end
+        if not anyPublicFree then
+            return true
+        end
+    end
+
+    return false
+end
+allocation_engine.is_eligible = allocation_engine.isEligible
+
+function allocation_engine.filter_candidates(facilities, craftWeight, craftRadius, craftReq)
     local candidates = {}
     if type(facilities) ~= "table" then
         return candidates
@@ -22,7 +125,9 @@ function allocation_engine.filter_candidates(facilities, craftWeight, craftRadiu
             local maxW = fac.maxSupportWeight or 0
             local maxR = fac.maxSupportRadius or 0
             if maxW >= weight and maxR >= radius then
-                table.insert(candidates, fac)
+                if not craftReq or allocation_engine.isEligible(fac, craftReq, facilities) then
+                    table.insert(candidates, fac)
+                end
             end
         end
     end
@@ -77,14 +182,16 @@ function allocation_engine.select_best_pad(facilities, craftReq, surfaceWind, op
         for _, fac in pairs(facilities) do
             if fac.facilityId == craftReq.preferredFacilityId then
                 if fac.status == "FREE" and (fac.maxSupportWeight or 0) >= craftWeight and (fac.maxSupportRadius or 0) >= craftRadius then
-                    return fac, nil
+                    if allocation_engine.isEligible(fac, craftReq, facilities) then
+                        return fac, nil
+                    end
                 end
             end
         end
     end
 
     -- Stage 1: Hard filter
-    local validCandidates = allocation_engine.filter_candidates(facilities, craftWeight, craftRadius)
+    local validCandidates = allocation_engine.filter_candidates(facilities, craftWeight, craftRadius, craftReq)
     if #validCandidates == 0 then
         -- Check if any free pad exists at all to distinguish error reasons
         local hasFreePad = false
@@ -102,11 +209,21 @@ function allocation_engine.select_best_pad(facilities, craftReq, surfaceWind, op
         end
     end
 
+    -- Dedicated facility priority: if craft matches a dedicated facility, select among dedicated pool
+    local dedicatedCandidates = {}
+    for _, fac in ipairs(validCandidates) do
+        if allocation_engine.is_dedicated_for_craft(fac, craftReq) then
+            table.insert(dedicatedCandidates, fac)
+        end
+    end
+
+    local pool = (#dedicatedCandidates > 0) and dedicatedCandidates or validCandidates
+
     -- Stage 2: Soft scoring
     local bestPad = nil
     local bestScore = -math.huge
 
-    for _, pad in ipairs(validCandidates) do
+    for _, pad in ipairs(pool) do
         local score = allocation_engine.calculate_score(pad, craftPos, windDir, craftWeight, opts and opts.weights, opts and opts.dNorm)
         if score > bestScore then
             bestScore = score

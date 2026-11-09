@@ -71,6 +71,26 @@ describe("manifest dual-source module definitions", function()
         assert_eq(#manifest.BOOTSTRAP_FILES, 7)
         assert_eq(version_registry.DEFAULT_META_PATH, "/.version.json")
     end)
+
+    it("exposes ADVANCED_VTOL airframe preset and files in manifest", function()
+        local advPreset = manifest.getAirframePreset("ADVANCED_VTOL")
+        assert_not_nil(advPreset)
+        assert_eq(advPreset.airframeType, "ADVANCED_VTOL")
+        assert_eq(advPreset.configTemplate.system.airframeType, "ADVANCED_VTOL")
+
+        local list = manifest.listAirframePresets()
+        assert_true(#list >= 2)
+
+        local fcp = manifest.getModule("fcp")
+        local foundAdvDriver = false
+        for _, f in ipairs(fcp.files) do
+            if f.dest == "/modules/advanced_vtol_driver.lua" then
+                foundAdvDriver = true
+                break
+            end
+        end
+        assert_true(foundAdvDriver, "fcp missing advanced_vtol_driver.lua")
+    end)
 end)
 
 describe("version_registry /.version.json persistence and multi-module orphan safety", function()

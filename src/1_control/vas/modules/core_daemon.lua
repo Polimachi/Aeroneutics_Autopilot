@@ -91,7 +91,18 @@ function core_daemon.init(configDirOrTable)
     local net = network_manager.init(cfg.system)
     local fdCore = flight_dynamics_core.init(cfg.pid)
     local policy = vehicle_policy.init(cfg.system)
-    local adapter = actuator_adapter_tca.init(cfg.thrusters)
+
+    local thrusterCfg = cfg.thrusters or {}
+    if (cfg.system and (cfg.system.vehicleType == "ADVANCED_VTOL" or cfg.system.airframeType == "ADVANCED_VTOL" or cfg.system.isVectorVtol)) then
+        thrusterCfg.isVectorVtol = true
+        thrusterCfg.airframeType = "ADVANCED_VTOL"
+    end
+    if cfg.system and cfg.system.pseudoInverseMatrix and not thrusterCfg.pseudoInverseMatrix then
+        thrusterCfg.pseudoInverseMatrix = cfg.system.pseudoInverseMatrix
+        thrusterCfg.controlEffectivenessMatrix = cfg.system.controlEffectivenessMatrix
+    end
+
+    local adapter = actuator_adapter_tca.init(thrusterCfg)
     local adapterAsa = actuator_adapter_asa.init(cfg.surfaces)
     local feeder = telemetry_feeder.init(cfg.system)
     local nowMs = (os.epoch and os.epoch("utc")) or 0
@@ -100,7 +111,7 @@ function core_daemon.init(configDirOrTable)
     net.on_profile_sync = function(payload)
         save_json(dir .. "/thrusters.json", payload)
         if adapter and adapter.reload_coefficients then
-            adapter.reload_coefficients(adapter, payload and payload.thrusterCoefficients, false)
+            adapter.reload_coefficients(adapter, payload, false)
         end
     end
     if network_manager.broadcast_discovery then network_manager.broadcast_discovery(net) end
@@ -136,7 +147,7 @@ local function step_actuation(state, comState, dt)
     local compWrench = vehicle_policy.post_process_wrench(state.policy, baseWrench, comState, condCmd)
 
     local rawTap, satTap = actuator_adapter_tca.allocate(state.adapter, compWrench)
-    local isAero = (state.policy and (state.policy.vehicleType == "FIXED_WING" or state.policy.vehicleType == "WINGED_VTOL"))
+    local isAero = vehicle_policy.is_aerodynamic(state.policy)
     local rawAsa, satAsa = nil, nil
     if isAero then
         local vel = comState and comState.dynamics and comState.dynamics.velocity
@@ -145,6 +156,34 @@ local function step_actuation(state, comState, dt)
     end
 
     local combSat = isAero and vehicle_policy.combine_saturation(satTap, satAsa, condCmd.transitionAlpha) or satTap
+
+    -- Integrate TCA gimbalSaturated feedback into directional anti-windup
+    if state.adapter and state.adapter.groupStatus then
+        local anyGimbalSaturated = false
+        for _, gst in pairs(state.adapter.groupStatus) do
+            if gst.gimbalSaturated == true then
+                anyGimbalSaturated = true
+                break
+            end
+        end
+        if anyGimbalSaturated then
+            if (compWrench.surge or 0) > 0.05 then combSat.axisSaturatedPos.surge = true
+            elseif (compWrench.surge or 0) < -0.05 then combSat.axisSaturatedNeg.surge = true end
+
+            if (compWrench.sway or 0) > 0.05 then combSat.axisSaturatedPos.sway = true
+            elseif (compWrench.sway or 0) < -0.05 then combSat.axisSaturatedNeg.sway = true end
+
+            if (compWrench.pitchTorque or 0) > 0.05 then combSat.axisSaturatedPos.pitch = true
+            elseif (compWrench.pitchTorque or 0) < -0.05 then combSat.axisSaturatedNeg.pitch = true end
+
+            if (compWrench.rollTorque or 0) > 0.05 then combSat.axisSaturatedPos.roll = true
+            elseif (compWrench.rollTorque or 0) < -0.05 then combSat.axisSaturatedNeg.roll = true end
+
+            if (compWrench.yawTorque or 0) > 0.05 then combSat.axisSaturatedPos.yaw = true
+            elseif (compWrench.yawTorque or 0) < -0.05 then combSat.axisSaturatedNeg.yaw = true end
+        end
+    end
+
     state.fdCore.saturationStatus = combSat
 
     local safeTap = state_machine.apply_output_safety_rule(state.fsm, rawTap, false)
@@ -153,6 +192,8 @@ local function step_actuation(state, comState, dt)
 
     state.fdCore.lastDemands = { pitch = compWrench.pitchTorque, roll = compWrench.rollTorque, yaw = compWrench.yawTorque }
     state.fdCore.saturationFreeze = combSat.axisSaturatedPos.pitch or combSat.axisSaturatedNeg.pitch
+        or combSat.axisSaturatedPos.roll or combSat.axisSaturatedNeg.roll
+        or combSat.axisSaturatedPos.surge or combSat.axisSaturatedNeg.surge
     return safeTap, safeAsa, dynLoad
 end
 
@@ -168,7 +209,7 @@ function core_daemon.tick(state)
     network_manager.send_packet(state.net, state.net.channels.actuation, "MSG_THRUST_CMD", {
         watchdogSeq = state.tickCount, controlState = state.fsm.currentState, outputs = safeTap
     })
-    local isAero = (state.policy and (state.policy.vehicleType == "FIXED_WING" or state.policy.vehicleType == "WINGED_VTOL"))
+    local isAero = vehicle_policy.is_aerodynamic(state.policy)
     if isAero and safeAsa then
         network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
             watchdogSeq = state.tickCount, controlState = state.fsm.currentState, surfaces = safeAsa
@@ -194,14 +235,17 @@ function core_daemon.shutdown(state, reason)
             reason = r, isAirborne = true, fsmState = fsm.currentState, altitude = altY
         })
     end
+    local isAero = vehicle_policy.is_aerodynamic(state.policy)
     local safeTap = state_machine.apply_output_safety_rule(fsm, {}, false)
-    local safeAsa = state_machine.apply_output_safety_rule(fsm, {}, true)
+    local safeAsa = isAero and state_machine.apply_output_safety_rule(fsm, {}, true) or nil
     network_manager.send_packet(state.net, state.net.channels.actuation, "MSG_THRUST_CMD", {
         watchdogSeq = 0, controlState = "E_STOP", outputs = safeTap
     })
-    network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
-        watchdogSeq = 0, controlState = "E_STOP", surfaces = safeAsa
-    })
+    if isAero and safeAsa then
+        network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
+            watchdogSeq = 0, controlState = "E_STOP", surfaces = safeAsa
+        })
+    end
 end
 
 function core_daemon.handle_event(state, event, p1, p2, p3, p4)

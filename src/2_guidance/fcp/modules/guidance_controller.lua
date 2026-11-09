@@ -1,8 +1,9 @@
 -- src/modules/guidance_controller.lua
 local vectored_vtol_driver = require("vectored_vtol_driver")
+local advanced_vtol_driver = require("advanced_vtol_driver")
 
 local guidance_controller = {}
-guidance_controller.SUPPORTED_AIRFRAMES = { VECTORED_VTOL = true }
+guidance_controller.SUPPORTED_AIRFRAMES = { VECTORED_VTOL = true, ADVANCED_VTOL = true }
 guidance_controller.DEFERRED_AIRFRAMES = {
     FIXED_WING = true, WINGED_VTOL = true, QUADROTOR = true, HEXAROTOR = true,
 }
@@ -126,26 +127,28 @@ function guidance_controller.compute(state, nav, mission_target, fsm_ctx, dt)
     local fsm_state = fsm_ctx and fsm_ctx.state or "CRUISE"
     local now = fsm_ctx and fsm_ctx.now_ms or 0
 
+    local driver = (state.airframeType == "ADVANCED_VTOL") and advanced_vtol_driver or vectored_vtol_driver
+
     if fsm_state == "FAILSAFE_HOLD" then
         if not state.wasInHold then
-            vectored_vtol_driver.reset_integrals(state.driver_state)
+            driver.reset_integrals(state.driver_state)
         end
         state.wasInHold = true
     elseif state.wasInHold and fsm_state ~= "FAILSAFE_HOLD" then
         state.wasInHold = false
         state.rampStartMs = now
-        vectored_vtol_driver.reset_integrals(state.driver_state)
+        driver.reset_integrals(state.driver_state)
     elseif fsm_state == "DISARMED" then
-        vectored_vtol_driver.reset_integrals(state.driver_state)
+        driver.reset_integrals(state.driver_state)
     end
 
-    local raw = vectored_vtol_driver.compute(state.config, nav, mission_target, fsm_state, dt, state.driver_state)
+    local raw = driver.compute(state.config, nav, mission_target, fsm_state, dt, state.driver_state)
     state.driver_state.prev_heading = raw.targetHeading
 
     if (now - state.rampStartMs) < (state.bumplessRampSec * 1000.0) and fsm_state == "CRUISE" then
         raw = apply_ramping(state, raw, now)
     end
-    raw.mode = "VECTORED_VTOL"
+    raw.mode = state.airframeType or "VECTORED_VTOL"
 
     local is_active = (fsm_ctx and fsm_ctx.flightActive)
     if is_active == nil then

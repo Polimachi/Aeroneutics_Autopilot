@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.24.0` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v1.25.0` |
+| **최종 수정일 (Date)** | `2026-11-09` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.25.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 기체 규격 추가, MSG_THRUST_CMD 다형성(polymorphic) outputs 스키마 정의, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 확장, 순수 추력형 비공력 특성(ASA 바이패스) 명시 | 고기동 짐벌 벡터 추진 VTOL 아키텍처 및 6-DoF 의사역행렬 제어 분배 지원 |
 | `v1.24.0` | 2026-11-08 | 유선 패킷 podId를 ASA_L/R/T로 완전 단일화, 텔레메트리 헬스 키 asa 반영, 구 명칭(구버전 명칭) 전면 소급 척결 | 인터페이스 표준화 및 용어 정비 |
 | `v1.23.0` | 2026-11-08 | ASA 적용 기체 범위 축소: VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체에서 ASA 동작 배제 및 FCP/VAS 비활성화 규격 동기화 | 비공력 순수 추력형 기체에서 공력 타면 지령 차단 및 스키마 직교성 확보 |
 | `v1.22.0` | 2026-11-08 | 지상 시설물 전용 GPS 응답 채널(`CH_SECTOR_GPS_REPLY` = $Base_{\text{sec}}+5$) 정식 등재 및 착륙패드(v2.4.0)·GAC(v1.2.0) 인터페이스 동기화 | 지상 구역 관제 및 착륙패드 정밀 시운전·항법 체계 통합 |
@@ -34,9 +35,9 @@
 > [!TIP]
 > - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.9.0)에 완전 시각화되어 있습니다.
 > - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.4.0)에 상세 기술되어 있습니다.
-> - 비행 제어 컴퓨터(FCP, Node 04)의 5대 기체 타입별 외루프 유도 제어(L1/TECS/Tilt-to-Accelerate/Zero-Tilt 6-DoF/Tilt-Assisted), C2 단일 진입로(Base+0) 총괄, 평시 5Hz MFD 계기 다운링크(Base+3), 15-State FSM, GPS/추측항법 융합, GAC 섹터 관제 연동, 도킹암 4단계 랑데부 FSM 및 20Hz 외루프 지령(Base+1) 명세는 **[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md)** (v1.11.0)에 상세 기술되어 있습니다.
+> - 비행 제어 컴퓨터(FCP, Node 04)의 6대 기체 타입별 외루프 유도 제어(L1/TECS/Tilt-to-Accelerate/Zero-Tilt 6-DoF/Tilt-Assisted/Decoupled Vector), C2 단일 진입로(Base+0) 총괄, 평시 5Hz MFD 계기 다운링크(Base+3), 15-State FSM, GPS/추측항법 융합, GAC 섹터 관제 연동, 도킹암 4단계 랑데부 FSM 및 20Hz 외루프 지령(Base+1) 명세는 **[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md)** (v1.15.0)에 상세 기술되어 있습니다.
 > - 공력 날개 및 조종면(에일러론/승강타/방향타/플랩) 분산 구동기, VAS 산하 3구역 노드(Node 06-xx, Base+11, 구 Base+7 [DEPRECATED]), `peripheral.find` 동적 탐색 및 300ms 안전 활공 트림(Safe Glide Trim) 규격은 **[ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md)** (v1.4.0)에 상세 기술되어 있습니다.
-> - **ASA 기체 적용 범위**: ASA는 `FIXED_WING` 및 `WINGED_VTOL` 기체에서만 전용 가동되며, `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 기체에서는 ASA 노드가 탑재되지 않고 FCP/VAS 단계에서 조종면/플랩 연산 및 Base+11 전송이 원천 배제됩니다.
+> - **ASA 기체 적용 범위**: ASA는 `FIXED_WING` 및 `WINGED_VTOL` 기체에서만 전용 가동되며, `VECTORED_VTOL`, `ADVANCED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 기체에서는 ASA 노드가 탑재되지 않고 FCP/VAS 단계에서 조종면/플랩 연산 및 Base+11 전송이 원천 배제됩니다.
 > - 센서 정적 매핑(config/sensors.json), 3D 레버암 기하 동역학 보정, VICD-Spec 3계층 드라이버(추진기 `actuator_adapter_tca` + 조종면 `actuator_adapter_asa`), 단위 쿼터니언 $SO(3)$ 동역학 제어, $V^2$ 동압 스케줄링, 단일 실속 방지(Stall Guard), 플랩 $V_{fe}$ 가드, Base+1 선점 중재(`E_STOP` > `MFD_ACRO` > `FCP`), 역방향 포화 피드백, `ui_renderer` 대시보드 및 20Hz 실행 생명주기는 **[VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md)** (v1.14.0)에 상세 기술되어 있습니다.
 > - 추진기 개별 하드웨어 구동, REDSTONE 모드/API 모드 듀얼 모드, 자체 비례 손실 보상, 핫플러그 감지, `discovery_handler` 세션 격리, 동적 베이 바인딩(`MSG_CALIB_BAY_BIND`) 및 동적 타이머 300ms 워치독 데몬 명세는 **[TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md)** (v1.8.0)에 상세 기술되어 있습니다.
 > - 격납고 상주 시설 콘솔로서 베이별 10채널 블록(`101 ~ 200`, $Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$) 및 기체 `Base+0` 직결 바인딩을 기반으로 입고된 임의의 기체와 지상 교정 세션을 맺고 6-DoF 추력기/공력 보조 프로파일(`AERO_ASSISTED_PASS`)을 생성하는 `Alignment` 프로그램의 세부 수치해석, 주 작용축 OLS 회귀, 대형 모니터 HUD 및 14단계 FSM 명세는 **[ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md)** (v2.4.0)에 상세 기술되어 있습니다.
@@ -440,10 +441,10 @@ flowchart TD
 | :--- | :---: | :---: | :---: | :--- |
 | `payload.watchdogSeq` | uint16 | $0 \sim 65535$ | 필수 | 틱마다 1씩 증가하는 워치독 시퀀스 번호 |
 | `payload.controlState` | string | 상태 코드 | 필수 | `"DISARMED"`, `"ARMING"`, `"IDLE_ARMED"`, `"NORMAL"`, `"CALIBRATION"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"E_STOP"` |
-| `payload.outputs` | table | `{ [groupId] = signal }` | 필수 | 추진기 그룹 ID별 0~15 정수 목표 추력값 |
+| `payload.outputs` | table | `{ [groupId] = number \| { thrust: number, gimbalX: number, gimbalY: number } }` | 필수 | 추진기 그룹 ID별 구동 지령 (다형성 지원). 고정 추진기: $0 \sim 15$ 정수 추력. 벡터 추진기(2D 짐벌): `{ thrust = 0~15, gimbalX = -1.0~1.0, gimbalY = -1.0~1.0 }` 테이블 |
 
 ```lua
--- VAS-Core가 20Hz 브로드캐스트하는 MSG_THRUST_CMD 예시
+-- VAS-Core가 20Hz 브로드캐스트하는 MSG_THRUST_CMD 예시 (다형성 outputs 지원)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -454,12 +455,12 @@ flowchart TD
         watchdogSeq = 8402,
         controlState = "NORMAL",
         outputs = {
-            ["THR_MAIN_L"]  = 11,    -- 주 추진 좌측 (0~15)
-            ["THR_MAIN_R"]  = 11,    -- 주 추진 우측 (0~15)
-            ["THR_VTOL_F"]  = 4,     -- 전방 수직 리프트 팬 (0~15)
-            ["THR_VTOL_R"]  = 5,     -- 후방 수직 리프트 팬 (0~15)
-            ["THR_YAW_RCS_L"] = 0,   -- 좌측 편항 RCS (0~15)
-            ["THR_YAW_RCS_R"] = 2    -- 우측 편항 RCS (0~15)
+            ["THR_VEC_FL"]  = { thrust = 12, gimbalX = 0.15, gimbalY = -0.20 },  -- 2D 짐벌 벡터 추진기
+            ["THR_VEC_FR"]  = { thrust = 12, gimbalX = -0.15, gimbalY = -0.20 }, -- 2D 짐벌 벡터 추진기
+            ["THR_VEC_RL"]  = { thrust = 10, gimbalX = 0.10, gimbalY = 0.15 },   -- 2D 짐벌 벡터 추진기
+            ["THR_VEC_RR"]  = { thrust = 10, gimbalX = -0.10, gimbalY = 0.15 },  -- 2D 짐벌 벡터 추진기
+            ["THR_FIXED_L"] = 2,     -- 고정 보조 추진기 (0~15 스칼라 정수)
+            ["THR_FIXED_R"] = 0      -- 고정 보조 추진기 (0~15 스칼라 정수)
         }
     }
 }
@@ -476,6 +477,8 @@ flowchart TD
 | `payload.mode` `[DEPRECATED]` | string | `"REDSTONE"`, `"API"` | 선택 | 구버전 모드 필드 (`interactionMode`로 대체됨. 코드베이스는 무폴백 원칙에 따라 interactionMode만 단일 파싱) |
 | `payload.appliedSignal`| integer | $0 \sim 15$ | 필수 | 손실 보상/클램핑 후 실제 인가된 디지털 신호 (0~15) |
 | `payload.appliedRatio` | number | $0.0 \sim 1.0$ | 선택 | API 모드 시 실제 인가된 정규화 추력 비율 (REDSTONE 시 0.0) |
+| `payload.appliedGimbal`| table | `{ x = -1.0~1.0, y = -1.0~1.0 }` | 선택 | 벡터 추진기 노즐에 인가된 2D 짐벌 편향 각도 (고정 추진기 시 nil) |
+| `payload.gimbalSaturated` | boolean | `true`/`false` | 선택 | 짐벌 편향 각도가 물리적 최대 한계($\pm 1.0$)에 도달하여 포화되었는지 여부 |
 | `payload.isSaturated` | boolean | `true`/`false`| 필수 | 요구 신호의 증폭값이 최대 한계 15를 초과하여 클램핑되었는지 여부 (단일화 표준) |
 | `payload.activeCount` | integer | $0 \sim 16$ | 필수 | 현재 감지/작동 중인 정상 추진기 수 |
 | `payload.totalCount` | integer | $1 \sim 16$ | 필수 | 해당 노드에 설치된 공칭 총 추진기 수 |
@@ -495,6 +498,8 @@ flowchart TD
         mode = "API", -- [DEPRECATED] 구버전 호환용 (코드베이스는 interactionMode 단일 파싱)
         appliedSignal = 15,
         appliedRatio = 1.0,
+        appliedGimbal = { x = 0.15, y = -0.20 },
+        gimbalSaturated = false,
         isSaturated = true,
         activeCount = 3,
         totalCount = 4,
@@ -522,7 +527,9 @@ flowchart TD
         mode = "REDSTONE", -- [DEPRECATED] 구버전 호환용 (코드베이스는 interactionMode 단일 파싱)
         activeCount = 1,
         totalCount = 1,
-        healthStatus = "REDSTONE_NOMINAL"
+        isVectorCapable = true,
+        gimbalLimits = { minX = -1.0, maxX = 1.0, minY = -1.0, maxY = 1.0 },
+        healthStatus = "API_NOMINAL"
     }
 }
 ```
@@ -588,7 +595,7 @@ flowchart TD
 | `payload.hardwareUuid` | string | UUID 문자열 | 필수 | 기체 온보드 하드웨어 UUID |
 | `payload.bayId` | integer | $1 \sim 10$ | 필수 | 바인딩 확정된 베이 번호 |
 | `payload.status` | string | 상태 코드 | 필수 | `"READY"` (채널 개방 완료 및 대기) 또는 `"BUSY"` (비행 중/거절) |
-| `payload.airframeType` | string | 기체 타입 | 필수 | 5대 표준 기체 식별자 (`"WINGED_VTOL"` 등) |
+| `payload.airframeType` | string | 기체 타입 | 필수 | 6대 표준 기체 식별자 (`"WINGED_VTOL"`, `"ADVANCED_VTOL"` 등) |
 
 ```lua
 -- VAS-Core가 Base_hangar+1 포트로 회신하는 MSG_CALIBRATION_INIT_ACK 예시
@@ -818,13 +825,14 @@ flowchart TD
 > - **고정익 활주로 및 항공모함 비행갑판**: **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.5 - 유선 모뎀 조명 제어망 및 GAC 유도로 관제 연계)
 > - **정밀 도킹암 및 모선 붐**: **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.11.0 - 2축 로봇 암 원거리 전개 포획·인입·격납 분리 및 GAC 에이프런 연계)
 
-#### 5대 기체 타입 및 지상/함상 스마트 시설물 호환성 매트릭스
+#### 6대 기체 타입 및 지상/함상 스마트 시설물 호환성 매트릭스
 
 | 기체 식별자 (`airframeType`) | 착륙패드 (`LANDING_PAD`) | 활주로 (`RUNWAY`) | 정밀 도킹암 (`DOCKING_ARM`) | 주요 비행 특성 및 구동계 분담 메커니즘 |
 | :--- | :---: | :---: | :---: | :--- |
 | **`FIXED_WING`** | **불가** (양력 실속) | **기본 (CTOL)** | **불가** | 가상 ILS 3° 글라이드슬로프 정렬 $\to$ 플레어 접지 $\to$ 롤아웃.<br/>**[구동 분담]** 추진계(전진 추력/차동 요): VAS $\to$ TCA(Base+10, 구 Base+6 [DEPRECATED]) / 공력 3축 자세(Ail/Elev/Rudd) 및 플랩: VAS Layer 3 `actuator_adapter_asa` $\to$ ASA(Base+11, 구 Base+7 [DEPRECATED]) 분배. fcp는 Base+1 외루프 목표각/타겟 플랩만 Core로 하달. |
 | **`WINGED_VTOL`** | **기본 (VTOL)** | **지원 (CTOL 듀얼)** | 비상/특수 지원 | 패드 수직 이착륙 또는 활주로 CTOL 선택 운용.<br/>**[구동 분담]** 호버: 100% TCA(VAS) $\leftrightarrow$ 천이(8~18m/s): TCA 추진+ASA 공력면 통합 가중 블렌딩(VAS) $\leftrightarrow$ 순항(>18m/s): ASA 공력 자세 제어(VAS) + TCA 전진 순항추력(VAS). fcp는 Base+1 외루프 목표각/타겟 플랩만 Core로 하달. |
 | **`VECTORED_VTOL`** | **지원 (VTOL)** | 비권장 (비상 전용) | **특화 (랑데부 포획)** | 무경사 6-DoF 병진 바이어스(Surge/Sway)로 공중 도킹암 포획 최적화 (100% TCA 추진기 제어, ASA 미탑재). |
+| **`ADVANCED_VTOL`** | **지원 (VTOL)** | 비권장 (비상 전용) | **특화 (랑데부 포획)** | 고기동 2D 짐벌 벡터 추진 VTOL (노즐 편향 및 차동 추력 6-DoF 통합 제어, 공력 조종면 불요, ASA 미탑재). |
 | **`QUADROTOR`** | **기본 (VTOL)** | 비권장 (단순 평지) | **불가** | Tilt-to-Accelerate 틸트 감속 후 패드 연직 하강 접지 (100% TCA 추진기 제어, ASA 미탑재). |
 | **`HEXAROTOR`** | **기본 (VTOL)** | 비권장 (단순 평지) | **불가** | QUADROTOR와 동일 FSM 공유, 높은 하중 여유도 기반 패드 접지 (100% TCA 추진기 제어, ASA 미탑재). |
 

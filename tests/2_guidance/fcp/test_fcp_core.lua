@@ -271,7 +271,7 @@ describe("fcp asa exclusion for vectored_vtol and drone", function()
     local aerodynamic_controller = require("aerodynamic_controller")
 
     it("ensures flapTarget is strictly 0.0 for VECTORED_VTOL, QUADROTOR, and HEXAROTOR", function()
-        local non_aero_types = { "VECTORED_VTOL", "QUADROTOR", "HEXAROTOR" }
+        local non_aero_types = { "VECTORED_VTOL", "ADVANCED_VTOL", "QUADROTOR", "HEXAROTOR" }
         for _, af in ipairs(non_aero_types) do
             local state = guidance_controller.init({ system = { airframeType = af } })
             local cmd_takeoff = guidance_controller.pack_attitude_cmd(state, {}, "TAKEOFF", true)

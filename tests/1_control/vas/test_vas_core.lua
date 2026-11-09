@@ -481,7 +481,7 @@ describe("vas asa exclusion for vectored_vtol and drone", function()
     local core_daemon = require("core_daemon")
 
     it("clamps flapTarget to 0.0 in vehicle_policy for non-aero airframes", function()
-        local non_aero = { "VECTORED_VTOL", "QUADROTOR", "HEXAROTOR", "VTOL" }
+        local non_aero = { "VECTORED_VTOL", "ADVANCED_VTOL", "QUADROTOR", "HEXAROTOR", "VTOL" }
         for _, vType in ipairs(non_aero) do
             local pol = vehicle_policy.init({ vehicleType = vType })
             local flap = vehicle_policy.resolve_flap_target(pol, { flapTarget = 0.8 }, 15.0, {})
