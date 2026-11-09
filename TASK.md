@@ -47,14 +47,14 @@
     - [x] **환경 격리 및 브랜치 생성**: `.worktrees/task-advanced-vtol` 워크트리 생성 및 기본 테스트 환경 검증 완료
     - [x] **설계 인터뷰 및 아키텍처 확정 (/grill-me, /brainstorming)**: 2~4기 짐벌 벡터 통합 구동, `Base+10` 다형성 테이블 스키마, 의사역행렬($B^\dagger$) 기반 6-DoF 믹서, Alignment 짐벌 펄스 캘리브레이션 및 FCP 전용 드라이버 설계 합의
     - [x] **구현 계획서 작성 및 최신 변경점 점검 반영 (/writing-plans)**: TASK-007 구버전 용어 척결, 사양서 6종 버전 최신화, E2E/돌연변이 테스트넷 확장 반영한 최신 계획서(`2026-11-09-task-115-advanced-vtol-architecture-and-implementation.md`) 확정
-    - [ ] **TASK-115-0**: 워크트리 최신화 및 Rebase (`main` 브랜치 최신 커밋 반영 및 베이스라인 정렬)
-    - [ ] **TASK-115-1**: 사양서 6종 개정 (ICD v1.25.0, System Diagram v2.11.0, TCA v1.11.0, VAS v1.18.0, FCP v1.15.0, Alignment v2.6.0) 및 100% CLEAN 동기화
-    - [ ] **TASK-115-2**: TCA `vector_thruster` 페리페럴 래핑 및 다형성 추력/짐벌 출력 구동 (`src/1_control/tca/`)
-    - [ ] **TASK-115-3**: Alignment 짐벌 X/Y 펄스 시퀀서 및 제어 효과 의사역행렬 추출기 (`src/0_development/alignment/`)
-    - [ ] **TASK-115-4**: VAS ADVANCED_VTOL 정책, 의사역행렬 6-DoF 렌치 믹서 및 짐벌 포화 안티와인드업 (`src/1_control/vas/`)
-    - [ ] **TASK-115-5**: FCP 외루프 `advanced_vtol_driver.lua` 및 가이던스 컨트롤러 연동 (`src/2_guidance/fcp/`)
-    - [ ] **TASK-115-6**: 지상 인프라 및 미션 시스템 기종 호환성 확장 (GAC, Landing Pad, GCS, Installer)
-    - [ ] **TASK-115-7**: 전계층 단위 테스트, E2E 6/6, 돌연변이 20/20, 하네스 33/33 회귀 검증 100% PASS 및 사양서 `Implemented` 전이
+    - [x] **TASK-115-0**: 워크트리 최신화 및 Rebase (`main` 브랜치 최신 커밋 반영 및 베이스라인 정렬)
+    - [x] **TASK-115-1**: 사양서 6종 개정 (ICD v1.25.0, System Diagram v2.11.0, TCA v1.11.0, VAS v1.18.0, FCP v1.15.0, Alignment v2.6.0) 및 100% CLEAN 동기화
+    - [x] **TASK-115-2**: TCA `vector_thruster` 페리페럴 래핑 및 다형성 추력/짐벌 출력 구동 (`src/1_control/tca/`)
+    - [x] **TASK-115-3**: Alignment 짐벌 X/Y 펄스 시퀀서 및 제어 효과 의사역행렬 추출기 (`src/0_development/alignment/`)
+    - [x] **TASK-115-4**: VAS ADVANCED_VTOL 정책, 의사역행렬 6-DoF 렌치 믹서 및 짐벌 포화 안티와인드업 (`src/1_control/vas/`)
+    - [x] **TASK-115-5**: FCP 외루프 `advanced_vtol_driver.lua` 및 가이던스 컨트롤러 연동 (`src/2_guidance/fcp/`)
+    - [x] **TASK-115-6**: 지상 인프라 및 미션 시스템 기종 호환성 확장 (GAC, Landing Pad, GCS, Installer)
+    - [x] **TASK-115-7**: 전계층 단위 테스트, E2E 6/6, 돌연변이 20/20, 하네스 33/33 회귀 검증 100% PASS 및 사양서 `Implemented` 전이
 
 - [ ] **TASK-201: AMP (Autopilot Mission Planner) 사양서 초안(Draft) 작성**
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`
