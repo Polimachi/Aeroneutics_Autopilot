@@ -51,6 +51,7 @@ local function main()
 
     -- 5. Main Loop Variables
     local running = true
+    local skipNextChar = false
     local TICK_INTERVAL = 0.05 -- 20Hz
     local timerId = os.startTimer(TICK_INTERVAL)
     local nowClock = os.clock and os.clock() or 0
@@ -167,29 +168,36 @@ local function main()
             end
 
         elseif event == "key" or event == "char" then
-            local action, data, extraPayload
-            local keyState = { facilities = inventory:get_all_facilities() }
-            if event == "key" then
-                action, data, extraPayload = tui:handle_key(eventData[2], nil, keyState)
+            if event == "char" and skipNextChar then
+                skipNextChar = false
             else
-                action, data, extraPayload = tui:handle_key(nil, eventData[2], keyState)
-            end
+                skipNextChar = false
+                local action, data, extraPayload
+                local keyState = { facilities = inventory:get_all_facilities() }
+                if event == "key" then
+                    action, data, extraPayload = tui:handle_key(eventData[2], nil, keyState)
+                else
+                    action, data, extraPayload = tui:handle_key(nil, eventData[2], keyState)
+                end
 
-            if action == "QUIT" then
-                running = false
-            elseif action == "ADD_FACILITY" and type(data) ~= "table" then
-                tui:open_prompt("ADD_FACILITY")
-            elseif action == "EDIT_DEDICATED" and type(extraPayload) ~= "table" then
-                tui:open_prompt("EDIT_DEDICATED", data)
-            elseif action then
-                tui_view.apply_operator_action(action, data, {
-                    inventory = inventory,
-                    config = cfg,
-                    configPath = CONFIG_FILE,
-                    configLoader = config_loader,
-                    tui = tui,
-                    modem = modem
-                }, extraPayload)
+                if action == "QUIT" then
+                    running = false
+                elseif action == "ADD_FACILITY" and type(data) ~= "table" then
+                    tui:open_prompt("ADD_FACILITY")
+                    skipNextChar = (event == "key")
+                elseif action == "EDIT_DEDICATED" and type(extraPayload) ~= "table" then
+                    tui:open_prompt("EDIT_DEDICATED", data)
+                    skipNextChar = (event == "key")
+                elseif action then
+                    tui_view.apply_operator_action(action, data, {
+                        inventory = inventory,
+                        config = cfg,
+                        configPath = CONFIG_FILE,
+                        configLoader = config_loader,
+                        tui = tui,
+                        modem = modem
+                    }, extraPayload)
+                end
             end
 
         elseif event == "monitor_touch" then

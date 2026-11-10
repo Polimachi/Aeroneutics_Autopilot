@@ -394,13 +394,16 @@ function tui_view.create(termDev, monitorDev)
 
     function view:handle_key(key, char, state)
         if self.prompt then
-            if keys and key == keys.escape then
+            local escKey = (keys and keys.escape) or 256
+            local bsKey = (keys and keys.backspace) or 259
+            local enterKey = (keys and keys.enter) or 257
+            if key ~= nil and (key == escKey or key == 1) then
                 self.prompt = nil
                 return "PROMPT_CANCEL", nil
-            elseif keys and key == keys.backspace then
+            elseif key ~= nil and (key == bsKey or key == 14) then
                 self.prompt.buffer = self.prompt.buffer:sub(1, math.max(0, #self.prompt.buffer - 1))
                 return "PROMPT_INPUT", self.prompt.buffer
-            elseif keys and key == keys.enter then
+            elseif key ~= nil and (key == enterKey or key == 28 or (keys and keys.numPadEnter and key == keys.numPadEnter)) then
                 local mode = self.prompt.mode
                 local targetIdx = self.prompt.targetIdx
                 local parsed = parse_prompt_input(mode, self.prompt.buffer)
