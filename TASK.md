@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-10  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-012 / 활성 대기: TASK-010, 011, 116, 117, 118, 119, 120, 201, 202)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-118 / 활성 대기: TASK-010, 011, 116, 117, 119, 120, 201, 202)
 
 ---
 
@@ -52,14 +52,6 @@
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 및 대상 경로 확정 필요)
   - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
   - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거
-
-- [ ] **TASK-118: [검증 확장] `ADVANCED_VTOL` 및 GAC 전용 패드/비상 징발 E2E 시뮬레이션 & 돌연변이 테스트 확장** (`tests/e2e/`, `tools/run_mutation_tests.py`)
-  - **사양서 상태**: 사양서 변경 불필요 (구현 완료된 TASK-114·TASK-115 대상 멀티노드 E2E 및 돌연변이 검증 확장)
-  - **배경 및 필요성**: TASK-111(E2E 6개 시나리오, 돌연변이 20개) 구축 이후 구현 완료된 TASK-115(`ADVANCED_VTOL` 6-DoF 의사역행렬 믹서 및 짐벌 펄스 정렬)와 TASK-114(GAC 전용 패드 격리 및 비상 징발)는 단위 테스트만 존재하고 멀티노드 E2E 시나리오 및 돌연변이 타겟에는 아직 미통합 상태
-  - **주요 작업**:
-    - [ ] **TASK-118-1**: `tests/e2e/test_e2e_advanced_vtol_flight.lua` (시나리오 7) 신설 — 격납고 짐벌 X/Y 펄스 캘리브레이션 → FCP/VAS/TCA `ADVANCED_VTOL` 6-DoF 폐루프 유도 비행 검증
-    - [ ] **TASK-118-2**: `tests/e2e/test_e2e_facility_landing.lua` 확장 — 전용 패드(`dedicatedCraftIds`) 타 기체 접근 거부(`FACILITY_DEDICATED`) 및 비상 상태(`EMERGENCY`) 시 전용 패드 강제 징발 시퀀스 검증
-    - [ ] **TASK-118-3**: `tools/run_mutation_tests.py` 확장 — `ADVANCED_VTOL` 믹서 및 GAC 전용/비상 분배 엔진 돌연변이 타겟 추가
 
 - [ ] **TASK-119: [OTA 보안/안정성] 슬레이브 노드 부트스트랩 OTA 에이전트 및 원자적 롤백(Atomic Rollback) 가드 구현** (`src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{tca,asa,vas}/`)
   - **사양서 상태**: 미작성 / 연관 사양서 연동 필요 (TASK-117 OTA 프로토콜 Draft → Approved 및 VAS·TCA·ASA 상태 게이트 반영 필요)
@@ -119,6 +111,14 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-118: [검증 확장] `ADVANCED_VTOL` 및 GAC 전용 패드/비상 징발 E2E 시뮬레이션 & 돌연변이 테스트 확장** (완료일: 2026-11-10, 커밋 `f4d0c1f` ~ `b9211fa`) (`src/1_control/tca/`, `tests/1_control/tca/`, `tests/e2e/`, `tools/run_mutation_tests.py`, `harness/simulation/node_sandbox.lua`, `tests/harness/test_simulation_core.py`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-118-advanced-vtol-gac-e2e-mutation.md`
+  - **목적 및 성과**: `TASK-115`(`ADVANCED_VTOL` 6-DoF 짐벌 벡터 추진) 및 `TASK-114`(`GAC` 전용 패드 격리·비상 징발) 대상 멀티노드 E2E 시나리오 및 결정론적 돌연변이 테스트 확장, 통합 E2E 동시 실행 중 노출된 게스트 샌드박스 `require` 인자 누락 버그(`node_sandbox.lua:226` `(norm_name, found_path)` 2인자 전달) 수정 완료. 단위 테스트 309/309 PASS(12개 타겟, TCA 32/32), E2E 7개 시나리오 8/8 PASS, 돌연변이 25/25 KILLED(100.0%, 기준 90.0%), 하네스 회귀 50/50 PASS, `verify_manifest_sync.py`·`verify_all_specs.py` 0 Errors/0 Warnings 달성.
+  - **구현 내용**:
+    - [x] **TASK-118-1**: `tca_daemon.lua`·`watchdog_sentinel.lua` `MSG_CALIB_PULSE` 2D 짐벌(`gimbalX`/`gimbalY`) 전달 수정, TCA 단위 테스트 추가(`32/32`) 및 `tests/e2e/test_e2e_advanced_vtol_flight.lua`(시나리오 7) 신설 (`f4d0c1f`)
+    - [x] **TASK-118-2**: `tests/e2e/test_e2e_facility_landing.lua` 확장 — 전용 패드 비콘 분리, `FACILITY_DEDICATED` 거절 및 `isEmergency = true` 강제 징발 시퀀스 검증 (`704822f`)
+    - [x] **TASK-118-3**: `tools/run_mutation_tests.py` `MUT-21`~`MUT-25` 추가(25/25 KILLED) 및 `node_sandbox.lua` `require` 표준 인자 패리티 수정·하네스 회귀(`test_simulation_core.py`) 추가 (`b9211fa`)
 
 - [x] **TASK-012: [CI/CD 정적 가드] 인스톨러 매니페스트(`manifest.lua`) · GDrive 맵 · 실제 소스 트리 간 3자 정합성 검증기 구현** (완료일: 2026-11-10) (`tools/verify_manifest_sync.py`, `tests/harness/test_manifest_sync_verifier.py`, `tests/harness/test_tools_integrity.py`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-012-manifest-sync-verifier.md`
@@ -193,6 +193,3 @@
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-110-fcp-vtol-refinement.md`
   - **목적 및 성과**: VECTORED_VTOL 기종의 외루프 유도 제어기를 3축(Surge/Sway/Heave) 완전 PID + Anti-windup, CRUISE 모드 한정 15m/s TILT_ASSISTED 피치 슬루율(최대 15°/s) 완화, 수평 고정 수직 이륙 및 착륙 패드 정렬 2단계 감속 수직 착륙 시퀀스로 전면 고도화.
 
-- [x] **TASK-113: 온보드 제어기(VAS, TCA, ASA) 헤드리스 기본 구동 및 `parallel` 비동기 디버그 TUI 분리** (완료일: 2026-11-08, 커밋 `b5ee552` ~ `b2c5d5a`) (`docs/specs/1_control/`, `src/1_control/`, `tests/1_control/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-113-headless-parallel-debug-tui.md`
-  - **목적 및 성과**: 터미널 렌더링 부하를 20Hz 제어 루프에서 분리하고, `debug: true` 설정 시에만 ComputerCraft `parallel` API 기반 비동기 디버그 TUI를 안전하게 구동하는 구조 개편 완료.

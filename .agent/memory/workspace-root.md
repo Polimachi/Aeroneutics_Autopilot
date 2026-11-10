@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-10 — ADVANCED_VTOL & GAC 전용 패드/비상 징발 E2E 및 돌연변이 확장 (TASK-118)
+
+- **결정 배경**: `TASK-111` 구축 이후 구현된 `TASK-115`(`ADVANCED_VTOL` 2D 짐벌 벡터 추진)와 `TASK-114`(`GAC` 전용 패드 격리·비상 징발)에 대해 단위 테스트를 넘어선 다중 노드 패킷 시퀀스 E2E 시뮬레이션과 결정론적 돌연변이 타겟 확장이 필요했음.
+- **반영 내역**:
+  1. `tca_daemon.lua`·`watchdog_sentinel.lua`·`test_tca_vector_thruster.lua`·`tests/e2e/test_e2e_advanced_vtol_flight.lua`(`f4d0c1f`): `MSG_CALIB_PULSE`의 `gimbalX`/`gimbalY` 다형성 전달을 수정하고, Alignment 2D 짐벌 펄스 캘리브레이션·$B^\dagger$ 프로파일 동기화·FCP/VAS/TCA 6-DoF 폐루프 유도 비행(`flapTarget = 0.0`, `Base+11` 비송출)·포화 안티와인드업·`E_STOP` 노즐 `(0, 0)` 복귀를 검증하는 시나리오 7을 신설함.
+  2. `tests/e2e/test_e2e_facility_landing.lua`(`704822f`): 전용 착륙패드(`dedicatedCraftIds`) 비콘 `freeLandingPads` 제외·공용 우선 배정·비인가 `FACILITY_DEDICATED` 거절·`isEmergency = true` 비상 징발 시퀀스를 시나리오 6에 추가함.
+  3. `tools/run_mutation_tests.py`·`harness/simulation/node_sandbox.lua`·`tests/harness/test_simulation_core.py`(`b9211fa`): `MUT-21`~`MUT-25` 5종(11도메인 25타겟)을 확장하고, 전체 E2E 동시 실행 시 `fcp:require("main")`·`gcs:require("main")` 0인자 호출로 인한 CraftOS-PC `--headless` `term.clear()` 행을 유발하던 `node_sandbox.lua` `require` 시그니처를 Lua 5.2 표준 `(norm_name, found_path)` 2인자 전달로 수정(`test_node_sandbox_require_passes_modname_and_filepath` 회귀 추가).
+- **검증 (2026-11-10 실행)**: 단위 309/309 PASS(12개 타겟, TCA 32/32), E2E 7개 시나리오 8/8 PASS, 돌연변이 25/25 KILLED(100.0%, 기준 90.0%), 하네스 50/50 PASS, `verify_manifest_sync.py`·`verify_all_specs.py` 0 Errors/0 Warnings(9 Implemented, 5 Approved), Lua 126 파일 문법 PASS.
+
+---
+
 ## 2026-11-10 — 인스톨러 매니페스트·GDrive·소스 트리 3자 정합성 검증기 구축 (TASK-012)
 
 - **결정 배경**: `TASK-009`(GDrive 매핑) 및 향후 `TASK-116`(인스톨러 카테고리 개편)과 연계하여 `src/`에 신규 Lua/JSON 파일이 추가·개명될 때 `manifest.lua` 또는 `config/gdrive_mapping.json` 갱신 누락으로 인한 배포 불일치를 사전에 차단할 정적 가드가 필요함.

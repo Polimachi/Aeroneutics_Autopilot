@@ -3,7 +3,7 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-012` 인스톨러 매니페스트·GDrive 맵·소스 트리 3자 정합성 검증기(`tools/verify_manifest_sync.py`) 구축 및 파이프라인 편입 (2026-11-10, 상세 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-118` `ADVANCED_VTOL`·`GAC` 전용 패드/비상 징발 E2E 시뮬레이션·돌연변이 25종 확장 및 `node_sandbox.lua` `require` 인자 수정 (2026-11-10, 상세 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
   1. `TASK-201`: FCP 사양서 v1.15.0 Implemented → v1.16.0 개정 후 `LOITER`/`POI_HOLD` 구현.
   2. `TASK-202`: AMM 사양서 v1.0.1 Implemented → v1.1.0 개정 후 미션 엔진 구현.
@@ -25,10 +25,10 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 308/308 PASS).
-- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (6개 시나리오 6/6 PASS).
-- **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (20/20 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (49/49 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 309/309 PASS).
+- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (7개 시나리오 8/8 PASS).
+- **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (50/50 PASS).
 - **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (9 Implemented, 5 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
