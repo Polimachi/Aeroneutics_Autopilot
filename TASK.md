@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-10  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-114 / 활성 대기: TASK-010, 011, 012, 116, 117, 118, 119, 120, 201, 202)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-012 / 활성 대기: TASK-010, 011, 116, 117, 118, 119, 120, 201, 202)
 
 ---
 
@@ -40,13 +40,6 @@
     - [ ] **TASK-011-2**: 중앙 지상 관제소 매뉴얼(`playbook/0_infra/gcs.md`) 작성
     - [ ] **TASK-011-3**: 섹터 관제·착륙패드 매뉴얼(`playbook/0_infra/gac.md`, `playbook/0_infra/landing_pad.md`) 작성
     - [ ] **TASK-011-4**: `tools/verify_playbooks.py` 7대 섹션·링크·인가 목록 정적 검증 통과
-
-- [ ] **TASK-012: [CI/CD 정적 가드] 인스톨러 매니페스트(`manifest.lua`) · GDrive 맵 · 실제 소스 트리 간 3자 정합성 검증기 구현** (`tools/verify_manifest_sync.py`)
-  - **사양서 상태**: 사양서 변경 불필요 (정적 검증 CLI 구축; `TASK-009` GDrive 매핑 및 `TASK-116` 카테고리 규격 연동)
-  - **배경 및 필요성**: `TASK-009`(GDrive 파일 매핑)와 `TASK-116`(인스톨러 카테고리 개편) 도입 시, 향후 새로운 Lua 모듈이 `src/`에 추가되거나 파일명이 바뀔 때 `src/0_development/installer/modules/manifest.lua` 또는 `config/gdrive_mapping.json` 갱신을 누락하는 휴먼 에러 방지 필요
-  - **주요 작업**:
-    - [ ] **TASK-012-1**: `tools/verify_manifest_sync.py` 정적 검증기 구현 — `src/` 실제 런타임 파일 목록, `src/0_development/installer/modules/manifest.lua` 등록 패키지 파일 목록, `config/gdrive_mapping.json` GDrive 매핑 메타데이터 간 누락·고아 파일(Orphan File)·카테고리 미지정 항목 전수 검사
-    - [ ] **TASK-012-2**: 표준 One-Liner 검증 파이프라인 편입 및 검증
 
 - [ ] **TASK-116: 통합 인스톨러(installer.lua) 역할/도메인별 TUI 폴더 탐색 구조 개편** (`installer.lua`, `src/0_development/installer/`)
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요)
@@ -127,6 +120,13 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
 
+- [x] **TASK-012: [CI/CD 정적 가드] 인스톨러 매니페스트(`manifest.lua`) · GDrive 맵 · 실제 소스 트리 간 3자 정합성 검증기 구현** (완료일: 2026-11-10) (`tools/verify_manifest_sync.py`, `tests/harness/test_manifest_sync_verifier.py`, `tests/harness/test_tools_integrity.py`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-012-manifest-sync-verifier.md`
+  - **목적 및 성과**: 외부 Lua 런타임 없이 `manifest.lua`·`installer.lua`·`src/`·`config/gdrive_mapping.json` 3자 정합성(모듈 순서·카테고리 정합성, 공용 센서 번들링, 양방향 누락·고아 파일, 연기 서브시스템 면제 만료, 부트스트랩 바이트/ID 패리티)을 정적 검사하는 CLI 구축 및 표준 검증 파이프라인(`test_tools_integrity.py`) 편입 완료. 전체 하네스 회귀 49/49 PASS(신규 7건+통합 1건), `verify_manifest_sync.py` `0 Errors, 0 Warnings`(12 모듈·113 매니페스트 경로·129 소스 파일·9 GDrive 엔트리) 달성.
+  - **구현 내용**:
+    - [x] **TASK-012-1**: `tools/verify_manifest_sync.py` 구현 및 결함 주입 단위 테스트(`tests/harness/test_manifest_sync_verifier.py` 7/7 PASS) 구축
+    - [x] **TASK-012-2**: `tests/harness/test_tools_integrity.py` 편입, `README.md`/`GEMINI.md` 표준 One-Liner 갱신 및 전체 정적 파이프라인 검증 완료
+
 - [x] **TASK-114: GAC 전용 시설물(Dedicated Facility) 지원 및 2단계 다속성 분배 엔진/TUI 확장** (완료일: 2026-11-10) (`src/0_infra/gac/`, `tests/0_infra/gac/`, `docs/specs/0_infra/gac/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-114-gac-dedicated-facility.md`
   - **목적 및 성과**: 특정 VTOL/DRONE 전속 대기용 전용 착륙패드/도킹암/활주로(`dedicatedCraftIds`, `dedicatedAirframeTypes`) 런타임 검증, 비콘 공용 가용 패드 분리, `FACILITY_DEDICATED` 거절 분기 및 3-Tab TUI `[DED: ...]`/`PUBLIC` 콘솔 관리 구현 완료. 전체 12개 타겟 단위 테스트 308/308 PASS(GAC 46/46 PASS), E2E 6/6 PASS, 돌연변이 20/20 KILLED(100.0%), 하네스 41/41 PASS, GAC 사양서 v1.4.1 `Implemented` 승격(9 Implemented, 5 Approved, 0 Errors/0 Warnings) 달성.
@@ -196,7 +196,3 @@
 - [x] **TASK-113: 온보드 제어기(VAS, TCA, ASA) 헤드리스 기본 구동 및 `parallel` 비동기 디버그 TUI 분리** (완료일: 2026-11-08, 커밋 `b5ee552` ~ `b2c5d5a`) (`docs/specs/1_control/`, `src/1_control/`, `tests/1_control/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-113-headless-parallel-debug-tui.md`
   - **목적 및 성과**: 터미널 렌더링 부하를 20Hz 제어 루프에서 분리하고, `debug: true` 설정 시에만 ComputerCraft `parallel` API 기반 비동기 디버그 TUI를 안전하게 구동하는 구조 개편 완료.
-
-- [x] **TASK-200: AMM (Aircraft Mission Manager & Cockpit MFD 통합 단말) 구현** (완료일: 2026-11-08, 커밋 `3b2907a`) (`docs/specs/3_planning/amm/`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-amm-mission-manager.md`
-  - TASK-106(Cockpit MFD)을 완전 병합하여 51x19 분할 TUI(5Hz 계기판 HUD + 미션 큐 및 C2 관리), 단방향 순차 웨이포인트 큐, JSON 영속화, GCS C2 무반향 감청, 원터치 핫키 및 CLI 대화형 인터페이스 일체화 단말 구현 완료.

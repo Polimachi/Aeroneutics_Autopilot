@@ -20,6 +20,7 @@ class TestToolsIntegrity(unittest.TestCase):
             WORKSPACE_ROOT / "tools" / "run_unit_tests.py",
             WORKSPACE_ROOT / "tools" / "run_e2e_tests.py",
             WORKSPACE_ROOT / "tools" / "sync_gdrive.py",
+            WORKSPACE_ROOT / "tools" / "verify_manifest_sync.py",
         ]
         for tool_path in expected_tools:
             self.assertTrue(
@@ -110,6 +111,24 @@ class TestToolsIntegrity(unittest.TestCase):
             f"tools/verify_all_specs.py --check-readmes exited with non-zero code {result.returncode}.\nOutput:\n{result.stdout}\nError:\n{result.stderr}",
         )
         self.assertIn("README audit complete: 0 error(s)", result.stdout)
+
+    def test_verify_manifest_sync_execution(self) -> None:
+        script = WORKSPACE_ROOT / "tools" / "verify_manifest_sync.py"
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(WORKSPACE_ROOT),
+            timeout=30,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"tools/verify_manifest_sync.py exited with non-zero code {result.returncode}.\nOutput:\n{result.stdout}\nError:\n{result.stderr}",
+        )
+        self.assertIn("0 Errors, 0 Warnings", result.stdout)
 
 
 if __name__ == "__main__":

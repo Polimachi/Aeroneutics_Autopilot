@@ -3,7 +3,7 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-114` GAC 전용 시설물 런타임·TUI 확장 (2026-11-10, 사양서 v1.4.1 `Implemented`, 상세 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-012` 인스톨러 매니페스트·GDrive 맵·소스 트리 3자 정합성 검증기(`tools/verify_manifest_sync.py`) 구축 및 파이프라인 편입 (2026-11-10, 상세 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
   1. `TASK-201`: FCP 사양서 v1.15.0 Implemented → v1.16.0 개정 후 `LOITER`/`POI_HOLD` 구현.
   2. `TASK-202`: AMM 사양서 v1.0.1 Implemented → v1.1.0 개정 후 미션 엔진 구현.
@@ -17,7 +17,7 @@
 - `docs/superpowers/plans/`: 태스크별 실행 계획서 (`YYYY-MM-DD-task-<id>-*.md`).
 - `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`).
+- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`, `tools/verify_manifest_sync.py`).
 - `config/gdrive_mapping.json` & `dist_gdrive/` & `tools/sync_gdrive.py`: GDrive 배포 매핑 SSOT, 격리 스테이징, 동기화 CLI (가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
@@ -28,8 +28,8 @@
 - **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 308/308 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (6개 시나리오 6/6 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (20/20 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (41/41 PASS).
-- **사양서·문법 정적 검사**: `python tools/verify_all_specs.py` (0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (9 Implemented, 5 Approved).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (49/49 PASS).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (9 Implemented, 5 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants

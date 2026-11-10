@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-10 — 인스톨러 매니페스트·GDrive·소스 트리 3자 정합성 검증기 구축 (TASK-012)
+
+- **결정 배경**: `TASK-009`(GDrive 매핑) 및 향후 `TASK-116`(인스톨러 카테고리 개편)과 연계하여 `src/`에 신규 Lua/JSON 파일이 추가·개명될 때 `manifest.lua` 또는 `config/gdrive_mapping.json` 갱신 누락으로 인한 배포 불일치를 사전에 차단할 정적 가드가 필요함.
+- **반영 내역**:
+  1. `tools/verify_manifest_sync.py`: 외부 Lua 런타임 없이 `manifest.lua`·`installer.lua`·`src/`·`config/gdrive_mapping.json`을 구조 파싱하여 바이트/부트스트랩 패리티, `MODULE_ORDER`↔`MODULES` 대칭성, 모듈/GDrive 카테고리 정합성, 공용 센서(`/lib/avionics_sensors.lua`) 번들링, 양방향 누락·고아(`ORPHAN_SRC_FILE`/`ORPHAN_SRC_CONFIG_FILE`/`MISSING_DISK_FILE`/`ORPHAN_GDRIVE_MAPPING`), 연기 서브시스템(`src/1_control/asa`) 면제 만료(`STALE_DEFERRED_EXEMPTION`)를 전수 검사함.
+  2. `tests/harness/test_manifest_sync_verifier.py`·`tests/harness/test_tools_integrity.py`·`README.md`·`GEMINI.md`·`TASK.md`: 결함 주입 테스트 7건 및 통합 실행 테스트 1건을 하네스 회귀 슈트에 편입하고 표준 One-Liner 검증 파이프라인을 동기화함.
+- **검증 (2026-11-10 실행)**: `verify_manifest_sync.py` `0 Errors, 0 Warnings`(12 모듈·113 매니페스트 경로·129 소스 파일·9 GDrive 엔트리), 하네스 49/49 PASS, 사양서 9 Implemented / 5 Approved(0 Errors/0 Warnings), Lua 126 파일 문법 PASS.
+
+---
+
 ## 2026-11-10 — GAC 전용 시설물(Dedicated Facility) 런타임 및 TUI 확장 (TASK-114)
 
 - **결정 배경**: `GAC_PROGRAM_SPECIFICATION_AND_ICD.md` v1.4.1(전속 착륙패드/도킹암 보호, 비콘 공용 패드 분리, `FACILITY_DEDICATED` 거절, TUI `[DED: ...]`/`PUBLIC` 관리)에 맞춰 `src/0_infra/gac/` 런타임을 완결하고 사양서를 `Implemented`로 승격함.

@@ -88,6 +88,7 @@ Create_Aeroneutics/
 │   ├── sync_gdrive.py                     # GDrive 스테이징·동기화·검증 CLI
 │   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
 │   ├── verify_all_specs.py                # 14대 사양서 전수 무결성 검증기
+│   ├── verify_manifest_sync.py            # manifest.lua·GDrive 맵·src/ 3자 정합성 검증기
 │   └── verify_spec_status.py              # 사양서 상태 분포 검증기
 │
 ├── reports/                               # 정적 분석 및 리팩토링 검토 보고서
@@ -131,11 +132,11 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 ### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
 Windows PowerShell 5.1 (`&&` 미지원):
 ```powershell
-python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/validate_lua_syntax.py }
+python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/verify_manifest_sync.py }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/validate_lua_syntax.py }
 ```
 bash / PowerShell 7+:
 ```bash
-python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_all_specs.py && python tools/validate_lua_syntax.py
+python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_manifest_sync.py && python tools/verify_all_specs.py && python tools/validate_lua_syntax.py
 ```
 
 ### 1. Lua 멀티 코드베이스 단위 테스트 실행
@@ -189,7 +190,13 @@ python tools/verify_spec_status.py
 python tools/validate_lua_syntax.py
 ```
 
-### 8. 인게임 배포 (GDrive)
+### 8. 인스톨러 매니페스트 · GDrive · 소스 트리 3자 정합성 검증
+`src/` 실제 런타임 파일, `manifest.lua` 등록 목록, `config/gdrive_mapping.json` 간의 누락·고아 파일·카테고리 불일치를 정적 검사합니다:
+```bash
+python tools/verify_manifest_sync.py
+```
+
+### 9. 인게임 배포 (GDrive)
 배포 파일을 `dist_gdrive/`에 스테이징하고 Google Drive 공식 폴더와 동기화합니다 (`gdrive` CLI PATH 등록 필요). 상세 절차: [docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md](docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md)
 ```powershell
 python tools/sync_gdrive.py stage
