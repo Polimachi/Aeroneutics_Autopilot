@@ -138,6 +138,60 @@ class TestSimulationCore(unittest.TestCase):
             self.assertEqual(report.status, "PASS", f"Errors: {report.errors}")
             self.assertEqual(report.passed_tests, 1)
 
+    def test_node_sandbox_require_passes_modname_and_filepath(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sdir = root / "src" / "0_development" / "sim_req_args_test"
+            tdir = root / "tests" / "0_development" / "sim_req_args_test"
+            sdir.mkdir(parents=True)
+            tdir.mkdir(parents=True)
+            (sdir / "main.lua").write_text("return true\n", encoding="utf-8")
+
+            for sim_name in ("virtual_bus.lua", "node_sandbox.lua"):
+                sim_src = self.repo_root / "harness" / "simulation" / sim_name
+                (sdir / sim_name).write_text(sim_src.read_text(encoding="utf-8"), encoding="utf-8")
+
+            (tdir / "test_sandbox_require_args.lua").write_text(
+                'local virtual_bus = require("virtual_bus")\n'
+                'local node_sandbox = require("node_sandbox")\n'
+                'describe("node_sandbox require varargs", function()\n'
+                '    it("passes module name and resolved filepath matching standard Lua require", function()\n'
+                '        local bus = virtual_bus.create_bus()\n'
+                '        local n1 = node_sandbox.create_node(bus, "NODE_1", "src/mock_app", {\n'
+                '            virtual_files = {\n'
+                '                ["src/mock_app/main.lua"] = [[\n'
+                'local args = { ... }\n'
+                'local argc = select("#", ...)\n'
+                'local auto_ran = (argc == 0)\n'
+                'return { argc = argc, modname = args[1], filepath = args[2], auto_ran = auto_ran }\n'
+                ']],\n'
+                '            }\n'
+                '        })\n'
+                '        local m = n1:require("main")\n'
+                '        assert_eq(m.argc, 2)\n'
+                '        assert_eq(m.modname, "main")\n'
+                '        assert_eq(m.filepath, "src/mock_app/main.lua")\n'
+                '        assert_false(m.auto_ran)\n'
+                '    end)\n'
+                'end)\n',
+                encoding="utf-8",
+            )
+
+            cfg = UnitTargetConfig(
+                target_id="0_development/sim_req_args_test",
+                source_dir=sdir,
+                tests_dir=tdir,
+                timeout_sec=10.0,
+            )
+            report = run_target_unit_tests(
+                target=cfg,
+                craftos_paths=self.paths,
+                sessions_root=root / ".sessions",
+                require_tests=True,
+            )
+            self.assertEqual(report.status, "PASS", f"Errors: {report.errors}")
+            self.assertEqual(report.passed_tests, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -223,7 +223,7 @@ function M.create_node(bus, node_id, base_dir, options)
             if not fn then
                 error("Error loading module '" .. norm_name .. "': " .. tostring(err), 2)
             end
-            local res = fn()
+            local res = fn(norm_name, found_path)
             loaded[norm_name] = (res ~= nil) and res or true
             return loaded[norm_name]
         end

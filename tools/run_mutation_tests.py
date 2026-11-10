@@ -16,7 +16,7 @@ TOOLS_DIR = WORKSPACE_ROOT / "tools"
 RUN_UNIT_TESTS = TOOLS_DIR / "run_unit_tests.py"
 RUN_E2E_TESTS = TOOLS_DIR / "run_e2e_tests.py"
 
-# Definition of 20 core mutations across 6 domains
+# Definition of 25 core mutations across 11 domains
 MUTATIONS: List[Dict[str, Any]] = [
     {
         "id": "MUT-01",
@@ -217,6 +217,56 @@ MUTATIONS: List[Dict[str, Any]] = [
         "replacement": "return nil",
         "runner": "unit",
         "target_arg": "0_development/installer",
+    },
+    {
+        "id": "MUT-21",
+        "name": "VAS Vector VTOL Pseudo-Inverse Wrench Matrix Multiplication Sign Inversion",
+        "domain": "Control",
+        "file": "src/1_control/vas/modules/thrust_mixer.lua",
+        "target": "sum = sum + (row[c] or 0.0) * (w[c] or 0.0)",
+        "replacement": "sum = sum - (row[c] or 0.0) * (w[c] or 0.0)",
+        "runner": "unit",
+        "target_arg": "1_control/vas",
+    },
+    {
+        "id": "MUT-22",
+        "name": "TCA Vector Thruster Fail-Safe Nozzle Neutralization Bypass",
+        "domain": "Safety",
+        "file": "src/1_control/tca/modules/actuator_adapter.lua",
+        "target": "pcall(item.wrapped.setVector, 0.0, 0.0)",
+        "replacement": "-- pcall(item.wrapped.setVector, 0.0, 0.0)",
+        "runner": "unit",
+        "target_arg": "1_control/tca",
+    },
+    {
+        "id": "MUT-23",
+        "name": "FCP Advanced VTOL PID Surge Proportional Gain Sign Inversion",
+        "domain": "Guidance",
+        "file": "src/2_guidance/fcp/modules/advanced_vtol_driver.lua",
+        "target": "local raw_surge = clamp(skp * err_surge - skd * vel_surge + s_i, -1.0, 1.0)",
+        "replacement": "local raw_surge = clamp(-skp * err_surge - skd * vel_surge + s_i, -1.0, 1.0)",
+        "runner": "unit",
+        "target_arg": "2_guidance/fcp",
+    },
+    {
+        "id": "MUT-24",
+        "name": "GAC Dedicated Facility Rejection Classification Bypass",
+        "domain": "Infra",
+        "file": "src/0_infra/gac/modules/allocation_engine.lua",
+        "target": "if hasDedicatedBlockingFree then",
+        "replacement": "if false and hasDedicatedBlockingFree then",
+        "runner": "unit",
+        "target_arg": "0_infra/gac",
+    },
+    {
+        "id": "MUT-25",
+        "name": "GAC Emergency Dedicated Pad Commandeering Public-Free Guard Inversion",
+        "domain": "Infra",
+        "file": "src/0_infra/gac/modules/allocation_engine.lua",
+        "target": "if not anyPublicFree then",
+        "replacement": "if anyPublicFree then",
+        "runner": "unit",
+        "target_arg": "0_infra/gac",
     },
 ]
 
