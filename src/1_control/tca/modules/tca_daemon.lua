@@ -54,7 +54,10 @@ function tca_daemon.handle_calib_pulse(inst, pkt)
     local tgt = p.targetThrusterId
     if tgt and tgt ~= inst.cfg.groupId and tgt ~= "ALL" then return false end
     if is_flight_state(inst.lastControlState) and inst.lastControlState ~= "CALIBRATION" then return false end
-    return inst.sentinel:handle_pulse(p.pulseLevel, p.pulseDurationMs, inst.adapterState)
+    local pulseSignal = (p.gimbalX ~= nil or p.gimbalY ~= nil)
+        and { thrust = p.pulseLevel, gimbalX = p.gimbalX, gimbalY = p.gimbalY }
+        or p.pulseLevel
+    return inst.sentinel:handle_pulse(pulseSignal, p.pulseDurationMs, inst.adapterState)
 end
 
 local function handle_safed_output(inst, mode, act, tot)

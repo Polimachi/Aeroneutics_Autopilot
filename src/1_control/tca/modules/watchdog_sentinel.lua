@@ -86,14 +86,15 @@ function watchdog_sentinel.handle_pulse(wd, pulseLevel, durationMs, adapterState
     if not wd or not adapterState then return false end
     local ok_aa, mod_aa = pcall(require, "actuator_adapter")
     local aa = ok_aa and mod_aa or package.loaded["actuator_adapter"]
-    local pLvl = tonumber(pulseLevel) or 0
+    local pLvl = (type(pulseLevel) == "table" and tonumber(pulseLevel.thrust)) or tonumber(pulseLevel) or 0
     local dMs = tonumber(durationMs) or 0
     if pLvl <= 0 or dMs <= 0 then
         wd:cancel_pulse()
         if aa and aa.cut_thrust then aa.cut_thrust(adapterState) end
         return true
     end
-    if aa and aa.apply_thrust then aa.apply_thrust(adapterState, pLvl, 1, 1) end
+    local signalArg = (type(pulseLevel) == "table") and pulseLevel or pLvl
+    if aa and aa.apply_thrust then aa.apply_thrust(adapterState, signalArg, 1, 1) end
     wd:schedule_pulse(dMs, function()
         if aa and aa.cut_thrust then aa.cut_thrust(adapterState) end
     end)

@@ -275,4 +275,49 @@ describe("tca vector thruster discovery and status reporting", function()
         assert_near(mockDev._vectorX, 0.0, 1e-6)
         assert_near(mockDev._vectorY, 0.0, 1e-6)
     end)
+
+    it("applies 2D gimbal deflections during calibration pulse in tca_daemon", function()
+        local mockDev = create_mock_vector_thruster()
+        mock.peripheral_registry({
+            left = { type = "vector_thruster", dev = mockDev }
+        })
+
+        local mockModem = mock.modem()
+        local cfg = {
+            groupId = "THR_VEC_1",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            watchdogTimeoutMs = 300,
+            nominalActuatorCount = 1,
+            interactionMode = "API",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = { "left" } }
+        }
+
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.lastControlState = "CALIBRATION"
+
+        local pulsePkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 14,
+            type = "MSG_CALIB_PULSE",
+            payload = {
+                targetThrusterId = "THR_VEC_1",
+                stepIndex = 4,
+                phase = "GIMBAL_X",
+                pulseLevel = 8,
+                gimbalX = -0.5,
+                gimbalY = 0.25,
+                pulseDurationMs = 300
+            }
+        }
+
+        local ok = daemon:handle_calib_pulse(pulsePkt)
+        assert_true(ok)
+        assert_eq(mockDev._power, 8)
+        assert_near(mockDev._vectorX, -0.5, 1e-6)
+        assert_near(mockDev._vectorY, 0.25, 1e-6)
+    end)
 end)
