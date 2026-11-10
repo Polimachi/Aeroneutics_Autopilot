@@ -256,4 +256,293 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         assert_eq(status_pkt.payload.freePads, 0)
         assert_eq(inv:get_facility("PAD_01").status, "OCCUPIED")
     end)
+
+    it("enforces dedicated pad beacon isolation, FACILITY_DEDICATED rejection, and last-resort EMERGENCY commandeering", function()
+        local bus = virtual_bus.create_bus({ clock = 2000.0 })
+
+        local gac = node_sandbox.create_node(bus, "GAC", "src/0_infra/gac")
+        local pad_pub = node_sandbox.create_node(bus, "PAD_PUB_01", "src/0_infra/landing_pad")
+        local pad_vip = node_sandbox.create_node(bus, "PAD_VIP_02", "src/0_infra/landing_pad")
+        local fcp = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+
+        local config_loader = gac:require("config_loader")
+        local facility_inventory = gac:require("facility_inventory")
+        local allocation_engine = gac:require("allocation_engine")
+        local beacon_broadcaster = gac:require("beacon_broadcaster")
+        local gac_fsm = gac:require("gac_fsm")
+
+        local gac_cfg = config_loader.get_default_config()
+        gac_cfg.facilities = {
+            {
+                facilityId = "PAD_PUB_01",
+                type = "LANDING_PAD",
+                tacticalChannel = 50211,
+                maxSupportWeight = 40000.0,
+                maxSupportRadius = 12.0,
+                coordinates = { x = 1400.0, y = 65.0, z = -820.0 },
+                status = "FREE",
+                mobility = "STATIC"
+            },
+            {
+                facilityId = "PAD_VIP_02",
+                type = "LANDING_PAD",
+                tacticalChannel = 50212,
+                maxSupportWeight = 40000.0,
+                maxSupportRadius = 12.0,
+                coordinates = { x = 1210.0, y = 65.0, z = -805.0 },
+                status = "FREE",
+                mobility = "STATIC",
+                dedicatedCraftIds = { "VIP_VTOL_01" },
+                dedicatedAirframeTypes = { "ADVANCED_VTOL" }
+            }
+        }
+        assert_true(config_loader.validate_config(gac_cfg))
+
+        local inv = facility_inventory.create(gac_cfg.facilities)
+        local fsm = gac_fsm.create(gac_cfg, inv, allocation_engine)
+        local bc = beacon_broadcaster.create(gac_cfg)
+
+        gac.modem:open(50201)
+        gac.modem:open(50202)
+
+        -- Setup PAD_PUB_01 and PAD_VIP_02 nodes
+        local pub_streamer = pad_pub:require("tactical_streamer").create({
+            padId = "PAD_PUB_01", facilityId = "PAD_PUB_01", mode = "STATIC",
+            approachHeading = 180.0, safeDescentRate = 1.0, clearanceZoneRadius = 5.0,
+            channels = { sectorFacilityChannel = 50202, tacticalChannel = 50211 }
+        })
+        local pub_fsm = pad_pub:require("pad_fsm").create({
+            padId = "PAD_PUB_01", facilityId = "PAD_PUB_01", mode = "STATIC",
+            channels = { sectorFacilityChannel = 50202, tacticalChannel = 50211 }
+        }, pub_streamer, true)
+        pad_pub.modem:open(50202)
+        pad_pub.modem:open(50211)
+
+        local vip_streamer = pad_vip:require("tactical_streamer").create({
+            padId = "PAD_VIP_02", facilityId = "PAD_VIP_02", mode = "STATIC",
+            approachHeading = 180.0, safeDescentRate = 1.0, clearanceZoneRadius = 5.0,
+            channels = { sectorFacilityChannel = 50202, tacticalChannel = 50212 }
+        })
+        local vip_fsm = pad_vip:require("pad_fsm").create({
+            padId = "PAD_VIP_02", facilityId = "PAD_VIP_02", mode = "STATIC",
+            channels = { sectorFacilityChannel = 50202, tacticalChannel = 50212 }
+        }, vip_streamer, true)
+        pad_vip.modem:open(50202)
+        pad_vip.modem:open(50212)
+
+        local facility_client = fcp:require("facility_client")
+        local fcp_fc = facility_client.init({ safety = { maxApproachRetries = 3 } })
+        fcp.modem:open(50003)
+        fcp.modem:open(50201)
+        fcp.modem:open(50212)
+
+        -- 1. Beacon public-only free pad advertisement check (total=2, free=1)
+        local beacon_pkt = bc:build_sector_beacon(inv, gac_cfg.surfaceWind, "OPERATIONAL")
+        assert_eq(beacon_pkt.payload.facilitiesSummary.totalLandingPads, 2)
+        assert_eq(beacon_pkt.payload.facilitiesSummary.freeLandingPads, 1)
+
+        -- 2. Review Focus Check: Emergency craft arriving while PAD_PUB_01 is FREE must select PAD_PUB_01 (not PAD_VIP_02)
+        local early_emg_pad, early_emg_err = allocation_engine.select_best_pad(inv:get_all_facilities(), {
+            aircraftId = "EMG_EARLY_01",
+            airframeType = "VECTORED_VTOL",
+            craftWeight = 12000,
+            craftRadius = 4.5,
+            currentPos = { x = 1200, y = 80, z = -800 },
+            isEmergency = true
+        }, gac_cfg.surfaceWind)
+        assert_nil(early_emg_err)
+        assert_not_nil(early_emg_pad)
+        assert_eq(early_emg_pad.facilityId, "PAD_PUB_01")
+
+        -- 3. Unprivileged craft requesting preferredFacilityId = "PAD_VIP_02" while PAD_PUB_01 is FREE is redirected to PAD_PUB_01
+        local reg1_assign, reg1_err = fsm:handle_aircraft_checkin({
+            ver = "1.9.5",
+            domainId = "REGULAR_VTOL_01",
+            seq = 1,
+            type = "MSG_GAC_CHECKIN_REQ",
+            time = 2010,
+            payload = {
+                sectorId = gac_cfg.sectorId,
+                aircraftId = "REGULAR_VTOL_01",
+                craftWeight = 12000,
+                craftRadius = 4.5,
+                currentPos = { x = 1200, y = 80, z = -800 },
+                airframeType = "VECTORED_VTOL",
+                preferredFacilityId = "PAD_VIP_02",
+                isEmergency = false
+            }
+        }, gac_cfg.surfaceWind)
+        assert_nil(reg1_err)
+        assert_not_nil(reg1_assign)
+        assert_eq(reg1_assign.payload.facilityId, "PAD_PUB_01")
+
+        -- Mark PAD_PUB_01 as OCCUPIED after REGULAR_VTOL_01 lands
+        fsm:handle_facility_update({
+            ver = "1.9.5",
+            domainId = "PAD_PUB_01",
+            seq = 2,
+            type = "MSG_ATC_FACILITY_UPDATE",
+            time = 2050,
+            payload = {
+                facilityId = "PAD_PUB_01",
+                status = "OCCUPIED",
+                currentCraft = "REGULAR_VTOL_01"
+            }
+        })
+        assert_eq(inv:get_summary().freeLandingPads, 0)
+        assert_eq(inv:get_facility("PAD_VIP_02").status, "FREE")
+
+        -- 4. Unprivileged craft REGULAR_VTOL_02 rejected with FACILITY_DEDICATED at both Tier-1 Handoff and Tier-2 Check-In
+        local handoff_ack = fsm:handle_tower_handoff_req({
+            ver = "1.9.5",
+            domainId = "TOWER_SECTOR_00",
+            seq = 10,
+            type = "MSG_ATC_SECTOR_HANDOFF_REQ",
+            time = 2060,
+            payload = {
+                sectorId = gac_cfg.sectorId,
+                aircraftId = "REGULAR_VTOL_02",
+                airframeType = "VECTORED_VTOL",
+                craftWeight = 12000,
+                craftRadius = 4.5,
+                isEmergency = false
+            }
+        })
+        assert_eq(handoff_ack.payload.status, "REJECTED")
+        assert_eq(handoff_ack.payload.rejectReason, "FACILITY_DEDICATED")
+
+        fcp.modem:transmit(50201, 50201, {
+            ver = "1.9.5",
+            domainId = "REGULAR_VTOL_02",
+            seq = 11,
+            type = "MSG_GAC_CHECKIN_REQ",
+            time = 2070,
+            payload = {
+                sectorId = gac_cfg.sectorId,
+                aircraftId = "REGULAR_VTOL_02",
+                craftWeight = 12000,
+                craftRadius = 4.5,
+                currentPos = { x = 1200, y = 80, z = -800 },
+                airframeType = "VECTORED_VTOL",
+                preferredFacilityId = "PAD_VIP_02",
+                isEmergency = false
+            }
+        })
+        bus:step(0.05)
+
+        local gac_deny_in = gac.modem:drain()
+        assert_eq(#gac_deny_in, 1)
+        local deny_assign, deny_clr = fsm:handle_aircraft_checkin(gac_deny_in[1].payload, gac_cfg.surfaceWind)
+        assert_nil(deny_assign)
+        assert_not_nil(deny_clr)
+        assert_eq(deny_clr.payload.status, "DENIED")
+        assert_eq(deny_clr.payload.reason, "FACILITY_DEDICATED")
+
+        gac.modem:transmit(50201, 50201, deny_clr)
+        bus:step(0.05)
+
+        local fcp_deny_in = fcp.modem:drain()
+        assert_eq(#fcp_deny_in, 1)
+        facility_client.on_atc_clearance(fcp_fc, {
+            status = fcp_deny_in[1].payload.payload.status,
+            reason = fcp_deny_in[1].payload.payload.reason
+        }, { x = 1200, y = 80, z = -800 }, 2075)
+        assert_eq(fcp_fc.atcStatus, "DENIED")
+
+        -- 5. Emergency aircraft MAYDAY_VTOL_99 commandeers dedicated PAD_VIP_02 when all public pads are OCCUPIED
+        fcp.modem:transmit(50201, 50201, {
+            ver = "1.9.5",
+            domainId = "MAYDAY_VTOL_99",
+            seq = 20,
+            type = "MSG_GAC_CHECKIN_REQ",
+            time = 2100,
+            payload = {
+                sectorId = gac_cfg.sectorId,
+                aircraftId = "MAYDAY_VTOL_99",
+                craftWeight = 14000,
+                craftRadius = 5.0,
+                currentPos = { x = 1205, y = 78, z = -802 },
+                airframeType = "VECTORED_VTOL",
+                isEmergency = true
+            }
+        })
+        bus:step(0.05)
+
+        local gac_emg_in = gac.modem:drain()
+        assert_eq(#gac_emg_in, 1)
+        local emg_assign, emg_err = fsm:handle_aircraft_checkin(gac_emg_in[1].payload, gac_cfg.surfaceWind)
+        assert_nil(emg_err)
+        assert_not_nil(emg_assign)
+        assert_eq(emg_assign.payload.facilityId, "PAD_VIP_02")
+        assert_eq(emg_assign.payload.aircraftId, "MAYDAY_VTOL_99")
+        assert_eq(emg_assign.payload.tacticalChannel, 50212)
+
+        gac.modem:transmit(50202, 50202, emg_assign)
+        bus:step(0.05)
+
+        -- PAD_VIP_02 processes slot assignment and replies MSG_ATC_SLOT_ACK
+        pad_pub.modem:drain()
+        local vip_assign_in = pad_vip.modem:drain()
+        assert_eq(#vip_assign_in, 1)
+        local vip_acks = vip_fsm:handle_backbone_message(vip_assign_in[1].payload, 2105)
+        assert_eq(#vip_acks, 1)
+        assert_eq(vip_acks[1].type, "MSG_ATC_SLOT_ACK")
+        assert_eq(vip_acks[1].payload.status, "ACCEPTED")
+        assert_eq(vip_fsm:get_state(), "APPROACH_STATIC")
+
+        pad_vip.modem:transmit(50202, 50202, vip_acks[1])
+        bus:step(0.05)
+
+        -- GAC grants approach clearance on 50201 for commandeered PAD_VIP_02
+        local gac_vip_ack = gac.modem:drain()
+        assert_eq(#gac_vip_ack, 1)
+        local emg_clr = fsm:handle_pad_slot_ack(gac_vip_ack[1].payload)
+        assert_not_nil(emg_clr)
+        assert_eq(emg_clr.payload.status, "CLEARED")
+        assert_eq(emg_clr.payload.assignedFacilityId, "PAD_VIP_02")
+        assert_eq(emg_clr.payload.assignedTacticalChannel, 50212)
+
+        gac.modem:transmit(50201, 50201, emg_clr)
+        bus:step(0.05)
+
+        local fcp_emg_clr = fcp.modem:drain()
+        assert_eq(#fcp_emg_clr, 1)
+        local emg_p = fcp_emg_clr[1].payload.payload
+        facility_client.on_atc_clearance(fcp_fc, {
+            status = emg_p.status,
+            padId = emg_p.assignedFacilityId,
+            padChannel = emg_p.assignedTacticalChannel,
+            padMobility = "STATIC",
+        }, { x = 1205, y = 78, z = -802 }, 2110)
+        assert_eq(fcp_fc.atcStatus, "CLEARED")
+        assert_eq(fcp_fc.activePadId, "PAD_VIP_02")
+        assert_eq(fcp_fc.padChannel, 50212)
+
+        -- Touchdown on PAD_VIP_02 transitions pad and GAC inventory to OCCUPIED
+        fcp.modem:transmit(50212, 50212, {
+            ver = "1.9.5",
+            domainId = "MAYDAY_VTOL_99",
+            seq = 21,
+            type = "MSG_TOUCHDOWN_COMPLETE",
+            time = 2150,
+            payload = { facilityId = "PAD_VIP_02", craftState = "GROUND_IDLE" }
+        })
+        bus:step(0.05)
+
+        local vip_td_in = pad_vip.modem:drain()
+        assert_eq(#vip_td_in, 1)
+        local vip_upds = vip_fsm:handle_tactical_message(vip_td_in[1].payload, 2155)
+        assert_eq(#vip_upds, 1)
+        assert_eq(vip_fsm:get_state(), "OCCUPIED")
+
+        pad_vip.modem:transmit(50202, 50202, vip_upds[1])
+        bus:step(0.05)
+
+        local gac_vip_upd = gac.modem:drain()
+        assert_eq(#gac_vip_upd, 1)
+        local sec_status = fsm:handle_facility_update(gac_vip_upd[1].payload)
+        assert_not_nil(sec_status)
+        assert_eq(inv:get_facility("PAD_VIP_02").status, "OCCUPIED")
+        assert_eq(inv:get_facility("PAD_VIP_02").currentCraft, "MAYDAY_VTOL_99")
+    end)
 end)
