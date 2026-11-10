@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), E2E 다중노드 시뮬레이션 및 돌연변이 테스트 체계(`TASK-111`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료, 단위 테스트(`293/293 PASS, 12개 타겟`), E2E 시뮬레이션(`6/6 PASS`), 돌연변이 살상률(`20/20 KILLED, 100.0%`), 하네스 회귀(`33/33 PASS`), 14대 사양서 무결성(`8 Implemented, 6 Approved`) 확보
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), 구버전 용어 정비(`TASK-007`, `TASK-008`), GDrive 배포 체계(`TASK-009`), E2E 다중노드 시뮬레이션 및 돌연변이 테스트 체계(`TASK-111`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료. 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조.
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm` 일정 보류)
@@ -39,8 +39,12 @@ Create_Aeroneutics/
 ├── GEMINI.md                              # 작업 간 동적 컨텍스트 스냅샷 (<= 80줄)
 ├── AGENTS.md                              # 에이전트 불변 행동 헌장
 ├── installer.lua                          # 통합 코드베이스 설치 프로그램 (화면 직접 업로드/플로피/wget)
+├── config/gdrive_mapping.json             # GDrive 배포 파일 ID 매핑 (SSOT)
+├── dist_gdrive/                           # GDrive 업로드 격리 스테이징 (sync_gdrive.py 생성)
 │
 ├── docs/                                  # 시스템 사양서 및 아키텍처 문서
+│   ├── guides/                            # 운영 가이드 (GDRIVE_DEPLOYMENT_GUIDE.md)
+│   ├── superpowers/plans/                 # 태스크별 실행 계획서
 │   ├── system/                            # 마스터 ICD 및 시스템 전역 관계도
 │   │   ├── AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md
 │   │   └── SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md
@@ -81,6 +85,7 @@ Create_Aeroneutics/
 │   ├── run_e2e_tests.py                   # 멀티노드 E2E 패킷 시뮬레이션 러너
 │   ├── run_mutation_tests.py              # 테스트 실효성 검증용 돌연변이 테스터 (살상률 측정)
 │   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
+│   ├── sync_gdrive.py                     # GDrive 스테이징·동기화·검증 CLI
 │   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
 │   ├── verify_all_specs.py                # 14대 사양서 전수 무결성 검증기
 │   └── verify_spec_status.py              # 사양서 상태 분포 검증기
@@ -124,6 +129,11 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 ## 🛠️ 개발 및 검증 명령어 (Standard Commands)
 
 ### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
+Windows PowerShell 5.1 (`&&` 미지원):
+```powershell
+python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/validate_lua_syntax.py }
+```
+bash / PowerShell 7+:
 ```bash
 python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_all_specs.py && python tools/validate_lua_syntax.py
 ```
@@ -168,7 +178,7 @@ python tools/verify_all_specs.py
   ```
 
 ### 6. 사양서 상태 분포 검증
-14대 활성 사양서의 상태 분포(8 Implemented, 6 Approved)를 검사합니다:
+14대 활성 사양서의 상태 분포(9 Implemented, 5 Approved)를 검사합니다:
 ```bash
 python tools/verify_spec_status.py
 ```
@@ -177,6 +187,13 @@ python tools/verify_spec_status.py
 전체 Lua 소스(126개 파일)의 Cobalt 런타임 문법 및 허용/차단 모드 네임스페이스 규칙 준수 여부를 검사합니다:
 ```bash
 python tools/validate_lua_syntax.py
+```
+
+### 8. 인게임 배포 (GDrive)
+배포 파일을 `dist_gdrive/`에 스테이징하고 Google Drive 공식 폴더와 동기화합니다 (`gdrive` CLI PATH 등록 필요). 상세 절차: [docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md](docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md)
+```powershell
+python tools/sync_gdrive.py stage
+python tools/sync_gdrive.py sync --dry-run
 ```
 
 ---

@@ -38,4 +38,5 @@ The user has ADHD; protect their attention by preventing both failure modes:
   "world-class", "best-in-class", "flawless", "zero-defect", "bulletproof", "guarantee(s)",
   측정 근거 없는 시간 주장("1ms 내 원복", "within 5 ms").
 - 대신 쓸 것: 실제 측정값과 측정 방법, 또는 검증 스크립트 실행 출력에 근거한 범위가 명확한 사실 서술.
+- 도구 출력 인용 시: 원문 문구 대신 수치형 결과(예: `0 Errors, 0 Warnings`, `294/294 PASS`)와 실행 명령을 함께 기재한다.
 <!-- no-overclaim:end -->

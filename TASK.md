@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-10  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-114 / 활성 대기: TASK-010, 116, 117, 201, 202)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-114 / 활성 대기: TASK-010, 011, 012, 116, 117, 118, 119, 120, 201, 202)
 
 ---
 
@@ -32,6 +32,22 @@
   - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성
   - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증
 
+- [ ] **TASK-011: [인프라 매뉴얼] 지상 관제 및 정비 도메인 플레이북 2차 확장 (Alignment, GCS, GAC, Landing Pad)** (`playbook/0_development/alignment.md`, `playbook/0_infra/{gcs,gac,landing_pad}.md`)
+  - **선행 의존성**: `TASK-010` 완료 필요 (표준 7대 섹션 템플릿 `playbook/README.md` 및 `tools/verify_playbooks.py` 검증 체계 활용)
+  - **배경 및 필요성**: `TASK-010`은 핵심 5종(GPS, VAS, TCA, FCP, AMM)에 집중되어 있으나, 실제 인게임 운용 시 설정·조작이 가장 까다로운 격납고 동역학 캘리브레이션(Alignment)과 지상 관제소/패드 셋업(GCS, GAC, Landing Pad) 매뉴얼 보강 필요
+  - **주요 작업**:
+    - [ ] **TASK-011-1**: 격납고 동역학 캘리브레이션 매뉴얼(`playbook/0_development/alignment.md`) 작성
+    - [ ] **TASK-011-2**: 중앙 지상 관제소 매뉴얼(`playbook/0_infra/gcs.md`) 작성
+    - [ ] **TASK-011-3**: 섹터 관제·착륙패드 매뉴얼(`playbook/0_infra/gac.md`, `playbook/0_infra/landing_pad.md`) 작성
+    - [ ] **TASK-011-4**: `tools/verify_playbooks.py` 7대 섹션·링크·인가 목록 정적 검증 통과
+
+- [ ] **TASK-012: [CI/CD 정적 가드] 인스톨러 매니페스트(`manifest.lua`) · GDrive 맵 · 실제 소스 트리 간 3자 정합성 검증기 구현** (`tools/verify_manifest_sync.py`)
+  - **사양서 상태**: 사양서 변경 불필요 (정적 검증 CLI 구축; `TASK-009` GDrive 매핑 및 `TASK-116` 카테고리 규격 연동)
+  - **배경 및 필요성**: `TASK-009`(GDrive 파일 매핑)와 `TASK-116`(인스톨러 카테고리 개편) 도입 시, 향후 새로운 Lua 모듈이 `src/`에 추가되거나 파일명이 바뀔 때 `src/0_development/installer/modules/manifest.lua` 또는 `config/gdrive_mapping.json` 갱신을 누락하는 휴먼 에러 방지 필요
+  - **주요 작업**:
+    - [ ] **TASK-012-1**: `tools/verify_manifest_sync.py` 정적 검증기 구현 — `src/` 실제 런타임 파일 목록, `src/0_development/installer/modules/manifest.lua` 등록 패키지 파일 목록, `config/gdrive_mapping.json` GDrive 매핑 메타데이터 간 누락·고아 파일(Orphan File)·카테고리 미지정 항목 전수 검사
+    - [ ] **TASK-012-2**: 표준 One-Liner 검증 파이프라인 편입 및 검증
+
 - [ ] **TASK-116: 통합 인스톨러(installer.lua) 역할/도메인별 TUI 폴더 탐색 구조 개편** (`installer.lua`, `src/0_development/installer/`)
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요)
   - **배경 및 필요성**: 온보드/지상 모듈(FCP, VAS, ASA, TCA, GPS, GCS, Runway 등) 확장에 따라 전체 패키지 목록이 길어져 발생하는 TUI 내 패키지 탐색 복잡도 해소
@@ -43,6 +59,28 @@
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 및 대상 경로 확정 필요)
   - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
   - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거
+
+- [ ] **TASK-118: [검증 확장] `ADVANCED_VTOL` 및 GAC 전용 패드/비상 징발 E2E 시뮬레이션 & 돌연변이 테스트 확장** (`tests/e2e/`, `tools/run_mutation_tests.py`)
+  - **사양서 상태**: 사양서 변경 불필요 (구현 완료된 TASK-114·TASK-115 대상 멀티노드 E2E 및 돌연변이 검증 확장)
+  - **배경 및 필요성**: TASK-111(E2E 6개 시나리오, 돌연변이 20개) 구축 이후 구현 완료된 TASK-115(`ADVANCED_VTOL` 6-DoF 의사역행렬 믹서 및 짐벌 펄스 정렬)와 TASK-114(GAC 전용 패드 격리 및 비상 징발)는 단위 테스트만 존재하고 멀티노드 E2E 시나리오 및 돌연변이 타겟에는 아직 미통합 상태
+  - **주요 작업**:
+    - [ ] **TASK-118-1**: `tests/e2e/test_e2e_advanced_vtol_flight.lua` (시나리오 7) 신설 — 격납고 짐벌 X/Y 펄스 캘리브레이션 → FCP/VAS/TCA `ADVANCED_VTOL` 6-DoF 폐루프 유도 비행 검증
+    - [ ] **TASK-118-2**: `tests/e2e/test_e2e_facility_landing.lua` 확장 — 전용 패드(`dedicatedCraftIds`) 타 기체 접근 거부(`FACILITY_DEDICATED`) 및 비상 상태(`EMERGENCY`) 시 전용 패드 강제 징발 시퀀스 검증
+    - [ ] **TASK-118-3**: `tools/run_mutation_tests.py` 확장 — `ADVANCED_VTOL` 믹서 및 GAC 전용/비상 분배 엔진 돌연변이 타겟 추가
+
+- [ ] **TASK-119: [OTA 보안/안정성] 슬레이브 노드 부트스트랩 OTA 에이전트 및 원자적 롤백(Atomic Rollback) 가드 구현** (`src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{tca,asa,vas}/`)
+  - **사양서 상태**: 미작성 / 연관 사양서 연동 필요 (TASK-117 OTA 프로토콜 Draft → Approved 및 VAS·TCA·ASA 상태 게이트 반영 필요)
+  - **배경 및 필요성**: TASK-117(OTA 업데이트 서버) 구현 시 비행 중이거나 추진기 가동 중인 기체가 OTA 패킷을 받아 재부팅하면 추락 위험이 있으며, 무선 패킷 유실로 손상된 파일 상태로 리부트되면 기체 내부 컴퓨터를 수동 복구해야 하는 벽돌(Brick) 장애 발생
+  - **주요 작업**:
+    - [ ] **TASK-119-1**: 착륙/안전 인터록 구현 — 기체가 `DISARMED` 또는 격납고 정지 상태일 때만 OTA 수신·적용을 허용하는 상태 게이트 구현 (`src/1_control/{tca,asa,vas}/`)
+    - [ ] **TASK-119-2**: 원자적 스테이징 및 CRC/해시 검증 구현 — 수신 파일을 `/ota_staging/`에 우선 기록하고 체크섬 일치 시에만 본 경로로 교체하며, 부팅 직후 런타임 에러 발생 시 이전 버전(`/ota_backup/`)으로 자동 복구하는 워치독 래퍼를 `startup.lua` 생성기에 내장 (`src/0_development/installer/modules/startup_generator.lua`)
+
+- [ ] **TASK-120: [개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
+  - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요; `Base+1` `MSG_ATTITUDE_CMD`·`Base+2` `MSG_FLIGHT_TELEMETRY` 패시브 감청 기준, 필요 시 진단 필드 확장 검토)
+  - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 인게임 비행 중 발생하는 미세 자세 진동, 짐벌 포화(Saturation), 슬루율 제한 현상을 정밀 튜닝하기 위한 시계열 로그 수집 수단 부재
+  - **주요 작업**:
+    - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프
+    - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력
 
 - [ ] **TASK-201: FCP 외루프 유도 프리미티브(LOITER 선회 반경 제어 & POI_HOLD 관심점 지향) 확장**
   - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.15.0 Implemented → 목표 v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.25.0 Approved → 유도 프리미티브 반영 개정 필요)
