@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v1.4.1` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **최종 수정일 (Date)** | `2026-11-10` |
 | **구현 코드 (Source)** | `src/0_infra/gac/` |
 | **주관 도메인 (Domain)** | 국지 에이프런 총괄 관제사 (Ground Apron Controller / GAC) |
 

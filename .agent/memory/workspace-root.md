@@ -4,6 +4,98 @@
 
 ---
 
+## 2026-11-10 — GAC 전용 시설물(Dedicated Facility) 런타임 및 TUI 확장 (TASK-114)
+
+- **결정 배경**: `GAC_PROGRAM_SPECIFICATION_AND_ICD.md` v1.4.1(전속 착륙패드/도킹암 보호, 비콘 공용 패드 분리, `FACILITY_DEDICATED` 거절, TUI `[DED: ...]`/`PUBLIC` 관리)에 맞춰 `src/0_infra/gac/` 런타임을 완결하고 사양서를 `Implemented`로 승격함.
+- **반영 내역**:
+  1. `config_loader.lua`·`facility_inventory.lua`: `dedicatedCraftIds`/`dedicatedAirframeTypes` 스키마 검증(`validate_dedicated_field`), 전용 시설 판별(`is_facility_dedicated`/`is_dedicated`/`update_dedicated`), `get_summary()` 공용 가용 패드·활주로(`freeLandingPads`/`freeRunways`) 분리 (`37c45a4`).
+  2. `allocation_engine.lua`·`gac_fsm.lua`: 비인가 `preferredFacilityId` 및 공용 패드 부재 시 `FACILITY_DEDICATED` 거절 분기, `handle_tower_handoff_req` `craftReq` 필터 전달 (`f46d0ce`).
+  3. `tui_view.lua`·`main.lua`: `format_dedicated_badge` Tab 2 Cyan 하이라이트, 비동기 인라인 프롬프트(`[A]`/`[P]`), `apply_operator_action` 및 로컬 백본 `MSG_ATC_FACILITY_UPDATE` 동기화 (`ac98618`, `3825f7e`).
+- **검증 (2026-11-10 실행)**: 단위 306/306(GAC 44/44), E2E 6/6, 돌연변이 20/20 KILLED(100.0%), 하네스 41/41, 사양서 9 Implemented / 5 Approved(0 Errors/0 Warnings).
+
+---
+
+## 2026-11-10 — 루트 4대 마크다운 Mode B 감사 및 Tier 3 메모리 백필
+
+- **결정 배경**: 감사 결과 `README.md` 수치 낡음(단위 293 → 실측 294, 하네스 33 → 실측 41), Windows PowerShell 5.1에서 `&&` One-Liner ParserError, `TASK.md` 과장 표현 3건 및 ICD 버전 낡음(v1.24.0 → 실제 v1.25.0), `GEMINI.md` Section 1 규격 초과(약 11줄·후보 7개), 본 아카이브의 TASK-113 이후 9개 마일스톤 누락을 확인함. 점수: AGENTS 88 / GEMINI 76 / TASK 70 / README 69.
+- **반영 내역**:
+  1. 본 아카이브에 2026-11-08 ~ 2026-11-09 마일스톤 9개 소급 기록.
+  2. `GEMINI.md` Section 1을 다음 액션 3개로 압축, GDrive 배포 경로·명령 추가, PowerShell 5.1 체이닝 및 `/lib/avionics_sensors.lua` 예외 Gotcha 추가, 사양서 중복 Gotcha 3줄(VECTORED_VTOL·GCS·AMM) 제거, 인스톨러 이중 다운로드 표기 `GitHub/GCS` → `GitHub raw / Google Drive` 정정 — 해당 내용은 FCP/GCS/AMM 사양서와 아래 TASK-110/107/200 항목에 보존.
+  3. `AGENTS.md` 과장 금지 절에 도구 출력 인용 규칙 1줄 추가 (사용자 승인 후 반영).
+  4. `TASK.md` TASK-114 `[-]` 전환, TASK-201/202 사양서 현재/목표 버전 분리, TASK-116/117 사양서 선행 조건 명시, TASK-301 Phase 3 섹션 분리, 과장 표현 4건 교체 및 `100% CLEAN` 5건을 `0 Errors/0 Warnings`로 통일.
+  5. `README.md` 수치를 GEMINI §3 참조로 대체, PowerShell 5.1 호환 One-Liner, `config/`·`dist_gdrive/`·`docs/guides/`·`docs/superpowers/plans/`·`tools/sync_gdrive.py` 구조도 보강, GDrive 배포 절 추가.
+- **검증 기준선 (2026-11-10 실행)**: 단위 294/294, E2E 6/6, 하네스 41/41, 사양서 8 Implemented / 6 Approved, Lua 126 파일 문법 PASS. 돌연변이 테스트는 재실행하지 않음.
+
+---
+
+## 2026-11-09 — GDrive 배포 디렉토리 재지정 및 파일 관리 체계 구축 (TASK-009)
+
+- **결정 배경**: `installer.lua`의 Google Drive 다운로드 경로를 지원하기 위해 업로드 대상을 저장소 구조와 분리된 격리 스테이징으로 관리하고, 파일 ID 매핑을 단일 원천으로 고정할 필요가 있었음.
+- **반영 내역**: `dist_gdrive/` 스테이징 레이아웃(커밋 `8bf2aa9`), 인스톨러 구조화 `gdrive_mapping.json` 파싱(`8431cab`), `tools/sync_gdrive.py` `stage`/`sync`/`status`/`verify` CLI(`66834c6`, 외부 `gdrive` CLI 필요), 공식 폴더 `1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9`로 부트스트랩 7종·인스톨러·센서 라이브러리 동기화 및 ID 임베딩(`decb69a`), 운영 가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`(`90bcc0a`).
+- **검증**: 단위 294/294, 하네스 41/41, E2E 6/6, 돌연변이 20/20 KILLED.
+
+---
+
+## 2026-11-09 — 구버전 명칭(VAS-Core, VAS-Align, VAC-Align) 전면 치환 (TASK-008)
+
+- **결정 배경**: TASK-007 이후에도 `VAS-Core`/`VAS-Align`/`VAC-Align`/`VAC-Core` 및 TCA 내 `VAC` 링크 스트림 명칭이 잔존하여 단일 표준(`VAS`, `Alignment`)으로 정리함.
+- **반영 내역**: `tests/harness/test_terminology_guard.py` 금지 패턴 추가(`b471ba2`), 런타임 모듈 치환(`4991488`), TCA 테스트 단언 갱신(`3c83f2a`), 사양서 7종 치환(`aca89bb`), `verify_all_specs.py` Rule 8 확장.
+- **검증**: 단위 293/293, E2E 6/6, 돌연변이 20/20, 하네스 36/36.
+
+---
+
+## 2026-11-09 — ADVANCED_VTOL 짐벌 벡터 추진 기종 전계층 연동 (TASK-115)
+
+- **결정 배경**: 2D 짐벌 벡터 추진기(`vector_thruster` 계열)를 탑재한 고기동 기종을 기존 VECTORED_VTOL과 분리된 기종 정책으로 수용하기 위함.
+- **반영 내역**: 사양서 6종 개정(ICD v1.25.0, 구조도 v2.11.0, TCA v1.11.0, VAS v1.18.0, FCP v1.15.0, Alignment v2.6.0, `7ee5d40`), TCA `setVector` 및 페일세이프 노즐 `(0, 0)` 복귀(`0eefd93`), Alignment 짐벌 펄스 및 $B^\dagger$ 산출(`ed68d37`), VAS 6-DoF 의사역행렬 믹서·안티와인드업(`61ae050`), FCP `advanced_vtol_driver.lua`(`95ba854`), GAC/Landing Pad/GCS/Installer 호환(`109c8aa`), 병합 `8c48468`.
+- **검증**: 단위 293/293, E2E 6/6, 돌연변이 20/20, 하네스 33/33.
+
+---
+
+## 2026-11-08 — 구버전 명칭(UAP/SAS/WAP) 척결 및 용어 회귀 가드 구축 (TASK-007)
+
+- **결정 배경**: 공력 구동계/비행 제어 명칭이 `UAP`/`SAS`/`WAP`와 `ASA`/`FCP`로 혼재하여 패킷 `podId`, 헬스 키, 모듈 파일명을 단일화함 (Zero-Fallback, 듀얼키 미보존).
+- **반영 내역**: 회귀 가드 `test_terminology_guard.py`(`a51493e`), `verify_all_specs.py` Rule 8(`26bf042`), 런타임 식별자·모듈 개명 22개 파일(`a6c6311`), 사양서 14종 용어 정비 및 SemVer 승격(`4a8e26b`, `e3224bd`), 병합 `f7eb99b`.
+- **검증**: 단위 248/248, E2E 6/6, 돌연변이 20/20, 하네스 33/33.
+
+---
+
+## 2026-11-08 — 멀티노드 E2E 시뮬레이션 및 돌연변이 테스트 체계 구축 (TASK-111)
+
+- **결정 배경**: 단위 테스트만으로는 노드 간 패킷 시퀀스 결함을 검출할 수 없어 다중 노드 통합 검증 계층이 필요했음.
+- **반영 내역**: `harness/simulation/virtual_bus.lua`, `_ENV` 격리 `node_sandbox.lua`, `tools/run_e2e_tests.py`(6개 시나리오), `tools/run_mutation_tests.py`(20개 결정론적 결함, 기준 90.0%, `7315403`), 원본 바이트·개행 보존 복원(`58d6c58`). 커밋 `646d831` ~ `81e584b`, 병합 `0ca7148`.
+- **운용 원칙**: 노드별 `_ENV` 격리, 채널 배타성, 종료 시 `os.shutdown()` 핸드셰이크.
+
+---
+
+## 2026-11-08 — GCS 채널 관리자(CH 50000) 및 지상 비행 지휘 콘솔 (TASK-107)
+
+- **결정 배경**: 40채널 블록 할당과 원격 C2를 담당할 중앙 지상 관제 노드가 필요했음.
+- **반영 내역**: `CH 50000` 부트스트랩 블록 스티키 영속화, `Base+0` 원격 C2 오버라이드, `Base+1` 하드 `E_STOP` 직결 셧다운, `Base+3` 텔레메트리 캐시 및 51x19 무깜빡임 분할 TUI (`src/0_infra/gcs/`, 커밋 `e9febe6` ~ `e8c25b3`).
+
+---
+
+## 2026-11-08 — FCP VECTORED_VTOL 외루프 유도 고도화 (TASK-110)
+
+- **결정 배경**: VECTORED_VTOL 외루프의 축 결합 및 이착륙 시퀀스 정밀도 개선.
+- **반영 내역**: Surge/Sway/Heave 3축 완전 PID + Anti-windup, CRUISE 한정 TILT_ASSISTED 피치 슬루율 15°/s, 안전고도 미달 시 수평 차단 수직 이륙, 패드 0.5m 정렬 2단계 감속 터치다운 (`src/2_guidance/fcp/`, 커밋 `21f4e76` ~ `e6b22c8`).
+
+---
+
+## 2026-11-08 — 온보드 제어기 헤드리스 기본화 및 parallel 디버그 TUI 분리 (TASK-113)
+
+- **결정 배경**: 터미널 렌더링 부하가 VAS/TCA/ASA 20Hz 제어 루프를 블로킹하는 문제 제거.
+- **반영 내역**: 헤드리스 기본 구동, `config.json`의 `debug: true` 시에만 `parallel` 기반 비동기 디버그 TUI 구동, ASA 기본 프레임워크(`Base+11` 수신 루프, 300ms Safe Glide Trim) 구축 (`src/1_control/`, 커밋 `b5ee552` ~ `b2c5d5a`).
+
+---
+
+## 2026-11-08 — AMM 임무 관리자 및 Cockpit MFD 통합 단말 (TASK-200)
+
+- **결정 배경**: TASK-106(Cockpit MFD)을 AMM에 병합해 조종석 단말을 단일화함.
+- **반영 내역**: 51x19 분할 TUI(5Hz HUD + 미션 큐/C2), 순차 웨이포인트 큐(2D 수평 15m 자동 전환), JSON 영속화, GCS C2 무반향 감청, E-STOP/HOLD 선점 중재, 핫키 및 CLI (`src/3_planning/amm/`, 커밋 `3b2907a`).
+
+---
+
 ## 2026-11-08 — VAS 센서 파이프라인의 CC:Avionics 표준 API 동기화 및 3축 속도/고도 정합화 (TASK-112)
 
 - **결정 배경**: VAS의 내루프 실시간 동역학 제어용 `sensor_pipeline.lua`를 전역 표준 라이브러리(`/lib/avionics_sensors.lua`)와 정합화하고, 공식 CC:Avionics 센서 메서드(`getHeight()`, 1축 스칼라 `getVelocity()`의 3축 합성, 짐벌 오일러/각속도 벡터) 및 3D 기하 레버암 오프셋 보정을 통합 검증함.
