@@ -313,9 +313,15 @@ function tui_view.updateSelection(termObj, items, prevIndex, nextIndex, scrollOf
     local maxEndY = h - 4
     local maxRows = math.max(1, maxEndY - startY + 1)
     local curScroll = math.floor(tonumber(scrollOffset) or 0)
-    local firstIdx, lastIdx, nextScroll = tui_view.computeViewport(#list, nextIndex, maxRows, curScroll)
+    local nextSel = math.floor(tonumber(nextIndex) or 1)
+    local prev = tonumber(prevIndex)
+    if not prev then
+        return false
+    end
+    prev = math.floor(prev)
+    local firstIdx, lastIdx, nextScroll = tui_view.computeViewport(#list, nextSel, maxRows, curScroll)
 
-    if nextScroll ~= curScroll or prevIndex < firstIdx or prevIndex > lastIdx then
+    if nextScroll ~= curScroll or prev < firstIdx or prev > lastIdx then
         return false
     end
 
@@ -333,14 +339,21 @@ function tui_view.updateSelection(termObj, items, prevIndex, nextIndex, scrollOf
         drawRow(termObj, y, rowText, fg, bg, w, h, renderState)
     end
 
-    if prevIndex ~= nextIndex then
-        drawItemAt(prevIndex, false)
-        drawItemAt(nextIndex, true)
+    if prev ~= nextSel then
+        drawItemAt(prev, false)
+        drawItemAt(nextSel, true)
     end
 
     if clearStatusRow then
         local blankRow = (w == 51) and BLANK_51 or repeatChar(" ", w)
         drawRow(termObj, h, blankRow, palette.fg, palette.bg, w, h, renderState)
+    end
+
+    if termObj.setTextColor and renderState.fg ~= palette.fg then
+        termObj.setTextColor(palette.fg)
+    end
+    if termObj.setBackgroundColor and renderState.bg ~= palette.bg then
+        termObj.setBackgroundColor(palette.bg)
     end
 
     return true

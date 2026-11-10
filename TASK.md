@@ -110,14 +110,14 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
 
-- [x] **TASK-116: 통합 인스톨러(`installer.lua`) 역할/도메인별 TUI 폴더 탐색 구조 개편** (완료일: 2026-11-10, 커밋 `30023fb` ~ `2e1b53a`) (`installer.lua`, `src/0_development/installer/`, `tests/0_development/installer/`, `docs/specs/0_development/installer/`)
+- [x] **TASK-116: 통합 인스톨러(`installer.lua`) 역할/도메인별 TUI 폴더 탐색 구조 개편** (완료일: 2026-11-10) (`installer.lua`, `src/0_development/installer/`, `tests/0_development/installer/`, `docs/specs/0_development/installer/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-116-installer-category-folder-tui.md`
-  - **목적 및 성과**: `51x19` 터미널 12행(`y = 4..15`) 포화를 해소하고 패키지 탐색 복잡도를 낮추기 위해, `INSTALLER_PROGRAM_SPECIFICATION.md` v1.1.0 제정과 `manifest.lua` v1.1.0 6대 도메인 카테고리 그룹화 API(`CATEGORY_ORDER`, `CATEGORIES`, `getCategory`, `listModulesByCategory`, `listCategories`), `tui_view.lua` 12행 뷰포트 스크롤러(`computeViewport`)·카테고리 폴더 렌더러(`renderCategoryMenu`)·증분 커서 갱신(`updateSelection`)·잔상 초기화, `installer_app.lua` 2계층 상태 머신(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU` $\leftrightarrow$ `CONFIRM_*`)을 구현하고 사양서를 `Implemented`로 승격함 (단일 컴퓨터 복합 프리셋 제외, CLI 모드 호환 유지). 단위 314/314 PASS(12개 타겟, `installer` 35/35), E2E 8/8 PASS(7개 시나리오), 돌연변이 25/25 KILLED(100.0%, 기준 90.0%), 하네스 50/50 PASS, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` 15대 사양서(10 Implemented, 5 Approved) PASS, Lua 126/126 PASS.
+  - **목적 및 성과**: `51x19` 터미널 12행(`y = 4..15`) 포화를 해소하고 패키지 탐색 복잡도를 낮추기 위해, `INSTALLER_PROGRAM_SPECIFICATION.md` v1.1.0 제정과 `manifest.lua` v1.1.0 6대 도메인 카테고리 그룹화 API(`CATEGORY_ORDER`, `CATEGORIES`, `getCategory`, `listModulesByCategory`, `listCategories`), `tui_view.lua` 12행 뷰포트 스크롤러(`computeViewport`)·카테고리 폴더 렌더러(`renderCategoryMenu`)·증분 커서 갱신(`updateSelection`, 정상 색상 복원)·잔상 초기화, `installer_app.lua` 2계층 상태 머신(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU` $\leftrightarrow$ `CONFIRM_*`, `Q` 종료 시 색상/커서 복원)을 구현하고 사양서를 `Implemented`로 승격함 (단일 컴퓨터 복합 프리셋 제외, CLI 모드 호환 유지). 단위 318/318 PASS(12개 타겟, `installer` 39/39), E2E 8/8 PASS(7개 시나리오), 돌연변이 25/25 KILLED(100.0%, 기준 90.0%), 하네스 50/50 PASS, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` 15대 사양서(10 Implemented, 5 Approved) PASS, Lua 126/126 PASS.
   - **구현 내용**:
     - [x] **TASK-116-1**: `INSTALLER_PROGRAM_SPECIFICATION.md` v1.1.0 `Approved` 작성 및 `verify_all_specs.py`·`verify_spec_status.py`·`README.md` 등록 (`30023fb`)
     - [x] **TASK-116-2**: `manifest.lua` v1.1.0 도메인 카테고리 레지스트리 및 조회 API 구현, `installer.lua` 바이트 패리티·버전 동기화 (`f23a27d`)
     - [x] **TASK-116-3**: `tui_view.lua` 뷰포트 스크롤/폴더 뷰/증분 선택 및 `installer_app.lua` 2계층 TUI FSM 구현 (`2e1b53a`)
-    - [x] **TASK-116-4**: 전계층 회귀 검증, 사양서 `Implemented` 승격(`10 Implemented, 5 Approved`) 및 컨텍스트 동기화
+    - [x] **TASK-116-4**: 전계층 회귀 검증, 사양서 `Implemented` 승격(`10 Implemented, 5 Approved`), 리뷰 보완(`updateSelection`/종료 색상 복원·경계 통합 테스트 4종 추가·§5.1 정합화) 및 컨텍스트 동기화 (`c320d12` + 후속 수정)
 
 - [x] **TASK-118: [검증 확장] `ADVANCED_VTOL` 및 GAC 전용 패드/비상 징발 E2E 시뮬레이션 & 돌연변이 테스트 확장** (완료일: 2026-11-10, 커밋 `f4d0c1f` ~ `b9211fa`) (`src/1_control/tca/`, `tests/1_control/tca/`, `tests/e2e/`, `tools/run_mutation_tests.py`, `harness/simulation/node_sandbox.lua`, `tests/harness/test_simulation_core.py`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-118-advanced-vtol-gac-e2e-mutation.md`

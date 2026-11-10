@@ -232,6 +232,21 @@ local function stepSelection(tuiView, termObj, items, currentIndex, scrollOffset
     return nextIdx, nil, true
 end
 
+local function resetTerminalOnExit(termObj)
+    if not termObj then return end
+    local c = _G.colors or {}
+    if termObj.setTextColor then
+        termObj.setTextColor(c.white or 1)
+    end
+    if termObj.setBackgroundColor then
+        termObj.setBackgroundColor(c.black or 32768)
+    end
+    if termObj.setCursorPos and termObj.getSize then
+        local _, h = termObj.getSize()
+        termObj.setCursorPos(1, tonumber(h) or 19)
+    end
+end
+
 --- Runs the installer in either non-interactive CLI mode or interactive 51x19 TUI mode.
 -- @param opts table|nil Configuration options
 -- @return boolean success
@@ -331,7 +346,8 @@ function installer_app.run(opts)
                 if type(tuiView.renderCategoryMenu) == "function" then
                     categoryScroll = tuiView.renderCategoryMenu(termObj, categories, categoryIndex, currentSource, installedMap, categoryScroll) or categoryScroll
                 else
-                    tuiView.renderMenu(termObj, activeModules, moduleIndex, currentSource, installedMap)
+                    local flatMods = (type(manifestMod.listModules) == "function" and manifestMod.listModules()) or activeModules
+                    tuiView.renderMenu(termObj, flatMods, moduleIndex, currentSource, installedMap)
                 end
                 if statusMsg then
                     tuiView.renderMessage(termObj, statusLevel, statusMsg)
@@ -356,6 +372,7 @@ function installer_app.run(opts)
             local ch = tostring(p1 or ""):lower()
             if state == "CATEGORY_MENU" then
                 if ch == "q" then
+                    resetTerminalOnExit(termObj)
                     return true, nil
                 elseif ch == "s" then
                     currentSource = tuiView.toggleSource(currentSource)
@@ -365,6 +382,7 @@ function installer_app.run(opts)
                 end
             elseif state == "MODULE_MENU" then
                 if ch == "q" then
+                    resetTerminalOnExit(termObj)
                     return true, nil
                 elseif ch == "b" then
                     state = "CATEGORY_MENU"
@@ -474,6 +492,7 @@ function installer_app.run(opts)
                         needsMessageOnly = true
                     end
                 elseif isQ then
+                    resetTerminalOnExit(termObj)
                     return true, nil
                 end
             elseif state == "MODULE_MENU" then
@@ -492,6 +511,7 @@ function installer_app.run(opts)
                     statusMsg = nil
                     needsFullRender = true
                 elseif isQ then
+                    resetTerminalOnExit(termObj)
                     return true, nil
                 end
             elseif state == "CONFIRM_INSTALL" then

@@ -149,7 +149,7 @@ stateDiagram-v2
 
 1. **사전 검증**: 대상 모듈 조회, `http`/`fs` API 가용성 점검, 배치 내 모든 파일의 URL 사전 해석(실패 시 디스크 무변경 중단).
 2. **스테이징 배치 다운로드 (`downloader.downloadBatch`)**: `<targetRoot>/.installer_stage` 아래에 각 파일을 `.tmp` 경유 원자적 다운로드 후, 전체 파일 성공 시에만 최종 목적지로 일괄 이동 커밋 (실패 시 `.installer_stage` 전체 삭제 롤백).
-3. **설정 Deep-Merge 마이그레이션 (`migration_engine.migrateFile`)**: `defaultConfigs` / `configTemplate` 대상 JSON 파일이 이미 존재하면 임의 깊이 사용자 설정값을 보존하고 누락 키만 기본값으로 백필 (순차 배열은 요소 병합 대신 사용자 배열 우선 교체).
+3. **설정 Deep-Merge 마이그레이션 (`migration_engine.migrateFile`)**: `mod.defaultConfigs`에 선언된 대상 JSON 파일이 이미 존재하면 임의 깊이 사용자 설정값을 보존하고 누락 키만 기본값으로 백필합니다(순차 배열은 요소 병합 대신 사용자 배열 우선 교체). 반면 `configTemplate` 메타데이터만 정의하고 `.json` 설정 파일을 `mod.files`에 직접 포함하는 모듈(`amm`, `gcs`)은 스테이징 다운로드 단계에서 파일이 직접 덮어써지며 `migrateFile` 백필을 수행하지 않습니다.
 4. **멀티부트 스타트업 후크 (`startup_generator.installHook`)**: `mod.startup.enabled == true`인 모듈에 한해 `/startup/00_<id>.lua`를 생성하며, `cc.require.make` 기반으로 `modules/`, `modules/drivers/`, `hal/`, `tools/`, `/lib/`, `/apis/` 검색 경로와 `args`(예: `fcp`의 `"--daemon"`)를 주입합니다. 기존 루트 `/startup.lua`는 덮어쓰지 않습니다.
 5. **안전한 고아 파일 정리 (`version_registry.getOrphanFiles`)**: 이전 설치 파일 목록 중 신규 목록에 없고 `/.version.json` 내 타 공존 모듈(`gps_client` 등)이 소유하지 않는 파일만 선별 삭제합니다.
 6. **레지스트리 커밋 (`version_registry.save`)**: `/.version.json.tmp`를 거쳐 `/.version.json`을 원자적으로 갱신합니다.

@@ -45,7 +45,7 @@ local function readFile(path)
 end
 
 describe("tui_view 51x19 terminal rendering and source toggle", function()
-    it("renders header, 7-module menu, progress bar, and source toggle within 51x19 bounds", function()
+    it("renders header, 12-module menu, progress bar, and source toggle within 51x19 bounds", function()
         -- 1. Source toggle logic
         assert_eq(tui_view.toggleSource("github"), "gdrive")
         assert_eq(tui_view.toggleSource("gdrive"), "github")
@@ -172,7 +172,57 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         assert_true(termDelta:_contains("> MOD_02"))
         assert_true(termDelta:_contains("  MOD_01"))
         assert_false(termDelta:_contains("Temporary status"), "status row must be cleared on cursor move")
+        -- Moving cursor without status-row clear must still restore normal white/black terminal colors
+        assert_true(tui_view.updateSelection(termDelta, syntheticMods, 2, 3, 0, {}, false, false))
+        assert_eq(termDelta._cur_fg, "0", "updateSelection must restore normal white fg")
+        assert_eq(termDelta._cur_bg, "f", "updateSelection must restore normal black bg")
+        assert_false(tui_view.updateSelection(termDelta, syntheticMods, nil, 2, 0, {}, false, false), "nil prevIndex must safely fall back to full render")
         assert_false(tui_view.updateSelection(termDelta, syntheticMods, 12, 13, 0, {}, false, false), "crossing bottom edge requires full viewport scroll")
+    end)
+
+    it("renders category folder scrolling on monochrome and non-51x19 terminals and restores normal colors", function()
+        local syntheticCats = {}
+        for i = 1, 15 do
+            syntheticCats[i] = {
+                id = string.format("cat_%02d", i),
+                code = string.format("9_cat%02d", i),
+                shortName = string.format("CAT_%02d", i),
+                name = string.format("Category %02d", i),
+                moduleCount = 1,
+                modules = { { id = string.format("m_%02d", i), name = string.format("M_%02d", i), version = "1.0.0" } },
+            }
+        end
+
+        -- Monochrome >12 category scroll + delta selection color restoration
+        local termMono = mock.term(51, 19)
+        termMono.isColor = function() return false end
+        termMono.isColour = termMono.isColor
+        local monoScroll = tui_view.renderCategoryMenu(termMono, syntheticCats, 14, "github", {}, 0)
+        assert_eq(monoScroll, 2)
+        assert_true(termMono:_contains("CAT_14"))
+        assert_true(termMono:_contains("[3-14 of 15]"))
+        assert_false(termMono:_contains("CAT_01"))
+        assert_true(tui_view.updateSelection(termMono, syntheticCats, 14, 13, monoScroll, {}, true, false))
+        assert_eq(termMono._cur_fg, "0", "mono updateSelection must restore normal white fg")
+        assert_eq(termMono._cur_bg, "f", "mono updateSelection must restore normal black bg")
+
+        -- Non-51x19 terminal sizes (pocket 26x20, turtle 39x13) stay bounded within maxRows = h - 7
+        local termPocket = mock.term(26, 20)
+        local pocketScroll = tui_view.renderCategoryMenu(termPocket, syntheticCats, 1, "gdrive", {}, 0)
+        assert_eq(pocketScroll, 0)
+        assert_true(termPocket:_contains("[DIR]"))
+        assert_true(termPocket:_contains("9_cat01"))
+        assert_eq(#termPocket:_get_line(1), 26)
+        assert_eq(#termPocket:_get_line(4), 26)
+
+        local termTurtle = mock.term(39, 13)
+        local turtleScroll = tui_view.renderCategoryMenu(termTurtle, syntheticCats, 14, "github", {}, 0)
+        assert_eq(turtleScroll, 8) -- h=13 -> startY=4..9 -> maxRows=6 -> 14-6 = 8
+        assert_true(termTurtle:_contains("9_cat14"))
+        assert_true(termTurtle:_contains("[9-14 of 15]"))
+        assert_false(termTurtle:_contains("9_cat01"))
+        assert_eq(termTurtle._cur_fg, "0")
+        assert_eq(termTurtle._cur_bg, "f")
     end)
 end)
 
@@ -475,6 +525,209 @@ describe("installer_app module installation and upgrade pipeline", function()
         })
         assert_true(okStub)
         assert_nil(errStub)
+    end)
+
+    it("scrolls >12 categories, handles term_resize, and resets terminal state on Q quit", function()
+        local appRoot = sdk.temp_path("installer_tui_scroll_cats_root")
+        fs.makeDir(appRoot)
+
+        local longCats = {}
+        for i = 1, 13 do
+            longCats[i] = {
+                id = string.format("cat_%02d", i),
+                code = string.format("9_cat%02d", i),
+                shortName = string.format("CAT_%02d", i),
+                name = string.format("Category %02d", i),
+                modules = { { id = "x_" .. i, name = "X_" .. i, version = "1.0.0" } },
+                moduleCount = 1,
+            }
+        end
+
+        local events = {}
+        -- Move Down 12 times in CATEGORY_MENU: 1 -> 13 triggers categoryScroll = 1
+        for _ = 1, 12 do
+            events[#events + 1] = { "key", 208 }
+        end
+        events[#events + 1] = { "term_resize" }
+        -- Move Up 12 times in CATEGORY_MENU: 13 -> 1 triggers categoryScroll = 0 (upward scroll)
+        for _ = 1, 12 do
+            events[#events + 1] = { "key", 200 }
+        end
+        events[#events + 1] = { "char", "q" }
+
+        local idx = 0
+        local termMock = mock.term(51, 19)
+        local seenScrolledDown = false
+        local ok, err = installer_app.run({
+            targetRoot = appRoot,
+            term = termMock,
+            manifest = {
+                listCategories = function() return longCats end,
+                listModules = function() return longCats[1].modules end,
+            },
+            pullEvent = function()
+                if idx == 13 then
+                    seenScrolledDown = termMock:_contains("[2-13 of 13]") and termMock:_contains("> [DIR] 9_cat13")
+                end
+                idx = idx + 1
+                local ev = events[idx]
+                if ev then return ev[1], ev[2] end
+                return nil
+            end,
+        })
+
+        assert_true(ok)
+        assert_nil(err)
+        assert_true(seenScrolledDown)
+        assert_true(termMock:_contains("> [DIR] 9_cat01"))
+        assert_true(termMock:_contains("[1-12 of 13]"))
+        assert_eq(termMock._cur_fg, "0", "Q quit must restore normal white foreground")
+        assert_eq(termMock._cur_bg, "f", "Q quit must restore normal black background")
+        assert_eq(termMock._cx, 1)
+        assert_eq(termMock._cy, 19)
+    end)
+
+    it("scrolls >12 modules down and up inside MODULE_MENU and returns cleanly to CATEGORY_MENU", function()
+        local appRoot = sdk.temp_path("installer_tui_scroll_mods_root")
+        fs.makeDir(appRoot)
+
+        local longMods = {}
+        for i = 1, 14 do
+            longMods[i] = { id = string.format("mod_%02d", i), name = string.format("MOD_%02d", i), version = "1.0.0" }
+        end
+        local cats = {
+            {
+                id = "ctrl",
+                code = "1_control",
+                shortName = "Control",
+                name = "Flight Control",
+                modules = longMods,
+                moduleCount = #longMods,
+            },
+        }
+
+        local events = {
+            { "key", 28 }, -- Open ctrl folder (14 modules)
+        }
+        -- Move Down 12 times in MODULE_MENU: 1 -> 13 triggers moduleScroll = 1
+        for _ = 1, 12 do
+            events[#events + 1] = { "key", 208 }
+        end
+        -- Move Up 12 times in MODULE_MENU: 13 -> 1 triggers moduleScroll = 0 (upward full render)
+        for _ = 1, 12 do
+            events[#events + 1] = { "key", 200 }
+        end
+        events[#events + 1] = { "key", 14 } -- Backspace back to CATEGORY_MENU
+        events[#events + 1] = { "char", "q" }
+
+        local idx = 0
+        local termMock = mock.term(51, 19)
+        local seenModScrollDown = false
+        local seenModScrollUp = false
+        local ok, err = installer_app.run({
+            targetRoot = appRoot,
+            term = termMock,
+            manifest = {
+                listCategories = function() return cats end,
+                listModules = function() return longMods end,
+            },
+            pullEvent = function()
+                if idx == 13 then
+                    seenModScrollDown = termMock:_contains("[2-13 of 14]") and termMock:_contains("> MOD_13")
+                elseif idx == 25 then
+                    seenModScrollUp = termMock:_contains("[1-12 of 14]") and termMock:_contains("> MOD_01")
+                end
+                idx = idx + 1
+                local ev = events[idx]
+                if ev then return ev[1], ev[2] end
+                return nil
+            end,
+        })
+
+        assert_true(ok)
+        assert_nil(err)
+        assert_true(seenModScrollDown)
+        assert_true(seenModScrollUp)
+        assert_true(termMock:_contains("> [DIR] 1_control"))
+        assert_eq(termMock._cur_fg, "0")
+        assert_eq(termMock._cur_bg, "f")
+        assert_eq(termMock._cx, 1)
+        assert_eq(termMock._cy, 19)
+    end)
+
+    it("guards empty folders and cancels CONFIRM_INSTALL / CONFIRM_UNINSTALL cleanly on N, Q, and Backspace", function()
+        local appRoot = sdk.temp_path("installer_tui_confirm_cancel_root")
+        fs.makeDir(appRoot)
+        local hMeta = fs.open(appRoot .. "/.version.json", "w")
+        hMeta.write(textutils.serializeJSON({
+            installerVersion = "1.1.0",
+            modules = {
+                mod_a = { id = "mod_a", version = "1.0.0", files = { "/main.lua" }, source = "github", installedAt = 1 },
+            },
+        }))
+        hMeta.close()
+
+        local stubCats = {
+            { id = "empty_cat", code = "4_mission", shortName = "Swarm", name = "Swarm Mission", modules = {}, moduleCount = 0 },
+            {
+                id = "ctrl_cat",
+                code = "1_control",
+                shortName = "Control",
+                name = "Flight Control",
+                modules = { { id = "mod_a", name = "MOD_A", version = "1.0.0" } },
+                moduleCount = 1,
+            },
+        }
+
+        local events = {
+            { "key", 28 },    -- Enter empty folder -> Folder is empty warning
+            { "key", 208 },   -- Down -> ctrl_cat (also clears status via updateSelection)
+            { "key", 28 },    -- Enter -> MODULE_MENU
+            { "key", 28 },    -- Enter -> CONFIRM_INSTALL
+            { "char", "n" },  -- Cancel via n -> Installation cancelled
+            { "key", 28 },    -- Enter -> CONFIRM_INSTALL
+            { "char", "q" },  -- Cancel via q -> Installation cancelled (must NOT exit app)
+            { "char", "u" },  -- U -> CONFIRM_UNINSTALL (mod_a is installed)
+            { "char", "n" },  -- Cancel via n -> Uninstallation cancelled
+            { "char", "u" },  -- U -> CONFIRM_UNINSTALL
+            { "char", "q" },  -- Cancel via q -> Uninstallation cancelled
+            { "char", "u" },  -- U -> CONFIRM_UNINSTALL
+            { "key", 14 },    -- Backspace -> Uninstallation cancelled
+            { "key", 16 },    -- Key Q from MODULE_MENU -> exits app
+        }
+        local seenWarnEmpty, seenInstCancelN, seenInstCancelQ, seenUninstCancelQ = false, false, false, false
+        local idx = 0
+        local termMock = mock.term(51, 19)
+        local ok, err = installer_app.run({
+            targetRoot = appRoot,
+            term = termMock,
+            manifest = {
+                listCategories = function() return stubCats end,
+                listModules = function() return stubCats[2].modules end,
+            },
+            pullEvent = function()
+                if idx == 1 then seenWarnEmpty = termMock:_contains("Folder is empty") end
+                if idx == 5 then seenInstCancelN = termMock:_contains("Installation cancelled") end
+                if idx == 7 then seenInstCancelQ = termMock:_contains("Installation cancelled") end
+                if idx == 11 then seenUninstCancelQ = termMock:_contains("Uninstallation cancelled") end
+                idx = idx + 1
+                local ev = events[idx]
+                if ev then return ev[1], ev[2] end
+                return nil
+            end,
+        })
+
+        assert_true(ok)
+        assert_nil(err)
+        assert_true(seenWarnEmpty)
+        assert_true(seenInstCancelN)
+        assert_true(seenInstCancelQ)
+        assert_true(seenUninstCancelQ)
+        assert_true(termMock:_contains("Uninstallation cancelled"))
+        assert_eq(termMock._cur_fg, "0")
+        assert_eq(termMock._cur_bg, "f")
+        assert_eq(termMock._cx, 1)
+        assert_eq(termMock._cy, 19)
     end)
 
     it("executes non-interactive CLI install and uninstall commands", function()
