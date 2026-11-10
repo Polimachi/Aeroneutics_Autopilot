@@ -3,6 +3,241 @@
 
 local tui_view = {}
 
+local function first_non_empty_entry(val)
+    if type(val) == "string" and val ~= "" then
+        return val
+    elseif type(val) == "table" and #val > 0 and type(val[1]) == "string" and val[1] ~= "" then
+        return val[1]
+    end
+    return nil
+end
+
+function tui_view.format_dedicated_badge(fac)
+    if type(fac) ~= "table" then
+        return "PUBLIC", false
+    end
+    local craftId = first_non_empty_entry(fac.dedicatedCraftIds)
+    if craftId then
+        return "[DED: " .. craftId .. "]", true
+    end
+    local airframeType = first_non_empty_entry(fac.dedicatedAirframeTypes)
+    if airframeType then
+        return "[DED: " .. airframeType .. "]", true
+    end
+    return "PUBLIC", false
+end
+
+local function short_facility_type(fType)
+    if fType == "LANDING_PAD" or not fType then
+        return "PAD"
+    elseif fType == "DOCKING_ARM" then
+        return "DOCK"
+    elseif fType == "RUNWAY" then
+        return "RWY"
+    end
+    return tostring(fType):sub(1, 4)
+end
+
+local function split_csv(str)
+    if type(str) ~= "string" then return nil end
+    local out = {}
+    for part in string.gmatch(str, "([^,]+)") do
+        local trimmed = part:match("^%s*(.-)%s*$")
+        if trimmed and trimmed ~= "" then
+            table.insert(out, trimmed)
+        end
+    end
+    if #out == 0 then return nil end
+    return out
+end
+
+local function parse_prompt_input(mode, buffer)
+    if mode == "ADD_FACILITY" then
+        local parts = {}
+        for part in string.gmatch(buffer .. ",", "([^,]*),") do
+            table.insert(parts, part:match("^%s*(.-)%s*$"))
+        end
+        local id = parts[1]
+        if not id or id == "" then return nil end
+        local dedVal = (parts[6] and parts[6] ~= "") and parts[6] or nil
+        return {
+            facilityId = id,
+            type = "LANDING_PAD",
+            tacticalChannel = tonumber(parts[2]) or 50211,
+            maxSupportWeight = 30000.0,
+            maxSupportRadius = 10.0,
+            coordinates = {
+                x = tonumber(parts[3]) or 0.0,
+                y = tonumber(parts[4]) or 65.0,
+                z = tonumber(parts[5]) or 0.0
+            },
+            status = "FREE",
+            mobility = "STATIC",
+            dedicatedCraftIds = dedVal
+        }
+    elseif mode == "EDIT_DEDICATED" then
+        local craftPart, typePart = buffer:match("^([^|]*)|?(.*)$")
+        return {
+            dedicatedCraftIds = split_csv(craftPart),
+            dedicatedAirframeTypes = split_csv(typePart)
+        }
+    end
+    return nil
+end
+
+function tui_view.apply_operator_action(action, data, ctx, extraPayload)
+    if type(ctx) ~= "table" or not ctx.inventory then
+        return false, "MISSING_CONTEXT"
+    end
+
+    local inv = ctx.inventory
+    local cfg = ctx.config
+    local baseSec = (cfg and cfg.baseSecChannel) or 50201
+    local domainId = (cfg and cfg.sectorId) or "GAC_NODE"
+
+    local function get_time_ms()
+        if os.epoch then return os.epoch("utc") end
+        if os.time then return os.time() * 1000 end
+        return 0
+    end
+
+    local function get_seq()
+        return os.time and os.time() or 0
+    end
+
+    local function persist_and_sync(facId, status, craftId)
+        if cfg and ctx.configLoader then
+            cfg.facilities = inv:get_all_facilities()
+            if ctx.configPath and ctx.configLoader.save_config then
+                ctx.configLoader.save_config(ctx.configPath, cfg)
+            end
+        end
+        if facId and ctx.modem and ctx.modem.transmit then
+            ctx.modem.transmit(baseSec + 1, baseSec, {
+                ver = "1.9.5",
+                domainId = domainId,
+                seq = get_seq(),
+                type = "MSG_ATC_FACILITY_UPDATE",
+                time = get_time_ms(),
+                payload = {
+                    facilityId = facId,
+                    status = status,
+                    currentCraft = craftId
+                }
+            })
+        end
+    end
+
+    local function resolve_facility(indexOrId)
+        if type(indexOrId) == "number" then
+            return inv:get_all_facilities()[indexOrId]
+        elseif type(indexOrId) == "string" then
+            return inv:get_facility(indexOrId)
+        end
+        return nil
+    end
+
+    if action == "ADD_FACILITY" then
+        if type(data) ~= "table" or not data.facilityId or data.facilityId == "" then
+            return false, "INVALID_FACILITY_DATA"
+        end
+        local ok, err = inv:add_facility(data)
+        if not ok then return false, err end
+        if ctx.tui then ctx.tui:add_log("[OP] Added facility " .. tostring(data.facilityId)) end
+        persist_and_sync()
+        return true, nil
+    elseif action == "DELETE_FACILITY" then
+        local targetFac = resolve_facility(data)
+        if not targetFac then return false, "FACILITY_NOT_FOUND" end
+        local ok, err = inv:remove_facility(targetFac.facilityId)
+        if not ok then return false, err end
+        if ctx.tui then
+            local count = #inv:get_all_facilities()
+            if ctx.tui.selectedFacilityIndex > count and count > 0 then
+                ctx.tui.selectedFacilityIndex = count
+            end
+            ctx.tui:add_log("[OP] Deleted facility " .. tostring(targetFac.facilityId))
+        end
+        persist_and_sync()
+        return true, nil
+    elseif action == "EDIT_DEDICATED" then
+        local targetFac = resolve_facility(data)
+        if not targetFac then return false, "FACILITY_NOT_FOUND" end
+        if type(extraPayload) ~= "table" then return false, "INVALID_DEDICATED_PAYLOAD" end
+        local ok, err = inv:update_dedicated(
+            targetFac.facilityId,
+            extraPayload.dedicatedCraftIds,
+            extraPayload.dedicatedAirframeTypes
+        )
+        if not ok then return false, err end
+        if ctx.tui then ctx.tui:add_log("[OP] Dedicated updated: " .. tostring(targetFac.facilityId)) end
+        persist_and_sync()
+        return true, nil
+    elseif action == "TOGGLE_MAINTENANCE" then
+        local targetFac = resolve_facility(data)
+        if not targetFac then return false, "FACILITY_NOT_FOUND" end
+        local nextStatus = (targetFac.status == "MAINTENANCE") and "FREE" or "MAINTENANCE"
+        inv:update_status(targetFac.facilityId, nextStatus, nil)
+        if ctx.tui then ctx.tui:add_log(string.format("[OP] %s status -> %s", targetFac.facilityId, nextStatus)) end
+        persist_and_sync(targetFac.facilityId, nextStatus, nil)
+        return true, nil
+    elseif action == "FORCE_FREE" then
+        local targetFac = resolve_facility(data)
+        if not targetFac then return false, "FACILITY_NOT_FOUND" end
+        inv:update_status(targetFac.facilityId, "FREE", nil)
+        if ctx.tui then ctx.tui:add_log(string.format("[OP] %s FORCE FREE reset", targetFac.facilityId)) end
+        persist_and_sync(targetFac.facilityId, "FREE", nil)
+        return true, nil
+    elseif action == "WAVE_OFF" then
+        local targetFac = resolve_facility(data)
+        if not targetFac then return false, "FACILITY_NOT_FOUND" end
+        if targetFac.tacticalChannel and ctx.modem and ctx.modem.transmit then
+            ctx.modem.transmit(targetFac.tacticalChannel, baseSec, {
+                ver = "1.9.5",
+                domainId = domainId,
+                seq = get_seq(),
+                type = "MSG_ABORT_APPROACH",
+                time = get_time_ms(),
+                payload = {
+                    facilityId = targetFac.facilityId,
+                    reason = "GAC_ORDER",
+                    recommendedClimbAltitude = 100.0
+                }
+            })
+        end
+        inv:update_status(targetFac.facilityId, "GO_AROUND", nil)
+        if ctx.tui then ctx.tui:add_log(string.format("[OP] Wave-off issued for %s", targetFac.facilityId)) end
+        return true, nil
+    elseif action == "TOGGLE_EMERGENCY" then
+        local isEmg = not inv:is_emergency_lockdown()
+        inv:set_emergency_lockdown(isEmg)
+        if ctx.tui then
+            ctx.tui:add_log(isEmg and "[OP] EMERGENCY LOCKDOWN ENGAGED!" or "[OP] Emergency lockdown disengaged.")
+        end
+        if isEmg and ctx.modem and ctx.modem.transmit then
+            for _, fac in ipairs(inv:get_all_facilities()) do
+                if fac.tacticalChannel then
+                    ctx.modem.transmit(fac.tacticalChannel, baseSec, {
+                        ver = "1.9.5",
+                        domainId = domainId,
+                        seq = get_seq(),
+                        type = "MSG_ABORT_APPROACH",
+                        time = get_time_ms(),
+                        payload = {
+                            facilityId = fac.facilityId,
+                            reason = "GAC_ORDER",
+                            recommendedClimbAltitude = 100.0
+                        }
+                    })
+                end
+            end
+        end
+        return true, nil
+    end
+
+    return false, "UNKNOWN_ACTION"
+end
+
 function tui_view.create(termDev, monitorDev)
     local termTarget = termDev or term
     local monTarget = monitorDev
@@ -10,8 +245,21 @@ function tui_view.create(termDev, monitorDev)
     local view = {
         activeTab = 1,
         selectedFacilityIndex = 1,
-        logs = {}
+        logs = {},
+        prompt = nil
     }
+
+    function view:open_prompt(mode, targetIdx)
+        local label = (mode == "ADD_FACILITY")
+            and "Add ID,CH,X,Y,Z[,DED]: "
+            or "Ded Craft|Type (Enter): "
+        self.prompt = {
+            mode = mode,
+            targetIdx = targetIdx,
+            label = label,
+            buffer = ""
+        }
+    end
 
     function view:set_active_tab(tabIndex)
         if tabIndex >= 1 and tabIndex <= 3 then
@@ -93,27 +341,24 @@ function tui_view.create(termDev, monitorDev)
             end
         elseif view.activeTab == 2 then
             -- Tab 2: Facilities
-            draw_text(dev, 2, 4, "ID       TYPE         STATUS      CRAFT       CH", colors.yellow, colors.black)
-            draw_text(dev, 2, 5, "---------------------------------------------------", colors.gray, colors.black)
+            draw_text(dev, 2, 4, "ID     TYPE STATUS    DEDICATED      CRAFT   CH", colors.yellow, colors.black)
+            draw_text(dev, 2, 5, string.rep("-", 50), colors.gray, colors.black)
             local facilities = state and state.facilities or {}
             local lineY = 6
             for idx, fac in ipairs(facilities) do
                 if lineY > 17 then break end
                 local isSelected = (idx == view.selectedFacilityIndex)
-                local fg = isSelected and colors.black or colors.white
+                local dedBadge, isDedicated = tui_view.format_dedicated_badge(fac)
+                local fg = isSelected and colors.black or (isDedicated and colors.cyan or colors.white)
                 local bg = isSelected and colors.lightGray or colors.black
                 local facStatus = fac.status or "FREE"
-                local statusFg = isSelected and colors.black or colors.green
-                if facStatus == "OCCUPIED" then statusFg = isSelected and colors.black or colors.orange
-                elseif facStatus == "RESERVED" then statusFg = isSelected and colors.black or colors.yellow
-                elseif facStatus == "MAINTENANCE" or facStatus == "GO_AROUND" then statusFg = isSelected and colors.black or colors.red
-                end
 
-                local rowText = string.format("%-8s %-12s %-11s %-11s %-5d",
-                    tostring(fac.facilityId):sub(1, 8),
-                    tostring(fac.type or "PAD"):sub(1, 12),
-                    facStatus:sub(1, 11),
-                    tostring(fac.currentCraft or "-"):sub(1, 11),
+                local rowText = string.format("%-6s %-4s %-9s %-14s %-7s %-5d",
+                    tostring(fac.facilityId):sub(1, 6),
+                    short_facility_type(fac.type),
+                    facStatus:sub(1, 9),
+                    dedBadge:sub(1, 14),
+                    tostring(fac.currentCraft or "-"):sub(1, 7),
                     fac.tacticalChannel or 0
                 )
                 draw_text(dev, 2, lineY, rowText, fg, bg)
@@ -131,8 +376,13 @@ function tui_view.create(termDev, monitorDev)
             end
         end
 
+        if view.prompt then
+            local promptLine = (view.prompt.label .. view.prompt.buffer .. "_"):sub(1, 50)
+            draw_text(dev, 1, 18, promptLine, colors.black, colors.yellow)
+        end
+
         -- Y=19: Shortcut Bar
-        draw_text(dev, 1, 19, "[1-3]Tab [Up/Dn]Sel [M]aint [F]ree [W]ave [E]mg [Q]uit", colors.black, colors.lightGray)
+        draw_text(dev, 1, 19, "[1-3]Tab [A]dd [D]el [P]Ded [M]nt [F]re [E]mg [Q]", colors.black, colors.lightGray)
     end
 
     function view:render(state)
@@ -143,6 +393,31 @@ function tui_view.create(termDev, monitorDev)
     end
 
     function view:handle_key(key, char, state)
+        if self.prompt then
+            if keys and key == keys.escape then
+                self.prompt = nil
+                return "PROMPT_CANCEL", nil
+            elseif keys and key == keys.backspace then
+                self.prompt.buffer = self.prompt.buffer:sub(1, math.max(0, #self.prompt.buffer - 1))
+                return "PROMPT_INPUT", self.prompt.buffer
+            elseif keys and key == keys.enter then
+                local mode = self.prompt.mode
+                local targetIdx = self.prompt.targetIdx
+                local parsed = parse_prompt_input(mode, self.prompt.buffer)
+                self.prompt = nil
+                if mode == "ADD_FACILITY" and parsed then
+                    return "ADD_FACILITY", parsed
+                elseif mode == "EDIT_DEDICATED" and parsed then
+                    return "EDIT_DEDICATED", targetIdx, parsed
+                end
+                return "PROMPT_CANCEL", nil
+            elseif char and type(char) == "string" and #char == 1 then
+                self.prompt.buffer = self.prompt.buffer .. char
+                return "PROMPT_INPUT", self.prompt.buffer
+            end
+            return nil, nil
+        end
+
         if key == keys.one or char == "1" then
             self.activeTab = 1
             return "SWITCH_TAB", 1
@@ -175,6 +450,8 @@ function tui_view.create(termDev, monitorDev)
             return "ADD_FACILITY", nil
         elseif key == keys.d or char == "d" or char == "D" then
             return "DELETE_FACILITY", self.selectedFacilityIndex
+        elseif key == keys.p or char == "p" or char == "P" then
+            return "EDIT_DEDICATED", self.selectedFacilityIndex
         elseif key == keys.q or char == "q" or char == "Q" then
             return "QUIT", nil
         end

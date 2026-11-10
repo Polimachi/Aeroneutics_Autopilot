@@ -69,11 +69,6 @@ local function main()
         term.setCursorPos(1, 1)
     end
 
-    local function save_current_config()
-        cfg.facilities = inventory:get_all_facilities()
-        config_loader.save_config(CONFIG_FILE, cfg)
-    end
-
     -- 6. Event Loop
     while running do
         local eventData = { os.pullEventRaw() }
@@ -172,68 +167,29 @@ local function main()
             end
 
         elseif event == "key" or event == "char" then
-            local action, data
+            local action, data, extraPayload
+            local keyState = { facilities = inventory:get_all_facilities() }
             if event == "key" then
-                action, data = tui:handle_key(eventData[2], nil, { facilities = inventory:get_all_facilities() })
+                action, data, extraPayload = tui:handle_key(eventData[2], nil, keyState)
             else
-                action, data = tui:handle_key(nil, eventData[2], { facilities = inventory:get_all_facilities() })
+                action, data, extraPayload = tui:handle_key(nil, eventData[2], keyState)
             end
 
             if action == "QUIT" then
                 running = false
-            elseif action == "TOGGLE_EMERGENCY" then
-                local isEmg = not inventory:is_emergency_lockdown()
-                inventory:set_emergency_lockdown(isEmg)
-                tui:add_log(isEmg and "[OP] EMERGENCY LOCKDOWN ENGAGED!" or "[OP] Emergency lockdown disengaged.")
-                -- Broadcast wave-off on all tactical channels
-                if isEmg and modem then
-                    for _, fac in ipairs(inventory:get_all_facilities()) do
-                        if fac.tacticalChannel then
-                            local waveOff = {
-                                ver = "1.9.5",
-                                domainId = cfg.sectorId,
-                                seq = os.time(),
-                                type = "MSG_ABORT_APPROACH",
-                                time = os.epoch and os.epoch("utc") or (os.time() * 1000),
-                                payload = { facilityId = fac.facilityId, reason = "GAC_ORDER", recommendedClimbAltitude = 100.0 }
-                            }
-                            modem.transmit(fac.tacticalChannel, cfg.baseSecChannel, waveOff)
-                        end
-                    end
-                end
-            elseif action == "TOGGLE_MAINTENANCE" and data then
-                local allFacs = inventory:get_all_facilities()
-                local targetFac = allFacs[data]
-                if targetFac then
-                    local nextStatus = (targetFac.status == "MAINTENANCE") and "FREE" or "MAINTENANCE"
-                    inventory:update_status(targetFac.facilityId, nextStatus, nil)
-                    tui:add_log(string.format("[OP] %s status -> %s", targetFac.facilityId, nextStatus))
-                    save_current_config()
-                end
-            elseif action == "FORCE_FREE" and data then
-                local allFacs = inventory:get_all_facilities()
-                local targetFac = allFacs[data]
-                if targetFac then
-                    inventory:update_status(targetFac.facilityId, "FREE", nil)
-                    tui:add_log(string.format("[OP] %s FORCE FREE reset", targetFac.facilityId))
-                    save_current_config()
-                end
-            elseif action == "WAVE_OFF" and data then
-                local allFacs = inventory:get_all_facilities()
-                local targetFac = allFacs[data]
-                if targetFac and targetFac.tacticalChannel and modem then
-                    local waveOff = {
-                        ver = "1.9.5",
-                        domainId = cfg.sectorId,
-                        seq = os.time(),
-                        type = "MSG_ABORT_APPROACH",
-                        time = os.epoch and os.epoch("utc") or (os.time() * 1000),
-                        payload = { facilityId = targetFac.facilityId, reason = "GAC_ORDER", recommendedClimbAltitude = 100.0 }
-                    }
-                    modem.transmit(targetFac.tacticalChannel, cfg.baseSecChannel, waveOff)
-                    inventory:update_status(targetFac.facilityId, "GO_AROUND", nil)
-                    tui:add_log(string.format("[OP] Wave-off issued for %s", targetFac.facilityId))
-                end
+            elseif action == "ADD_FACILITY" and type(data) ~= "table" then
+                tui:open_prompt("ADD_FACILITY")
+            elseif action == "EDIT_DEDICATED" and type(extraPayload) ~= "table" then
+                tui:open_prompt("EDIT_DEDICATED", data)
+            elseif action then
+                tui_view.apply_operator_action(action, data, {
+                    inventory = inventory,
+                    config = cfg,
+                    configPath = CONFIG_FILE,
+                    configLoader = config_loader,
+                    tui = tui,
+                    modem = modem
+                }, extraPayload)
             end
 
         elseif event == "monitor_touch" then
