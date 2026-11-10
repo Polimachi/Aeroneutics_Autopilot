@@ -49,7 +49,7 @@ Create_Aeroneutics/
 │   │   ├── AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md
 │   │   └── SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md
 │   └── specs/                             # 기능 도메인별 프로그램 사양서 (영구 단일 계층)
-│       ├── 0_development/alignment/       # 격납고 동역학 프로파일러 및 식별 사양서
+│       ├── 0_development/                 # 개발·교정·배포 사양서 (alignment, installer)
 │       ├── 0_infra/                       # 기지 인프라 및 지상 설비 사양서 (docking_arm, gac, gcs, gps, landing_pad, runway)
 │       ├── 1_control/                     # 온보드 제어 사양서 (asa, tca, vas)
 │       ├── 2_guidance/fcp/                # 비행 제어 프로그램 및 외루프 유도 사양서 (FCP)
