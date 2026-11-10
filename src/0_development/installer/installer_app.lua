@@ -201,6 +201,37 @@ function installer_app.uninstallModule(moduleId, opts)
     return true, nil
 end
 
+local function renderActiveMessage(tuiView, termObj, state, activeModules, moduleIndex, statusMsg, statusLevel)
+    if state == "CONFIRM_INSTALL" then
+        local selectedMod = activeModules[moduleIndex]
+        tuiView.renderMessage(termObj, "warn", "Install " .. tostring(selectedMod and selectedMod.name or "") .. "? (y/n)")
+    elseif state == "CONFIRM_UNINSTALL" then
+        local selectedMod = activeModules[moduleIndex]
+        tuiView.renderMessage(termObj, "warn", "Uninstall " .. tostring(selectedMod and selectedMod.name or "") .. "? (y/n)")
+    elseif statusMsg then
+        tuiView.renderMessage(termObj, statusLevel, statusMsg)
+    end
+end
+
+local function stepSelection(tuiView, termObj, items, currentIndex, scrollOffset, isUp, installedMap, isCategory, statusMsg)
+    if #items == 0 then
+        return currentIndex, statusMsg, false
+    end
+    local prev = currentIndex
+    local nextIdx = isUp and math.max(1, currentIndex - 1) or math.min(#items, currentIndex + 1)
+    local hadStatus = (statusMsg ~= nil)
+    if nextIdx == prev and not hadStatus then
+        return nextIdx, statusMsg, false
+    end
+
+    if type(tuiView.updateSelection) == "function" then
+        if tuiView.updateSelection(termObj, items, prev, nextIdx, scrollOffset, installedMap, isCategory, hadStatus) then
+            return nextIdx, nil, false
+        end
+    end
+    return nextIdx, nil, true
+end
+
 --- Runs the installer in either non-interactive CLI mode or interactive 51x19 TUI mode.
 -- @param opts table|nil Configuration options
 -- @return boolean success
@@ -259,59 +290,107 @@ function installer_app.run(opts)
         return false, "REQUIRED_MODULES_MISSING"
     end
 
-    local modules = manifestMod.listModules()
-    local selectedIndex = 1
-    local state = "MENU" -- "MENU", "CONFIRM_INSTALL", "CONFIRM_UNINSTALL"
+    local categories
+    if type(manifestMod.listCategories) == "function" then
+        categories = manifestMod.listCategories(false) or {}
+    else
+        local fallbackMods = manifestMod.listModules and manifestMod.listModules() or {}
+        categories = {
+            {
+                id = "all",
+                code = "all",
+                name = "All Modules",
+                shortName = "All Modules",
+                modules = fallbackMods,
+                moduleCount = #fallbackMods,
+            },
+        }
+    end
+
+    local categoryIndex = 1
+    local categoryScroll = 0
+    local moduleIndex = 1
+    local moduleScroll = 0
+    local state = "CATEGORY_MENU" -- "CATEGORY_MENU", "MODULE_MENU", "CONFIRM_INSTALL", "CONFIRM_UNINSTALL"
     local statusMsg = nil
     local statusLevel = "info"
+    local needsFullRender = true
+    local needsMessageOnly = false
 
     local meta = versionReg.load(metaPath, fsObj)
     local installedMap = (meta and meta.modules) or {}
 
     while true do
-        if state == "MENU" then
-            tuiView.renderMenu(termObj, modules, selectedIndex, currentSource, installedMap)
-            if statusMsg then
-                tuiView.renderMessage(termObj, statusLevel, statusMsg)
+        local activeCategory = categories[categoryIndex]
+        local activeModules = (activeCategory and activeCategory.modules) or {}
+
+        if needsFullRender then
+            needsFullRender = false
+            needsMessageOnly = false
+            if state == "CATEGORY_MENU" then
+                if type(tuiView.renderCategoryMenu) == "function" then
+                    categoryScroll = tuiView.renderCategoryMenu(termObj, categories, categoryIndex, currentSource, installedMap, categoryScroll) or categoryScroll
+                else
+                    tuiView.renderMenu(termObj, activeModules, moduleIndex, currentSource, installedMap)
+                end
+                if statusMsg then
+                    tuiView.renderMessage(termObj, statusLevel, statusMsg)
+                end
+            else
+                moduleScroll = tuiView.renderMenu(termObj, activeModules, moduleIndex, currentSource, installedMap, activeCategory, moduleScroll) or moduleScroll
+                renderActiveMessage(tuiView, termObj, state, activeModules, moduleIndex, statusMsg, statusLevel)
             end
-        elseif state == "CONFIRM_INSTALL" then
-            local selectedMod = modules[selectedIndex]
-            tuiView.renderMenu(termObj, modules, selectedIndex, currentSource, installedMap)
-            tuiView.renderMessage(termObj, "warn", "Install " .. tostring(selectedMod and selectedMod.name or "") .. "? (y/n)")
-        elseif state == "CONFIRM_UNINSTALL" then
-            local selectedMod = modules[selectedIndex]
-            tuiView.renderMenu(termObj, modules, selectedIndex, currentSource, installedMap)
-            tuiView.renderMessage(termObj, "warn", "Uninstall " .. tostring(selectedMod and selectedMod.name or "") .. "? (y/n)")
+        elseif needsMessageOnly then
+            needsMessageOnly = false
+            renderActiveMessage(tuiView, termObj, state, activeModules, moduleIndex, statusMsg, statusLevel)
         end
 
-        local ev, p1, p2, p3 = pullEvent()
+        local ev, p1 = pullEvent()
         if not ev then
             return true, nil
         end
 
-        if ev == "char" then
-            local ch = tostring(p1):lower()
-            if state == "MENU" then
+        if ev == "term_resize" then
+            needsFullRender = true
+        elseif ev == "char" then
+            local ch = tostring(p1 or ""):lower()
+            if state == "CATEGORY_MENU" then
                 if ch == "q" then
                     return true, nil
                 elseif ch == "s" then
                     currentSource = tuiView.toggleSource(currentSource)
                     statusMsg = "Switched source to " .. (currentSource == "gdrive" and "Google Drive" or "GitHub")
                     statusLevel = "info"
+                    needsFullRender = true
+                end
+            elseif state == "MODULE_MENU" then
+                if ch == "q" then
+                    return true, nil
+                elseif ch == "b" then
+                    state = "CATEGORY_MENU"
+                    statusMsg = nil
+                    needsFullRender = true
+                elseif ch == "s" then
+                    currentSource = tuiView.toggleSource(currentSource)
+                    statusMsg = "Switched source to " .. (currentSource == "gdrive" and "Google Drive" or "GitHub")
+                    statusLevel = "info"
+                    needsFullRender = true
                 elseif ch == "u" then
-                    local selectedMod = modules[selectedIndex]
+                    local selectedMod = activeModules[moduleIndex]
                     if selectedMod and installedMap[selectedMod.id] then
                         state = "CONFIRM_UNINSTALL"
                         statusMsg = nil
+                        needsMessageOnly = true
                     else
                         statusMsg = "Module is not installed"
                         statusLevel = "warn"
+                        needsMessageOnly = true
                     end
                 end
             elseif state == "CONFIRM_INSTALL" then
                 if ch == "y" then
-                    state = "MENU"
-                    local selectedMod = modules[selectedIndex]
+                    state = "MODULE_MENU"
+                    local selectedMod = activeModules[moduleIndex]
                     if selectedMod then
                         local onProg = function(cur, total, path)
                             tuiView.renderProgress(termObj, cur, total, path, currentSource)
@@ -332,15 +411,17 @@ function installer_app.run(opts)
                             statusLevel = "error"
                         end
                     end
+                    needsFullRender = true
                 elseif ch == "n" or ch == "q" then
-                    state = "MENU"
+                    state = "MODULE_MENU"
                     statusMsg = "Installation cancelled"
                     statusLevel = "info"
+                    needsMessageOnly = true
                 end
             elseif state == "CONFIRM_UNINSTALL" then
                 if ch == "y" then
-                    state = "MENU"
-                    local selectedMod = modules[selectedIndex]
+                    state = "MODULE_MENU"
+                    local selectedMod = activeModules[moduleIndex]
                     if selectedMod then
                         local uninstOpts = {}
                         for k, v in pairs(opts) do uninstOpts[k] = v end
@@ -356,32 +437,76 @@ function installer_app.run(opts)
                             statusLevel = "error"
                         end
                     end
+                    needsFullRender = true
                 elseif ch == "n" or ch == "q" then
-                    state = "MENU"
+                    state = "MODULE_MENU"
                     statusMsg = "Uninstallation cancelled"
                     statusLevel = "info"
+                    needsMessageOnly = true
                 end
             end
         elseif ev == "key" then
             local key = p1
             local keysObj = _G.keys or {}
-            local isUp = (key == 200) or (key == keysObj.up)
-            local isDown = (key == 208) or (key == keysObj.down)
-            local isEnter = (key == 28) or (key == 156) or (key == keysObj.enter) or (key == keysObj.numPadEnter)
-            local isQ = (key == 16) or (key == keysObj.q)
+            local isUp = (key == 200) or (keysObj.up ~= nil and key == keysObj.up)
+            local isDown = (key == 208) or (keysObj.down ~= nil and key == keysObj.down)
+            local isLeft = (key == 203) or (keysObj.left ~= nil and key == keysObj.left)
+            local isRight = (key == 205) or (keysObj.right ~= nil and key == keysObj.right)
+            local isEnter = (key == 28) or (key == 156) or (keysObj.enter ~= nil and key == keysObj.enter) or (keysObj.numPadEnter ~= nil and key == keysObj.numPadEnter)
+            local isBackspace = (key == 14) or (keysObj.backspace ~= nil and key == keysObj.backspace)
+            local isQ = (key == 16) or (keysObj.q ~= nil and key == keysObj.q)
 
-            if state == "MENU" then
-                if isUp then
-                    selectedIndex = math.max(1, selectedIndex - 1)
-                    statusMsg = nil
-                elseif isDown then
-                    selectedIndex = math.min(#modules, selectedIndex + 1)
-                    statusMsg = nil
-                elseif isEnter then
-                    state = "CONFIRM_INSTALL"
-                    statusMsg = nil
+            if state == "CATEGORY_MENU" then
+                if isUp or isDown then
+                    local needFull
+                    categoryIndex, statusMsg, needFull = stepSelection(tuiView, termObj, categories, categoryIndex, categoryScroll, isUp, installedMap, true, statusMsg)
+                    if needFull then needsFullRender = true end
+                elseif isEnter or isRight then
+                    if activeCategory and #activeModules > 0 then
+                        state = "MODULE_MENU"
+                        moduleIndex = 1
+                        moduleScroll = 0
+                        statusMsg = nil
+                        needsFullRender = true
+                    elseif activeCategory then
+                        statusMsg = "Folder is empty"
+                        statusLevel = "warn"
+                        needsMessageOnly = true
+                    end
                 elseif isQ then
                     return true, nil
+                end
+            elseif state == "MODULE_MENU" then
+                if isUp or isDown then
+                    local needFull
+                    moduleIndex, statusMsg, needFull = stepSelection(tuiView, termObj, activeModules, moduleIndex, moduleScroll, isUp, installedMap, false, statusMsg)
+                    if needFull then needsFullRender = true end
+                elseif isEnter then
+                    if activeModules[moduleIndex] then
+                        state = "CONFIRM_INSTALL"
+                        statusMsg = nil
+                        needsMessageOnly = true
+                    end
+                elseif isBackspace or isLeft then
+                    state = "CATEGORY_MENU"
+                    statusMsg = nil
+                    needsFullRender = true
+                elseif isQ then
+                    return true, nil
+                end
+            elseif state == "CONFIRM_INSTALL" then
+                if isBackspace then
+                    state = "MODULE_MENU"
+                    statusMsg = "Installation cancelled"
+                    statusLevel = "info"
+                    needsMessageOnly = true
+                end
+            elseif state == "CONFIRM_UNINSTALL" then
+                if isBackspace then
+                    state = "MODULE_MENU"
+                    statusMsg = "Uninstallation cancelled"
+                    statusLevel = "info"
+                    needsMessageOnly = true
                 end
             end
         end
