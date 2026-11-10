@@ -202,4 +202,38 @@ describe("GAC 2-stage multi-attribute pad allocation engine", function()
         assert_nil(errDed)
         assert_eq(bestDed.facilityId, "PAD_DED_CLOSER")
     end)
+
+    it("allows emergency commandeering of dedicated pad when only undersized or incompatible public pads are FREE", function()
+        local mixedScalePads = {
+            {
+                facilityId = "PAD_PUB_TINY_DRONE",
+                facilityType = "LANDING_PAD",
+                status = "FREE",
+                maxSupportWeight = 2000.0,
+                maxSupportRadius = 3.0,
+                coordinates = { x = 10.0, y = 64.0, z = 0.0 }
+            },
+            {
+                facilityId = "PAD_DED_HEAVY",
+                facilityType = "LANDING_PAD",
+                status = "FREE",
+                maxSupportWeight = 50000.0,
+                maxSupportRadius = 15.0,
+                coordinates = { x = 100.0, y = 64.0, z = 0.0 },
+                dedicatedCraftIds = "VIP_HEAVY_01"
+            }
+        }
+        local heavyEmgReq = {
+            aircraftId = "EMG_HEAVY",
+            airframeType = "VECTORED_VTOL",
+            craftWeight = 35000.0,
+            craftRadius = 8.0,
+            currentPos = { x = 0.0, y = 64.0, z = 0.0 },
+            isEmergency = true
+        }
+        local best, err = allocation_engine.select_best_pad(mixedScalePads, heavyEmgReq, { speed = 0, direction = 0 })
+        assert_not_nil(best)
+        assert_nil(err)
+        assert_eq(best.facilityId, "PAD_DED_HEAVY")
+    end)
 end)

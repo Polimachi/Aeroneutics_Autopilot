@@ -91,13 +91,13 @@
 
 - [x] **TASK-114: GAC 전용 시설물(Dedicated Facility) 지원 및 2단계 다속성 분배 엔진/TUI 확장** (완료일: 2026-11-10) (`src/0_infra/gac/`, `tests/0_infra/gac/`, `docs/specs/0_infra/gac/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-114-gac-dedicated-facility.md`
-  - **목적 및 성과**: 특정 VTOL/DRONE 전속 대기용 전용 착륙패드/도킹암/활주로(`dedicatedCraftIds`, `dedicatedAirframeTypes`) 런타임 검증, 비콘 공용 가용 패드 분리, `FACILITY_DEDICATED` 거절 분기 및 3-Tab TUI `[DED: ...]`/`PUBLIC` 콘솔 관리 구현 완료. 전체 12개 타겟 단위 테스트 306/306 PASS(GAC 44/44 PASS), E2E 6/6 PASS, 돌연변이 20/20 KILLED(100.0%), 하네스 41/41 PASS, GAC 사양서 v1.4.1 `Implemented` 승격(9 Implemented, 5 Approved, 0 Errors/0 Warnings) 달성.
+  - **목적 및 성과**: 특정 VTOL/DRONE 전속 대기용 전용 착륙패드/도킹암/활주로(`dedicatedCraftIds`, `dedicatedAirframeTypes`) 런타임 검증, 비콘 공용 가용 패드 분리, `FACILITY_DEDICATED` 거절 분기 및 3-Tab TUI `[DED: ...]`/`PUBLIC` 콘솔 관리 구현 완료. 전체 12개 타겟 단위 테스트 308/308 PASS(GAC 46/46 PASS), E2E 6/6 PASS, 돌연변이 20/20 KILLED(100.0%), 하네스 41/41 PASS, GAC 사양서 v1.4.1 `Implemented` 승격(9 Implemented, 5 Approved, 0 Errors/0 Warnings) 달성.
   - **구현 내용**:
     - [x] **TASK-114-1**: 전용 시설물 사양서 개정 및 동기화 (GAC v1.4.1, 착륙패드 v2.4.2, 도킹암 v1.11.1)
     - [x] **TASK-114-2**: `config_loader.lua` 전용 필드 스키마 검증 및 `facility_inventory.lua` 비콘 공용 가용 패드(`freeLandingPads`/`freeRunways`) 분리·동적 전용 속성 갱신 구현
     - [x] **TASK-114-3**: `allocation_engine.lua` `FACILITY_DEDICATED` 거절 분기(비인가 `preferredFacilityId`·공용 패드 부재) 및 `gac_fsm.lua` `handle_tower_handoff_req` `craftReq` 필터 연동
     - [x] **TASK-114-4**: `tui_view.lua` Tab 2 `[DED: ...]`/`PUBLIC` Cyan 하이라이트, 비동기 인라인 프롬프트(`[A]`/`[P]`), `apply_operator_action` 및 `main.lua` 로컬 백본 동기화 연동
-    - [x] **TASK-114-5**: CraftOS-PC 단위 테스트 44/44·전계층 회귀 검증 및 GAC 사양서 `Implemented` 승격
+    - [x] **TASK-114-5**: CraftOS-PC 단위 테스트 46/46·전계층 회귀 검증 및 GAC 사양서 `Implemented` 승격
 
 - [x] **TASK-009: GDrive 업로드용 디렉토리 재지정 및 파일 관리 방식 개선** (완료일: 2026-11-09) (`dist_gdrive/`, `config/gdrive_mapping.json`, `tools/sync_gdrive.py`, `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-009-gdrive-deployment-framework.md`

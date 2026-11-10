@@ -94,11 +94,19 @@ function allocation_engine.isEligible(pad, craftReq, allFacilities)
         return true
     end
 
-    -- Case 3: Emergency override when no public pads are free
+    -- Case 3: Emergency override when no compatible fitting public pads are free
     if craftReq.isEmergency and allFacilities then
         local anyPublicFree = false
         for _, other in pairs(allFacilities) do
-            if not allocation_engine.is_dedicated_facility(other) and other.status == "FREE" then
+            local fType = other.facilityType or other.type or "LANDING_PAD"
+            local compat = not craftReq.airframeType
+                or allocation_engine.is_facility_compatible(fType, craftReq.airframeType)
+            local fits = (other.maxSupportWeight or 0) >= (craftReq.craftWeight or 0)
+                and (other.maxSupportRadius or 0) >= (craftReq.craftRadius or 0)
+            if not allocation_engine.is_dedicated_facility(other)
+                and other.status == "FREE"
+                and compat
+                and fits then
                 anyPublicFree = true
                 break
             end

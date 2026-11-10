@@ -9,9 +9,9 @@
 - **결정 배경**: `GAC_PROGRAM_SPECIFICATION_AND_ICD.md` v1.4.1(전속 착륙패드/도킹암 보호, 비콘 공용 패드 분리, `FACILITY_DEDICATED` 거절, TUI `[DED: ...]`/`PUBLIC` 관리)에 맞춰 `src/0_infra/gac/` 런타임을 완결하고 사양서를 `Implemented`로 승격함.
 - **반영 내역**:
   1. `config_loader.lua`·`facility_inventory.lua`: `dedicatedCraftIds`/`dedicatedAirframeTypes` 스키마 검증(`validate_dedicated_field`), 전용 시설 판별(`is_facility_dedicated`/`is_dedicated`/`update_dedicated`), `get_summary()` 공용 가용 패드·활주로(`freeLandingPads`/`freeRunways`) 분리 (`37c45a4`).
-  2. `allocation_engine.lua`·`gac_fsm.lua`: 비인가 `preferredFacilityId` 및 공용 패드 부재 시 `FACILITY_DEDICATED` 거절 분기, `handle_tower_handoff_req` `craftReq` 필터 전달 (`f46d0ce`).
-  3. `tui_view.lua`·`main.lua`: `format_dedicated_badge` Tab 2 Cyan 하이라이트, 비동기 인라인 프롬프트(`[A]`/`[P]`), `apply_operator_action` 및 로컬 백본 `MSG_ATC_FACILITY_UPDATE` 동기화 (`ac98618`, `3825f7e`).
-- **검증 (2026-11-10 실행)**: 단위 306/306(GAC 44/44), E2E 6/6, 돌연변이 20/20 KILLED(100.0%), 하네스 41/41, 사양서 9 Implemented / 5 Approved(0 Errors/0 Warnings).
+  2. `allocation_engine.lua`·`gac_fsm.lua`: 비인가 `preferredFacilityId` 및 공용 패드 부재 시 `FACILITY_DEDICATED` 거절 분기, `isEligible` 비상 override 시 공용 패드 호환·크기·중량 검증, `handle_tower_handoff_req` `craftReq` 필터 전달 (`f46d0ce` + 후속 수정).
+  3. `tui_view.lua`·`main.lua`: `format_dedicated_badge` Tab 2 Cyan 하이라이트, 비동기 인라인 프롬프트(`[A]`/`[P]`), `apply_operator_action` 설정 저장 실패 로그/전파 및 로컬 백본 `MSG_ATC_FACILITY_UPDATE` 동기화 (`ac98618`, `3825f7e` + 후속 수정).
+- **검증 (2026-11-10 실행)**: 단위 308/308(GAC 46/46), E2E 6/6, 돌연변이 20/20 KILLED(100.0%), 하네스 41/41, 사양서 9 Implemented / 5 Approved(0 Errors/0 Warnings).
 
 ---
 

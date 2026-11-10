@@ -90,4 +90,28 @@ describe("GAC main application module integration smoke test", function()
         assert_eq(#reloaded.facilities, 2)
         assert_eq(reloaded.facilities[1].dedicatedCraftIds[1], "VIP_CRAFT_99")
     end)
+
+    it("logs error and propagates failure when config persistence fails in apply_operator_action", function()
+        local tui_view = require("tui_view")
+        local cfg = config_loader.get_default_config()
+        local inv = facility_inventory.create(cfg.facilities)
+        local tui = tui_view.create()
+
+        local failingLoader = {
+            save_config = function()
+                return false, "DISK_FULL"
+            end
+        }
+        local ok, err = tui_view.apply_operator_action("TOGGLE_MAINTENANCE", 1, {
+            inventory = inv,
+            config = cfg,
+            configPath = "/gac/config.json",
+            configLoader = failingLoader,
+            tui = tui
+        })
+        assert_false(ok)
+        assert_eq(err, "DISK_FULL")
+        local lastLog = tui.logs[#tui.logs]
+        assert_true(string.find(lastLog or "", "Config save failed: DISK_FULL", 1, true) ~= nil)
+    end)
 end)

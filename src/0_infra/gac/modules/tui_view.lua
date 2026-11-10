@@ -106,10 +106,14 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
     end
 
     local function persist_and_sync(facId, status, craftId)
+        local saveOk, saveErr = true, nil
         if cfg and ctx.configLoader then
             cfg.facilities = inv:get_all_facilities()
             if ctx.configPath and ctx.configLoader.save_config then
-                ctx.configLoader.save_config(ctx.configPath, cfg)
+                saveOk, saveErr = ctx.configLoader.save_config(ctx.configPath, cfg)
+                if not saveOk and ctx.tui then
+                    ctx.tui:add_log("[ERR] Config save failed: " .. tostring(saveErr))
+                end
             end
         end
         if facId and ctx.modem and ctx.modem.transmit then
@@ -126,6 +130,7 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
                 }
             })
         end
+        return saveOk, saveErr
     end
 
     local function resolve_facility(indexOrId)
@@ -144,7 +149,8 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
         local ok, err = inv:add_facility(data)
         if not ok then return false, err end
         if ctx.tui then ctx.tui:add_log("[OP] Added facility " .. tostring(data.facilityId)) end
-        persist_and_sync()
+        local okSave, errSave = persist_and_sync()
+        if not okSave then return false, errSave end
         return true, nil
     elseif action == "DELETE_FACILITY" then
         local targetFac = resolve_facility(data)
@@ -158,7 +164,8 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
             end
             ctx.tui:add_log("[OP] Deleted facility " .. tostring(targetFac.facilityId))
         end
-        persist_and_sync()
+        local okSave, errSave = persist_and_sync()
+        if not okSave then return false, errSave end
         return true, nil
     elseif action == "EDIT_DEDICATED" then
         local targetFac = resolve_facility(data)
@@ -171,7 +178,8 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
         )
         if not ok then return false, err end
         if ctx.tui then ctx.tui:add_log("[OP] Dedicated updated: " .. tostring(targetFac.facilityId)) end
-        persist_and_sync()
+        local okSave, errSave = persist_and_sync()
+        if not okSave then return false, errSave end
         return true, nil
     elseif action == "TOGGLE_MAINTENANCE" then
         local targetFac = resolve_facility(data)
@@ -179,14 +187,16 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
         local nextStatus = (targetFac.status == "MAINTENANCE") and "FREE" or "MAINTENANCE"
         inv:update_status(targetFac.facilityId, nextStatus, nil)
         if ctx.tui then ctx.tui:add_log(string.format("[OP] %s status -> %s", targetFac.facilityId, nextStatus)) end
-        persist_and_sync(targetFac.facilityId, nextStatus, nil)
+        local okSave, errSave = persist_and_sync(targetFac.facilityId, nextStatus, nil)
+        if not okSave then return false, errSave end
         return true, nil
     elseif action == "FORCE_FREE" then
         local targetFac = resolve_facility(data)
         if not targetFac then return false, "FACILITY_NOT_FOUND" end
         inv:update_status(targetFac.facilityId, "FREE", nil)
         if ctx.tui then ctx.tui:add_log(string.format("[OP] %s FORCE FREE reset", targetFac.facilityId)) end
-        persist_and_sync(targetFac.facilityId, "FREE", nil)
+        local okSave, errSave = persist_and_sync(targetFac.facilityId, "FREE", nil)
+        if not okSave then return false, errSave end
         return true, nil
     elseif action == "WAVE_OFF" then
         local targetFac = resolve_facility(data)
