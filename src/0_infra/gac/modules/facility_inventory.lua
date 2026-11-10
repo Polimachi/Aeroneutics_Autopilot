@@ -3,6 +3,24 @@
 
 local facility_inventory = {}
 
+local function has_dedicated_entries(val)
+    if type(val) == "string" then
+        return val ~= ""
+    end
+    if type(val) == "table" then
+        return #val > 0
+    end
+    return false
+end
+
+function facility_inventory.is_facility_dedicated(fac)
+    if type(fac) ~= "table" then
+        return false
+    end
+    return has_dedicated_entries(fac.dedicatedCraftIds)
+        or has_dedicated_entries(fac.dedicatedAirframeTypes)
+end
+
 function facility_inventory.create(initialFacilities)
     local state = {
         facilities = {},
@@ -55,6 +73,20 @@ function facility_inventory.create(initialFacilities)
         end
         table.sort(list, function(a, b) return tostring(a.facilityId) < tostring(b.facilityId) end)
         return list
+    end
+
+    function inv:is_dedicated(facilityId)
+        return facility_inventory.is_facility_dedicated(state.facilities[facilityId])
+    end
+
+    function inv:update_dedicated(facilityId, dedicatedCraftIds, dedicatedAirframeTypes)
+        local fac = state.facilities[facilityId]
+        if not fac then
+            return false, "FACILITY_NOT_FOUND"
+        end
+        fac.dedicatedCraftIds = clone_table(dedicatedCraftIds)
+        fac.dedicatedAirframeTypes = clone_table(dedicatedAirframeTypes)
+        return true, nil
     end
 
     function inv:update_status(facilityId, status, craftId, faultCode)
@@ -117,9 +149,10 @@ function facility_inventory.create(initialFacilities)
 
         for _, fac in pairs(state.facilities) do
             local fType = fac.type or "LANDING_PAD"
+            local isDedicated = facility_inventory.is_facility_dedicated(fac)
             if fType == "LANDING_PAD" then
                 totalPads = totalPads + 1
-                if fac.status == "FREE" and not state.emergencyLockdown then
+                if fac.status == "FREE" and not state.emergencyLockdown and not isDedicated then
                     freePads = freePads + 1
                 end
                 if (fac.maxSupportWeight or 0) > maxWeight then
@@ -130,7 +163,7 @@ function facility_inventory.create(initialFacilities)
                 end
             elseif fType == "RUNWAY" then
                 totalRunways = totalRunways + 1
-                if fac.status == "FREE" and not state.emergencyLockdown then
+                if fac.status == "FREE" and not state.emergencyLockdown and not isDedicated then
                     freeRunways = freeRunways + 1
                 end
             end

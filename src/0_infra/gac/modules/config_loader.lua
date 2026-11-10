@@ -46,6 +46,31 @@ function config_loader.get_default_config()
     }
 end
 
+function config_loader.validate_dedicated_field(val)
+    if val == nil or type(val) == "string" then
+        return true
+    end
+    if type(val) == "table" then
+        local count = 0
+        for k, v in pairs(val) do
+            if type(k) ~= "number" or k < 1 or k ~= math.floor(k) then
+                return false
+            end
+            if type(v) ~= "string" or v == "" then
+                return false
+            end
+            count = count + 1
+        end
+        for i = 1, count do
+            if type(val[i]) ~= "string" or val[i] == "" then
+                return false
+            end
+        end
+        return true
+    end
+    return false
+end
+
 function config_loader.validate_config(cfg)
     if type(cfg) ~= "table" then
         return false, "CONFIG_NOT_A_TABLE"
@@ -64,6 +89,17 @@ function config_loader.validate_config(cfg)
     end
     if type(cfg.facilities) ~= "table" then
         return false, "MISSING_OR_INVALID_FACILITIES"
+    end
+    for _, fac in ipairs(cfg.facilities) do
+        if type(fac) ~= "table" then
+            return false, "INVALID_FACILITY_ENTRY"
+        end
+        if not config_loader.validate_dedicated_field(fac.dedicatedCraftIds) then
+            return false, "INVALID_DEDICATED_CRAFT_IDS"
+        end
+        if not config_loader.validate_dedicated_field(fac.dedicatedAirframeTypes) then
+            return false, "INVALID_DEDICATED_AIRFRAME_TYPES"
+        end
     end
     return true, nil
 end

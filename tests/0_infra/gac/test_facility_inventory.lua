@@ -95,4 +95,58 @@ describe("GAC facility swarm inventory manager", function()
         assert_eq(fac.heading, 90.0)
         assert_eq(fac.velocity.vx, 1.0)
     end)
+
+    it("excludes dedicated pads and runways from freeLandingPads and freeRunways in summary", function()
+        local mixedFacilities = {
+            {
+                facilityId = "PAD_PUB_01",
+                type = "LANDING_PAD",
+                status = "FREE",
+                maxSupportWeight = 30000.0,
+                maxSupportRadius = 10.0
+            },
+            {
+                facilityId = "PAD_DED_VIP",
+                type = "LANDING_PAD",
+                status = "FREE",
+                maxSupportWeight = 50000.0,
+                maxSupportRadius = 15.0,
+                dedicatedCraftIds = { "VIP_CRAFT_01" }
+            },
+            {
+                facilityId = "RWY_DED_01",
+                type = "RUNWAY",
+                status = "FREE",
+                dedicatedAirframeTypes = "FIXED_WING"
+            }
+        }
+        local inv = facility_inventory.create(mixedFacilities)
+        assert_false(inv:is_dedicated("PAD_PUB_01"))
+        assert_true(inv:is_dedicated("PAD_DED_VIP"))
+        assert_true(inv:is_dedicated("RWY_DED_01"))
+
+        local summary = inv:get_summary()
+        assert_eq(summary.totalLandingPads, 2)
+        assert_eq(summary.freeLandingPads, 1)
+        assert_eq(summary.totalRunways, 1)
+        assert_eq(summary.freeRunways, 0)
+        assert_eq(summary.maxSupportWeight, 50000.0)
+        assert_eq(summary.maxSupportRadius, 15.0)
+    end)
+
+    it("updates dedicated attributes dynamically on an existing facility", function()
+        local inv = facility_inventory.create(samplePads)
+        assert_false(inv:is_dedicated("PAD_02"))
+
+        local ok, err = inv:update_dedicated("PAD_02", { "DRONE_01" }, "QUADROTOR")
+        assert_true(ok)
+        assert_nil(err)
+        assert_true(inv:is_dedicated("PAD_02"))
+        assert_eq(inv:get_summary().freeLandingPads, 1)
+
+        local okClear = inv:update_dedicated("PAD_02", nil, nil)
+        assert_true(okClear)
+        assert_false(inv:is_dedicated("PAD_02"))
+        assert_eq(inv:get_summary().freeLandingPads, 2)
+    end)
 end)
