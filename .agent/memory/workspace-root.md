@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-10 — 통합 인스톨러(installer.lua) 도메인별 2계층 폴더 TUI 개편 (TASK-116)
+
+- **결정 배경**: `manifest.lua` 등록 모듈이 12개에 도달하면서 `tui_view.lua`의 `51x19` 터미널 12행 뷰포트(`y = 4..15`)가 포화되어 후속 모듈(`runway`, `asa`, `docking_arm` 등) 추가 시 화면 이탈 위험이 발생했고, 통합 인스톨러 공식 규격서도 부재한 상태였음.
+- **반영 내역**:
+  1. `docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md` (`30023fb` Approved → v1.1.0 Implemented): 3종 실행 컨텍스트, 이중 원격 소스, 6대 도메인 계층 카테고리, `51x19` 2계층 상태 머신·12행 스크롤러·잔상 초기화 규칙을 정식 규격화하고 `verify_all_specs.py`·`verify_spec_status.py`·`README.md`에 편입함(15대 사양서).
+  2. `src/0_development/installer/modules/manifest.lua`·`installer.lua` (`f23a27d`): `VERSION = "1.1.0"`으로 통일하고 `CATEGORY_ORDER`·`CATEGORIES`·`getCategory`·`listModulesByCategory`·`listCategories(includeEmpty)`(기본값 빈 `mission` 폴더 제외) 구현 및 루트/소스 `installer.lua` 바이트 패리티 유지.
+  3. `src/0_development/installer/modules/tui_view.lua`·`installer_app.lua`·`tests/0_development/installer/` (`2e1b53a`): `computeViewport` 12행 스크롤 윈도우 및 `[first-last of total]` 구분선 지표, `renderCategoryMenu`(`[DIR]`·`[inst/total inst]`), `renderMenu` 폴더 헤더/`[Bksp/B] Folders`/잔상·상태바(`y = h`) 공백 초기화, `updateSelection` 동일 뷰포트 내 증분 커서 갱신(CraftOS-PC 하네스 50,000 바이트코드 예산 준수 및 터미널 깜빡임 방지) 및 2계층 상태 머신(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU` $\leftrightarrow$ `CONFIRM_*`) 구현.
+- **검증 (2026-11-10 실행)**: 단위 314/314 PASS(12개 타겟, `installer` 35/35, 최대 관측 인스트럭션 `46,400 <= 50,000`), E2E 8/8 PASS(7개 시나리오), 돌연변이 25/25 KILLED(100.0%, 기준 90.0%), 하네스 50/50 PASS, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` 15대 사양서(10 Implemented, 5 Approved) PASS, Lua 126/126 PASS.
+
+---
+
 ## 2026-11-10 — ADVANCED_VTOL & GAC 전용 패드/비상 징발 E2E 및 돌연변이 확장 (TASK-118)
 
 - **결정 배경**: `TASK-111` 구축 이후 구현된 `TASK-115`(`ADVANCED_VTOL` 2D 짐벌 벡터 추진)와 `TASK-114`(`GAC` 전용 패드 격리·비상 징발)에 대해 단위 테스트를 넘어선 다중 노드 패킷 시퀀스 E2E 시뮬레이션과 결정론적 돌연변이 타겟 확장이 필요했음.

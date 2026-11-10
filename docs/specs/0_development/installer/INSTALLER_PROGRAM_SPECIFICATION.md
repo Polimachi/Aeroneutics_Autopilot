@@ -5,7 +5,7 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v1.1.0` |
 | **최종 수정일 (Date)** | `2026-11-10` |
 | **구현 코드 (Source)** | `src/0_development/installer/` |
@@ -138,6 +138,7 @@ stateDiagram-v2
    - `#items > maxVisibleRows`인 경우 `h-3` 구분선 우측/중앙에 ` [firstIdx-lastIdx of totalItems] ` 범위 지표를 표기합니다.
 4. **잔상 제거 및 상태 유지**:
    - `renderCategoryMenu`와 `renderMenu`는 실제 항목 렌더링 이후 `y = startY + drawnCount .. h - 4`의 모든 미사용 뷰포트 행과 최하단 상태 행 `y = h`를 공백(`w` 폭)으로 초기화하여 폴더 전환 시 이전 화면 잔상이 남지 않도록 합니다.
+   - 동일 스크롤 구간 내 커서 상/하 이동(`Up`/`Down`) 시 `tui_view.updateSelection`으로 이전/신규 선택 행(및 잔여 상태 바)만 증분 갱신하여 터미널 깜빡임을 줄이며, 스크롤 경계 이탈 시 전체 재렌더링으로 즉시 전환합니다.
    - 모듈 설치/제거 완료 시 `installedMap`을 즉시 갱신하고, `CATEGORY_MENU` 복귀 시 기존 `categoryIndex`와 `categoryScroll`을 유지해 `[x/y inst]` 카운터를 최신 상태로 표시합니다.
 
 ---

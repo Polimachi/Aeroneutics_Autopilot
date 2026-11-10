@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-10  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-118 / 활성 대기: TASK-010, 011, 116, 117, 119, 120, 201, 202)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-116 / 활성 대기: TASK-010, 011, 117, 119, 120, 201, 202)
 
 ---
 
@@ -41,49 +41,44 @@
     - [ ] **TASK-011-3**: 섹터 관제·착륙패드 매뉴얼(`playbook/0_infra/gac.md`, `playbook/0_infra/landing_pad.md`) 작성
     - [ ] **TASK-011-4**: `tools/verify_playbooks.py` 7대 섹션·링크·인가 목록 정적 검증 통과
 
-- [ ] **TASK-116: 통합 인스톨러(installer.lua) 역할/도메인별 TUI 폴더 탐색 구조 개편** (`installer.lua`, `src/0_development/installer/`)
-  - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요)
-  - **배경 및 필요성**: 온보드/지상 모듈(FCP, VAS, ASA, TCA, GPS, GCS, Runway 등) 확장에 따라 전체 패키지 목록이 길어져 발생하는 TUI 내 패키지 탐색 복잡도 해소
-  - **주요 기능**: 인스톨러 대화형 TUI에서 개별 패키지를 주요 역할/도메인별 폴더(카테고리) 단위로 그룹화하여 계층적으로 탐색·선택할 수 있도록 UI 개편 (단일 컴퓨터용 복합 패키지 프리셋 기능은 제외하며, 순수 카테고리 분류 및 탐색 편의성 개선에 집중)
-    - 예: `A.infra` 선택 시 `gps` / `gcs` / `runway` 등 표시
-    - 예: `B.flight` 선택 시 `fcp` / `vas` / `asa` / `tca` 등 표시
-
 - [ ] **TASK-117: 무선 원격 배포 및 OTA 업데이트 서버 (OTA Provisioner) 구축** (`src/0_development/ota/` 또는 installer 확장 모듈)
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 및 대상 경로 확정 필요)
   - **배경 및 필요성**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM 등)에서 소프트웨어 업데이트 시 인게임 개별 컴퓨터 수동 `installer.lua` 실행 비용 과다
-  - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거
+  - **주요 기능**: 격납고 교정 채널(101 ~ 200) 또는 시스템 예약 대역(0 ~ 100)을 활용한 무선 패킷 배포 프로토콜, 격납고 마스터 컴퓨터 단일 명령으로 기체 내 모든 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 무선 일괄 업데이트 및 원격 `os.reboot()` 트리거 (신규 `src/` 파일 추가 시 `manifest.lua` 및 `verify_manifest_sync.py` 정합성 동기화 필수)
 
 - [ ] **TASK-119: [OTA 보안/안정성] 슬레이브 노드 부트스트랩 OTA 에이전트 및 원자적 롤백(Atomic Rollback) 가드 구현** (`src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{tca,asa,vas}/`)
+  - **선행 의존성**: `TASK-117` 완료 필요
   - **사양서 상태**: 미작성 / 연관 사양서 연동 필요 (TASK-117 OTA 프로토콜 Draft → Approved 및 VAS·TCA·ASA 상태 게이트 반영 필요)
   - **배경 및 필요성**: TASK-117(OTA 업데이트 서버) 구현 시 비행 중이거나 추진기 가동 중인 기체가 OTA 패킷을 받아 재부팅하면 추락 위험이 있으며, 무선 패킷 유실로 손상된 파일 상태로 리부트되면 기체 내부 컴퓨터를 수동 복구해야 하는 벽돌(Brick) 장애 발생
   - **주요 작업**:
-    - [ ] **TASK-119-1**: 착륙/안전 인터록 구현 — 기체가 `DISARMED` 또는 격납고 정지 상태일 때만 OTA 수신·적용을 허용하는 상태 게이트 구현 (`src/1_control/{tca,asa,vas}/`)
+    - [ ] **TASK-119-1**: 착륙/안전 인터록 구현 — 기체가 `DISARMED` 또는 격납고 정지 상태일 때만 OTA 수신·적용을 허용하는 상태 게이트 구현 (`src/1_control/{vas,tca}/` 우선 적용; `src/1_control/asa/`는 `TASK-105` 연기 해제 시 연동)
     - [ ] **TASK-119-2**: 원자적 스테이징 및 CRC/해시 검증 구현 — 수신 파일을 `/ota_staging/`에 우선 기록하고 체크섬 일치 시에만 본 경로로 교체하며, 부팅 직후 런타임 에러 발생 시 이전 버전(`/ota_backup/`)으로 자동 복구하는 워치독 래퍼를 `startup.lua` 생성기에 내장 (`src/0_development/installer/modules/startup_generator.lua`)
 
 - [ ] **TASK-120: [개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요; `Base+1` `MSG_ATTITUDE_CMD`·`Base+2` `MSG_FLIGHT_TELEMETRY` 패시브 감청 기준, 필요 시 진단 필드 확장 검토)
   - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 인게임 비행 중 발생하는 미세 자세 진동, 짐벌 포화(Saturation), 슬루율 제한 현상을 정밀 튜닝하기 위한 시계열 로그 수집 수단 부재
   - **주요 작업**:
-    - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프
+    - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력
 
 - [ ] **TASK-201: FCP 외루프 유도 프리미티브(LOITER 선회 반경 제어 & POI_HOLD 관심점 지향) 확장**
-  - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.15.0 Implemented → 목표 v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.25.0 Approved → 유도 프리미티브 반영 개정 필요)
+  - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.15.0 Implemented → 목표 v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.25.0 Approved → 유도 프리미티브 반영 개정 필요), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.11.0 Approved — `MSG_OPERATOR_CMD`/유도 흐름 변경 시 동기화)
   - **배경 및 목적**: 고수준 미션/편대/레이더 로직을 FCP 범위에서 제외(구 TASK-202 다이어트)하고, 상위 AMM의 전술 기동을 뒷받침할 2종 순수 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 정밀 호버/조준)와 `MSG_OPERATOR_CMD`(`Base+0`) 인터페이스 확장
-  - [ ] **TASK-201-1**: FCP 사양서(→ v1.16.0 Approved) 및 마스터 ICD(현재 v1.25.0 → 개정) 유도 프리미티브 명세 반영
-  - [ ] **TASK-201-2**: FCP `guidance_controller.lua` 및 기종별 드라이버에 `LOITER`(선회 반경/방향 속도 제어) 및 `POI_HOLD`(관심 좌표 지속 지향) 제어 루프 구현
+  - [ ] **TASK-201-1**: FCP 사양서(→ v1.16.0 Approved) 및 마스터 ICD(현재 v1.25.0 → 개정; 필요 시 구조도 v2.11.0 동기화) 유도 프리미티브 명세 반영
+  - [ ] **TASK-201-2**: FCP `guidance_controller.lua` 및 활성 기종 드라이버(`vectored_vtol_driver.lua`, `advanced_vtol_driver.lua`; 현행 `DEFERRED_AIRFRAMES` 4종 제외)에 `LOITER`(선회 반경/방향 속도 제어) 및 `POI_HOLD`(관심 좌표 지속 지향) 제어 루프 구현
   - [ ] **TASK-201-3**: `operator_handler.lua` `MSG_OPERATOR_CMD` 신규 모드 수신 및 범프리스 전환 인터록 구현
-  - [ ] **TASK-201-4**: FCP 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원
+  - [ ] **TASK-201-4**: FCP 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원 (`verify_spec_status.py` 기준 충족 및 신규 `src/` 파일 시 `manifest.lua` 동기화)
 
-- [ ] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201 + 203 완전 통합)**
+- [ ] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201 + 203 통합)**
+  - **선행 의존성**: `TASK-201` 완료 필요 (`ORBIT`/`POI_HOLD` 체크포인트 및 `MSG_OPERATOR_CMD` 확장 인터페이스 연동)
   - **참조 초안 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md` (Layer 4 AMP 설계를 AMM `mission_engine.lua`로 통합 승계; 구현 전 TASK-202-1 사양서 개정 선행)
-  - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.0.1 Implemented → 목표 v1.1.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.25.0 Approved → 통합 미션 스키마 반영 개정 필요)
+  - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.0.1 Implemented → 목표 v1.1.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.25.0 Approved → 통합 미션 스키마 반영 개정 필요), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.11.0 Approved — 필요 시 동기화)
   - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 단일 미션 엔진(`src/3_planning/amm/modules/mission_engine.lua`)으로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 향후 무인기/지상 관제(AMP)에서도 헤드리스로 재사용 가능하도록 모듈화
-  - [ ] **TASK-202-1**: AMM 사양서(→ v1.1.0 Approved) 및 마스터 ICD(현재 v1.25.0 → 개정) 통합 미션 스키마 반영
+  - [ ] **TASK-202-1**: AMM 사양서(→ v1.1.0 Approved) 및 마스터 ICD(현재 v1.25.0 → 개정; 필요 시 구조도 동기화) 통합 미션 스키마 반영
   - [ ] **TASK-202-2**: 13종 체크포인트 스키마 및 `completeWhen`/`abortWhen` 복합 조건 평가 엔진 구현 (`src/3_planning/amm/modules/mission_engine.lua`)
   - [ ] **TASK-202-3**: `missions/*.json` 다형성 시퀀스 파일 로더 및 스텝 자동 전이 FSM 구현
   - [ ] **TASK-202-4**: AMM 51x19 TUI 미션 뷰 시각화 및 CLI 명령어(`mission run/stop/status`) 확장
-  - [ ] **TASK-202-5**: AMM 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원
+  - [ ] **TASK-202-5**: AMM 단위 테스트 및 E2E 시뮬레이션 검증, `manifest.lua`·`verify_manifest_sync.py` 동기화 및 사양서 `Implemented` 환원
 
 ---
 
@@ -91,15 +86,18 @@
 
 - [ ] **TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
   - **사양서 상태**: `docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md` (v1.10.6 Approved)
-  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜
+  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜 (`TASK-116` 완료로 `0_infra` 폴더 스크롤 수용 가능, 구현 시 `manifest.lua` 등록 필요)
 
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
-  - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지)
+  - **사양서 상태**: `docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md` (v1.11.1 Approved)
+  - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (일정 연기 — 사양서 `Approved` 유지, 구현 시 `manifest.lua` 등록 필요)
 - [ ] **[연기] TASK-105: ASA (Aerodynamic Surface Adapter) 공력 조종면·플랩 분산 구동기 본 구현 완성** (`src/1_control/asa/`)
-  - TASK-113의 기본 프레임워크(헤드리스/비동기 TUI, `Base+11` 수신 루프, 300ms Safe Glide Trim, 단위 테스트 15/15 PASS)를 기반으로 물리 액추에이터(Avionics API/RS) 각도 인가, `MSG_AERO_STATUS` 상태 피드백 송출 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 핸드셰이크 완성 (일정 연기 — 사양서 `Approved` 유지)
+  - **사양서 상태**: `docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md` (v1.6.0 Approved)
+  - TASK-113의 기본 프레임워크(헤드리스/비동기 TUI, `Base+11` 수신 루프, 300ms Safe Glide Trim, 단위 테스트 15/15 PASS)를 기반으로 물리 액추에이터(Avionics API/RS) 각도 인가, `MSG_AERO_STATUS` 상태 피드백 송출 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 핸드셰이크 완성 (일정 연기 — 사양서 `Approved` 유지; 재개 시 `manifest.lua` 등록 및 `tools/verify_manifest_sync.py` `DEFERRED_SUBSYSTEM_DIRS` 면제 해제 필요)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
+  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` v1.25.0 Interface I-5 기반; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
 
 ### 🔭 Phase 3 백로그 (Phase 3 Backlog)
@@ -111,6 +109,15 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-116: 통합 인스톨러(`installer.lua`) 역할/도메인별 TUI 폴더 탐색 구조 개편** (완료일: 2026-11-10, 커밋 `30023fb` ~ `2e1b53a`) (`installer.lua`, `src/0_development/installer/`, `tests/0_development/installer/`, `docs/specs/0_development/installer/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-116-installer-category-folder-tui.md`
+  - **목적 및 성과**: `51x19` 터미널 12행(`y = 4..15`) 포화를 해소하고 패키지 탐색 복잡도를 낮추기 위해, `INSTALLER_PROGRAM_SPECIFICATION.md` v1.1.0 제정과 `manifest.lua` v1.1.0 6대 도메인 카테고리 그룹화 API(`CATEGORY_ORDER`, `CATEGORIES`, `getCategory`, `listModulesByCategory`, `listCategories`), `tui_view.lua` 12행 뷰포트 스크롤러(`computeViewport`)·카테고리 폴더 렌더러(`renderCategoryMenu`)·증분 커서 갱신(`updateSelection`)·잔상 초기화, `installer_app.lua` 2계층 상태 머신(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU` $\leftrightarrow$ `CONFIRM_*`)을 구현하고 사양서를 `Implemented`로 승격함 (단일 컴퓨터 복합 프리셋 제외, CLI 모드 호환 유지). 단위 314/314 PASS(12개 타겟, `installer` 35/35), E2E 8/8 PASS(7개 시나리오), 돌연변이 25/25 KILLED(100.0%, 기준 90.0%), 하네스 50/50 PASS, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` 15대 사양서(10 Implemented, 5 Approved) PASS, Lua 126/126 PASS.
+  - **구현 내용**:
+    - [x] **TASK-116-1**: `INSTALLER_PROGRAM_SPECIFICATION.md` v1.1.0 `Approved` 작성 및 `verify_all_specs.py`·`verify_spec_status.py`·`README.md` 등록 (`30023fb`)
+    - [x] **TASK-116-2**: `manifest.lua` v1.1.0 도메인 카테고리 레지스트리 및 조회 API 구현, `installer.lua` 바이트 패리티·버전 동기화 (`f23a27d`)
+    - [x] **TASK-116-3**: `tui_view.lua` 뷰포트 스크롤/폴더 뷰/증분 선택 및 `installer_app.lua` 2계층 TUI FSM 구현 (`2e1b53a`)
+    - [x] **TASK-116-4**: 전계층 회귀 검증, 사양서 `Implemented` 승격(`10 Implemented, 5 Approved`) 및 컨텍스트 동기화
 
 - [x] **TASK-118: [검증 확장] `ADVANCED_VTOL` 및 GAC 전용 패드/비상 징발 E2E 시뮬레이션 & 돌연변이 테스트 확장** (완료일: 2026-11-10, 커밋 `f4d0c1f` ~ `b9211fa`) (`src/1_control/tca/`, `tests/1_control/tca/`, `tests/e2e/`, `tools/run_mutation_tests.py`, `harness/simulation/node_sandbox.lua`, `tests/harness/test_simulation_core.py`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-10-task-118-advanced-vtol-gac-e2e-mutation.md`
@@ -188,8 +195,3 @@
 - [x] **TASK-107: GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 구현** (완료일: 2026-11-08, 커밋 `e9febe6` ~ `e8c25b3`) (`docs/specs/0_infra/gcs/`, `src/0_infra/gcs/`, `tests/0_infra/gcs/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-107-gcs-channel-manager-console.md`
   - **목적 및 성과**: UAFS 항공 생태계 중앙 지상 관제 인프라로서 40채널 블록($N = 1 \sim 1000$, $Base = 10000 + (N-1)\times 40$) 스티키 영속화 관리자(`CH 50000`), 원격 비행 C2 오버라이드(`Base+0`), 직결 하드 `E_STOP` 비상차단기(`Base+1`), 실시간 텔레메트리(`Base+3`) 캐시, 51x19 무깜빡임 분할 TUI 콘솔 및 메인 데몬 루프 구현 완료.
-
-- [x] **TASK-110: FCP VTOL 제어 고도화** (완료일: 2026-11-08, 커밋 `21f4e76` ~ `e6b22c8`) (`docs/specs/2_guidance/fcp/`, `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-110-fcp-vtol-refinement.md`
-  - **목적 및 성과**: VECTORED_VTOL 기종의 외루프 유도 제어기를 3축(Surge/Sway/Heave) 완전 PID + Anti-windup, CRUISE 모드 한정 15m/s TILT_ASSISTED 피치 슬루율(최대 15°/s) 완화, 수평 고정 수직 이륙 및 착륙 패드 정렬 2단계 감속 수직 착륙 시퀀스로 전면 고도화.
-

@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), GAC 전용 시설물(`TASK-114`), 매니페스트 3자 정합성 검증(`TASK-012`), E2E 다중노드 시뮬레이션·돌연변이 25종 확장(`TASK-111`, `TASK-118`), 구버전 용어 정비(`TASK-007`, `TASK-008`), GDrive 배포 체계(`TASK-009`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료. 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조.
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 통합 인스톨러 도메인 폴더 TUI 개편(`TASK-116`), ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), GAC 전용 시설물(`TASK-114`), 매니페스트 3자 정합성 검증(`TASK-012`), E2E 다중노드 시뮬레이션·돌연변이 25종 확장(`TASK-111`, `TASK-118`), 구버전 용어 정비(`TASK-007`, `TASK-008`), GDrive 배포 체계(`TASK-009`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료. 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조.
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm` 일정 보류)
@@ -87,7 +87,7 @@ Create_Aeroneutics/
 │   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
 │   ├── sync_gdrive.py                     # GDrive 스테이징·동기화·검증 CLI
 │   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
-│   ├── verify_all_specs.py                # 14대 사양서 전수 무결성 검증기
+│   ├── verify_all_specs.py                # 15대 사양서 전수 무결성 검증기
 │   ├── verify_manifest_sync.py            # manifest.lua·GDrive 맵·src/ 3자 정합성 검증기
 │   └── verify_spec_status.py              # 사양서 상태 분포 검증기
 │
@@ -169,7 +169,7 @@ python -m unittest discover -s tests/harness -p "test_*.py"
 ```
 
 ### 5. 사양서 전수 무결성 검증
-14대 활성 사양서의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
+15대 활성 사양서의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
 ```bash
 python tools/verify_all_specs.py
 ```
@@ -179,7 +179,7 @@ python tools/verify_all_specs.py
   ```
 
 ### 6. 사양서 상태 분포 검증
-14대 활성 사양서의 상태 분포(9 Implemented, 5 Approved)를 검사합니다:
+15대 활성 사양서의 상태 분포(10 Implemented, 5 Approved)를 검사합니다:
 ```bash
 python tools/verify_spec_status.py
 ```
