@@ -3,7 +3,7 @@
 
 local bootstrapper = {}
 
-bootstrapper.VERSION = "1.0.0"
+bootstrapper.VERSION = "1.1.0"
 bootstrapper.DEFAULT_GITHUB_BASE = "https://raw.githubusercontent.com/Polimachi/Aeroneutics_Autopilot/main/"
 bootstrapper.DEFAULT_GDRIVE_BASE = "https://drive.usercontent.google.com/download?id="
 

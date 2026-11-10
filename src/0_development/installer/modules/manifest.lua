@@ -3,7 +3,61 @@
 
 local manifest = {}
 
-manifest.VERSION = "1.0.0"
+manifest.VERSION = "1.1.0"
+
+manifest.CATEGORY_ORDER = {
+    "development",
+    "infra",
+    "control",
+    "guidance",
+    "planning",
+    "mission",
+}
+
+manifest.CATEGORIES = {
+    development = {
+        id = "development",
+        code = "0_development",
+        name = "Development & Calibration",
+        shortName = "Dev & Align",
+        description = "Hangar calibration, sensors library, and diagnostics",
+    },
+    infra = {
+        id = "infra",
+        code = "0_infra",
+        name = "Ground Infrastructure",
+        shortName = "Ground Infra",
+        description = "GPS cluster, GCS, GAC, landing pads, and runway",
+    },
+    control = {
+        id = "control",
+        code = "1_control",
+        name = "Flight Control",
+        shortName = "Flight Control",
+        description = "Onboard 20Hz attitude, thruster, and aero adapters",
+    },
+    guidance = {
+        id = "guidance",
+        code = "2_guidance",
+        name = "Guidance & Navigation",
+        shortName = "Guidance (FCP)",
+        description = "Outer-loop flight computer and airframe drivers",
+    },
+    planning = {
+        id = "planning",
+        code = "3_planning",
+        name = "Mission Planning & MFD",
+        shortName = "Planning (AMM)",
+        description = "Cockpit MFD terminal and waypoint mission manager",
+    },
+    mission = {
+        id = "mission",
+        code = "4_mission",
+        name = "Swarm & Payload Mission",
+        shortName = "Swarm Mission",
+        description = "Multi-craft formation and payload orchestration",
+    },
+}
 
 manifest.SOURCES = {
     GITHUB = "github",
@@ -558,6 +612,44 @@ function manifest.listModules()
     local list = {}
     for i, id in ipairs(manifest.MODULE_ORDER) do
         list[i] = manifest.MODULES[id]
+    end
+    return list
+end
+
+function manifest.getCategory(categoryId)
+    return manifest.CATEGORIES[categoryId]
+end
+
+function manifest.listModulesByCategory(categoryId)
+    local list = {}
+    if type(categoryId) ~= "string" or categoryId == "" then
+        return list
+    end
+    for _, id in ipairs(manifest.MODULE_ORDER) do
+        local mod = manifest.MODULES[id]
+        if mod and mod.category == categoryId then
+            list[#list + 1] = mod
+        end
+    end
+    return list
+end
+
+function manifest.listCategories(includeEmpty)
+    local list = {}
+    for _, catId in ipairs(manifest.CATEGORY_ORDER) do
+        local cat = manifest.CATEGORIES[catId]
+        if cat then
+            local mods = manifest.listModulesByCategory(catId)
+            if includeEmpty or #mods > 0 then
+                local entry = {}
+                for k, v in pairs(cat) do
+                    entry[k] = v
+                end
+                entry.modules = mods
+                entry.moduleCount = #mods
+                list[#list + 1] = entry
+            end
+        end
     end
     return list
 end
