@@ -139,4 +139,56 @@ describe("GAC sector FSM and multi-tier handoff protocols", function()
         assert_eq(actions2[1].type, "SLOT_TIMEOUT")
         assert_eq(inv:get_facility("PAD_01").status, "FREE")
     end)
+
+    it("Tower ATC handoff & Checkin reject unauthorized craft with FACILITY_DEDICATED when only dedicated pads are free", function()
+        local dedOnlyPads = {
+            {
+                facilityId = "PAD_VIP_ONLY",
+                type = "LANDING_PAD",
+                tacticalChannel = 50211,
+                maxSupportWeight = 40000.0,
+                maxSupportRadius = 12.0,
+                coordinates = { x = 1250.0, y = 65.0, z = -820.0 },
+                status = "FREE",
+                dedicatedCraftIds = { "VIP_CRAFT_01" }
+            }
+        }
+        local inv = facility_inventory.create(dedOnlyPads)
+        local fsm = gac_fsm.create(cfg, inv, allocation_engine)
+
+        local handoffReq = {
+            type = "MSG_ATC_SECTOR_HANDOFF_REQ",
+            payload = {
+                sectorId = "BASE_ALPHA_SECTOR_01",
+                aircraftId = "REGULAR_CRAFT",
+                airframeType = "VECTORED_VTOL",
+                craftWeight = 15000.0,
+                craftRadius = 5.0,
+                isEmergency = false
+            }
+        }
+        local handoffAck = fsm:handle_tower_handoff_req(handoffReq)
+        assert_eq(handoffAck.payload.status, "REJECTED")
+        assert_eq(handoffAck.payload.rejectReason, "FACILITY_DEDICATED")
+        assert_nil(handoffAck.payload.assignedGacChannel)
+
+        local checkinReq = {
+            type = "MSG_GAC_CHECKIN_REQ",
+            payload = {
+                sectorId = "BASE_ALPHA_SECTOR_01",
+                aircraftId = "REGULAR_CRAFT",
+                airframeType = "VECTORED_VTOL",
+                craftWeight = 15000.0,
+                craftRadius = 5.0,
+                currentPos = { x = 1200.0, y = 100.0, z = -750.0 },
+                preferredFacilityId = "PAD_VIP_ONLY",
+                isEmergency = false
+            }
+        }
+        local slotAssign, clearance = fsm:handle_aircraft_checkin(checkinReq)
+        assert_nil(slotAssign)
+        assert_not_nil(clearance)
+        assert_eq(clearance.payload.status, "DENIED")
+        assert_eq(clearance.payload.reason, "FACILITY_DEDICATED")
+    end)
 end)

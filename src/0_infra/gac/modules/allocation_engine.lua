@@ -45,6 +45,24 @@ local function list_contains(listOrVal, val)
     return false
 end
 
+local function has_dedicated_entries(val)
+    if type(val) == "string" then
+        return val ~= ""
+    end
+    if type(val) == "table" then
+        return #val > 0
+    end
+    return false
+end
+
+function allocation_engine.is_dedicated_facility(pad)
+    if type(pad) ~= "table" then
+        return false
+    end
+    return has_dedicated_entries(pad.dedicatedCraftIds)
+        or has_dedicated_entries(pad.dedicatedAirframeTypes)
+end
+
 function allocation_engine.is_dedicated_for_craft(pad, craftReq)
     if not pad or not craftReq then return false end
     if craftReq.aircraftId and list_contains(pad.dedicatedCraftIds, craftReq.aircraftId) then
@@ -66,17 +84,8 @@ function allocation_engine.isEligible(pad, craftReq, allFacilities)
         return false
     end
 
-    local hasDedicatedCraft = pad.dedicatedCraftIds and (
-        (type(pad.dedicatedCraftIds) == "table" and #pad.dedicatedCraftIds > 0) or
-        (type(pad.dedicatedCraftIds) == "string" and pad.dedicatedCraftIds ~= "")
-    )
-    local hasDedicatedAirframe = pad.dedicatedAirframeTypes and (
-        (type(pad.dedicatedAirframeTypes) == "table" and #pad.dedicatedAirframeTypes > 0) or
-        (type(pad.dedicatedAirframeTypes) == "string" and pad.dedicatedAirframeTypes ~= "")
-    )
-
     -- Case 1: PUBLIC facility
-    if not hasDedicatedCraft and not hasDedicatedAirframe then
+    if not allocation_engine.is_dedicated_facility(pad) then
         return true
     end
 
@@ -89,15 +98,7 @@ function allocation_engine.isEligible(pad, craftReq, allFacilities)
     if craftReq.isEmergency and allFacilities then
         local anyPublicFree = false
         for _, other in pairs(allFacilities) do
-            local otherHasCraft = other.dedicatedCraftIds and (
-                (type(other.dedicatedCraftIds) == "table" and #other.dedicatedCraftIds > 0) or
-                (type(other.dedicatedCraftIds) == "string" and other.dedicatedCraftIds ~= "")
-            )
-            local otherHasAf = other.dedicatedAirframeTypes and (
-                (type(other.dedicatedAirframeTypes) == "table" and #other.dedicatedAirframeTypes > 0) or
-                (type(other.dedicatedAirframeTypes) == "string" and other.dedicatedAirframeTypes ~= "")
-            )
-            if not otherHasCraft and not otherHasAf and other.status == "FREE" then
+            if not allocation_engine.is_dedicated_facility(other) and other.status == "FREE" then
                 anyPublicFree = true
                 break
             end
@@ -193,16 +194,37 @@ function allocation_engine.select_best_pad(facilities, craftReq, surfaceWind, op
     -- Stage 1: Hard filter
     local validCandidates = allocation_engine.filter_candidates(facilities, craftWeight, craftRadius, craftReq)
     if #validCandidates == 0 then
-        -- Check if any free pad exists at all to distinguish error reasons
-        local hasFreePad = false
-        for _, fac in pairs(facilities) do
-            if fac.status == "FREE" then
-                hasFreePad = true
-                break
+        -- 1. Unauthorized preferredFacilityId targeting a dedicated facility
+        if craftReq.preferredFacilityId then
+            for _, fac in pairs(facilities) do
+                if fac.facilityId == craftReq.preferredFacilityId
+                    and allocation_engine.is_dedicated_facility(fac)
+                    and not allocation_engine.isEligible(fac, craftReq, facilities) then
+                    return nil, "FACILITY_DEDICATED"
+                end
             end
         end
 
-        if hasFreePad then
+        -- 2. Distinguish dedicated-only free pads vs overweight/undersized vs all occupied
+        local hasFreePad = false
+        local hasDedicatedBlockingFree = false
+        for _, fac in pairs(facilities) do
+            if fac.status == "FREE" then
+                hasFreePad = true
+                local maxW = fac.maxSupportWeight or 0
+                local maxR = fac.maxSupportRadius or 0
+                local facType = fac.facilityType or fac.type or "LANDING_PAD"
+                if maxW >= craftWeight and maxR >= craftRadius
+                    and allocation_engine.is_facility_compatible(facType, craftReq.airframeType)
+                    and allocation_engine.is_dedicated_facility(fac) then
+                    hasDedicatedBlockingFree = true
+                end
+            end
+        end
+
+        if hasDedicatedBlockingFree then
+            return nil, "FACILITY_DEDICATED"
+        elseif hasFreePad then
             return nil, "OVERWEIGHT"
         else
             return nil, "SECTOR_ALL_OCCUPIED"

@@ -42,18 +42,17 @@ function gac_fsm.create(config, inventory, allocator)
 
     function fsm:handle_tower_handoff_req(packet)
         local payload = packet and packet.payload or {}
-        local cWeight = payload.craftWeight or 0
-        local cRadius = payload.craftRadius or 0
-
-        local candidates = alloc.filter_candidates(inv:get_all_facilities(), cWeight, cRadius)
-        local accepted = (#candidates > 0) and not inv:is_emergency_lockdown()
-
+        local accepted = false
         local rejectReason = nil
-        if not accepted then
-            if inv:is_emergency_lockdown() then
-                rejectReason = "DECK_DANGEROUS"
+
+        if inv:is_emergency_lockdown() then
+            rejectReason = "DECK_DANGEROUS"
+        else
+            local bestPad, errReason = alloc.select_best_pad(inv:get_all_facilities(), payload, cfg.surfaceWind)
+            if bestPad then
+                accepted = true
             else
-                rejectReason = "SECTOR_ALL_OCCUPIED"
+                rejectReason = errReason or "SECTOR_ALL_OCCUPIED"
             end
         end
 
