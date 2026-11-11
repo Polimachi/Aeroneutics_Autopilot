@@ -992,20 +992,27 @@ local statusData = gpsClient.queryStatus([timeoutSec], [queryType]) -- 동기 �
   function gpsClient.locate(altitudeY, timeoutSec)
       if isManaged then
           -- Managed 모드: os.pullEvent 대신 비동기 poll 루프 운용 및 50% 타임아웃 시 1회 동일 clientSeq 재전송
-          local totalTimeout = timeoutSec or 0.5
+          local totalTimeout = tonumber(timeoutSec) or 0.5
           local retryDelay = totalTimeout * 0.5
           local seq = gpsClient.request(altitudeY)
-          local startTime = os.epoch("utc")
+          local startTime = os.epoch and os.epoch("utc") or 0
           local deadline = startTime + totalTimeout * 1000
           local retryTime = startTime + retryDelay * 1000
           local retried = false
 
-          while os.epoch("utc") < deadline do
+          while (os.epoch and os.epoch("utc") or 0) < deadline do
               local fix = gpsClient.poll(seq)
-              if fix then return fix.position.x, altitudeY, fix.position.z, fix end
+              if fix then
+                  if fix.position then
+                      return fix.position.x, altitudeY, fix.position.z, fix
+                  end
+                  return nil, nil, nil, fix
+              end
 
-              if not retried and os.epoch("utc") >= retryTime then
-                  gpsClient.retransmit(seq, altitudeY)
+              if not retried and (os.epoch and os.epoch("utc") or 0) >= retryTime then
+                  local nowMs = os.epoch and os.epoch("utc") or 0
+                  local _, retryPkt = instance:nextRequestPacket(altitudeY, nowMs, seq)
+                  modem.transmit(protocol.CH_GPS_PING, instance.replyChannel, retryPkt)
                   retried = true
               end
               os.sleep(0.05)
