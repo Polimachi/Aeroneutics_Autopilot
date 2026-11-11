@@ -3,13 +3,15 @@ name: md-management
 description: >-
   Manage 3-tier project context across AGENTS.md (immutable charter), GEMINI.md
   (<= 80 lines living snapshot), and .agent/memory/<dir>.md (per-directory
-  historical archive). USE ONLY WHEN (1) a milestone completes that changes
-  architecture, directories, standard commands, or project phase, or (2) the
-  user explicitly asks to update, audit, or sync project context memory files.
-  NEVER invoke during general chat, Q&A, mid-planning (/plan, /grill-me),
-  specification/ICD edits (docs/system/**, docs/specs/** — owned by
-  specification-lifecycle-manager), report edits (reports/**), CHANGELOG.md
-  edits, or trivial changes that do not alter project structure or workflow.
+  historical archive). USE ONLY WHEN (1) any TASK-ID completes (append
+  .agent/memory/<dir>.md with TASK-ID per verify_context_docs.py R8; update
+  GEMINI.md only when phase, directories, commands, or invariants change),
+  (2) a structural milestone completes, or (3) the user explicitly asks to
+  update, audit, or sync project context memory files. NEVER invoke during
+  general chat, Q&A, mid-planning (/plan, /grill-me), specification/ICD edits
+  (docs/system/**, docs/specs/** — owned by specification-lifecycle-manager),
+  report edits (reports/**), CHANGELOG.md edits, or trivial standalone edits
+  outside a TASK-ID or structural change.
 ---
 
 # Project Markdown & Context Management (`md-management`)
@@ -23,14 +25,14 @@ Antigravity loads **both** root `AGENTS.md` and `GEMINI.md` into `<user_rules>` 
 | Tier | File Path | Role | Update Policy |
 | :--- | :--- | :--- | :--- |
 | **Tier 1** | `./AGENTS.md` | Immutable Behavioral Charter (`attention-span`, `caveman` hybrid, `no-overclaim`) | **Approval Required**: Output diff and wait for explicit user approval before editing. |
-| **Tier 2** | `./GEMINI.md` | Living Project Snapshot (**strictly <= 80 lines**, in-place replace only) | **Milestone Direct Sync**: Update immediately upon milestone completion; report in 1 line. |
-| **Tier 3** | `./.agent/memory/<dir-slug>.md` | On-demand per-directory decision & history archive (0 always-on tokens; keeps `src/` clean for CraftOS mounts) | **Milestone Append**: Prepend newest ISO-dated entry when a directory's architecture or contract changes. |
+| **Tier 2** | `./GEMINI.md` | Living Project Snapshot (**strictly <= 80 lines**, in-place replace only) | **Structural Milestone Sync**: Update only when phase, directory layout, standard commands, or invariants change; report in 1 line. |
+| **Tier 3** | `./.agent/memory/<dir-slug>.md` | On-demand per-directory decision & history archive (0 always-on tokens; keeps `src/` clean for CraftOS mounts) | **Task & Milestone Append**: Prepend newest ISO-dated entry (`## YYYY-MM-DD — ... (TASK-ID)`) on every `TASK-ID` completion (R8) or architectural change. |
 
-## 2. Mode A — Milestone Context Sync (Automatic on Structural Milestones)
+## 2. Mode A — Task & Milestone Context Sync
 
 Run after **every TASK-ID completion** (append one `.agent/memory/<dir-slug>.md` entry whose heading contains the TASK-ID; enforced by `tools/verify_context_docs.py` rule R8). Update `GEMINI.md` only when phases, directory layout, standard CLI/harness commands, or key architectural gotchas change:
 
-1. **Update `./GEMINI.md` (In-Place Replace, <= 80 lines)**:
+1. **Update `./GEMINI.md` (Only on structural/phase/command/gotcha changes; In-Place Replace, <= 80 lines)**:
    - Keep strictly the 4 fixed sections:
      1. `## 1. Current Phase & Active Handover` (current phase, just-finished milestone, next 1-3 concrete actions in <= 5 lines)
      2. `## 2. Confirmed Architecture & Paths`
@@ -39,7 +41,7 @@ Run after **every TASK-ID completion** (append one `.agent/memory/<dir-slug>.md`
    - Prune superseded handover notes so total length stays at or below 80 lines.
 2. **Append History to `./.agent/memory/<dir-slug>.md`**:
    - Use `workspace-root.md` for root/harness governance, or `<dir-slug>.md` (e.g., `src-flight.md`, `tools-harness.md`) for specific directories.
-   - Prepend a concise entry (`## YYYY-MM-DD — <Milestone Title>`) recording *why* the decision was made and *what* shipped.
+   - Prepend a concise entry (`## YYYY-MM-DD — <Title> (TASK-ID)` or `<Milestone Title>`) recording *why* the decision was made and *what* shipped.
 3. **Report**: Mention the context sync in a single bullet line in your completion reply.
 
 ## 3. Mode B — Quality Audit & `AGENTS.md` Revision (User Approval Mandatory)

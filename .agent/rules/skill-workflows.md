@@ -18,8 +18,8 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
   - `domain-aeronautics.md`(금지 모드 체크)만 참조. 구현 승인 전까지 `specification-lifecycle-manager`, `test-driven-development`, `lua`, `computercraft-lua`, `code-simplifier`, `pr-review-toolkit`, `verification-before-completion`, `md-management` **호출 금지** (`/plan`·`walkthrough` 아티팩트 작성 시에도 `specification-lifecycle-manager` 비발동).
 - **문서 유형별 관할 스킬 분리 (Markdown & Config Dispatch)**:
   - **활성 사양서·ICD 편집 및 명시적 감사** (`docs/system/*.md`, 활성 `docs/specs/**/*.md` — Status: `Draft` 및 `README.md` 제외): `specification-lifecycle-manager` **단독 호출** (`md-management`, `writing-changelogs`, `test-driven-development`, `lua`, `computercraft-lua` 호출 금지; 사양서 내 실행 코드 작성 금지).
-  - **초안 사양서, 분석 보고서 및 일반 설정·메타 문서 편집** (Status: `Draft` 사양서, `docs/specs/README.md`, `reports/**`, `.agent/**`, 루트/하위 `README.md`, `.json`, `.gitignore`): `specification-lifecycle-manager`, `md-management`, `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
-  - **프로젝트 컨텍스트·메모리 관리** (`AGENTS.md`, `GEMINI.md`, `.agent/memory/*.md`): 마일스톤 인계 또는 명시적 감사 요청 시 `md-management` **단독 관할**.
+  - **초안 사양서, 분석 보고서 및 일반 설정·메타 문서 편집** (Status: `Draft` 사양서, `docs/specs/README.md`, `reports/**`, `.agent/**` — `.agent/memory/*.md` 제외, 루트/하위 `README.md`, `.json`, `.gitignore`): `specification-lifecycle-manager`, `md-management`, `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
+  - **프로젝트 컨텍스트·메모리 관리** (`AGENTS.md`, `GEMINI.md`, `.agent/memory/*.md`): `TASK-ID` 완료, 마일스톤 인계 또는 명시적 감사 요청 시 `md-management` **단독 관할**.
   - **배포 릴리스 노트** (`CHANGELOG.md`): 버전 릴리스 시 `writing-changelogs` **단독 관할**.
 - **활성 사양서와 코드베이스 동시 수정 요청 인입 시 (Mixed-Scope)**:
   - `docs/system/*.md` 또는 활성 `docs/specs/**/*.md`의 스펙 변경과 `src/` 코드 수정을 한 작업에서 동시 요청받으면 `specification-lifecycle-manager`의 **Mixed-Scope Safety Interlock**을 즉시 발동하여 파일 수정 전 **중단(Hard Stop)**하고 진행 방향(Option 1: Spec-First, Option 2: Sequential, Option 3: Codebase-Only)을 질의한다.
@@ -36,7 +36,7 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
 - **작업 완료 보고 및 마일스톤 인계 (Completion & Context Sync)**:
   - 실제 코드·설정·테스트 변경 완료 주장 직전에만 `verification-before-completion` 호출.
   - 사양서 기반 코드 구현이 검증을 통과하면 **Mixed-Scope 중단 예외(경량 완료 전이)**로서 `specification-lifecycle-manager`를 호출하지 않고, 대상 사양서 상단 메타데이터 표의 `문서 상태`를 `Implemented`로 갱신하고 `최종 수정일`을 당일 날짜로 동기화한다.
-  - 아키텍처·디렉토리·표준 명령어·Phase가 바뀐 마일스톤 완료 시에만 `md-management`를 호출해 `GEMINI.md` 스냅샷과 `.agent/memory/<dir>.md`를 갱신한다.
+  - `TASK-ID` 완료 시 `md-management`를 호출해 `.agent/memory/<dir>.md`에 `TASK-ID`를 포함한 이력 항목을 추가한다(`verify_context_docs.py` R8). `GEMINI.md` 스냅샷은 Phase·디렉토리·표준 명령어·핵심 아키텍처 불변식이 바뀐 마일스톤 완료 시에만 갱신한다.
   - 작업 계획 생성 시 및 작업 완료 후 후속 과제 도출 시 `TASK.md`에 신규/후속 태스크를 즉시 등록하고 진행 상태(`[ ]`, `[-]`, `[x]`)를 동기화한다.
   - 작업 완료 직전 `python tools/verify_context_docs.py`로 컨텍스트 문서 정합성을 확인한다. `.agent/hooks.json`의 `Stop` 훅이 위반 시 턴 종료를 보류한다 (동일 위반당 최대 2회).
 
