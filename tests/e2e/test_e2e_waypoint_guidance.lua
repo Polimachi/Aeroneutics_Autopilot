@@ -246,5 +246,117 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         assert_eq(latest_cmd.command, "CRUISE")
         assert_eq(latest_cmd.params.targetWaypoint.x, 100)
         assert_eq(latest_cmd.params.targetWaypoint.z, 100)
+
+        -- 9. FCP full runtime closed-loop LOITER and POI_HOLD C2 -> Base+1 / Base+3 verification
+        fcp.modem:drain()
+        vas.modem:drain()
+        amm.modem:drain()
+
+        local fcp_runtime = fcp:require("fcp_runtime")
+        local fcp_net_mod = fcp:require("network_manager")
+        local fcp_cfg = fcp:require("main").load_config()
+        local fcp_ctx = fcp_runtime.create_context(fcp_cfg, function() return fcp.modem end)
+        fcp_fsm.transition_to(fcp_ctx.fsm, "CRUISE")
+        fcp_ctx.nav.pos = { x = 100.0, y = 150.0, z = 60.0 }
+        fcp_ctx.nav.lastCoreRxMs = 2000
+        fcp_ctx.nav.lastGpsFixMs = 2000
+
+        -- Dispatch LOITER C2 command from AMM on Base+0 (10000)
+        amm.modem:transmit(10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            type = "MSG_OPERATOR_CMD",
+            seq = 301,
+            timestamp = 2000,
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "LOITER",
+                flightMode = "LOITER",
+                params = {
+                    targetWaypoint = { x = 100.0, z = 100.0 },
+                    targetAlt = 150.0,
+                    targetSpeed = 10.0,
+                    loiterRadius = 40.0,
+                    loiterDirection = "CW",
+                },
+                emergencyAction = "NONE",
+            },
+        })
+        bus:step(0.05)
+
+        for _, m in ipairs(fcp.modem:drain()) do
+            fcp_net_mod.ingest_modem_event(fcp_ctx.net, "top", m.channel, m.replyChannel, m.payload, 1, 2000)
+        end
+        fcp_runtime.step_tick(fcp_ctx, 0.05, 2050)
+        bus:step(0.05)
+
+        assert_eq(fcp_ctx.fsm.current_state, "LOITER")
+        local vas_loiter_in = vas.modem:drain()
+        local loiter_att = nil
+        for _, m in ipairs(vas_loiter_in) do
+            if m.channel == 10001 and type(m.payload) == "table" and m.payload.type == "MSG_ATTITUDE_CMD" then
+                loiter_att = m.payload.payload
+            end
+        end
+        assert_not_nil(loiter_att, "FCP must transmit LOITER MSG_ATTITUDE_CMD on Base+1 (10001)")
+        assert_eq(loiter_att.flightMode, "LOITER")
+        assert_eq(loiter_att.flapTarget, 0.0)
+
+        -- Dispatch POI_HOLD C2 command from AMM on Base+0 (10000)
+        amm.modem:transmit(10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            type = "MSG_OPERATOR_CMD",
+            seq = 302,
+            timestamp = 2100,
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "POI_HOLD",
+                flightMode = "POI_HOLD",
+                params = {
+                    targetWaypoint = { x = 100.0, z = 100.0 },
+                    targetAlt = 150.0,
+                    poiTarget = { x = 200.0, y = 64.0, z = 100.0 },
+                },
+                emergencyAction = "NONE",
+            },
+        })
+        bus:step(0.05)
+
+        for _, m in ipairs(fcp.modem:drain()) do
+            fcp_net_mod.ingest_modem_event(fcp_ctx.net, "top", m.channel, m.replyChannel, m.payload, 1, 2100)
+        end
+        -- Advance 3 ticks (fcp_ctx.tick reaches 4 -> triggers 5Hz Base+3 MSG_MFD_STATE broadcast)
+        for i = 1, 3 do
+            fcp_ctx.nav.lastCoreRxMs = 2100 + i * 50
+            fcp_ctx.nav.lastGpsFixMs = 2100 + i * 50
+            fcp_runtime.step_tick(fcp_ctx, 0.05, 2100 + i * 50)
+        end
+        bus:step(0.05)
+
+        assert_eq(fcp_ctx.fsm.current_state, "POI_HOLD")
+        local vas_poi_in = vas.modem:drain()
+        local poi_att = nil
+        for _, m in ipairs(vas_poi_in) do
+            if m.channel == 10001 and type(m.payload) == "table" and m.payload.type == "MSG_ATTITUDE_CMD" then
+                poi_att = m.payload.payload
+            end
+        end
+        assert_not_nil(poi_att, "FCP must transmit POI_HOLD MSG_ATTITUDE_CMD on Base+1 (10001)")
+        assert_eq(poi_att.flightMode, "POI_HOLD")
+        assert_eq(poi_att.flapTarget, 0.0)
+
+        local amm_poi_in = amm.modem:drain()
+        local poi_mfd = nil
+        for _, m in ipairs(amm_poi_in) do
+            if m.channel == 10003 and type(m.payload) == "table" and m.payload.type == "MSG_MFD_STATE" then
+                poi_mfd = m.payload.payload
+            end
+        end
+        assert_not_nil(poi_mfd, "FCP must transmit POI_HOLD MSG_MFD_STATE on Base+3 (10003)")
+        assert_eq(poi_mfd.fsmState, "POI_HOLD")
+        assert_eq(poi_mfd.navigation.distanceToWp, 40.0)
     end)
 end)
