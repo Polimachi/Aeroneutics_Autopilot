@@ -3,6 +3,25 @@
 local input_handler = {}
 input_handler.__index = input_handler
 
+input_handler.VALID_COMMANDS = {
+    run = true,
+    stop = true,
+    next = true,
+    files = true,
+    mission = true,
+    add = true,
+    del = true,
+    clear = true,
+    ["goto"] = true,
+    pause = true,
+    resume = true,
+    save = true,
+    load = true,
+    alt = true,
+    spd = true,
+    rad = true,
+}
+
 local HOTKEYS = {
     x = "ESTOP", X = "ESTOP",
     h = "HOLD",  H = "HOLD",
@@ -45,10 +64,24 @@ local function parse_cli_command(line)
         table.insert(parts, part)
     end
     local cmd_name = table.remove(parts, 1)
+    cmd_name = string.lower(cmd_name or "")
+    local known = (input_handler.VALID_COMMANDS[cmd_name] == true)
+    local subcmd = nil
+    local subargs = nil
+    if cmd_name == "mission" then
+        subcmd = string.lower(parts[1] or "status")
+        subargs = {}
+        for i = 2, #parts do
+            table.insert(subargs, parts[i])
+        end
+    end
     return {
         type = "COMMAND",
-        name = string.lower(cmd_name),
+        name = cmd_name,
         args = parts,
+        known = known,
+        subcommand = subcmd,
+        subargs = subargs,
     }
 end
 
@@ -70,10 +103,16 @@ function input_handler:handle_char(ch)
     end
 end
 
+function input_handler:handle_paste(text)
+    if self.mode == "CLI" then
+        self.buffer = self.buffer .. tostring(text or "")
+    end
+end
+
 function input_handler:handle_key(key_code)
     local k_enter = (keys and keys.enter) or 28
     local k_esc = (keys and keys.escape) or 256
-    local k_bsp = (keys and keys.backSpace) or 14
+    local k_bsp = (keys and (keys.backspace or keys.backSpace)) or 14
 
     if self.mode == "NAV" then
         if key_code == k_enter then

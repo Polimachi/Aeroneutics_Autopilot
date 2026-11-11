@@ -91,4 +91,33 @@ describe("AMM Modal Input Handler", function()
         assert_not_nil(act)
         assert_eq(act.action, "ESTOP")
     end)
+
+    it("parses v1.2.0 CLI commands (run, load, files, stop, next, mission subcommands) and handles paste in CLI mode", function()
+        local h = input_handler.new()
+        assert_true(input_handler.VALID_COMMANDS.run == true)
+        assert_true(input_handler.VALID_COMMANDS.mission == true)
+        assert_true(input_handler.VALID_COMMANDS.files == true)
+
+        h:set_mode("CLI")
+        h:handle_paste("mission run /disk/sortie_01 loop")
+        local cmd_msn = h:handle_key(keys.enter or 28)
+        assert_not_nil(cmd_msn)
+        assert_eq(cmd_msn.name, "mission")
+        assert_true(cmd_msn.known)
+        assert_eq(cmd_msn.subcommand, "run")
+        assert_eq(cmd_msn.subargs[1], "/disk/sortie_01")
+        assert_eq(cmd_msn.subargs[2], "loop")
+
+        h:set_mode("CLI")
+        h.buffer = "files"
+        local cmd_files = h:handle_key(keys.enter or 28)
+        assert_eq(cmd_files.name, "files")
+        assert_true(cmd_files.known)
+
+        h:set_mode("CLI")
+        h.buffer = "boguscmd"
+        local cmd_unk = h:handle_key(keys.enter or 28)
+        assert_eq(cmd_unk.name, "boguscmd")
+        assert_false(cmd_unk.known)
+    end)
 end)

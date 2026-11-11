@@ -242,4 +242,175 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_false(rs.getOutput("bottom"))
         assert_false(m.isOpen(10020))
     end)
+
+    it("executes run, load, files, stop, next, and mission CLI commands with PILOT_PRIMARY takeover and queue fallback", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local m = mock.modem({ wireless = true })
+        net:bind_modem(m)
+        local q = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        local arb = c2_arbiter.new(q, net, { baseChannel = 10000 }, eng)
+        local inp = input_handler.new()
+        local app = { config = { domainId = "AIRCRAFT_01", baseChannel = 10000 }, queue = q, net = net, engine = eng, arbiter = arb, input = inp, now_ms = 1000 }
+
+        if not fs.exists("/disk") then fs.makeDir("/disk") end
+        local f = fs.open("/disk/cli_sortie.json", "w")
+        f.write(textutils.serializeJSON({
+            missionId = "CLI_SORTIE",
+            checkpoints = {
+                { checkpointId = "CP_1", action = "FLY_OVER", params = { x = 100, z = 200 } },
+                { checkpointId = "CP_2", action = "ORBIT", params = { x = 300, z = 400, radius = 35 } },
+            },
+        }))
+        f.close()
+
+        -- 1. files lists /disk/cli_sortie
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "files", args = {} }, 1000)
+        assert_true(string.find(arb.lastBanner, "/disk/cli_sortie", 1, true) ~= nil)
+
+        -- 2. load resolves /disk/cli_sortie without .json and leaves engine IDLE
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "load", args = { "/disk/cli_sortie" } }, 1050)
+        assert_eq(eng.state, "IDLE")
+        assert_eq(eng.missionId, "CLI_SORTIE")
+
+        -- 3. GCS_OVERRIDE followed by mission run loop -> PILOT_PRIMARY takeover + REPEAT execution
+        arb.authority = "GCS_OVERRIDE"
+        eng.authority = "GCS_OVERRIDE"
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "mission", args = { "run", "/disk/cli_sortie", "loop" } }, 1100)
+        assert_eq(arb.authority, "PILOT_PRIMARY")
+        assert_eq(eng.authority, "PILOT_PRIMARY")
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_eq(eng.executionMode, "REPEAT")
+        assert_eq(eng.active_index, 1)
+
+        -- 4. next advances to CP 2; stop aborts cleanly
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "next", args = {} }, 1200)
+        assert_eq(eng.active_index, 2)
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "stop", args = {} }, 1300)
+        assert_eq(eng.state, "ABORTED")
+
+        -- 5. run with no args when only legacy queue has items -> migrates and starts engine
+        local eng_q = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        local q2 = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
+        q2:add(50, 60)
+        local arb2 = c2_arbiter.new(q2, net, { baseChannel = 10000 }, eng_q)
+        local app2 = { config = { baseChannel = 10000 }, queue = q2, net = net, engine = eng_q, arbiter = arb2, input = inp, now_ms = 2000 }
+        main_mod.execute_cli_command(app2, { type = "COMMAND", name = "run", args = {} }, 2000)
+        assert_eq(eng_q.state, "EN_ROUTE")
+        assert_eq(eng_q:count(), 1)
+
+        if fs.exists("/disk/cli_sortie.json") then fs.delete("/disk/cli_sortie.json") end
+    end)
+
+    it("handles file_transfer drops safely across IDLE, autoRunDroppedFile, EN_ROUTE, and invalid payloads", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local m = mock.modem({ wireless = true })
+        net:bind_modem(m)
+        local q = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        local arb = c2_arbiter.new(q, net, { baseChannel = 10000 }, eng)
+        local inp = input_handler.new()
+
+        local function make_transfer(name, body)
+            local closed = false
+            return {
+                getFiles = function()
+                    return {
+                        {
+                            getName = function() return name end,
+                            readAll = function() return body end,
+                            close = function() closed = true end,
+                        },
+                    }
+                end,
+                isClosed = function() return closed end,
+            }
+        end
+
+        local valid_json = textutils.serializeJSON({
+            missionId = "DROPPED_01",
+            checkpoints = { { checkpointId = "CP_1", action = "FLY_TO", params = { x = 250, z = -350 } } },
+        })
+        local app = {
+            config = { domainId = "AIRCRAFT_01", baseChannel = 10000, autoRunDroppedFile = false },
+            queue = q, net = net, engine = eng, arbiter = arb, input = inp, now_ms = 1000,
+        }
+
+        -- 1. Drop valid file while IDLE (autoRunDroppedFile = false) -> saves and loads IDLE
+        main_mod.process_event(app, "file_transfer", make_transfer("dropped_01.json", valid_json))
+        assert_true(fs.exists("missions/dropped_01.json"))
+        assert_eq(eng.missionId, "DROPPED_01")
+        assert_eq(eng.state, "IDLE")
+        assert_true(string.find(arb.lastBanner, "DROP LOADED", 1, true) ~= nil)
+
+        -- 2. Drop invalid JSON with same name -> DROP FAIL without overwriting existing valid file!
+        main_mod.process_event(app, "file_transfer", make_transfer("dropped_01.json", "{invalid-json"))
+        assert_true(string.find(arb.lastBanner, "DROP FAIL", 1, true) ~= nil)
+        local check_f = fs.open("missions/dropped_01.json", "r")
+        local preserved = check_f.readAll()
+        check_f.close()
+        assert_true(string.find(preserved, "DROPPED_01", 1, true) ~= nil)
+
+        -- 3. Drop with autoRunDroppedFile = true while IDLE -> auto starts EN_ROUTE
+        app.config.autoRunDroppedFile = true
+        local valid2 = textutils.serializeJSON({
+            missionId = "DROPPED_02",
+            checkpoints = { { checkpointId = "CP_A", action = "FLY_OVER", params = { x = 10, z = 20 } } },
+        })
+        main_mod.process_event(app, "file_transfer", make_transfer("dropped_02.json", valid2))
+        assert_eq(eng.missionId, "DROPPED_02")
+        assert_eq(eng.state, "EN_ROUTE")
+
+        -- 4. Drop valid file while EN_ROUTE -> saves to disk only, active flight stays DROPPED_02!
+        local valid3 = textutils.serializeJSON({
+            missionId = "DROPPED_03",
+            checkpoints = { { checkpointId = "CP_B", action = "FLY_OVER", params = { x = 99, z = 99 } } },
+        })
+        main_mod.process_event(app, "file_transfer", make_transfer("../escape/dropped_03.json", valid3))
+        assert_true(fs.exists("missions/dropped_03.json"))
+        assert_eq(eng.missionId, "DROPPED_02")
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_true(string.find(arb.lastBanner, "DROP SAVED", 1, true) ~= nil)
+
+        if fs.exists("missions/dropped_01.json") then fs.delete("missions/dropped_01.json") end
+        if fs.exists("missions/dropped_02.json") then fs.delete("missions/dropped_02.json") end
+        if fs.exists("missions/dropped_03.json") then fs.delete("missions/dropped_03.json") end
+    end)
+
+    it("disambiguates shell boot arguments from config paths and auto-starts /disk missions in REPEAT mode", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local cfg_p, msn_p, mode_p = main_mod.parse_boot_args("config/amm_config.json", "/disk/sortie_01", "loop")
+        assert_eq(cfg_p, "config/amm_config.json")
+        assert_eq(msn_p, "/disk/sortie_01")
+        assert_eq(mode_p, "loop")
+
+        local cfg_d, msn_d, mode_d = main_mod.parse_boot_args("/disk/boot_sortie.json", "loop")
+        assert_nil(cfg_d)
+        assert_eq(msn_d, "/disk/boot_sortie.json")
+        assert_eq(mode_d, "loop")
+
+        if not fs.exists("/disk") then fs.makeDir("/disk") end
+        local f = fs.open("/disk/boot_sortie.json", "w")
+        f.write(textutils.serializeJSON({
+            missionId = "BOOT_SORTIE",
+            executionMode = "SINGLE",
+            checkpoints = { { checkpointId = "CP_1", action = "FLY_OVER", params = { x = 10, z = 20 } } },
+        }))
+        f.close()
+
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        local ok = main_mod.try_auto_start_mission(eng, msn_d, 1000, {}, nil, mode_d)
+        assert_true(ok)
+        assert_eq(eng.missionId, "BOOT_SORTIE")
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_eq(eng.executionMode, "REPEAT")
+
+        if fs.exists("/disk/boot_sortie.json") then fs.delete("/disk/boot_sortie.json") end
+    end)
 end)
