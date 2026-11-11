@@ -420,3 +420,129 @@ describe("vectored_vtol takeoff horizontal lock and approach 2-stage descent", f
         assert_eq(out_touchdown.targetPitch, 0.0)
     end)
 end)
+
+describe("flight_fsm POI_HOLD and LOITER mode transitions", function()
+    it("transitions cleanly among CRUISE, LOITER, POI_HOLD, and APPROACH_LAND while keeping inFlight active", function()
+        local fsm = flight_fsm.init({ system = { airframeType = "VECTORED_VTOL" } })
+        flight_fsm.transition_to(fsm, "CRUISE")
+        assert_true(flight_fsm.is_flight_active(fsm))
+        assert_true(flight_fsm.is_armed(fsm))
+
+        flight_fsm.evaluate(fsm, { cmd = "POI_HOLD" }, 1000)
+        assert_eq(fsm.current_state, "POI_HOLD")
+        assert_true(fsm.inFlight)
+        assert_true(flight_fsm.is_flight_active(fsm))
+        assert_true(flight_fsm.is_armed(fsm))
+
+        flight_fsm.evaluate(fsm, { cmd = "LOITER" }, 1050)
+        assert_eq(fsm.current_state, "LOITER")
+
+        flight_fsm.evaluate(fsm, { cmd = "POI_HOLD" }, 1100)
+        assert_eq(fsm.current_state, "POI_HOLD")
+
+        flight_fsm.evaluate(fsm, { cmd = "CRUISE" }, 1150)
+        assert_eq(fsm.current_state, "CRUISE")
+
+        flight_fsm.transition_to(fsm, "POI_HOLD")
+        flight_fsm.evaluate(fsm, { atcStatus = "CLEARED" }, 1200)
+        assert_eq(fsm.current_state, "APPROACH_LAND")
+    end)
+end)
+
+describe("vectored_vtol_driver LOITER CW/CCW orbit and POI_HOLD aiming primitives", function()
+    local vectored_vtol_driver = require("vectored_vtol_driver")
+    local main = require("main")
+
+    it("drives tangential East (+X) velocity in CW LOITER and West (-X) velocity in CCW LOITER when North of center", function()
+        local cfg = main.load_config()
+        cfg.guidance.vectored_vtol.envelopeMode = "TILT_ASSISTED"
+        -- Craft is at (0, 100, -30), which is exactly 30m North of center (0, 100, 0), facing North (heading = 0)
+        local nav = {
+            pos = { x = 0.0, y = 100.0, z = -30.0 },
+            vel = { x = 0.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 18.0,
+        }
+        local target_cw = {
+            x = 0.0, y = 100.0, z = 0.0,
+            loiterRadius = 30.0,
+            loiterDirection = "CW",
+            targetSpeed = 8.0,
+            headingMode = "AUTO",
+        }
+        local ds_cw = { prev_heading = 0.0, current_pitch = 0.0 }
+        local out_cw = vectored_vtol_driver.compute(cfg, nav, target_cw, "LOITER", 0.05, ds_cw)
+        -- Facing North (0 deg), Eastward (+X) tangent demand projects to positive sway (+right)
+        assert_true(out_cw.sway > 0.0, "CW loiter at North of center must command positive sway (East), got " .. tostring(out_cw.sway))
+        assert_eq(out_cw.targetPitch, 0.0, "LOITER must enforce STRICT_LEVEL pitch 0.0 even when TILT_ASSISTED is configured")
+        assert_eq(out_cw.targetRoll, 0.0, "LOITER must enforce STRICT_LEVEL roll 0.0")
+        assert_true(out_cw.targetHeading > 0.0 and out_cw.targetHeading <= 1.51, "Heading must slew toward 90 deg East tangent")
+
+        local target_ccw = {
+            x = 0.0, y = 100.0, z = 0.0,
+            loiterRadius = 30.0,
+            loiterDirection = "CCW",
+            targetSpeed = 8.0,
+            headingMode = "AUTO",
+        }
+        local ds_ccw = { prev_heading = 0.0, current_pitch = 0.0 }
+        local out_ccw = vectored_vtol_driver.compute(cfg, nav, target_ccw, "LOITER", 0.05, ds_ccw)
+        -- Facing North (0 deg), Westward (-X) tangent demand projects to negative sway (-left)
+        assert_true(out_ccw.sway < 0.0, "CCW loiter at North of center must command negative sway (West), got " .. tostring(out_ccw.sway))
+        assert_true(out_ccw.targetHeading >= 358.49 and out_ccw.targetHeading < 360.0, "Heading must slew toward 270 deg West tangent")
+    end)
+
+    it("pulls craft inward when outside loiterRadius and handles zero-distance center singularity", function()
+        local cfg = main.load_config()
+        -- Craft is 50m North of center (0, 100, -50), facing North (0 deg); loiterRadius = 30m -> r_err = -20m (Southward / backward)
+        local nav = {
+            pos = { x = 0.0, y = 100.0, z = -50.0 },
+            vel = { x = 0.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        local target = { x = 0.0, y = 100.0, z = 0.0, loiterRadius = 30.0, loiterDirection = "CW", targetSpeed = 8.0 }
+        local out = vectored_vtol_driver.compute(cfg, nav, target, "LOITER", 0.05, {})
+        assert_true(out.surge < 0.0, "Outside orbit radius while facing North (away from center) must command negative surge toward center")
+        assert_true(out.sway > 0.0, "CW LOITER while pulling inward must simultaneously command positive sway")
+
+        -- Singularity check: craft exactly at center (0, 100, 0)
+        nav.pos = { x = 0.0, y = 100.0, z = 0.0 }
+        local out_center = vectored_vtol_driver.compute(cfg, nav, target, "LOITER", 0.05, { prev_heading = 45.0 })
+        assert_true(out_center.surge == out_center.surge and out_center.sway == out_center.sway, "Must not produce NaN at d_center == 0")
+        assert_true(out_center.targetHeading == out_center.targetHeading, "targetHeading must not be NaN at d_center == 0")
+        assert_true(out_center.surge > 0.0, "At center d_center == 0, default North fallback must command outward surge toward orbit radius")
+    end)
+
+    it("holds position and slews heading toward poiTarget in POI_HOLD and FIXED heading modes", function()
+        local cfg = main.load_config()
+        local nav = {
+            pos = { x = 10.0, y = 100.0, z = 10.0 },
+            vel = { x = 0.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        -- Hold at (10, 100, 10), aim at POI (110, 64, 10) which is due East (+X -> 90 deg)
+        local poi_target = {
+            x = 10.0, y = 100.0, z = 10.0,
+            poiTarget = { x = 110.0, y = 64.0, z = 10.0 },
+        }
+        local ds = { prev_heading = 0.0 }
+        local out_poi = vectored_vtol_driver.compute(cfg, nav, poi_target, "POI_HOLD", 0.05, ds)
+        assert_eq(out_poi.surge, 0.0, "Zero position error in POI_HOLD must yield 0.0 surge")
+        assert_eq(out_poi.sway, 0.0, "Zero position error in POI_HOLD must yield 0.0 sway")
+        assert_eq(out_poi.targetPitch, 0.0, "POI_HOLD must maintain 0.0 pitch")
+        assert_eq(out_poi.targetRoll, 0.0, "POI_HOLD must maintain 0.0 roll")
+        -- 30 deg/s * 0.05s = 1.5 deg step toward 90 deg
+        assert_true(math.abs(out_poi.targetHeading - 1.5) < 0.01, "Heading must slew by +1.5 deg toward East POI")
+
+        -- FIXED heading mode in CRUISE aiming at 270 deg
+        local fixed_target = {
+            x = 10.0, y = 100.0, z = -50.0,
+            headingMode = "FIXED",
+            fixedHeading = 270.0,
+        }
+        local out_fixed = vectored_vtol_driver.compute(cfg, nav, fixed_target, "CRUISE", 0.05, { prev_heading = 0.0 })
+        assert_true(math.abs(out_fixed.targetHeading - 358.5) < 0.01, "FIXED 270 deg from 0 deg must slew -1.5 deg to 358.5 deg")
+    end)
+end)

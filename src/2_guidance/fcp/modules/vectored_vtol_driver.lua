@@ -22,26 +22,72 @@ local function wrap_deg180(deg)
     return d - 180.0
 end
 
-function vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_heading)
+function vectored_vtol_driver.resolve_horizontal_error(pos, target, fsm_state, g, cfg)
+    local tgt_x = target and target.x or pos.x
+    local tgt_z = target and target.z or pos.z
+    if fsm_state ~= "LOITER" then
+        return tgt_x - pos.x, tgt_z - pos.z, nil
+    end
+    local rx, rz = tgt_x - pos.x, tgt_z - pos.z
+    local d_center = math.sqrt(rx * rx + rz * rz)
+    local ux_out, uz_out = 0.0, -1.0
+    if d_center > 0.1 then
+        ux_out, uz_out = -rx / d_center, -rz / d_center
+    end
+    local dir = (target and target.loiterDirection == "CCW") and -1.0 or 1.0
+    local tx_unit, tz_unit = -dir * uz_out, dir * ux_out
+    local radius = math.max(5.0, tonumber(target and target.loiterRadius) or (g and g.orbitRadiusM) or (cfg and cfg.navigation and cfg.navigation.loiterRadiusM) or 30.0)
+    local v_orbit = math.max(1.0, tonumber(target and target.targetSpeed) or (g and g.orbitSpeedMps) or 8.0)
+    local k_rad = (g and g.loiterRadialKp) or 1.0
+    local r_err = (radius - d_center) * k_rad
+    local err_x = ux_out * r_err + tx_unit * v_orbit
+    local err_z = uz_out * r_err + tz_unit * v_orbit
+    local tan_hdg = (math.deg(math.atan2(tx_unit, -tz_unit)) + 360.0) % 360.0
+    return err_x, err_z, tan_hdg
+end
+
+function vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_heading, fsm_state, tangent_heading)
     local g = cfg and cfg.guidance and cfg.guidance.vectored_vtol or {}
     local max_rate = g.maxYawRateDegPerSec or 30.0
     local prev_h = prev_heading or (nav and nav.attitude and nav.attitude.heading) or 0.0
-    local mode = g.headingMode or "FACE_PATH"
+    local mode = (target and target.headingMode) or g.headingMode or "FACE_PATH"
 
     local target_h = prev_h
-    if target and target.x and target.z and nav and nav.pos then
-        local dx = target.x - nav.pos.x
-        local dz = target.z - nav.pos.z
-        local dist = math.sqrt(dx * dx + dz * dz)
-        if mode == "FACE_PATH" and dist >= 1.5 then
-            target_h = (math.deg(math.atan2(dx, -dz)) + 360.0) % 360.0
-        elseif mode == "TARGET_LOCK" then
-            target_h = (math.deg(math.atan2(dx, -dz)) + 360.0) % 360.0
+    if mode == "FIXED" and target and target.fixedHeading ~= nil then
+        target_h = ((tonumber(target.fixedHeading) or prev_h) % 360.0 + 360.0) % 360.0
+    elseif mode == "POI" or mode == "TARGET_LOCK" or mode == "ORBIT_POINT" or fsm_state == "POI_HOLD" then
+        local poi = (target and target.poiTarget) or g.targetPoint or target
+        if poi and poi.x and poi.z and nav and nav.pos then
+            local dx = poi.x - nav.pos.x
+            local dz = poi.z - nav.pos.z
+            if (dx * dx + dz * dz) >= 0.25 then
+                target_h = (math.deg(math.atan2(dx, -dz)) + 360.0) % 360.0
+            end
+        end
+    elseif mode == "AUTO" or mode == "FACE_PATH" then
+        if fsm_state == "LOITER" then
+            if target and target.poiTarget and target.poiTarget.x and target.poiTarget.z and nav and nav.pos then
+                local dx = target.poiTarget.x - nav.pos.x
+                local dz = target.poiTarget.z - nav.pos.z
+                if (dx * dx + dz * dz) >= 0.25 then
+                    target_h = (math.deg(math.atan2(dx, -dz)) + 360.0) % 360.0
+                end
+            elseif tangent_heading ~= nil then
+                target_h = tangent_heading
+            end
+        elseif target and target.x and target.z and nav and nav.pos then
+            local dx = target.x - nav.pos.x
+            local dz = target.z - nav.pos.z
+            local dist = math.sqrt(dx * dx + dz * dz)
+            if dist >= 1.5 then
+                target_h = (math.deg(math.atan2(dx, -dz)) + 360.0) % 360.0
+            end
         end
     end
 
     local diff = wrap_deg180(target_h - prev_h)
-    local max_step = max_rate * dt
+    local delta_t = dt or 0.05
+    local max_step = max_rate * delta_t
     local step = clamp(diff, -max_step, max_step)
     return (prev_h + step + 360.0) % 360.0
 end
@@ -108,10 +154,11 @@ function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_st
     local pos = nav.pos or { x = 0, y = 64, z = 0 }
     local vel = nav.vel or { x = 0, y = 0, z = 0 }
     local head = nav.attitude and nav.attitude.heading or 0.0
-    local tgt_x, tgt_y, tgt_z = target.x or pos.x, target.y or pos.y, target.z or pos.z
+    local tgt_x = target and target.x or pos.x
+    local tgt_y = target and target.y or pos.y
+    local tgt_z = target and target.z or pos.z
 
-    local err_x = tgt_x - pos.x
-    local err_z = tgt_z - pos.z
+    local err_x, err_z, tan_hdg = vectored_vtol_driver.resolve_horizontal_error(pos, target, fsm_state, g, cfg)
     local err_surge, err_sway = project_to_body(err_x, err_z, head)
     local vel_surge, vel_sway = project_to_body(vel.x, vel.z, head)
 
@@ -178,7 +225,7 @@ function vectored_vtol_driver.compute(cfg, nav, target, fsm_state, dt, driver_st
     local gs = nav.groundSpeed or math.sqrt(vel.x * vel.x + vel.z * vel.z)
     local pitch, roll = vectored_vtol_driver.compute_envelope_attitude(cfg, fsm_state, gs, surge, delta_t, driver_state)
     local prev_h = driver_state and driver_state.prev_heading or head
-    local cmd_h = vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_h)
+    local cmd_h = vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_h, fsm_state, tan_hdg)
 
     return {
         surge = surge, sway = sway, heave = heave, throttle = throttle,

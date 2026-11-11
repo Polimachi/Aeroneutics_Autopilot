@@ -66,7 +66,7 @@
   - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.15.0 Implemented → 목표 v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.26.0 Approved — `MSG_OPERATOR_CMD` 확장 파라미터는 `TASK-202-1`에서 선반영 완료; FCP v1.16.0 참조 배지 동기화), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.0 Approved — FCP v1.16.0 참조 배지 및 유도 흐름 동기화)
   - **배경 및 목적**: 고수준 미션/편대/레이더 로직을 FCP 범위에서 제외(구 TASK-202 다이어트)하고, 상위 AMM의 전술 기동을 뒷받침할 2종 순수 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 정밀 호버/조준)와 `MSG_OPERATOR_CMD`(`Base+0`) 수신 처리 확장
   - [x] **TASK-201-1**: FCP 사양서(→ v1.16.0 Approved) 유도 프리미티브·범프리스 전환 명세 반영 및 마스터 ICD(현재 v1.26.0)·구조도(현재 v2.12.0) 참조 버전 동기화 (`2026-11-11`)
-  - [ ] **TASK-201-2**: FCP `guidance_controller.lua` 및 활성 기종 드라이버(`vectored_vtol_driver.lua`, `advanced_vtol_driver.lua`; 현행 `DEFERRED_AIRFRAMES` 4종 제외)에 `LOITER`(선회 반경/방향 속도 제어) 및 `POI_HOLD`(관심 좌표 지속 지향) 제어 루프 구현
+  - [x] **TASK-201-2**: FCP `guidance_controller.lua` 및 활성 기종 드라이버(`vectored_vtol_driver.lua`, `advanced_vtol_driver.lua`; 현행 `DEFERRED_AIRFRAMES` 4종 제외)에 `LOITER`(선회 반경/방향 속도 제어) 및 `POI_HOLD`(관심 좌표 지속 지향) 제어 루프 구현 (`2026-11-11`)
   - [ ] **TASK-201-3**: `operator_handler.lua` `MSG_OPERATOR_CMD` 신규 모드(`POI_HOLD`, `loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 수신 및 범프리스 전환 인터록 구현
   - [ ] **TASK-201-4**: FCP 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원 (`verify_spec_status.py` 기준 충족 및 신규 `src/` 파일 시 `manifest.lua` 동기화)
 

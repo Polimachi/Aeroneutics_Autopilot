@@ -26,7 +26,7 @@ function flight_fsm.transition_to(state, next_state, reason)
     state.current_state = next_state
     if reason then state.lockReason = reason end
     local inflight_set = {
-        TAKEOFF = true, CRUISE = true, LOITER = true,
+        TAKEOFF = true, CRUISE = true, LOITER = true, POI_HOLD = true,
         APPROACH_LAND = true, FAILSAFE_HOLD = true,
         FAILSAFE_RTH = true, EMERGENCY_LAND = true,
     }
@@ -117,11 +117,13 @@ function flight_fsm.evaluate(state, ctx, now_ms)
     local s = state.current_state
     if s == "TAKEOFF" and (c.climbAltitudeReached or c.cmd == "CRUISE") then
         flight_fsm.transition_to(state, "CRUISE")
-    elseif s == "CRUISE" and c.cmd == "LOITER" then
+    elseif (s == "CRUISE" or s == "POI_HOLD") and c.cmd == "LOITER" then
         flight_fsm.transition_to(state, "LOITER")
-    elseif s == "LOITER" and c.cmd == "CRUISE" then
+    elseif (s == "CRUISE" or s == "LOITER") and c.cmd == "POI_HOLD" then
+        flight_fsm.transition_to(state, "POI_HOLD")
+    elseif (s == "LOITER" or s == "POI_HOLD") and c.cmd == "CRUISE" then
         flight_fsm.transition_to(state, "CRUISE")
-    elseif (s == "CRUISE" or s == "LOITER") and c.atcStatus == "CLEARED" then
+    elseif (s == "CRUISE" or s == "LOITER" or s == "POI_HOLD") and (c.atcStatus == "CLEARED" or c.cmd == "LANDING") then
         flight_fsm.transition_to(state, "APPROACH_LAND")
     elseif s == "APPROACH_LAND" and (c.approachAction == "GO_AROUND") then
         flight_fsm.transition_to(state, "LOITER")
@@ -171,7 +173,7 @@ end
 
 function flight_fsm.is_flight_active(state)
     local active_set = {
-        TAKEOFF = true, CRUISE = true, LOITER = true,
+        TAKEOFF = true, CRUISE = true, LOITER = true, POI_HOLD = true,
         APPROACH_LAND = true, FAILSAFE_HOLD = true,
         FAILSAFE_RTH = true, EMERGENCY_LAND = true,
     }
@@ -181,7 +183,7 @@ end
 function flight_fsm.is_armed(state)
     local armed_set = {
         ARMING = true, IDLE_ARMED = true, TAKEOFF = true,
-        CRUISE = true, LOITER = true, APPROACH_LAND = true,
+        CRUISE = true, LOITER = true, POI_HOLD = true, APPROACH_LAND = true,
         FAILSAFE_HOLD = true, FAILSAFE_RTH = true, EMERGENCY_LAND = true,
         PASSIVE_TRACKING = true,
     }
