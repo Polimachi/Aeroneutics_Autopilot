@@ -670,7 +670,7 @@ describe("gps client_core TTL pruning and CH 60002 status dispatch", function()
         assert_eq(live.position.x, 30)
     end)
 
-    it("builds MSG_GPS_STATUS_REQ and consumes MSG_GPS_STATUS_RESP on CH 60002", function()
+    it("builds MSG_GPS_STATUS_REQ and consumes MSG_GPS_STATUS_RESP on CH 60002 and replyChannel", function()
         local c = client_core.new()
         c:init("AIRCRAFT_01", "AIRCRAFT")
         local seq, reqPkt = c:nextStatusRequestPacket("SUMMARY", 1000)
@@ -687,6 +687,16 @@ describe("gps client_core TTL pruning and CH 60002 status dispatch", function()
         assert_not_nil(polled)
         assert_eq(polled.activeNodes, 4)
         assert_eq(polled.totalSolved, 42)
+        assert_nil(c:pollStatus())
+
+        -- Verify handleMessage also accepts MSG_GPS_STATUS_RESP on self.replyChannel (10005)
+        local stResp2 = protocol.buildStatusResp("GPS_BASE_NET", 6, {
+            activeNodes = 3, uptime = 140, totalSolved = 43, version = "1.9.5"
+        }, 1030)
+        assert_true(c:handleMessage(10005, stResp2, 1030))
+        local polled2 = c:pollStatus()
+        assert_not_nil(polled2)
+        assert_eq(polled2.activeNodes, 3)
         assert_nil(c:pollStatus())
     end)
 end)
@@ -755,5 +765,190 @@ describe("gps_client HAL managed retry parity and status query", function()
         local polled = gps_client.pollStatus()
         assert_not_nil(polled)
         assert_eq(polled.activeNodes, 5)
+    end)
+
+    it("handles isManaged locate failure paths: NO_MODEM, FAIL_GEOMETRY, and TIMEOUT with nil/frozen os.epoch", function()
+        -- 1. NO_MODEM
+        sdk.patch(peripheral, "find", function() return nil end)
+        gps_client.init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        gps_client.setManaged(true)
+        local x1, y1, z1, meta1 = gps_client.locate(120.0, 0.5)
+        gps_client.setManaged(false)
+        assert_nil(x1)
+        assert_nil(y1)
+        assert_nil(z1)
+        assert_not_nil(meta1)
+        assert_eq(meta1.status, "NO_MODEM")
+
+        -- 2. FAIL_GEOMETRY returning nil, nil, nil, fix
+        local m = mock.modem({ wireless = true })
+        sdk.patch(peripheral, "find", function(ptype)
+            if ptype == "modem" then return m end
+            return nil
+        end)
+        gps_client.init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        gps_client.setManaged(true)
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "epoch", function() return 1000 end)
+            sdk.patch(_G, "sleep", function(sec)
+                local failPkt = protocol.buildResponse("GPS_BASE_NET", 1, {
+                    targetClient = "AIRCRAFT_01",
+                    clientSeq = m._transmitted[1].pkt.payload.clientSeq,
+                    status = "FAIL_GEOMETRY",
+                    nodeCount = 3,
+                }, 1010)
+                gps_client.handleMessage("top", 10005, 60002, failPkt, 10)
+            end)
+            local x2, y2, z2, meta2 = gps_client.locate(120.0, 0.5)
+            assert_nil(x2)
+            assert_nil(y2)
+            assert_nil(z2)
+            assert_not_nil(meta2)
+            assert_eq(meta2.status, "FAIL_GEOMETRY")
+        end)
+        gps_client.setManaged(false)
+
+        -- 3. TIMEOUT with frozen os.epoch
+        m._transmitted = {}
+        gps_client.setManaged(true)
+        local sleepCount = 0
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "epoch", function() return 5000 end) -- non-advancing epoch
+            sdk.patch(_G, "sleep", function(sec) sleepCount = sleepCount + 1 end)
+            local x3, y3, z3, meta3 = gps_client.locate(120.0, 0.1)
+            assert_nil(x3)
+            assert_eq(meta3.status, "TIMEOUT")
+            assert_true(sleepCount >= 2, "fallback counter must advance despite frozen os.epoch")
+        end)
+        gps_client.setManaged(false)
+
+        -- 4. TIMEOUT with nil os.epoch
+        m._transmitted = {}
+        gps_client.setManaged(true)
+        local sleepCountNil = 0
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "epoch", nil) -- os.epoch is nil
+            sdk.patch(_G, "sleep", function(sec) sleepCountNil = sleepCountNil + 1 end)
+            local x4, y4, z4, meta4 = gps_client.locate(120.0, 0.1)
+            assert_nil(x4)
+            assert_eq(meta4.status, "TIMEOUT")
+            assert_true(sleepCountNil >= 2, "fallback counter must advance despite nil os.epoch")
+        end)
+        gps_client.setManaged(false)
+    end)
+
+    it("executes isManaged queryStatus: NO_MODEM, stale flushing, replyChannel routing, and TIMEOUT", function()
+        -- 1. NO_MODEM returns nil, "NO_MODEM"
+        sdk.patch(peripheral, "find", function() return nil end)
+        gps_client.setManaged(true)
+        local st1, err1 = gps_client.queryStatus(0.5, "SUMMARY")
+        gps_client.setManaged(false)
+        assert_nil(st1)
+        assert_eq(err1, "NO_MODEM")
+
+        -- 2. Stale status flushed, sends replyChannel = instance.replyChannel (10005), and succeeds
+        local m = mock.modem({ wireless = true })
+        sdk.patch(peripheral, "find", function(ptype)
+            if ptype == "modem" then return m end
+            return nil
+        end)
+        gps_client.init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        gps_client.setManaged(true)
+        -- Inject stale status:
+        local staleResp = protocol.buildStatusResp("GPS_BASE_NET", 1, { activeNodes = 99 }, 500)
+        gps_client.handleMessage("top", 10005, 60002, staleResp, 0)
+        assert_not_nil(gps_client.pollStatus(), "stale status injected")
+        -- Re-inject so instance:pollStatus() in queryStatus must flush it
+        gps_client.handleMessage("top", 10005, 60002, staleResp, 0)
+
+        local sleepCalls = 0
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "epoch", function() return 1000 + sleepCalls * 50 end)
+            sdk.patch(_G, "sleep", function(sec)
+                sleepCalls = sleepCalls + 1
+                if sleepCalls == 1 then
+                    -- Verify transmitted request packet: TX to CH_GPS_SERVICE (60002), RX set to instance.replyChannel (10005)
+                    assert_eq(#m._transmitted, 1)
+                    assert_eq(m._transmitted[1].tx, protocol.CH_GPS_SERVICE)
+                    assert_eq(m._transmitted[1].rx, 10005)
+                    local freshResp = protocol.buildStatusResp("GPS_BASE_NET", 2, {
+                        activeNodes = 4, uptime = 40, totalSolved = 15, version = "1.9.5"
+                    }, 1050)
+                    gps_client.handleMessage("top", 10005, 60002, freshResp, 0)
+                end
+            end)
+            local st2, err2 = gps_client.queryStatus(0.5, "SUMMARY")
+            assert_nil(err2)
+            assert_not_nil(st2)
+            assert_eq(st2.activeNodes, 4)
+            assert_eq(st2.totalSolved, 15)
+        end)
+        gps_client.setManaged(false)
+
+        -- 3. TIMEOUT with nil os.epoch
+        m._transmitted = {}
+        gps_client.setManaged(true)
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "epoch", nil)
+            sdk.patch(_G, "sleep", function(sec) end)
+            local st3, err3 = gps_client.queryStatus(0.1, "SUMMARY")
+            assert_nil(st3)
+            assert_eq(err3, "TIMEOUT")
+        end)
+        gps_client.setManaged(false)
+    end)
+
+    it("executes standalone queryStatus: success, channel lifecycle, default 1.0s timeout, and NO_MODEM", function()
+        -- 1. NO_MODEM
+        sdk.patch(peripheral, "find", function() return nil end)
+        gps_client.setManaged(false)
+        local st1, err1 = gps_client.queryStatus(0.5, "SUMMARY")
+        assert_nil(st1)
+        assert_eq(err1, "NO_MODEM")
+
+        -- 2. Success, verifies default 1.0s timeout and CH_GPS_SERVICE closed after completion
+        local m = mock.modem({ wireless = true })
+        sdk.patch(peripheral, "find", function(ptype)
+            if ptype == "modem" then return m end
+            return nil
+        end)
+        gps_client.init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        gps_client.setManaged(false)
+        assert_false(m.isOpen(protocol.CH_GPS_SERVICE))
+
+        local timerSec = nil
+        local resp = protocol.buildStatusResp("GPS_BASE_NET", 3, {
+            activeNodes = 6, uptime = 100, totalSolved = 25, version = "1.9.5"
+        }, 2000)
+
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "startTimer", function(sec)
+                timerSec = sec
+                return 77
+            end)
+            sdk.patch(os, "pullEvent", function()
+                assert_true(m.isOpen(protocol.CH_GPS_SERVICE), "channel must be open while listening")
+                return "modem_message", "top", protocol.CH_GPS_SERVICE, protocol.CH_GPS_SERVICE, resp, 0
+            end)
+            local st2, err2 = gps_client.queryStatus(nil, "SUMMARY") -- nil timeoutSec tests 1.0s default
+            assert_nil(err2)
+            assert_not_nil(st2)
+            assert_eq(st2.activeNodes, 6)
+            assert_eq(timerSec, 1.0, "queryStatus default timeout must be 1.0s")
+            assert_false(m.isOpen(protocol.CH_GPS_SERVICE), "channel must be closed after response if previously unopened")
+        end)
+
+        -- 3. TIMEOUT when channel was already open: remains open afterwards
+        m.open(protocol.CH_GPS_SERVICE)
+        assert_true(m.isOpen(protocol.CH_GPS_SERVICE))
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "startTimer", function(sec) return 88 end)
+            sdk.patch(os, "pullEvent", function() return "timer", 88 end)
+            local st3, err3 = gps_client.queryStatus(0.5, "SUMMARY")
+            assert_nil(st3)
+            assert_eq(err3, "TIMEOUT")
+            assert_true(m.isOpen(protocol.CH_GPS_SERVICE), "channel must remain open if opened before query")
+        end)
+        m.close(protocol.CH_GPS_SERVICE)
     end)
 end)
