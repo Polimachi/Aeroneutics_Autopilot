@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-12 — AMM 51x19 TUI 뷰포트·다중 경로 리졸버·프리플라이트 스키마 검증·파일 드롭/CLI 확장 구현 (TASK-202-4)
+
+- **결정 배경**: `AMM_PROGRAM_SPECIFICATION.md` (`v1.2.0 Approved`) 기반 외부 파일 즉시 구동 파이프라인 및 조종석 `51x19` MFD UI 확장을 구현함 (단, `tools/amm_mission_editor.html` 제작·E2E 확장·사양서 `Implemented` 승격은 `TASK-202-5` 범위로 유지).
+- **반영 내역**:
+  1. **다중 경로 리졸버, 프리플라이트 스키마 검증 및 C2 ACK 매핑 (`mission_engine.lua`, `c2_arbiter.lua`, `fa91084`)**: `resolve_path`(5단계 탐색·디렉토리 충돌 및 `..` 탈출 차단), `list_mission_files`, `validate_mission_table`(13종 액션·12종 조건·4종 훅·`x`/`z` 단축 좌표 정규화·`CP#<idx>` 사유 반환), 비변이 `preflight_file` 및 `load` 연동을 구현함. `c2_arbiter.lua`는 `forceRestart` 중단 이전에 `preflight_file`을 선행 검증하여 잘못된 원격 `RUN` 지령이 비행 중 임무를 중단하지 않도록 보호하고 `SCHEMA_INVALID` ACK를 매핑함 (`MUT-04`/`MUT-05` 보존).
+  2. **51x19 TUI 6행 스크롤 뷰포트 및 5행 조건 상세 패널 (`ui_renderer.lua`, `064a706`, `dfb3029`)**: `compute_viewport` 중앙 스크롤, `O`/`*`/`!` 마커, 5행 상세(`STATE`, `ACT`, `COND`, `ALT/V`, `DIST`), 레거시 `waypoint_queue` 다형성 지원, 정확히 25열 우측 패딩(`draw_right_pane`, `#text == #fg == #bg == 51`) 및 재사용 버퍼 잔상 제거(`render_mission_details` 분할 포함 전 함수 $\le 50$줄)를 구현함.
+  3. **CLI 확장·셸 부팅 인자·`file_transfer` 핫인젝션 (`input_handler.lua`, `main.lua`, `d3b3b8b`)**: `VALID_COMMANDS` 16종·`mission` 서브커맨드 파싱·`handle_paste`·`parse_boot_args`(`main.lua <spec> [loop]`)·`handle_file_transfer`(파일명 정규화·검증 실패 시 비덮어쓰기·`IDLE` 적재/`autoRunDroppedFile` vs `EN_ROUTE`/`SUSPENDED` 디스크 저장)·`PILOT_PRIMARY` 탈환(`§8.2`) 및 빈 엔진 시 레거시 큐 마이그레이션 실행을 구현함 (`amm_config.json` 변경 없음).
+- **검증 (워크트리 `.worktrees/task-202-4`, 브랜치 `feat/task-202-4`)**: 단위 12타겟 `372/372 PASS`(`3_planning/amm` `71/71 PASS`, `test_external_loader.lua` 신설), E2E 7시나리오 `8/8 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `82/82 PASS`, `verify_manifest_sync.py` `0 Errors, 0 Warnings`, `verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` `9 Implemented, 6 Approved PASS`, `validate_lua_syntax.py` `129/129 PASS`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-11 — AMM v1.2.0 호스트 PC 외부 웹 GUI 미션 에디터 및 외부 파일 즉시 구동 사양 개정 (TASK-202-1)
 
 - **결정 배경**: CC:Tweaked 인게임 `51x19` 터미널의 협소한 해상도 제약을 보완하여 13종 액션·12종 복합 조건·4종 훅을 직관적으로 설계할 수 있는 외부 에디터와, 저작한 `.json` 파일을 인게임 컴퓨터에 바로 집어넣어 구동하는 파이프라인을 명세화함.
