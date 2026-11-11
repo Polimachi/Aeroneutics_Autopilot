@@ -23,6 +23,7 @@ local function main()
         cfg = config_store.create_default()
         config_store.save_config(CONFIG_FILE, cfg)
     end
+    cfg = config_store.normalize_config(cfg)
 
     -- 2. Hardware Peripheral Discovery
     local modem = peripheral.find("modem", function(name, dev)
@@ -74,9 +75,9 @@ local function main()
         term.setCursorPos(1, 1)
     end
 
-    local function send_packet(channel, pkt)
+    local function send_packet(channel, pkt, replyCh)
         if modem and channel and pkt then
-            modem.transmit(channel, channel, pkt)
+            modem.transmit(channel, replyCh or channel, pkt)
         end
     end
 
@@ -145,12 +146,15 @@ local function main()
                 lastLog = string.format("[TX] STATIC_GUIDE seq=%d -> %s", seq, tostring(fsm:get_current_craft()))
             end
 
+            -- Dual-rate GPS query (5Hz in RESERVED/APPROACH_DYNAMIC, 1Hz otherwise, once if STATIC)
+            if gpsClient:should_query_gps(currentState, tickCount) then
+                local compPos = gpsClient:get_current_comp_pos()
+                local reqPkt = gpsClient:build_request_packet(compPos.y)
+                send_packet(GPS_PING_CHANNEL, reqPkt, reqPkt.payload.replyChannel)
+            end
+
             -- 1Hz periodic tasks (every 20 ticks)
             if tickCount % 20 == 0 then
-                -- GPS request
-                local reqPkt = gpsClient:build_request_packet(padPos.y)
-                send_packet(GPS_PING_CHANNEL, reqPkt)
-
                 -- Local backbone facility status update
                 local velForUpd = (cfg.mode == "DYNAMIC") and kin.velocity or nil
                 local headingForUpd = (cfg.mode == "DYNAMIC") and kin.attitude.yaw or nil

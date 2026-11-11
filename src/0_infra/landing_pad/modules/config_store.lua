@@ -45,6 +45,55 @@ end
 
 config_store.create_default = config_store.get_default_config
 
+function config_store.normalize_config(raw)
+    local cfg = {}
+    if type(raw) == "table" then
+        for k, v in pairs(raw) do cfg[k] = v end
+    end
+    local def = config_store.get_default_config()
+    local fid = tostring(cfg.facilityId or cfg.padId or def.facilityId)
+    local secId = tonumber(cfg.sectorId or cfg.sectorIndex) or def.sectorId
+    local pIdx = tonumber(cfg.padIndex) or def.padIndex
+    local mob = tostring(cfg.mobility or cfg.mode or def.mobility)
+    local baseSec = 50001 + secId * 200
+    local inCh = type(cfg.channels) == "table" and cfg.channels or {}
+
+    local gacCh = tonumber(inCh.sectorChannel or cfg.gacChannel) or baseSec
+    local facCh = tonumber(inCh.sectorFacilityChannel or cfg.sectorFacilityChannel) or (baseSec + 1)
+    local gpsCh = tonumber(inCh.sectorGpsReplyChannel or cfg.sectorGpsReplyChannel) or (baseSec + 5)
+    local tacCh = tonumber(inCh.tacticalChannel or cfg.tacticalChannel) or (baseSec + 10 + (pIdx - 1))
+
+    cfg.version = tostring(cfg.version or cfg.ver or def.version)
+    cfg.ver = tostring(cfg.ver or cfg.version)
+    cfg.facilityId = fid
+    cfg.padId = fid
+    cfg.sectorId = secId
+    cfg.sectorIndex = secId
+    cfg.padIndex = pIdx
+    cfg.mobility = mob
+    cfg.mode = mob
+    cfg.gacChannel = gacCh
+    cfg.sectorFacilityChannel = facCh
+    cfg.sectorGpsReplyChannel = gpsCh
+    cfg.tacticalChannel = tacCh
+    cfg.channels = {
+        sectorChannel = gacCh,
+        sectorFacilityChannel = facCh,
+        sectorGpsReplyChannel = gpsCh,
+        tacticalChannel = tacCh,
+    }
+    cfg.mountingYawOffset = tonumber(cfg.mountingYawOffset) or def.mountingYawOffset
+    cfg.bodyOffset = type(cfg.bodyOffset) == "table" and cfg.bodyOffset or { forward = 0.0, right = 0.0, up = 0.0 }
+    cfg.position = type(cfg.position) == "table" and cfg.position or { x = 0.0, y = 64.0, z = 0.0 }
+    cfg.approachHeading = tonumber(cfg.approachHeading) or def.approachHeading
+    cfg.safeDescentRate = tonumber(cfg.safeDescentRate) or def.safeDescentRate
+    cfg.clearanceZoneRadius = tonumber(cfg.clearanceZoneRadius) or def.clearanceZoneRadius
+    cfg.maxSupportedWeight = tonumber(cfg.maxSupportedWeight) or def.maxSupportedWeight
+    cfg.wirelessModemSide = tostring(cfg.wirelessModemSide or def.wirelessModemSide)
+    cfg.slotDurationSec = tonumber(cfg.slotDurationSec) or def.slotDurationSec
+    return cfg
+end
+
 function config_store.validate_config(cfg)
     if type(cfg) ~= "table" then
         return false, "CONFIG_NOT_A_TABLE"
@@ -93,12 +142,13 @@ function config_store.load_config(path)
         return nil, "JSON_PARSE_ERROR"
     end
 
-    local ok, err = config_store.validate_config(data)
+    local normalized = config_store.normalize_config(data)
+    local ok, err = config_store.validate_config(normalized)
     if not ok then
         return nil, "VALIDATION_FAILED: " .. tostring(err)
     end
 
-    return data, nil
+    return normalized, nil
 end
 
 function config_store.save_config(path, cfg)

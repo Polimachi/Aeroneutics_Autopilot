@@ -45,17 +45,31 @@ function setup_wizard.create(offsetTransform)
 
     function wizard:assemble_config(stepData)
         local d = stepData or {}
-        local ch = setup_wizard.derive_channels(d.sectorIndex, d.padIndex)
+        local fid = tostring(d.facilityId or d.padId or "PAD_01")
+        local secId = tonumber(d.sectorId or d.sectorIndex) or 1
+        local pIdx = tonumber(d.padIndex) or 1
+        local mob = tostring(d.mobility or d.mode or "DYNAMIC")
+        local ch = setup_wizard.derive_channels(secId, pIdx)
         return {
+            version = "2.4.0",
             ver = "2.4.0",
-            padId = d.padId or "PAD_01",
-            sectorIndex = tonumber(d.sectorIndex) or 1,
-            padIndex = tonumber(d.padIndex) or 1,
-            mode = d.mode or "DYNAMIC",
+            facilityId = fid,
+            padId = fid,
+            sectorId = secId,
+            sectorIndex = secId,
+            padIndex = pIdx,
+            mobility = mob,
+            mode = mob,
+            gacChannel = ch.sectorChannel,
+            sectorFacilityChannel = ch.sectorFacilityChannel,
+            sectorGpsReplyChannel = ch.sectorGpsReplyChannel,
+            tacticalChannel = ch.tacticalChannel,
             approachHeading = tonumber(d.approachHeading) or 180.0,
             safeDescentRate = tonumber(d.safeDescentRate) or 1.0,
             clearanceZoneRadius = tonumber(d.clearanceZoneRadius) or 5.0,
             maxSupportedWeight = tonumber(d.maxSupportedWeight) or 45000.0,
+            wirelessModemSide = tostring(d.wirelessModemSide or "top"),
+            slotDurationSec = tonumber(d.slotDurationSec) or 120,
             channels = ch,
             mountingYawOffset = tonumber(d.mountingYawOffset) or 0.0,
             bodyOffset = {

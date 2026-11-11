@@ -87,4 +87,32 @@ describe("Landing pad commissioning setup wizard and 51x19 TUI view", function()
         local line7 = termMock._get_line(7)
         assert_true(string.find(line7, "%[ 2 %]") ~= nil)
     end)
+
+    it("assembles schema-valid configuration passing config_store.validate_config", function()
+        local config_store = require("config_store")
+        local wizard = setup_wizard.create(offset_transform)
+        local assembled = wizard:assemble_config({
+            padId = "PAD_WIZ_01",
+            sectorIndex = 2,
+            padIndex = 4,
+            mode = "DYNAMIC",
+            x = 120, y = 70, z = -340,
+        })
+        local ok, err = config_store.validate_config(assembled)
+        assert_true(ok, err)
+        assert_eq(assembled.facilityId, "PAD_WIZ_01")
+        assert_eq(assembled.padId, "PAD_WIZ_01")
+        assert_eq(assembled.sectorId, 2)
+        assert_eq(assembled.sectorIndex, 2)
+        assert_eq(assembled.mobility, "DYNAMIC")
+        assert_eq(assembled.mode, "DYNAMIC")
+        assert_eq(assembled.version, "2.4.0")
+        assert_eq(assembled.wirelessModemSide, "top")
+        assert_eq(assembled.slotDurationSec, 120)
+        assert_eq(assembled.gacChannel, 50401)
+        assert_eq(assembled.sectorFacilityChannel, 50402)
+        assert_eq(assembled.sectorGpsReplyChannel, 50406)
+        assert_eq(assembled.tacticalChannel, 50414)
+        assert_eq(assembled.channels.sectorGpsReplyChannel, 50406)
+    end)
 end)
