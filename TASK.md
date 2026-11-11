@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-11  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-201, TASK-202-1~3 / 진행 중: TASK-202-4~5 / 활성 대기: TASK-010, 011, 117, 120, 204)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-201, TASK-202-1~3 / 진행 중: TASK-202-4~5 / 활성 대기: TASK-010, 011, 117, 120, 122, 204, 401)
 
 ---
 
@@ -29,7 +29,7 @@
   - [ ] **TASK-010-2**: 표준 템플릿 명세 및 인덱스(`playbook/README.md`) 작성
   - [ ] **TASK-010-3**: 인프라 도메인 매뉴얼(`playbook/0_infra/gps.md`) 작성
   - [ ] **TASK-010-4**: 온보드 제어 도메인 매뉴얼(`playbook/1_control/vas.md`, `playbook/1_control/tca.md`) 작성
-  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성 (`TASK-201` `LOITER`/`POI_HOLD` 및 `TASK-202` AMM v1.1.0 3분할 미션 시퀀서·CLI/TUI 규격 반영)
+  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성 (`TASK-201` `LOITER`/`POI_HOLD` 및 `TASK-202` AMM v1.2.0 3분할 미션 시퀀서·CLI/TUI·외부 에디터/파일 즉시 구동 규격 반영)
   - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증 (`test_tools_integrity.py` 도구 등록·`verify_context_docs.py` 통과 및 `TASK-009`·`113`·`114`·`115`·`116` 현행 반영 확인)
 
 - [ ] **TASK-011: [인프라 매뉴얼] 지상 관제 및 정비 도메인 플레이북 2차 확장 (Alignment, GCS, GAC, Landing Pad)** (`playbook/0_development/alignment.md`, `playbook/0_infra/{gcs,gac,landing_pad}.md`)
@@ -59,9 +59,21 @@
     - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
-- [-] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201 + 203 통합)**
+- [ ] **TASK-122: GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 보강** (`src/0_infra/gps/`, `src/0_infra/landing_pad/`, `src/2_guidance/fcp/`, `tests/e2e/test_e2e_gps_triangulation.lua`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-122-gps-client-protocol-sync.md`
+  - **사양서 상태**: `docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md` (현재 v2.2.2 Implemented → 목표 v2.3.0 Approved → Implemented), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.27.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.1 Approved), `docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md` (현재 v2.4.2 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.16.0 Implemented)
+  - **배경 및 목적**: 중앙 GPS 클러스터, GPS Client HAL, 착륙패드(`landing_pad`), FCP(`network_manager`/`nav_engine`) 간 와이어 프로토콜 불일치(`"FACILITY"`, `"FIX_OK"`/`"FIX_DEGRADED"`, `time` 헤더), `monitor_ui` 문자열 포맷 오류, `FAIL_GEOMETRY` 250ms 재시도 차단, `isManaged` 재시도 누락 및 채널 폴백(`60001`→`50206`)을 정합화하고 실노드 폐루프 E2E 시뮬레이션으로 검증
+  - **주요 작업**:
+    - [ ] **TASK-122-1**: GPS 사양서 개정(`v2.3.0 Approved`) 및 마스터 ICD·전체 구조도·FCP·착륙패드 사양서 GPS 참조 배지 동기화
+    - [ ] **TASK-122-2**: GPS 서버·스케줄러·노드·모니터 UI·커미셔닝 수정 (`FAIL_GEOMETRY` 150ms 단기 툼스톤/HWM 비갱신, `EARLY_SOLVED` `replyChannel` 반환, `CH 60002` 상태 응답, `payload.pos`, `monitor_ui` `%-10s`, `wizard_cli.writeJsonAtomic`)
+    - [ ] **TASK-122-3**: GPS Client HAL 보강 (`client_core.lua` `pendingResponses` 5000ms TTL 정리, `gps_client.lua` `isManaged` 50% 타임아웃 재시도 동등성 및 `CH 60002` 상태 조회 API)
+    - [ ] **TASK-122-4**: 착륙패드 GPS 클라이언트 Zero-Fallback·설정 정규화 및 이중 주기(`1Hz`/`5Hz`/`STATIC`) 구현 (`config_store.normalize_config`, `setup_wizard`, `Base_sec+5` `50206`, `"FACILITY"`/`"FIX_OK"`/`"FIX_DEGRADED"`)
+    - [ ] **TASK-122-5**: FCP GPS 엔벨로프 `time` 표준화, `targetClient`/`clientSeq` 방어, 경과시간 기반 동역학 게이트 `delta_t` 및 `altitudeY` 동기화 (`network_manager.lua`, `nav_engine.lua`)
+    - [ ] **TASK-122-6**: Scenario 3 실노드 폐루프 E2E 검증(`test_e2e_gps_triangulation.lua`), GPS 사양서 `Implemented` 승격, 전계층 회귀 및 컨텍스트 문서 동기화
+
+- [-] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201[AMP 초안] + 203 통합)**
   - **선행 의존성**: `TASK-202-1~3` 및 `TASK-201` 완료로 `TASK-202-4`(TUI/CLI 확장) 및 `TASK-202-5`(멀티노드 E2E 시뮬레이션·사양서 승격) 즉시 진행 가능
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-2-amm-mission-core-hooks-zone3.md`, `docs/superpowers/plans/2026-11-11-task-202-3-amm-mission-fsm-c2-headless.md` (초안: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-2-amm-mission-core-hooks-zone3.md`, `docs/superpowers/plans/2026-11-11-task-202-3-amm-mission-fsm-c2-headless.md`, `docs/superpowers/plans/2026-11-11-task-202-4-amm-tui-resolver-drop-cli.md` (초안: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`)
   - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.2.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.27.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.1 Approved)
   - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 3분할 미션 코어(`src/3_planning/amm/modules/{mission_engine,condition_evaluator,hook_runner}.lua`)로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 무인기 헤드리스(`config.headless`) 및 원격 트리거(`Base+0` `MSG_MISSION_CMD`)로 겸용 구동하며, 호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`) 저작 및 외부 파일 즉시 구동 파이프라인을 통합 지원하도록 모듈화
   - [x] **TASK-202-1**: AMM 사양서(v1.2.0 Approved), 마스터 ICD(v1.27.0 Approved), 전체 구조도(v2.12.1 Approved) 통합 미션 스키마·Zone 3 인터페이스·호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`) 및 외부 파일 즉시 구동(`resolve_path`, `validate_mission_table`, `file_transfer`, 부팅 인자) 규격 반영 완료 (2026-11-11)
@@ -72,6 +84,10 @@
 
 - [ ] **TASK-204: AMM의 미션 관리 시스템용 표준 행동 리스트 재정의: 진입조건 및 계층별 분류** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.2.0 Approved), `src/3_planning/amm/modules/`)
   - **배경 및 목적**: 현행 AMM의 3도메인(항법/인프라/특수) 13종 평면적 체크포인트 분류 및 사후 조건(`completeWhen`/`abortWhen`) 중심 스키마를 재검토하여, 각 표준 행동(Action)의 **진입조건(Entry Preconditions / State Guards)**과 **계층별 분류(Hierarchical Taxonomy)**를 체계적으로 재정의하고 사양서 및 미션 엔진 검증/실행 모델에 반영
+
+- [ ] **TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.27.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.1 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.2.0 Approved), `docs/specs/4_mission/`)
+  - **사양서 상태**: PAYLOAD 계층 전용 사양서 미작성 (Draft → Approved 수립 및 마스터 ICD Interface I-11·전체 구조도·AMM 사양서 동기화 필요)
+  - **배경 및 목적**: 현행 마스터 ICD Interface I-11(`Base+20~29`, Zone 3 탑재체 버스)에는 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK` 기본 예시 패킷만 정의되어 있으며, 전체 구조도의 세부 채널 구분(`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` 예비) 및 다양한 탑재체 노드(화물 투하, 마그넷 래치, 엄빌리컬 급유/충전, `CC:Radars`/터렛 무장 제어 등) 간 표준 통신 계약이 미비함. 탐색/기능 등록(Discovery & Capability), 상태/헬스 텔레메트리, 명령·응답(`ACK`/`NACK`)·오류 코드, 안전 인터록 및 채널 오프셋 배분 규칙을 포함한 PAYLOAD 계층 표준 통신 스키마를 정의함
 
 ---
 
