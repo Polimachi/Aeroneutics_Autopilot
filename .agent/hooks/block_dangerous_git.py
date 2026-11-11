@@ -5,14 +5,16 @@ import json
 import re
 import sys
 
+_GIT = r"""\b[Gg][Ii][Tt](?:\.[Ee][Xx][Ee])?["']?\s+"""
+
 DANGEROUS_PATTERNS = [
-    (r"\bgit\s+push\b", "git push"),
+    (_GIT + r"push\b", "git push"),
     (r"\bpush\s+(?:--force|-f)\b", "git push --force"),
-    (r"\bgit\s+reset\s+--hard\b", "git reset --hard"),
-    (r"\bgit\s+clean\s+-[a-zA-Z]*f", "git clean -f/-fd"),
-    (r"\bgit\s+branch\s+-D\b", "git branch -D"),
-    (r"\bgit\s+checkout\s+(?:--\s+)?\.(?:\s|$)", "git checkout ."),
-    (r"\bgit\s+restore\s+(?:--\s+)?\.(?:\s|$)", "git restore ."),
+    (_GIT + r"reset\s+--hard\b", "git reset --hard"),
+    (_GIT + r"clean\s+-[a-zA-Z]*f", "git clean -f/-fd"),
+    (_GIT + r"branch\s+-D\b", "git branch -D"),
+    (_GIT + r"checkout\s+(?:--\s+)?\.(?:\s|$)", "git checkout ."),
+    (_GIT + r"restore\s+(?:--\s+)?\.(?:\s|$)", "git restore ."),
 ]
 
 
