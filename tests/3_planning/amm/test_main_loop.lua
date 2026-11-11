@@ -85,4 +85,78 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(app.arb.authority, "PILOT_PRIMARY")
         assert_eq(app.q.state, "EN_ROUTE")
     end)
+
+    it("suppresses TUI rendering in headless mode while ticking hooks/conditions and routing Zone 3 ACKs", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local m = mock.modem({ wireless = true })
+        net:bind_modem(m)
+        local rs = mock.redstone()
+        local q = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
+        local eng = mission_engine.new({ net = net, redstone = rs, colors = colors, config = { baseChannel = 10000 } })
+        local arb = c2_arbiter.new(q, net, { baseChannel = 10000 }, eng)
+        local inp = input_handler.new()
+
+        local blit_calls = 0
+        local spy_term = {
+            setCursorPos = function() end,
+            blit = function() blit_calls = blit_calls + 1 end,
+        }
+
+        assert_true(eng:load_table({
+            missionId = "UAV_HEADLESS_SORTIE",
+            checkpoints = {
+                {
+                    checkpointId = "CP_PAYLOAD",
+                    action = "PAYLOAD_ACTION",
+                    params = { channelOffset = 20, command = "SCAN", expectedStatus = "DONE" },
+                    onEnter = { { type = "REDSTONE_PULSE", side = "top", durationMs = 400 } },
+                },
+                {
+                    checkpointId = "CP_HOLD",
+                    action = "ORBIT",
+                    params = { targetPos = { x = 100, z = 100 }, durationSec = 5 },
+                },
+            },
+        }))
+
+        local app = {
+            config = { domainId = "AIRCRAFT_01", baseChannel = 10000, headless = true },
+            queue = q,
+            net = net,
+            engine = eng,
+            arbiter = arb,
+            input = inp,
+            screen_buf = ui_renderer.create_buffer(51, 19),
+            render_timer = 77,
+            term_obj = spy_term,
+            now_ms = 1000,
+        }
+
+        -- Remote RUN command arrives on Base+0 via modem_message
+        main_mod.process_event(app, "modem_message", "back", 10000, 10000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_MISSION_CMD", time = 1000,
+            payload = { action = "RUN", executionMode = "SINGLE" },
+        }, 10)
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_eq(eng.active_index, 1)
+        assert_true(rs.getOutput("top"))
+        assert_true(m.isOpen(10020))
+
+        -- 5Hz timer fires at 1500ms -> expires pulse without calling term.blit in headless mode
+        app.now_ms = 1500
+        main_mod.process_event(app, "timer", 77)
+        assert_eq(blit_calls, 0)
+        assert_false(rs.getOutput("top"))
+
+        -- Zone 3 MSG_PAYLOAD_ACK arrives on Base+20 (10020) -> closes 10020 and advances to CP_HOLD (index 2)
+        app.now_ms = 1600
+        main_mod.process_event(app, "modem_message", "back", 10020, 10020, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_PAYLOAD_ACK", time = 1600,
+            payload = { checkpointId = "CP_PAYLOAD", command = "SCAN", status = "DONE" },
+        }, 1)
+        assert_false(m.isOpen(10020))
+        assert_eq(eng.active_index, 2)
+    end)
 end)

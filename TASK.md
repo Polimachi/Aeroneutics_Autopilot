@@ -68,7 +68,7 @@
   - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 3분할 미션 코어(`src/3_planning/amm/modules/{mission_engine,condition_evaluator,hook_runner}.lua`)로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 무인기 헤드리스(`config.headless`) 및 원격 트리거(`Base+0` `MSG_MISSION_CMD`)로 겸용 구동하도록 모듈화
   - [x] **TASK-202-1**: AMM 사양서(v1.1.0 Approved), 마스터 ICD(v1.26.0 Approved), 전체 구조도(v2.12.0 Approved) 통합 미션 스키마 및 Zone 3 인터페이스 반영 완료 (2026-11-11)
   - [x] **TASK-202-2**: 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 조건 평가기(`condition_evaluator.lua`) 및 0-tick 비차단 훅/디바이스 실행기(`hook_runner.lua`), `network_manager.lua` Zone 3(`Base+20~29`) 동적 채널 연동 구현 완료 (2026-11-11, `3_planning/amm` 48/48 PASS)
-  - [ ] **TASK-202-3**: `missions/*.json` 다형성 시퀀스 파일 로더 및 스텝 자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `Base+0` `MSG_MISSION_CMD`/`ACK` 중재 및 `config.headless` 분기 구현
+  - [x] **TASK-202-3**: `missions/*.json` 다형성 시퀀스 파일 로더 및 스텝 자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `Base+0` `MSG_MISSION_CMD`/`ACK` 중재 및 `config.headless` 분기 구현 완료 (2026-11-11, 단위 12타겟 356/356 PASS, `3_planning/amm` 55/55 PASS)
   - [ ] **TASK-202-4**: AMM 51x19 TUI 6행 스크롤 뷰포트 + 5행 조건 진행률 시각화(`ui_renderer.lua`) 및 CLI 명령어(`run/stop/next/mission`, `input_handler.lua`) 확장
   - [ ] **TASK-202-5**: AMM 단위 테스트 및 E2E 시뮬레이션 검증, `manifest.lua`·`verify_manifest_sync.py`·`verify_spec_status.py` 동기화 및 사양서 `Implemented` 환원
 

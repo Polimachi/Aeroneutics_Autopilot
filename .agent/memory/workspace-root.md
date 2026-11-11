@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-11 — AMM 미션 엔진 FSM·C2 중재·헤드리스 모드 및 5Hz 틱 연동 (TASK-202-3)
+
+- **결정 배경**: `AMM_PROGRAM_SPECIFICATION.md` (`v1.1.0 Approved`) 기반 통합 미션 시퀀서 구축의 2단계 구현으로, 다형성 미션 파일 로더(`load`/`save`/`load_table`) 및 스텝 자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `Base+0` `MSG_MISSION_CMD`/`MSG_MISSION_ACK` 중재, `main.lua` 헤드리스 모드(`config.headless`)·5Hz 타이머 틱·Zone 3(`Base+20~29`) 이벤트 라우팅을 구현함.
+- **반영 내역**:
+  1. **다형성 미션 로더 및 시퀀서 FSM (`mission_engine.lua`, `de91f47`, `e87a192`)**: `load_table`/`load`/`save` 구현(`items` 구형 포맷 자동 승격), 9종 FCP 디스패처(`TAKEOFF_LAUNCHPAD`, `FLY_OVER`, `FLY_TO`, `ORBIT`, `PATROL`, `POI_HOLD`, `LAND_LAUNCHPAD`, `PAYLOAD_ACTION`, `REDSTONE_ACTION`), `enter_checkpoint`·`advance`·`evaluate_active`·`step_telemetry`·`tick` 5단계 FSM 라이프사이클 및 4종 폴백 핸들러(`SKIP_NEXT`, `RTH`, `HOVER_HOLD`, `LOITER`), 일시정지 FSM 표준 전이(`SUSPENDED`) 및 런타임 예약 액션 거부(`DEFERRED_ACTION_UNSUPPORTED`) 적용.
+  2. **C2 중재 및 원격 제어 (`c2_arbiter.lua`, `8442bbc`, `6113559`)**: `Base+0` `MSG_MISSION_CMD` 6종 액션(`RUN` `SINGLE`/`REPEAT`/`forceRestart`/`BUSY_REJECTED`, `STOP`, `PAUSE`, `RESUME`, `NEXT`, `ABORT`) 처리 및 `MSG_MISSION_ACK` 응답, `GCS_OVERRIDE` 권한 획득 시 큐/엔진 동시 일시정지, 조종사 CLI 액션(`PAUSE`/`RESUME`) 시 엔진 FSM 및 권한(`PILOT_PRIMARY`) 동기화.
+  3. **헤드리스 모드·5Hz 엔진 틱·Zone 3 라우팅 (`main.lua`, `test_main_loop.lua`)**: `load_config` 기본값 `headless = false` 추가, 5Hz 타이머(`0.2s`) 시 `app.engine:tick(now_ms)` 구동 및 `config.headless == true` 시 TUI 렌더링/버퍼 플러시 생략, `modem_message` 시 `Base+3`(MFD), `Base+0`(GCS/C2), `Base+20~29`(Zone 3 `on_payload_ack`) 분기 라우팅, `execute_cli_command` 5종 명령어(`save`/`load`/`clear`/`pause`/`resume`) 엔진 동기화 및 `cfg.autoStartMission` 자동 시작 지원.
+- **검증 (워크트리 `.worktrees/task-202-2-amm-core`)**: 단위 12타겟 `356/356 PASS`(`3_planning/amm` `55/55 PASS`), E2E 7시나리오 `8/8 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `82/82 PASS`, `verify_manifest_sync.py` `0 Errors, 0 Warnings`(`116` 매니페스트 경로/`132` 소스), `verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` `9 Implemented, 6 Approved PASS`, `validate_lua_syntax.py` `129/129 PASS`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-11 — AMM 3분할 미션 코어 기반·조건 평가기·0-Tick 훅·Zone 3 버스 구현 (TASK-202-2)
 
 - **결정 배경**: `AMM_PROGRAM_SPECIFICATION.md` (`v1.1.0 Approved`) 기반 통합 미션 시퀀서 구축의 1단계 코드 구현으로, 후속 `TASK-202-3`(JSON 로더 및 FSM)과 분리해 13종 체크포인트 스키마 검증·12종 조건 평가기·0-tick 비차단 훅/디바이스 드라이버·Zone 3(`Base+20~29`) 동적 버스를 순환 참조(`require("mission_engine")` 금지) 없이 독립 모듈화함.
