@@ -21,6 +21,7 @@ class TestToolsIntegrity(unittest.TestCase):
             WORKSPACE_ROOT / "tools" / "run_e2e_tests.py",
             WORKSPACE_ROOT / "tools" / "sync_gdrive.py",
             WORKSPACE_ROOT / "tools" / "verify_manifest_sync.py",
+            WORKSPACE_ROOT / "tools" / "verify_context_docs.py",
         ]
         for tool_path in expected_tools:
             self.assertTrue(
