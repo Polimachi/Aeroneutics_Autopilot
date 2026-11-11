@@ -115,6 +115,7 @@ function session_scheduler:flushExpired(registry, nowMs)
     for sKey, session in pairs(self.active_sessions) do
         if nowMs >= session.expireMs then table.insert(expiredKeys, sKey) end
     end
+    table.sort(expiredKeys)
     for _, sKey in ipairs(expiredKeys) do
         local session = self.active_sessions[sKey]
         self.active_sessions[sKey] = nil

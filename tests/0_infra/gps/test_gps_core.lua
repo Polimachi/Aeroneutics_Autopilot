@@ -329,6 +329,38 @@ describe("gps session_scheduler early solve and FAIL_GEOMETRY retry window", fun
         assert_eq(rPl.status, "FIX_OK")
         assert_eq(rCh, 10005)
     end)
+
+    it("flushes multiple expired sessions in deterministic sorted order", function()
+        local sched = session_scheduler.new({ windowMs = 50, tombstoneTtlMs = 1000 })
+        local registry = { nodes = {} }
+        local clients = {
+            { id = "AIRCRAFT_06", ch = 10205 },
+            { id = "AIRCRAFT_05", ch = 10165 },
+            { id = "AIRCRAFT_04", ch = 10125 },
+            { id = "AIRCRAFT_03", ch = 10085 },
+            { id = "AIRCRAFT_02", ch = 10045 },
+            { id = "AIRCRAFT_01", ch = 10005 },
+        }
+        for _, c in ipairs(clients) do
+            sched:ingestReport({
+                targetClient = c.id,
+                clientSeq = 1,
+                nodeId = "N1",
+                nodePos = { x = 0, y = 80, z = 0 },
+                measuredDistance = 100,
+                clientAltitudeY = 80,
+                replyChannel = c.ch,
+            }, registry, 1000)
+        end
+        local responses = sched:flushExpired(registry, 1060)
+        assert_eq(#responses, 6)
+        assert_eq(responses[1].payload.targetClient, "AIRCRAFT_01")
+        assert_eq(responses[2].payload.targetClient, "AIRCRAFT_02")
+        assert_eq(responses[3].payload.targetClient, "AIRCRAFT_03")
+        assert_eq(responses[4].payload.targetClient, "AIRCRAFT_04")
+        assert_eq(responses[5].payload.targetClient, "AIRCRAFT_05")
+        assert_eq(responses[6].payload.targetClient, "AIRCRAFT_06")
+    end)
 end)
 
 describe("gps server handlers, CH 60002 status, nodes.json schema, and monitor_ui", function()
@@ -496,5 +528,122 @@ describe("gps server handlers, CH 60002 status, nodes.json schema, and monitor_u
             assert_not_nil(saved)
             assert_eq(saved.position.x, 100)
         end)
+    end)
+
+    it("ignores unregistered node heartbeats when registry is non-empty", function()
+        local registry = {
+            nodes = {
+                NODE_01 = { nodeId = "NODE_01", computerId = 1, position = { x = 0, y = 80, z = 0 }, status = "OFFLINE" },
+            }
+        }
+        local state = {
+            ticks = 0, solvedCount = 0, totalSolves = 0, seq = 1,
+            activeNodes = 0, clientCount = 0,
+            nodes = { { id = "NODE_01", x = 0, y = 80, z = 0, status = "OFFLINE", ping = 0 } },
+            clients = {}
+        }
+
+        local rogueHb = protocol.buildHeartbeat("ROGUE_99", 1, {
+            nodeId = "ROGUE_99",
+            computerId = 99,
+            pos = { x = 50, y = 80, z = 50 },
+            status = "ONLINE",
+        }, 1000)
+        server.handleHeartbeat(state, rogueHb, registry)
+        assert_eq(#state.nodes, 1)
+        assert_eq(state.activeNodes, 0)
+        assert_nil(registry.nodes["ROGUE_99"])
+
+        local validHb = protocol.buildHeartbeat("NODE_01", 2, {
+            nodeId = "NODE_01",
+            computerId = 1,
+            pos = { x = 10, y = 85, z = -20 },
+            status = "ONLINE",
+        }, 1010)
+        server.handleHeartbeat(state, validHb, registry)
+        assert_eq(#state.nodes, 1)
+        assert_eq(state.activeNodes, 1)
+        assert_eq(state.nodes[1].status, "ONLINE")
+        assert_eq(state.nodes[1].x, 10)
+        assert_eq(registry.nodes["NODE_01"].status, "ONLINE")
+    end)
+
+    it("flushTimerExpired sends FAIL_GEOMETRY without counting solve and commits 3-node fix", function()
+        local m = mock.modem({ wireless = true })
+        local sched = session_scheduler.new({ windowMs = 50, tombstoneTtlMs = 1000 })
+        local registry = { nodes = {} }
+        local state = {
+            ticks = 0, solvedCount = 0, totalSolves = 0, seq = 1,
+            activeNodes = 0, clientCount = 0, nodes = {}, clients = {}
+        }
+        local nowMs = 1000
+        sdk.patch(os, "epoch", function() return nowMs end)
+
+        -- 1. Collinear 3-node batch expires as FAIL_GEOMETRY: TX on replyChannel, zero solve/client count
+        local collinear = {
+            { id = "C1", x = 0, y = 80, z = 0, d = 120 },
+            { id = "C2", x = 100, y = 80, z = 0, d = 100 },
+            { id = "C3", x = 200, y = 80, z = 0, d = 120 },
+        }
+        for idx, n in ipairs(collinear) do
+            local rep = protocol.buildNodeReport(n.id, idx, {
+                targetClient = "AIRCRAFT_01",
+                clientSeq = 1,
+                nodeId = n.id,
+                nodePos = { x = n.x, y = n.y, z = n.z },
+                measuredDistance = n.d,
+                clientAltitudeY = 80,
+                replyChannel = 10005,
+            }, nowMs)
+            server.handleModemMsg(sched, registry, m, state, { "modem_message", "top", protocol.CH_GPS_NODE_IN, protocol.CH_GPS_PING, rep, 0 })
+        end
+        nowMs = 1060
+        server.flushTimerExpired(sched, registry, m, state)
+        assert_eq(state.solvedCount, 0)
+        assert_eq(state.totalSolves, 0)
+        assert_eq(state.clientCount, 0)
+        assert_eq(#state.clients, 0)
+        assert_eq(state.lastSolvedStatus, "FAIL_GEOMETRY")
+        assert_eq(#m._transmitted, 1)
+        assert_eq(m._transmitted[1].tx, 10005)
+        assert_eq(m._transmitted[1].rx, protocol.CH_GPS_SERVICE)
+        assert_eq(m._transmitted[1].pkt.type, protocol.MSG_RESPONSE)
+        assert_eq(m._transmitted[1].pkt.payload.status, "FAIL_GEOMETRY")
+
+        -- 2. After 150ms tombstone expires, 3 non-collinear nodes wait for timer flush and count 1 fix
+        nowMs = 1250
+        local triNodes = {
+            { id = "N1", x = 0, y = 80, z = 0 },
+            { id = "N2", x = 500, y = 80, z = 0 },
+            { id = "N3", x = 0, y = 80, z = 500 },
+        }
+        for idx, n in ipairs(triNodes) do
+            local d = math.sqrt((200 - n.x)^2 + (100 - n.y)^2 + (300 - n.z)^2)
+            local rep = protocol.buildNodeReport(n.id, idx + 10, {
+                targetClient = "AIRCRAFT_01",
+                clientSeq = 1,
+                nodeId = n.id,
+                nodePos = { x = n.x, y = n.y, z = n.z },
+                measuredDistance = d,
+                clientAltitudeY = 100,
+                replyChannel = 10005,
+            }, nowMs)
+            server.handleModemMsg(sched, registry, m, state, { "modem_message", "top", protocol.CH_GPS_NODE_IN, protocol.CH_GPS_PING, rep, 0 })
+        end
+        assert_eq(state.solvedCount, 0, "3-node batch must wait for flushTimerExpired")
+
+        nowMs = 1310
+        server.flushTimerExpired(sched, registry, m, state)
+        assert_eq(state.solvedCount, 1)
+        assert_eq(state.totalSolves, 1)
+        assert_eq(state.clientCount, 1)
+        assert_eq(state.clients[1].id, "AIRCRAFT_01")
+        assert_near(state.clients[1].x, 200, 0.5)
+        assert_near(state.clients[1].z, 300, 0.5)
+        assert_eq(state.clients[1].y, 100)
+        assert_eq(#m._transmitted, 2)
+        assert_eq(m._transmitted[2].tx, 10005)
+        assert_eq(m._transmitted[2].pkt.type, protocol.MSG_RESPONSE)
+        assert_true(m._transmitted[2].pkt.payload.status == "FIX_OK" or m._transmitted[2].pkt.payload.status == "FIX_DEGRADED")
     end)
 end)

@@ -137,15 +137,19 @@ local function handleHeartbeat(state, msg, registry)
     local nid = tostring(msg.payload.nodeId)
     local pos = type(msg.payload.pos) == "table" and msg.payload.pos or nil
     local nextStatus = msg.payload.status or "ONLINE"
-    if registry and type(registry.nodes) == "table" and registry.nodes[nid] then
-        registry.nodes[nid].status = nextStatus
-        registry.nodes[nid].lastHeartbeat = msg.time or (os.epoch and os.epoch("utc") or 0)
-        if pos then
-            registry.nodes[nid].position = {
-                x = tonumber(pos.x) or (registry.nodes[nid].position and registry.nodes[nid].position.x) or 0,
-                y = tonumber(pos.y) or (registry.nodes[nid].position and registry.nodes[nid].position.y) or 0,
-                z = tonumber(pos.z) or (registry.nodes[nid].position and registry.nodes[nid].position.z) or 0,
-            }
+    if registry and type(registry.nodes) == "table" then
+        if registry.nodes[nid] then
+            registry.nodes[nid].status = nextStatus
+            registry.nodes[nid].lastHeartbeat = msg.time or (os.epoch and os.epoch("utc") or 0)
+            if pos then
+                registry.nodes[nid].position = {
+                    x = tonumber(pos.x) or (registry.nodes[nid].position and registry.nodes[nid].position.x) or 0,
+                    y = tonumber(pos.y) or (registry.nodes[nid].position and registry.nodes[nid].position.y) or 0,
+                    z = tonumber(pos.z) or (registry.nodes[nid].position and registry.nodes[nid].position.z) or 0,
+                }
+            end
+        elseif next(registry.nodes) ~= nil then
+            return
         end
     end
     for _, n in ipairs(state.nodes) do
