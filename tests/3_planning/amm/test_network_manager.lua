@@ -112,6 +112,10 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(m._transmitted[1].pkt.payload.checkpointId, "CP_04")
         assert_true(m.isOpen(10020))
 
+        -- Calling send_payload_req without opts preserves already-open channel state
+        assert_true(net:send_payload_req(20, "CP_04", "STATUS_PING", {}))
+        assert_true(m.isOpen(10020))
+
         -- Fire-and-forget send on unopened Zone 3 channel opens for reply metadata and closes immediately
         local ok_ff, ch21 = net:send_payload_req(21, "CP_05", "PING", {}, { keepOpen = false })
         assert_true(ok_ff)

@@ -129,10 +129,13 @@ end
 function network_manager:close_payload_channel(channel_or_offset)
     local ch, err = self:resolve_payload_channel(channel_or_offset)
     if not ch then return false, err end
-    if self.modem then
-        pcall(function()
+    if self.modem and type(self.modem.close) == "function" then
+        local ok, m_err = pcall(function()
             self.modem.close(ch)
         end)
+        if not ok then
+            return false, m_err
+        end
     end
     self.openPayloadChannels[ch] = nil
     return true, ch

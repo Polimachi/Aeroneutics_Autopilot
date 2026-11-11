@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-11 — AMM 3분할 미션 코어 기반·조건 평가기·0-Tick 훅·Zone 3 버스 구현 (TASK-202-2)
+
+- **결정 배경**: `AMM_PROGRAM_SPECIFICATION.md` (`v1.1.0 Approved`) 기반 통합 미션 시퀀서 구축의 1단계 코드 구현으로, 후속 `TASK-202-3`(JSON 로더 및 FSM)과 분리해 13종 체크포인트 스키마 검증·12종 조건 평가기·0-tick 비차단 훅/디바이스 드라이버·Zone 3(`Base+20~29`) 동적 버스를 순환 참조(`require("mission_engine")` 금지) 없이 독립 모듈화함.
+- **반영 내역**:
+  1. **13종 체크포인트 스키마 및 Zone 3 버스 (`mission_engine.lua`, `network_manager.lua`, `3a2290e`)**: `ACTIVE_ACTIONS` 9종 파라미터 검증(`FLY_TO` 5m 기본 정밀도 유지, `POI_HOLD` `headingMode="POI"`, `ORBIT` 30m/CW 기본값), `DEFERRED_ACTIONS` 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 즉시 거부(`"DEFERRED_ACTION_UNSUPPORTED"`), `defaults` 상속 및 `validate_mission` 구축. `network_manager.lua`는 `bind_modem`(`+0`/`+3`) 유지 상태에서 Zone 3(`Base+20~29`) 정수 범위 검증(`INVALID_ZONE3_CHANNEL`)·동적 개폐(`openPayloadChannels`)·`MSG_PAYLOAD_REQ`·`MSG_MISSION_ACK` 추가(`close_payload_channel` `pcall` 반환값 검사 포함).
+  2. **12종 조건 평가기 (`condition_evaluator.lua`, `e089579`)**: 12종 조건(`PROXIMITY_2D/3D`, `ALTITUDE_REACHED`, `DURATION_SEC`, `TIMEOUT_SEC`, `FUEL_LEVEL_BELOW`, `FACILITY_TOUCHDOWN` 사전 접근 가드 `should_arm_touchdown`, `PAYLOAD_RESP_MATCH` `checkpointId` 격리, `REDSTONE_INPUT_HIGH` 번들/아날로그/디지털 병행, `CROSS_TRACK_ERROR`, 예약 `ARM_DOCKED/RELEASED`), `ALL`/`ANY` 조합기(빈 배열 허위 참 방지, `abortWhen` 우선 평가), 9종 기본 `completeWhen` 자동 보강 및 `format_progress`(`<= 25`자) 구현.
+  3. **0-Tick 훅 러너 및 통합 검증 (`hook_runner.lua`, `433bcec`, `test_mission_core_integration.lua`)**: `sleep()`/`pullEvent` 없이 `REDSTONE_SET`·`bit32` 데드라인 큐 `REDSTONE_PULSE`(중첩 연장 및 번들 타 색상 보존, 아날로그 `setOutput` 덮어쓰기 방지)·단발 `ZONE3_PAYLOAD_CMD`·`NOTIFY_OPERATOR` 및 `REDSTONE_ACTION`/`PAYLOAD_ACTION`(`cleanup()` 고아 출력·채널 일괄 회수)을 구현하고 3개 신규 `.lua` 파일을 `manifest.lua`에 등록함 (`AMM_PROGRAM_SPECIFICATION.md`는 `TASK-202-5`까지 `v1.1.0 Approved` 유지).
+- **검증 (워크트리 `.worktrees/task-202-2-amm-core`)**: 단위 12타겟 `349/349 PASS`(`3_planning/amm` `48/48`, `0_development/installer` `39/39`), E2E 7시나리오 `8/8 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`, `MUT-04`/`MUT-05` 포함), 하네스 `82/82 PASS`, `verify_manifest_sync.py` `0 Errors, 0 Warnings`(`116` 매니페스트 경로/`132` 소스), `verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` `9 Implemented, 6 Approved PASS`, `validate_lua_syntax.py` `129/129 PASS`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-11 — FCP 외루프 유도 프리미티브(LOITER/POI_HOLD) 확장 및 범프리스 C2 연동 (TASK-201)
 
 - **결정 배경**: `AMM` v1.1.0(`TASK-202-1`) 통합 미션 시퀀서의 `ORBIT`→`LOITER` 및 `POI_HOLD` 전술 기동 지령을 수행하기 위해 FCP(`src/2_guidance/fcp/`) 외루프 유도 프리미티브, 3종 기수 지향 모드, `Base+0` 파라미터 정규화 및 2.0s 범프리스 전환 인터록을 활성 VTOL 2종(`VECTORED_VTOL`, `ADVANCED_VTOL`)에 구현함 (`DEFERRED_AIRFRAMES` 4종 차단 및 `flapTarget == 0.0` 유지).

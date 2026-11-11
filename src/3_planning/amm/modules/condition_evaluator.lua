@@ -275,7 +275,10 @@ function condition_evaluator.evaluate_group(group, ctx, default_logic, defaults)
         results[i] = detail
         if met then any_met = true else all_met = false end
     end
-    return (logic == "ANY") and any_met or all_met, results
+    if logic == "ANY" then
+        return any_met, results
+    end
+    return all_met, results
 end
 
 function condition_evaluator.format_progress(cp, ctx, defaults)
