@@ -166,6 +166,7 @@ local function format_cp_target(item)
 end
 
 local function format_checkpoint_row(item, idx, active_idx, is_engine)
+    if not item then return "", "0" end
     if not is_engine then
         local marker = (idx == active_idx) and "*" or (item.completed and "O" or " ")
         local col = (idx == active_idx) and "4" or (item.completed and "8" or "0")
@@ -275,6 +276,29 @@ local function format_alt_spd_detail(cp, source, mfd, is_engine)
     return string.format("ALT/V: %dm / %dm/s", math.floor(alt), math.floor(spd))
 end
 
+local function render_mission_details(buf, mfd, source, app, active_idx, is_engine)
+    local active_cp = is_engine and source and source.checkpoints and source.checkpoints[active_idx] or nil
+    local st = source and source.state or "IDLE"
+    local mode = is_engine and source and source.executionMode or nil
+    local r11 = mode and string.format("STATE: %s (%s)", st, mode) or string.format("STATE: %s", st)
+    draw_right_pane(buf, 11, r11, "4", "f")
+
+    local r12 = "ACT  : " .. format_action_detail(active_cp, source, is_engine)
+    draw_right_pane(buf, 12, r12, "0", "f")
+
+    local r13
+    if is_engine then
+        local ctx = { mfd = mfd, enteredAtMs = source and source.enteredAtMs, nowMs = app and app.now_ms }
+        r13 = "COND : " .. condition_evaluator.format_progress(active_cp, ctx, source and source.defaults)
+    else
+        r13 = string.format("RAD  : %3.1f m", source and source.arrivalRadius or 15.0)
+    end
+    draw_right_pane(buf, 13, r13, "8", "f")
+
+    draw_right_pane(buf, 14, format_alt_spd_detail(active_cp, source, mfd, is_engine), "8", "f")
+    draw_right_pane(buf, 15, format_distance_detail(active_cp, source, mfd, is_engine), "8", "f")
+end
+
 local function render_mission_pane(buf, mfd, source, app)
     local is_engine = type(source) == "table" and type(source.checkpoints) == "table"
     local total = 0
@@ -305,26 +329,7 @@ local function render_mission_pane(buf, mfd, source, app)
     draw_text(buf, 10, 26, "|", "7", "f")
     draw_right_pane(buf, 10, string.rep("-", 25), "7", "f")
 
-    local active_cp = is_engine and source.checkpoints[active_idx] or nil
-    local st = source and source.state or "IDLE"
-    local mode = is_engine and (source.executionMode or "ONCE") or nil
-    local r11 = mode and string.format("STATE: %s (%s)", st, mode) or string.format("STATE: %s", st)
-    draw_right_pane(buf, 11, r11, "4", "f")
-
-    local r12 = "ACT  : " .. format_action_detail(active_cp, source, is_engine)
-    draw_right_pane(buf, 12, r12, "0", "f")
-
-    local r13
-    if is_engine then
-        local ctx = { mfd = mfd, enteredAtMs = source.enteredAtMs, nowMs = app and app.now_ms }
-        r13 = "COND : " .. condition_evaluator.format_progress(active_cp, ctx, source.defaults)
-    else
-        r13 = string.format("RAD  : %3.1f m", source and source.arrivalRadius or 15.0)
-    end
-    draw_right_pane(buf, 13, r13, "8", "f")
-
-    draw_right_pane(buf, 14, format_alt_spd_detail(active_cp, source, mfd, is_engine), "8", "f")
-    draw_right_pane(buf, 15, format_distance_detail(active_cp, source, mfd, is_engine), "8", "f")
+    render_mission_details(buf, mfd, source, app, active_idx, is_engine)
 end
 
 local function render_footer(buf, app)
