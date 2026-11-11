@@ -78,4 +78,72 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(transmitted[1].payload.payload.reason, "PILOT_ESTOP_HOTKEY")
         assert_eq(transmitted[1].payload.payload.source, "MFD")
     end)
+
+    it("enforces Zone 3 (Base+20..29) bounds and manages dynamic channel open/close without closing Base+0/+3", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local m = mock.modem({ wireless = true })
+        net:bind_modem(m)
+        assert_true(m.isOpen(10000))
+        assert_true(m.isOpen(10003))
+        assert_false(m.isOpen(10020))
+
+        local invalid_inputs = { -1, 0, 3, 19, 30, 20.5, 0 / 0, math.huge, 9999, 10000, 10010, 10030, "20" }
+        for _, bad in ipairs(invalid_inputs) do
+            local ch, err = net:resolve_payload_channel(bad)
+            assert_nil(ch, "Should reject invalid Zone 3 selector: " .. tostring(bad))
+            assert_eq(err, "INVALID_ZONE3_CHANNEL")
+            local ok_open, err_open = net:open_payload_channel(bad)
+            assert_false(ok_open)
+            assert_eq(err_open, "INVALID_ZONE3_CHANNEL")
+        end
+
+        local ok_o, ch20 = net:open_payload_channel(20)
+        assert_true(ok_o)
+        assert_eq(ch20, 10020)
+        assert_true(m.isOpen(10020))
+
+        local ok_tx, tx_ch = net:send_payload_req(20, "CP_04", "RELEASE_BAY", { bayId = 1 }, { keepOpen = true })
+        assert_true(ok_tx)
+        assert_eq(tx_ch, 10020)
+        assert_eq(#m._transmitted, 1)
+        assert_eq(m._transmitted[1].tx, 10020)
+        assert_eq(m._transmitted[1].pkt.type, "MSG_PAYLOAD_REQ")
+        assert_eq(m._transmitted[1].pkt.payload.replyChannel, 10020)
+        assert_eq(m._transmitted[1].pkt.payload.checkpointId, "CP_04")
+        assert_true(m.isOpen(10020))
+
+        -- Fire-and-forget send on unopened Zone 3 channel opens for reply metadata and closes immediately
+        local ok_ff, ch21 = net:send_payload_req(21, "CP_05", "PING", {}, { keepOpen = false })
+        assert_true(ok_ff)
+        assert_eq(ch21, 10021)
+        assert_false(m.isOpen(10021))
+
+        net:open_payload_channel(10025)
+        assert_true(m.isOpen(10025))
+        local closed = net:close_all_payload_channels()
+        assert_eq(closed, 2)
+        assert_false(m.isOpen(10020))
+        assert_false(m.isOpen(10025))
+        assert_true(m.isOpen(10000))
+        assert_true(m.isOpen(10003))
+    end)
+
+    it("encodes and transmits MSG_MISSION_ACK on Base+0", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10040 })
+        local m = mock.modem({ wireless = true })
+        net:bind_modem(m)
+        local ok = net:send_mission_ack({
+            action = "RUN",
+            status = "ACCEPTED",
+            missionId = "PATROL_ALPHA",
+            missionState = "EN_ROUTE",
+            activeIndex = 1,
+            totalCheckpoints = 4,
+        })
+        assert_true(ok)
+        assert_eq(m._transmitted[1].tx, 10040)
+        assert_eq(m._transmitted[1].pkt.type, "MSG_MISSION_ACK")
+        assert_eq(m._transmitted[1].pkt.payload.status, "ACCEPTED")
+        assert_eq(m._transmitted[1].pkt.payload.missionId, "PATROL_ALPHA")
+    end)
 end)

@@ -3,6 +3,10 @@
 local network_manager = {}
 network_manager.__index = network_manager
 
+local function is_finite_int(v)
+    return type(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge and math.floor(v) == v
+end
+
 function network_manager.new(config)
     local cfg = config or {}
     local self = setmetatable({
@@ -10,6 +14,7 @@ function network_manager.new(config)
         baseChannel = cfg.baseChannel or 10000,
         seq = 0,
         modem = nil,
+        openPayloadChannels = {},
     }, network_manager)
     return self
 end
@@ -85,6 +90,111 @@ function network_manager:send_emergency_override(action, reason)
     end
     local ok, err = pcall(function()
         self.modem.transmit(self.baseChannel + 1, self.baseChannel + 1, pkt)
+    end)
+    return ok, err
+end
+
+function network_manager:is_payload_channel(channel)
+    if not is_finite_int(channel) then
+        return false
+    end
+    return channel >= self.baseChannel + 20 and channel <= self.baseChannel + 29
+end
+
+function network_manager:resolve_payload_channel(channel_or_offset)
+    if not is_finite_int(channel_or_offset) then
+        return nil, "INVALID_ZONE3_CHANNEL"
+    end
+    if channel_or_offset >= 20 and channel_or_offset <= 29 then
+        return self.baseChannel + channel_or_offset, nil
+    end
+    if self:is_payload_channel(channel_or_offset) then
+        return channel_or_offset, nil
+    end
+    return nil, "INVALID_ZONE3_CHANNEL"
+end
+
+function network_manager:open_payload_channel(channel_or_offset)
+    local ch, err = self:resolve_payload_channel(channel_or_offset)
+    if not ch then return false, err end
+    if not self.modem then return false, "MODEM_UNBOUND" end
+    local ok, m_err = pcall(function()
+        self.modem.open(ch)
+    end)
+    if not ok then return false, m_err end
+    self.openPayloadChannels[ch] = true
+    return true, ch
+end
+
+function network_manager:close_payload_channel(channel_or_offset)
+    local ch, err = self:resolve_payload_channel(channel_or_offset)
+    if not ch then return false, err end
+    if self.modem then
+        pcall(function()
+            self.modem.close(ch)
+        end)
+    end
+    self.openPayloadChannels[ch] = nil
+    return true, ch
+end
+
+function network_manager:close_all_payload_channels()
+    local channels = {}
+    for ch, open in pairs(self.openPayloadChannels) do
+        if open then
+            channels[#channels + 1] = ch
+        end
+    end
+    for _, ch in ipairs(channels) do
+        self:close_payload_channel(ch)
+    end
+    return #channels
+end
+
+function network_manager:send_payload_req(channel_or_offset, checkpointId, command, params, opts)
+    local ch, err = self:resolve_payload_channel(channel_or_offset)
+    if not ch then return false, err end
+    if not self.modem then return false, "MODEM_UNBOUND" end
+    local options = opts or {}
+    local was_open = (self.openPayloadChannels[ch] == true)
+    if not was_open and options.keepOpen == true then
+        local ok_open, open_err = self:open_payload_channel(ch)
+        if not ok_open then return false, open_err end
+    end
+    local pkt = self:encode_envelope("MSG_PAYLOAD_REQ", {
+        checkpointId = checkpointId,
+        command = command,
+        replyChannel = ch,
+        params = params or {},
+    })
+    local ok, tx_err = pcall(function()
+        self.modem.transmit(ch, ch, pkt)
+    end)
+    if not was_open and not options.keepOpen and self.openPayloadChannels[ch] then
+        self:close_payload_channel(ch)
+    end
+    if not ok then return false, tx_err end
+    return true, ch
+end
+
+function network_manager:send_mission_ack(ack_payload)
+    if type(ack_payload) ~= "table" then
+        return false, "INVALID_ACK_PAYLOAD"
+    end
+    if not self.modem then
+        return false, "MODEM_UNBOUND"
+    end
+    local pkt = self:encode_envelope("MSG_MISSION_ACK", {
+        action = ack_payload.action,
+        status = ack_payload.status,
+        missionId = ack_payload.missionId,
+        missionState = ack_payload.missionState,
+        activeIndex = ack_payload.activeIndex,
+        totalCheckpoints = ack_payload.totalCheckpoints,
+        reason = ack_payload.reason,
+    })
+    local ok, err = pcall(function()
+        self.modem.transmit(self.baseChannel + 0, self.baseChannel + 0, pkt)
     end)
     return ok, err
 end
