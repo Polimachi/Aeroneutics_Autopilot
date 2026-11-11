@@ -5,30 +5,32 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.15.0` |
-| **최종 수정일 (Date)** | `2026-11-09` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.16.0` |
+| **최종 수정일 (Date)** | `2026-11-11` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 외루프 유도 및 자율 임무 컴퓨터 (FCP / Node 04) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.10.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.14.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.4.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.8.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.4.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.2.1)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.5)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.1)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.26.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.12.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션 시퀀서 v1.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.18.0)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.6.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.11.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.1)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.2.2)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.6)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.2)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.1)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.16.0` | 2026-11-11 | 외루프 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 관심점 지속 조준 호버) 확장, 3종 통합 기수 지향 모드(`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`) 및 `Base+0` `MSG_OPERATOR_CMD` 확장 파라미터(`loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 수신·범프리스 전환 인터록 명세 반영 (`Implemented` $\to$ `Approved`) | TASK-201 FCP 외루프 유도 프리미티브 확장 및 AMM v1.1.0 연동 |
 | `v1.15.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 전용 외루프 유도 제어기(advanced_vtol_driver.lua) 명세 신설: 3축 독립 병진 제어(Surge/Sway/Heave 완전 PID + Anti-windup), STRICT_LEVEL(θ=φ=0°) 무경사 기동 및 TILT_ASSISTED 모드, 짐벌 물리 슬루율 제한, 안전고도 기반 수직 이륙 및 패드 0.5m 정렬 2단계 감속 터치다운 시퀀스, flapTarget=0.0 고정 | 2D 짐벌 벡터 추진 VTOL 외루프 유도 알고리즘 표준화 |
 | `v1.14.0` | 2026-11-08 | 구 명칭(FCP/FCP/ASA) 소급 전면 척결, 40채널 대역폭 및 채널 할당 공식 정비 | 용어 무결성 및 40채널 표준 동기화 |
 | `v1.13.0` | 2026-11-08 | VECTORED_VTOL 외루프 제어기 3축 완전 PID + Anti-windup, TILT_ASSISTED 피치 슬루율(15°/s), 수평 고정 수직 이륙 및 2단계 감속 수직 착륙 시퀀스 상세 규격 반영 (`Implemented` $\to$ `Approved`) | TASK-110 VTOL 제어 고도화 사양 개정 |
@@ -62,7 +64,7 @@
    - 공력 조종면 구동계 ASA(Node 06-xx)은 VAS Layer 3(`actuator_adapter_asa`, `Base+11 (구 Base+7 [DEPRECATED])`)으로 완전 편입되었으며, FCP는 조종면 타각 직접 산출 및 `Base+11 (구 Base+7 [DEPRECATED])` 소켓을 보유하지 않음. (구버전 직접 제어 모듈 `aerodynamic_controller.lua` 및 `MSG_SURFACE_CMD` [DEPRECATED]).
    - FCP는 중복 연산(실속 방지 가드 등)을 배제하고 순수 유도 목표와 비행 단계별 플랩 목표(`flapTarget`)만을 인가하며, 동적압($V^2$) 역비례 게인 스케일링, 실속 방어 및 조종면 배분은 VAS가 일괄 전담.
 3. **외루프 비행 모드 FSM 및 2단계 시동 주도권 총괄**:
-   - 13대 상태 머신(`BOOT_INIT`, `BOOTSTRAP`, `PROBE_CHANNEL`, `ARMING_LOCKED`, `DISARMED`, `ARMING`, `IDLE_ARMED`, `TAKEOFF`, `CRUISE`, `LOITER`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `FAILSAFE_RTH`, `EMERGENCY_LAND`, `PASSIVE_TRACKING`) 운용.
+   - 16대 외루프 상태 머신(`BOOT_INIT`, `BOOTSTRAP`, `PROBE_CHANNEL`, `ARMING_LOCKED`, `DISARMED`, `ARMING`, `IDLE_ARMED`, `TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `FAILSAFE_RTH`, `EMERGENCY_LAND`, `PASSIVE_TRACKING`) 운용.
    - FCP 전담 2단계 시동: FCP가 채널 무결성, VAS 센서 헬스 및 하위 액추에이터 준비를 확인한 후 `arm = true, flightActive = false`로 지상 대기(`IDLE_ARMED`)를 수립하고, 이륙 허가 시 `flightActive = true`를 하달하여 활성 비행(`NORMAL`) 전환.
    - 조종석 MFD 수동 급기동(ACRO) 진입 시 `PASSIVE_TRACKING`으로 전이하여 유도 지령 송출을 일시 유예하고 GPS/DR 추적만 유지, 조종권 반환 시 2.0초 무급변(Bumpless) 램핑으로 자율 비행 복귀.
 4. **GPS 및 20Hz 추측항법(Dead Reckoning) 융합 엔진**:
@@ -103,7 +105,7 @@ flowchart TD
 
     subgraph FCP_NODE["[FCP 비행 제어 컴퓨터 (Node 04)]"]
         FCP_MAIN["main.lua (20Hz 디스패처)"]
-        FSM["modules/flight_fsm.lua (13-State FSM)"]
+        FSM["modules/flight_fsm.lua (16-State FSM)"]
         NAV["modules/nav_engine.lua (GPS / DR 융합)"]
         GUIDE["modules/guidance_controller.lua (L1 / TECS / 바이어스)"]
         FAC_CLI["modules/facility_client.lua (ATC / 전술 유도)"]
@@ -550,7 +552,7 @@ FCP는 부팅 및 캘리브레이션 단계에서 [ALIGNMENT_PROGRAM_SPECIFICATI
     $$\theta_{target} = \text{clamp}\left(-surge_{raw} \cdot \theta_{max}, \; -\theta_{max}, \; +\theta_{max}\right), \quad \theta_{max} = 10.0^\circ$$
   - **피치 슬루율(Slew-Rate) 완화 인터록**: 모드 진입/이탈 시 피치각 급변(Step Jump)에 따른 기체 요동을 방지하기 위해 1초당 최대 변화율($\text{tiltSlewRateDegPerSec} = 15.0^\circ/\text{s}$)로 완만한 1차 램핑을 적용합니다:
     $$\theta_{cmd}(t) = \text{clamp}\left(\theta_{target}, \; \theta_{cmd}(t - \Delta t) - \Delta\theta_{max}, \; \theta_{cmd}(t - \Delta t) + \Delta\theta_{max}\right), \quad \Delta\theta_{max} = 15.0 \cdot \Delta t$$
-  - `CRUISE` 이외의 모든 비행 상태(`TAKEOFF`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `LOITER` 등)에서는 `STRICT_LEVEL`($\theta_{cmd} = 0.0^\circ$)로 강제 고정됩니다.
+  - `CRUISE` 이외의 모든 비행 상태(`TAKEOFF`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `LOITER`, `POI_HOLD` 등)에서는 `STRICT_LEVEL`($\theta_{cmd} = 0.0^\circ, \phi_{cmd} = 0.0^\circ$)로 강제 고정됩니다.
 
 #### 4) 3축 병진 완전 PID 및 Anti-windup 제어기
 정상상태 위치/고도 오차 및 지속적인 바람/외란을 제거하기 위해 3축(Surge/Sway/Heave) 모두 P-I-D 폐루프로 연산합니다:
@@ -581,20 +583,23 @@ FCP는 부팅 및 캘리브레이션 단계에서 [ALIGNMENT_PROGRAM_SPECIFICATI
      - **2단계 (수직 터치다운 강하, $d_{2D} \le 0.5\text{ m}$)**: 수평 정렬 완료 후 터치다운 속도 $targetClimbRate = -0.5\text{ m/s}$로 완만히 강하하여 착륙 충격을 최소화.
      - 전 착륙 과정에서 피치/롤은 $0.0^\circ$ 완전 수평을 유지합니다.
 
-#### 6) 3대 전술 헤딩(Yaw) 운용 모드 수식
-`VECTORED_VTOL`은 동체 헤딩각과 이동 궤적이 완전히 분리(Decoupled)될 수 있으므로 전술 임무에 따라 3가지 독립 헤딩 모드를 지원합니다:
-1. **`FACE_PATH` (경로 진행 방향 정렬)**:
-   $$\psi_{cmd} = \text{atan2}(v_E, \; v_N)$$
-   - 기체의 전방 광학 센서 및 레이더 시야각(FOV)을 속도 진행 방향으로 유지하여 비행 항력을 최소화합니다.
-2. **`TARGET_LOCK` (표적/도킹암 포트 영구 주시 평행 스트레이핑)**:
-   $$\psi_{cmd} = \text{atan2}\left(Z_{target} - Z_{craft}, \; X_{target} - X_{craft}\right)$$
-   - 기수 방위를 표적 또는 공중 모선의 도킹암 포트에 영구 고정합니다.
-   - 이동은 오직 `sway`와 `surge`의 합성 벡터에 의해 완전한 평행 스트레이핑(Strafing)으로 실행됩니다.
-3. **`ORBIT_POINT` (표적 중심 원형 선회 감시)**:
-   - 표적 중심점 $(X_{tgt}, Z_{tgt})$을 기준으로 지정 반경 $R_{orbit}$을 유지하며 원형 궤도를 선회합니다:
-   $$\psi_{cmd} = \text{atan2}\left(Z_{tgt} - Z_{craft}, \; X_{tgt} - X_{craft}\right)$$
-   $$\vec{v}_{cmd} = v_{tangent} \cdot \vec{u}_{orbit\_tangent} + K_r (R_{orbit} - d_{target}) \cdot \vec{u}_{radial}$$
-   - 이때 원심력 보상을 고려한 구심가속도 $a_c = \frac{v_t^2}{R_{orbit}}$는 `sway` 추력기로 정밀 보상하며, 급격한 요 선회 충격을 방지하기 위해 요 슬루율(Slew Rate)을 최대 $30.0^\circ/\text{s}$로 제한합니다.
+#### 6) 3대 통합 헤딩(Yaw) 운용 모드 및 `LOITER` / `POI_HOLD` 외루프 유도 프리미티브
+`VECTORED_VTOL`은 동체 헤딩각과 병진 궤적이 독립 제어되므로 `MSG_OPERATOR_CMD`의 `headingMode` 또는 기체 설정에 따라 3가지 헤딩 모드와 2종 전술 체공 프리미티브를 운용합니다 (요 슬루율 최대 $\text{maxYawRateDegPerSec} = 30.0^\circ/\text{s}$, 방위각 산출 $\psi = \text{atan2}(\Delta X, -\Delta Z)$):
+1. **`AUTO` / `FACE_PATH` (진행 방향 정렬)**:
+   - 일반/순항 비행(`d >= 1.5m`)에서는 목적지 웨이포인트 방위각을 추종하며, `LOITER` 상태에서는 별도 `poiTarget`이 없을 경우 선회 접선 벡터 $\vec{u}_{tan}$ 방향을 추종합니다 (`d < 1.5m` 시 직전 방위각 유지).
+2. **`FIXED` (고정 방위각 잠금)**:
+   - `params.fixedHeading` $\in [0^\circ, 360^\circ)$로 기수 방위각을 고정 유지한 채 `surge`/`sway` 합성 벡터로 평행 이동(Strafing)합니다.
+3. **`POI` / `TARGET_LOCK` / `ORBIT_POINT` (관심 좌표 지속 주시)**:
+   - `poiTarget` $(X_{poi}, Z_{poi})$ (또는 `target`)과의 수평 거리 $d_{poi} \ge 0.5\text{ m}$인 구간에서 기수 방위각을 지속적으로 관심 좌표 방향으로 조준합니다 ($d_{poi} < 0.5\text{ m}$ 시 `math.atan2(0, 0)` 특이점 회피를 위해 직전 방위각 `prev_heading` 유지).
+4. **`LOITER` 원형 선회 궤도 제어 법칙**:
+   - 중심점 $(X_c, Z_c)$에서 기체 $(X, Z)$까지의 외향 방사 단위벡터는 다음과 같습니다($d_c \le 0.1\text{ m}$ 중심 특이점에서는 북방 $[0, -1]^T$ 기본값 적용):
+     $$\vec{u}_{out} = \begin{cases} \dfrac{[X - X_c, \; Z - Z_c]^T}{d_c}, & d_c > 0.1\text{ m} \\ [0, \; -1]^T, & d_c \le 0.1\text{ m} \end{cases}$$
+   - 선회 방향 부호 $s$ (`"CW"` $\to s = +1$, `"CCW"` $\to s = -1$)에 대한 단위 접선 벡터는 $\vec{u}_{tan} = [-s \cdot u_{out,z}, \; s \cdot u_{out,x}]^T$입니다(중심 북쪽 $Z < Z_c$ 위치에서 `"CW"`는 동향 $+X$, `"CCW"`는 서향 $-X$).
+   - 3축 PID에 주입되는 유효 수평 오차 벡터는 다음과 같습니다($R_{loiter} = \max(5.0, \text{loiterRadius})$ 기본 `30.0m`, $v_{orbit} = \max(1.0, \text{targetSpeed})$ 기본 `8.0m/s`, $K_{rad} = \text{loiterRadialKp}$ 기본 `1.0`):
+     $$\vec{e}_{horiz} = K_{rad} \cdot (R_{loiter} - d_c) \vec{u}_{out} + v_{orbit} \vec{u}_{tan}$$
+   - `LOITER` 상태에서는 `TILT_ASSISTED` 설정 여부와 무관하게 `STRICT_LEVEL`($\theta_{cmd} = 0.0^\circ, \phi_{cmd} = 0.0^\circ$, `flapTarget = 0.0`)을 강제 유지합니다.
+5. **`POI_HOLD` 정밀 체공 및 관심점 조준 법칙**:
+   - 목표 체공 좌표 $(X_{hold}, Y_{hold}, Z_{hold})$에 대해 3축 위치 PID로 위치를 정지 유지하되, 자세는 `STRICT_LEVEL`($\theta_{cmd} = 0.0^\circ, \phi_{cmd} = 0.0^\circ$, `flapTarget = 0.0`)을 유지하고 기수 요는 `poiTarget` 방향($d_{poi} \ge 0.5\text{ m}$)으로 $\le 30.0^\circ/\text{s}$ 슬루율 제한 하에 지속 조준합니다.
 
 #### 7) 무천이(Zero-Transition) 고신뢰성 FSM
 공력 날개가 없으므로 실속 속도($V_{stall}$)의 개념이 없으며, 임의의 속도(0 ~ 최고속)에서 천이 지연 시간(Transition Latency = 0s) 없이 즉각 제동 및 호버링 전환이 가능합니다.
@@ -612,14 +617,15 @@ FCP는 부팅 및 캘리브레이션 단계에서 [ALIGNMENT_PROGRAM_SPECIFICATI
      $$sway = \text{clamp}(K_{p,w} \cdot e_{sway} - K_{d,w} \cdot v_{sway} + I_{sway}, \; -1.0, \; 1.0)$$
      $$heave = \text{clamp}(K_{p,h} \cdot (y_{tgt} - y) - K_{d,h} \cdot v_y + I_{heave}, \; -1.0, \; 1.0)$$
 2. **짐벌 물리 슬루율 제한 (Gimbal Slew Rate Limiter)**:
-   - 2D 노즐의 물리적 편향 속도 한계를 반영하여 병진 바이어스 신호의 틱당 변화율을 제한($\text{slewRate} \le 2.0/\text{s}$)함으로써 급격한 짐벌 회전으로 인한 자세 불안정 및 과도한 관성 모멘트를 방지합니다.
+   - 2D 노즐의 물리적 편향 속도 한계를 반영하여 병진 바이어스 신호의 틱당 변화율을 제한($\text{gimbalSlewRate} \le 2.0/\text{s}$)함으로써 급격한 짐벌 회전으로 인한 자세 불안정 및 과도한 관성 모멘트를 방지합니다.
 3. **비행 포락선 모드 (`STRICT_LEVEL` vs `TILT_ASSISTED`)**:
-   - `STRICT_LEVEL`: 호버, 이착륙, 정밀 도킹 시 $\theta_{cmd} = 0.0^\circ, \phi_{cmd} = 0.0^\circ$ 수평 자세를 엄격히 유지.
-   - `TILT_ASSISTED`: 고속 순항($V > 15\text{ m/s}$) 시 최대 $\pm 10.0^\circ$ 범위에서 $15.0^\circ/\text{s}$ 슬루율로 피치 틸트를 보조 인가하여 순항 속도를 극대화.
+   - `STRICT_LEVEL`: 호버, 이착륙, 정밀 도킹, `LOITER`, `POI_HOLD` 시 $\theta_{cmd} = 0.0^\circ, \phi_{cmd} = 0.0^\circ$ 수평 자세를 엄격히 유지.
+   - `TILT_ASSISTED`: 고속 `CRUISE` 순항($V > 15\text{ m/s}$) 시 최대 $\pm 10.0^\circ$ 범위에서 $15.0^\circ/\text{s}$ 슬루율로 피치 틸트를 보조 인가하여 순항 속도를 극대화. (`LOITER` 및 `POI_HOLD` 진입 시 $15.0^\circ/\text{s}$ 슬루율로 $0.0^\circ$ 복귀.)
 4. **비공력 특성 보장**:
-   - 공력 조종면 및 플랩이 존재하지 않으므로 플랩 지령은 영구히 `flapTarget = 0.0`으로 고정 하달되며, ASA 액추에이터 통신은 바이패스됩니다.
+   - 공력 조종면 및 플랩이 존재하지 않으므로 전 비행 모드(`LOITER`, `POI_HOLD` 포함)에서 플랩 지령은 영구히 `flapTarget = 0.0`으로 고정 하달되며, ASA 액추에이터 통신은 바이패스됩니다.
 
-#### 2) 이착륙 FSM 시퀀스
+#### 2) `LOITER` / `POI_HOLD` / 3종 헤딩 제어 및 이착륙 FSM 시퀀스
+- **`LOITER` 및 `POI_HOLD` 유도**: §5.6과 동일한 수평 오차 분해(`resolve_horizontal_error`, 반경 $R_{loiter} \ge 5.0\text{ m}$ · CW/CCW 접선 속도 합성) 및 3종 통합 기수 지향 모드(`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`/`ORBIT_POINT`)를 적용하며, 산출된 raw `surge`/`sway` 바이어스에 `gimbalSlewRate`($2.0/\text{s}$) 슬루율 제한기를 후단 적용합니다.
 - **수직 이륙 (`TAKEOFF`)**: 지상 장애물 회피를 위해 안전 고도(15.0m) 도달 전까지 수평 이동을 강제 차단($surge=0, sway=0$)하고 $targetClimbRate = +2.5\text{ m/s}$로 수직 상승.
 - **정밀 2단계 착륙 (`APPROACH_LAND`)**:
   - $d_{2D} > 0.5\text{ m}$: 수평 정렬을 유지하며 $targetClimbRate = -1.5\text{ m/s}$ 강하.
@@ -811,7 +817,7 @@ GPS 수신 간격(100~200ms) 사이의 공백기 또는 일시적 신호 두절 
 
 ## 7. 외루프 비행 유한 상태 기계 (Outer-Loop Flight State Machine, FSM)
 
-### 7.1 15대 외루프 FSM 상태 정의
+### 7.1 16대 외루프 FSM 상태 정의
 
 | 상태 식별자 (State) | 상태 명칭 | 설명 및 제어 거동 |
 | :--- | :---: | :--- |
@@ -824,12 +830,13 @@ GPS 수신 간격(100~200ms) 사이의 공백기 또는 일시적 신호 두절 
 | **`IDLE_ARMED`** | 지상 시동 완료 (아이들 대기) | VAS 시동 확인 완료. 스로틀 0 및 조종면 중립 유지, 이륙 지령 대기. |
 | **`TAKEOFF`** | 자동 이륙 기동 (2단계 활성화) | 이륙 지령 수신 시 `flightActive = true` 인가. VTOL: 수직 상승 목표 고도 도달 / 고정익: 활주 가속 후 기수 인상 및 상승률 유지. |
 | **`CRUISE`** | 궤적 순항 항법 | L1 수평 유도, TECS 고도/속도 유지, 지정 웨이포인트 연속 추종. |
-| **`LOITER`** | 원형 선회 체공 | 지정 중심점 또는 거절 수신 현 위치(+30m) 기준 반경 30~40m 선회 궤적 비행 (GPS 두절, ATC 점유 거절 또는 대기 지령 시). |
+| **`LOITER`** | 원형 선회 체공 | 지정 중심점 또는 거절 수신 현 위치(+30m) 기준 지정 반경(`loiterRadius >= 5.0m`, 기본 30m) 및 방향(`CW`/`CCW`) 선회 궤적 비행 (`CRUISE`/`POI_HOLD`/C2 지령, GPS 두절, ATC 점유 거절 시). |
+| **`POI_HOLD`** | 관심점 조준 정밀 체공 | 지정 좌표 $(X_{hold}, Y_{hold}, Z_{hold})$에 3축 수평 정지 호버(`STRICT_LEVEL`)를 유지하면서 기수 요를 `poiTarget` 좌표에 지속 조준($\le 30.0^\circ/\text{s}$). |
 | **`APPROACH_LAND`** | 정밀 착륙 접근 | Tower ATC 및 GAC 인가 획득, 전술 채널 수신, ILS / 함선 랑데부 강하, 접지 시 `TOUCHDOWN_COMPLETE`. |
 | **`FAILSAFE_HOLD`** | 외루프 편류 방지 호버 홀드 | 텔레메트리 단절(500ms) 또는 C2 긴급 HOLD 지령(`Base + 0`) 시 위치 편류(Drift) 억제 및 수평 호버/선회 체공 유도. |
 | **`FAILSAFE_RTH`** | 비상 기지 복귀 | 저연료(fuel < 20% 또는 거절 대기 중 fuel <= 10%), 착륙 3회 실패, 또는 ATC 점유 10회 거절 후 대체 시설물 부재 시 홈 좌표/대체 기지로 20Hz 추측항법 자동 회항. |
 | **`EMERGENCY_LAND`** | 외루프 정밀 비상 강제 착륙 | 극저연료(fuel < 10%), 치명적 고장, 또는 C2 비상착륙 지령(`Base + 0`) 시 기종별 최적 강하각/플랩 전개 및 정속 안전 강하($-2.0\text{ m/s}$) 착륙 유도. |
-| **`PASSIVE_TRACKING`**| MFD ACRO 수동 급기동 추종 | 조종석 MFD가 `Base + 1`을 통해 저지연 직결 제어를 선점(`activeSource == "MFD_ACRO"`)할 때 진입. FCP는 `Base + 1` 및 `Base + 3` 송출을 침묵(Silence)하고 적분기를 동결하되 GPS/DR 항법을 지속. 해제 시 2.0초 범프리스 램핑으로 `CRUISE` 복귀. |
+| **`PASSIVE_TRACKING`**| MFD ACRO 수동 급기동 추종 | 조종석 MFD가 `Base + 1`을 통해 저지연 직결 제어를 선점(`activeSource == "MFD_ACRO"`)할 때 진입. FCP는 `Base + 1` 및 `Base + 3` 송출을 침묵(Silence)하고 적분기를 동결하되 GPS/DR 항법을 지속. 해제 시 2.0초 범프리스 램핑으로 직전 비행 모드 복귀. |
 
 ### 7.2 FSM 상태 전이 다이어그램
 
@@ -853,15 +860,22 @@ stateDiagram-v2
     IDLE_ARMED --> DISARMED: 시동 해제 (arm = false)
     
     TAKEOFF --> CRUISE: 안전 고도 도달
-    CRUISE --> LOITER: GPS 두절(5s) OR 체공 명령
-    LOITER --> CRUISE: GPS 복구 & 항법 재개
+    CRUISE --> LOITER: GPS 두절(5s) OR C2 LOITER 지령 (2s 범프리스)
+    LOITER --> CRUISE: GPS 복구 OR C2 CRUISE 지령 (2s 범프리스)
+    CRUISE --> POI_HOLD: C2 POI_HOLD 지령 (2s 범프리스)
+    POI_HOLD --> CRUISE: C2 CRUISE 지령 (2s 범프리스)
+    LOITER --> POI_HOLD: C2 POI_HOLD 지령 (2s 범프리스)
+    POI_HOLD --> LOITER: C2 LOITER 지령 (2s 범프리스)
     
     %% 복합 비상 (연료 고갈) 에스컬레이션
     LOITER --> FAILSAFE_RTH: 저연료 (fuel < 20%)
+    POI_HOLD --> FAILSAFE_RTH: 저연료 (fuel < 20%)
     LOITER --> EMERGENCY_LAND: 극저연료 (fuel < 10%)
+    POI_HOLD --> EMERGENCY_LAND: 극저연료 (fuel < 10%)
     FAILSAFE_RTH --> EMERGENCY_LAND: 귀환 중 연료 고갈 (fuel < 10%)
     
     CRUISE --> APPROACH_LAND: 착륙 명령 & GAC 접근 인가 승인 (MSG_GAC_APPROACH_CLEARANCE)
+    POI_HOLD --> APPROACH_LAND: 착륙 명령 & GAC 접근 인가 승인
     APPROACH_LAND --> CRUISE: 1~2회 복행 (GO_AROUND: GAC 대체 패드 재배정 또는 대기 선회)
     APPROACH_LAND --> FAILSAFE_RTH: 3회 복행 실패 (대체기지 / 홈 강제 회항)
     APPROACH_LAND --> IDLE_ARMED: 접지 완료 (MSG_TOUCHDOWN_COMPLETE)
@@ -870,7 +884,8 @@ stateDiagram-v2
     LOITER --> FAILSAFE_RTH: 10회 거절 후 대체 시설물 부재 OR 연료 <= 10%
     
     CRUISE --> FAILSAFE_HOLD: 텔레메트리 단절(500ms) OR C2 긴급 HOLD (Base+0)
-    LOITER --> FAILSAFE_HOLD: 텔레메트리 단절(500ms)
+    LOITER --> FAILSAFE_HOLD: 텔레메트리 단절(500ms) OR C2 긴급 HOLD (Base+0)
+    POI_HOLD --> FAILSAFE_HOLD: 텔레메트리 단절(500ms) OR C2 긴급 HOLD (Base+0)
     APPROACH_LAND --> FAILSAFE_HOLD: C2 긴급 HOLD (Base+0)
     CRUISE --> EMERGENCY_LAND: C2 비상착륙 (Base+0)
     
@@ -881,6 +896,7 @@ stateDiagram-v2
     %% MFD ACRO 선점 및 수동 급기동 추종
     CRUISE --> PASSIVE_TRACKING: MFD Acro 선점 (activeSource == MFD_ACRO)
     LOITER --> PASSIVE_TRACKING: MFD Acro 선점 (activeSource == MFD_ACRO)
+    POI_HOLD --> PASSIVE_TRACKING: MFD Acro 선점 (activeSource == MFD_ACRO)
     PASSIVE_TRACKING --> CRUISE: Acro 해제 (activeSource == FCP) & 2초 범프리스 램핑
 ```
 
@@ -898,13 +914,16 @@ stateDiagram-v2
 | `ARMING` | `ARMING_TIMEOUT_3S`| 3.0초 경과 미확인 | 시동 취소 (`arm = false`), MFD 결함 경보 | `DISARMED` |
 | `IDLE_ARMED` | `CMD_TAKEOFF` | `calibrated == true` | `MSG_ATTITUDE_CMD.flightActive = true`, 수직 상승/활주 가속 인가 | `TAKEOFF` |
 | `TAKEOFF` | `ALT_REACHED` | $h \ge h_{clearance}$ | L1 유도 활성화, 속도 가속 | `CRUISE` |
+| `CRUISE` / `POI_HOLD` | `CMD_LOITER` | C2 `Base+0` 수신 & 권한 승인 | 적분기 초기화, `loiterRadius`/`loiterDirection` 적용, 2초 범프리스 램핑 | `LOITER` |
+| `CRUISE` / `LOITER` | `CMD_POI_HOLD` | C2 `Base+0` 수신 & 권한 승인 | 적분기 초기화, `poiTarget` 조준 고정, 2초 범프리스 램핑 | `POI_HOLD` |
+| `LOITER` / `POI_HOLD` | `CMD_CRUISE` | C2 `Base+0` 수신 & 권한 승인 | 적분기 초기화, 목표 웨이포인트 갱신, 2초 범프리스 램핑 | `CRUISE` |
 | `CRUISE` | `GPS_LOST_5000MS` | GPS 타임아웃 만료 | 중심점 동결, 반경 30m 선회 | `LOITER` |
 | `LOITER` | `GPS_RECOVERED` | `FIX_OK` 수신 & 3회 연속 | 이전 웨이포인트 궤적 복귀 | `CRUISE` |
-| `LOITER` | `LOW_FUEL_20_PCT` | `telemetry.fuel < 0.20` | 홈 좌표 방면 20Hz DR 귀환 개시 | `FAILSAFE_RTH` |
-| `LOITER` / `RTH` | `CRITICAL_FUEL_10_PCT` | `telemetry.fuel < 0.10` | 수평 유지, 정속 강하(-2.0m/s) | `EMERGENCY_LAND` |
+| `LOITER` / `POI_HOLD` | `LOW_FUEL_20_PCT` | `telemetry.fuel < 0.20` | 홈 좌표 방면 20Hz DR 귀환 개시 | `FAILSAFE_RTH` |
+| `LOITER` / `POI_HOLD` / `RTH` | `CRITICAL_FUEL_10_PCT` | `telemetry.fuel < 0.10` | 수평 유지, 정속 강하(-2.0m/s) | `EMERGENCY_LAND` |
 | `ANY_FLIGHT` | `CMD_EMERGENCY_LAND`| C2 착륙 명령 (`Base+0`) | 외루프 정속 안전 강하 유도 인가 | `EMERGENCY_LAND` |
 | `ANY_FLIGHT` | `CMD_HOVER_HOLD` | C2 홀드 명령 (`Base+0`) | 외루프 편류 방지 호버/체공 유도 인가 | `FAILSAFE_HOLD` |
-| `CRUISE` | `CMD_LAND` | ATC 접근 허가 완료 | 전술 채널 $Base_{\text{sec}} + 10 + \text{Idx}$ 바인딩 | `APPROACH_LAND` |
+| `CRUISE` / `LOITER` / `POI_HOLD` | `CMD_LAND` | `atcStatus == "CLEARED"` 또는 C2 착륙 인가 | 전술 채널 $Base_{\text{sec}} + 10 + \text{Idx}$ 바인딩 | `APPROACH_LAND` |
 | `APPROACH_LAND` | `ATC_DENIED_OCCUPIED` | `status == "DENIED"` | 현 2D 위치 중심점 고정, $+30\text{m}$ 상승, 15초 타이머 시작, MFD 알람 발령 | `LOITER` |
 | `LOITER` | `ATC_CLEARED_RETRY` | `status == "CLEARED"` | 재시도 카운트 초기화, 전술 채널 바인딩 | `APPROACH_LAND` |
 | `LOITER` | `ALTERNATE_DIVERT_REQ` | 10회 거절 & 최인접 FREE 시설물 탐색 | 목표 ID 갱신, 신규 접근 요청 송출 | `APPROACH_LAND` |
@@ -1037,13 +1056,13 @@ FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하�
    - 조종사가 ACRO 모드를 해제하면 VAS는 텔레메트리의 `activeSource`를 `"FCP"`로 원복합니다.
    - FCP는 이를 감지하여 `CRUISE`로 복귀하고, 2.0초 무급변 선형 램핑(Bumpless Ramp)을 통해 현재 기체 자세로부터 유도 자세 지령으로 점진 보간하여 제어 충격을 차단합니다.
 
-### 7.7 페일세이프 복구 시 범프리스(Bumpless) 램핑 및 적분기 리셋 규격
-비행 중 일시적 통신 두절(500ms)이나 외란으로 `FAILSAFE_HOLD`에 진입했다가 정상 항법(`CRUISE`)으로 복귀할 때 발생하는 적분기 와인드업(Integrator Windup) 충격과 자세 급발진을 차단하기 위한 필수 규약입니다:
-1. **적분기 즉시 초기화 (Integrator Clear on Entry)**:
-   `FAILSAFE_HOLD` 진입 즉시 L1 크로스트랙 오차 적분기($\int d_{ct} dt = 0$), TECS 총 에너지 적분기($\int \dot{E}_{err} dt = 0$), VTOL 고도 적분기를 일괄 0으로 강제 초기화하여 가상 오차 누적을 원천 차단합니다.
-2. **2.0초 무급변 선형 램핑 (Bumpless Linear Ramping on Exit)**:
-   정상 모드로 복귀 시점($t_{rec}$)부터 $T_{ramp} = 2.0\text{ s}$ (40틱) 동안 직전 홀드 상태의 자세/스로틀 지령에서 신규 유도 지령으로 점진 선형 보간을 수행합니다:
-   $$\text{cmd}_{active}(t) = (1 - \lambda) \cdot \text{cmd}_{hold} + \lambda \cdot \text{cmd}_{guidance}(t), \quad \lambda = \min\left(1.0, \; \frac{t - t_{rec}}{T_{ramp}}\right)$$
+### 7.7 페일세이프 및 C2 비행 모드 전환 시 범프리스(Bumpless) 램핑 및 적분기 리셋 규격
+비행 중 `FAILSAFE_HOLD` 복귀 또는 `Base+0` `MSG_OPERATOR_CMD`를 통한 활성 비행 모드 상호 전환(`CRUISE` $\leftrightarrow$ `LOITER` $\leftrightarrow$ `POI_HOLD`) 시 발생하는 적분기 와인드업(Integrator Windup) 충격과 기체 급발진을 방지하기 위한 필수 규약입니다:
+1. **적분기 즉시 초기화 (Integrator Clear on Entry / Transition)**:
+   `FAILSAFE_HOLD` 진입·이탈 및 C2 비행 모드 전환(`trigger_bumpless_transition`) 즉시 L1 크로스트랙 오차 적분기, TECS 에너지 적분기, VTOL 3축 적분기(`surge_i`, `sway_i`, `heave_i`) 및 피치 상태를 0으로 초기화합니다 (단, `prev_heading`, `prev_surge`, `prev_sway`는 요/짐벌 연속성 보장을 위해 유지).
+2. **2.0초 무급변 선형 램핑 (Bumpless Linear Ramping)**:
+   전환 시점($t_{rec}$)부터 $T_{ramp} = 2.0\text{ s}$ (40틱) 동안 `CRUISE`, `LOITER`, `POI_HOLD` 병진 바이어스(`surge`, `sway`, `translationBias`)에 선형 램핑 계수 $\lambda$를 곱하여 점진 출력을 인가합니다 (단, 초기 부팅 시 미발동 상태를 위해 `rampStartMs`는 `-10000`으로 비활성 초기화):
+   $$\text{cmd}_{active}(t) = \lambda \cdot \text{cmd}_{guidance}(t), \quad \lambda = \text{clamp}\left(\frac{t - t_{rec}}{T_{ramp}}, \; 0.0, \; 1.0\right)$$
 
 ---
 
@@ -1127,7 +1146,7 @@ FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하�
 | `payload.source` | string | `"FCP"` | 지령 송신원 식별자 |
 | `payload.arm` | boolean | true/false | **FCP 주도 시동 통제 플래그 (true: Arm, false: Disarm)** |
 | `payload.flightActive` | boolean | true/false | **2단계 비행 활성화 플래그 (false: 지상 아이들 대기, true: 실비행 믹싱 인가)** |
-| `payload.flightMode` | string | 6대 모드 | `TAKEOFF`, `CRUISE`, `LOITER`, `LANDING`, `DOCKING`, `ACRO` |
+| `payload.flightMode` | string | 비행 모드 | `TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `LANDING`, `DOCKING`, `FAILSAFE_HOLD`, `FAILSAFE_RTH`, `EMERGENCY_LAND`, `ACRO` |
 | `payload.commandType` | string | ANGLE/RATE | `"ATTITUDE_ANGLE"` 또는 `"RATE_COMMAND"` |
 | `payload.angleTargets.targetPitch` | float | $-75.0 \sim +75.0^\circ$| 목표 피치각 (일반 $\pm 20.0^\circ$, 비상/급기동 최대 $\pm 75.0^\circ$) |
 | `payload.angleTargets.targetRoll` | float | $-75.0 \sim +75.0^\circ$| 목표 롤각 (일반 $\pm 20.0^\circ$, 비상/급기동 최대 $\pm 75.0^\circ$) |
@@ -1285,16 +1304,23 @@ FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하�
 
 ### 8.4 [Interface I-6] 조종석 MFD 및 지상 GCS 통합 C2 / 다운링크 인터페이스
 
-#### 8.4.1 [수신] 오퍼레이터 C2 명령 수신 (`MFD / GCS` $\rightarrow$ `FCP`, Base + 0)
+#### 8.4.1 [수신] 오퍼레이터 C2 명령 수신 (`AMM / GCS` $\rightarrow$ `FCP`, Base + 0)
 - **통신 채널**: `CH_OPERATOR_C2` (`Base + 0`)
-- **단일 진입 원칙**: MFD 조종사 입력 및 지상 GCS/ATC가 인가하는 모든 비행 모드 변경, 시동(`ARM`), 경로 유도, 긴급 홀드(`HOVER_HOLD`), 비상 착륙(`EMERGENCY_LAND`), 기지 복귀(`RTH`)는 기본적으로 FCP(`Base + 0`)로 단일 진입합니다.
+- **단일 진입 원칙**: 조종석 통합 단말(`AMM`, Node 03) 및 지상 `GCS`/ATC가 인가하는 모든 비행 모드 변경(`ARM`, `TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `LANDING`), 웨이포인트/선회 중심·반경·방향·POI 파라미터, 목표 시설물 지정, 긴급 홀드(`HOVER_HOLD`), 비상 착륙(`EMERGENCY_LAND`), 기지 복귀(`RTH`)는 FCP(`Base + 0`)로 단일 진입합니다.
 - **`Base + 1` 선점 직결 예외 (Strict Bypass)**:
-  1. **하드 비상 차단 (`E_STOP`)**: FCP 연산 생존 여부와 무관하게 전 추진계를 즉각 컷오프(공중 쿠션 정지 포함)해야 하는 킬스위치 (MFD / GCS).
-  2. **수동 급기동 (`MFD_ACRO`)**: 조종석 MFD 전용 20Hz 저지연 각속도 직결 조종 스트림.
-- **권한 중재**: `PILOT_PRIMARY` (기본) vs `GCS_OVERRIDE` (비상 명령 또는 위임 시)
+  1. **하드 비상 차단 (`E_STOP`)**: FCP 연산 생존 여부와 무관하게 전 추진계를 즉각 컷오프(공중 쿠션 정지 포함)해야 하는 킬스위치 (`AMM` / `GCS`).
+  2. **수동 급기동 (`MFD_ACRO`)**: 조종석 단말 전용 20Hz 저지연 각속도 직결 조종 스트림.
+- **권한 중재**: `PILOT_PRIMARY` (기본) vs `GCS_OVERRIDE` (`authority == "GCS_OVERRIDE"` 또는 `forceOverride == true` 시 승인, `PILOT_PRIMARY` 활성 중 비강제 `GCS` 패킷은 `PILOT_OVERRIDE_ACTIVE` 거부).
+- **확장 `params` 정규화 규약 (`operator_handler.normalize_params`)**:
+  - `loiterRadius`: $\max(5.0, \; \text{tonumber}(\text{loiterRadius}) \text{ or } 30.0)$ (최소 $5.0\text{ m}$ 보정)
+  - `loiterDirection`: `"CCW"`가 아니면 `"CW"` 단일 기본값 적용
+  - `headingMode`: `"AUTO"` | `"FIXED"` | `"POI"` (`"FACE_PATH"`, `"TARGET_LOCK"`, `"ORBIT_POINT"` 수용, `POI_HOLD` 모드에서 미지정 시 `"POI"` 자동 할당, 그 외 기본 `"AUTO"`)
+  - `fixedHeading`: `((tonumber(fixedHeading) % 360.0) + 360.0) % 360.0` (0~360° 정규화)
+  - `poiTarget`: `{ x, y, z }` 관심 좌표 (존재 시)
+  - `targetWaypoint`: `{ x, z }`, `targetAlt`: m, `targetSpeed`: m/s, `designatedFacilityId`: string
 
 ```lua
--- 조종석 MFD -> FCP 비행 명령 예시
+-- 조종석 AMM / GCS -> FCP 비행 명령 예시 (LOITER / POI_HOLD 포함)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1303,13 +1329,20 @@ FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하�
     time = 1729845000000,
     payload = {
         authority = "PILOT_PRIMARY",
-        flightMode = "CRUISE",
+        command = "LOITER",           -- "ARM" | "TAKEOFF" | "CRUISE" | "LOITER" | "POI_HOLD" | "LANDING"
+        flightMode = "LOITER",        -- "TAKEOFF" | "CRUISE" | "LOITER" | "POI_HOLD" | "LANDING"
         params = {
             targetAlt = 150.0,
-            targetSpeed = 18.0,
-            targetWaypoint = { x = 450.0, z = -1200.0 }
+            targetSpeed = 12.0,
+            targetWaypoint = { x = 450.0, z = -1200.0 },
+            designatedFacilityId = nil,
+            headingMode = "POI",      -- "AUTO" | "FIXED" | "POI"
+            fixedHeading = nil,       -- headingMode == "FIXED" 시 0~360 deg
+            poiTarget = { x = 480.0, y = 64.0, z = -1250.0 },
+            loiterRadius = 40.0,      -- 최소 5.0m, 기본 30.0m
+            loiterDirection = "CW"    -- "CW" | "CCW"
         },
-        emergencyAction = "NONE" -- NONE, HOVER_HOLD, EMERGENCY_LAND, RTH
+        emergencyAction = "NONE"      -- NONE, HOVER_HOLD, EMERGENCY_LAND, RTH
     }
 }
 ```
@@ -1521,9 +1554,10 @@ FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하�
       "tiltAssistedThresholdSpeedMps": 15.0,
       "tiltAssistedMaxPitchDeg": 10.0,
       "headingMode": "FACE_PATH",
-      "_headingMode_comment": "FACE_PATH | TARGET_LOCK | ORBIT_POINT",
+      "_headingMode_comment": "AUTO | FIXED | POI | FACE_PATH | TARGET_LOCK | ORBIT_POINT",
       "orbitRadiusM": 25.0,
       "orbitSpeedMps": 8.0,
+      "loiterRadialKp": 1.0,
       "maxYawRateDegPerSec": 30.0,
       "surgeKp": 0.15,
       "surgeKd": 0.08,
@@ -1554,8 +1588,12 @@ FCP는 상위 오케스트레이터로서 VAS의 하위 FSM을 원격 지휘하�
       "tiltAssistedThresholdSpeedMps": 15.0,
       "tiltAssistedMaxPitchDeg": 10.0,
       "tiltSlewRateDegPerSec": 15.0,
-      "gimbalSlewRatePerSec": 2.0,
+      "gimbalSlewRate": 2.0,
       "headingMode": "FACE_PATH",
+      "_headingMode_comment": "AUTO | FIXED | POI | FACE_PATH | TARGET_LOCK | ORBIT_POINT",
+      "orbitRadiusM": 25.0,
+      "orbitSpeedMps": 8.0,
+      "loiterRadialKp": 1.0,
       "surgeKp": 0.15,
       "surgeKi": 0.02,
       "surgeKd": 0.08,
@@ -2177,4 +2215,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack 내 모든 외루프 항법 소프트웨어의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.23.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.10.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.8.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.4.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.4.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.4.0) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.0.3)와 100% 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack 내 모든 외루프 항법 소프트웨어의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.26.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.12.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v1.1.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.18.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.11.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.6.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.6.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.4.1) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.2.2)와 정합성을 유지합니다.*
