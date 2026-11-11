@@ -202,4 +202,47 @@ describe("Landing pad GPS client and 20Hz dead reckoning", function()
         assert_near(statClient:get_current_comp_pos().y, 64.0, 1e-4)
         assert_near(statClient:get_current_comp_pos().z, 20.0, 1e-4)
     end)
+
+    it("retries STATIC pre-fix after FAIL_GEOMETRY and enforces canonical mobility and flat replyChannel precedence", function()
+        local statRetry = gps_client.create({
+            facilityId = "PAD_STATIC_RETRY",
+            sectorId = 1,
+            mobility = "static",
+            position = { x = 0, y = 64, z = 0 }
+        }, offset_transform)
+        assert_true(statRetry:should_query_gps("IDLE", 20))
+        local req = statRetry:build_request_packet(64.0, 1000)
+        assert_false(statRetry:handle_response_packet({
+            ver = "1.9.5", type = "MSG_GPS_RESPONSE", seq = 1, time = 1010,
+            payload = { targetClient = "PAD_STATIC_RETRY", clientSeq = req.payload.clientSeq, status = "FAIL_GEOMETRY" }
+        }, 1.0))
+        assert_false(statRetry:has_valid_fix())
+        assert_true(statRetry:should_query_gps("IDLE", 40))
+        assert_false(statRetry:check_gps_health(2.5))
+        assert_true(statRetry:is_degraded())
+
+        local fallbackClient = gps_client.create({
+            facilityId = "",
+            padId = "PAD_FALLBACK",
+            sectorId = 1,
+            mobility = "",
+            mode = "dynamic",
+            sectorGpsReplyChannel = 50806,
+            channels = { sectorGpsReplyChannel = 50206 },
+            position = { x = 0, y = 64, z = 0 }
+        }, offset_transform)
+        local fPkt = fallbackClient:build_request_packet(64.0, 2000)
+        assert_eq(fPkt.domainId, "PAD_FALLBACK")
+        assert_eq(fPkt.payload.replyChannel, 50806)
+        fallbackClient:update_dead_reckoning(0.05, {
+            velocity = { vx = 20.0, vy = 0.0, vz = 0.0 }
+        })
+        assert_near(fallbackClient:get_current_comp_pos().x, 1.0, 1e-4)
+
+        local okBad = pcall(gps_client.create, {
+            facilityId = "PAD_BAD_MOB",
+            mobility = "BOGUS"
+        }, offset_transform)
+        assert_false(okBad)
+    end)
 end)

@@ -12,15 +12,31 @@ local VALID_RESPONSE_STATUS = {
     FAIL_GEOMETRY = true,
 }
 
+local function non_empty_str(v)
+    if type(v) == "string" and v ~= "" then
+        return v
+    end
+    return nil
+end
+
+local function resolve_mobility(config)
+    local raw = non_empty_str(config.mobility) or non_empty_str(config.mode) or "STATIC"
+    local upper = string.upper(raw)
+    if upper ~= "STATIC" and upper ~= "DYNAMIC" then
+        error("INVALID_MOBILITY: " .. tostring(raw), 2)
+    end
+    return upper
+end
+
 function gps_client.create(config, offsetTransform)
     if not config then error("config table required", 2) end
     if not offsetTransform then error("offset_transform module required", 2) end
 
-    local facilityId = tostring(config.facilityId or config.padId or "PAD")
-    local mobility = tostring(config.mobility or config.mode or "STATIC")
+    local facilityId = non_empty_str(config.facilityId) or non_empty_str(config.padId) or "PAD"
+    local mobility = resolve_mobility(config)
     local sectorId = tonumber(config.sectorId or config.sectorIndex) or 1
-    local replyChannel = (config.channels and tonumber(config.channels.sectorGpsReplyChannel))
-        or tonumber(config.sectorGpsReplyChannel)
+    local replyChannel = tonumber(config.sectorGpsReplyChannel)
+        or (config.channels and tonumber(config.channels.sectorGpsReplyChannel))
         or (50001 + sectorId * 200 + 5)
 
     local state = {
