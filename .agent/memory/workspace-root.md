@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-11 — FCP 외루프 유도 프리미티브(LOITER/POI_HOLD) 확장 및 범프리스 C2 연동 (TASK-201)
+
+- **결정 배경**: `AMM` v1.1.0(`TASK-202-1`) 통합 미션 시퀀서의 `ORBIT`→`LOITER` 및 `POI_HOLD` 전술 기동 지령을 수행하기 위해 FCP(`src/2_guidance/fcp/`) 외루프 유도 프리미티브, 3종 기수 지향 모드, `Base+0` 파라미터 정규화 및 2.0s 범프리스 전환 인터록을 활성 VTOL 2종(`VECTORED_VTOL`, `ADVANCED_VTOL`)에 구현함 (`DEFERRED_AIRFRAMES` 4종 차단 및 `flapTarget == 0.0` 유지).
+- **반영 내역**:
+  1. **사양서 개정 및 배지 동기화 (`d3c5fef` → `Implemented` 승격)**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (`v1.15.0 Implemented` → `v1.16.0 Approved` → `v1.16.0 Implemented`), 마스터 ICD(`v1.26.0`), 전체 구조도(`v2.12.0`), AMM 사양서(`v1.1.0`) FCP 참조 배지를 동기화함.
+  2. **외루프 `LOITER`/`POI_HOLD` 제어 법칙 및 3종 요 제어 (`ddaf428`)**: `flight_fsm.lua` 16상태 확장(`POI_HOLD` 신설 및 `CRUISE`↔`LOITER`↔`POI_HOLD`↔`APPROACH_LAND` 전이, `MUT-14` 보존), `vectored_vtol_driver.lua`·`advanced_vtol_driver.lua`의 `resolve_horizontal_error` (반경 $R \ge 5.0\text{ m}$ 반경 오차 + CW/CCW 접선 벡터, 중심 $d_c \le 0.1\text{ m}$ 북향 `(0.0, -1.0)` 특이점 회피) 및 3종 `compute_heading` (`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`/`ORBIT_POINT`, $<0.5\text{ m}$ 요 고정, $30.0^\circ/\text{s}$ 슬루율, `LOITER`/`POI_HOLD` 중 `TILT_ASSISTED` 억제 `STRICT_LEVEL` $0.0^\circ$), `fcp_config.json` 기본값(`loiterRadialKp`, `orbitRadiusM`, `orbitSpeedMps`)을 구현함.
+  3. **C2 정규화, 2.0s 범프리스 램핑 및 런타임 배선 (`f218830`, `ecff4f4`, `fb08520`)**: `operator_handler.lua` `normalize_params`(`loiterRadius >= 5.0`, `loiterDirection` 기본 `"CW"`, `FIXED` $0\sim 360^\circ$ 래핑, `POI_HOLD` 기본 `"POI"`, `PILOT_PRIMARY` 비강제 GCS 거부 `PILOT_OVERRIDE_ACTIVE`), `guidance_controller.lua` `rampStartMs = -10000` 초기화 및 `trigger_bumpless_transition`(`prev_surge`/`prev_sway`/`prev_heading` 보존), `fcp_runtime.lua` C2→`mission_target`/`flight_fsm` 배선 및 `navigation.distanceToWp` 산출, 리뷰 후속 보완(`fb08520`: `NaN`/`Inf` 차단 `finite_num`, `FAILSAFE_HOLD` 이탈 시 `trigger_bumpless_transition` 통합, 지상 대기 C2 중심점 동결·램프 발동 방지, `POI_HOLD` 고도 자동 앵커링)을 적용하고 E2E 시나리오 2 Step 9(`test_e2e_waypoint_guidance.lua`)를 추가함.
+- **검증**: 단위 12타겟 `330/330 PASS`(`2_guidance/fcp` `45/45`, 최대 `46,400 <= 50,000` insns), E2E 7시나리오 `8/8 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `82/82 PASS`, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` `9 Implemented, 6 Approved PASS`, `validate_lua_syntax.py` `126/126 PASS`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-11 — AMM v1.1.0 통합 미션 시퀀서 사양서 및 마스터 ICD·구조도 개정 (TASK-202-1)
 
 - **결정 배경**: 기존 Layer 3(AMM 단순 웨이포인트 큐)와 Layer 4(AMP 복합 미션 플래너 초안)로 이원화되어 있던 미션 시퀀서를 Node 03 단일 컴퓨터 내 3분할 코어(`mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua`)로 통합하고, 별도 RF 채널 추가 없이 `Base+0` 원격 미션 제어와 Zone 3(`Base+20~29`) 동적 탑재체 버스를 규격화함.

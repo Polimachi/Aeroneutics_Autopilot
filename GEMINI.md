@@ -3,11 +3,11 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-202-1` AMM 통합 미션 엔진 사양서(`v1.1.0 Approved`), 마스터 ICD(`v1.26.0`), 구조도(`v2.12.0`) 개정 및 동기화 (2026-11-11, 상세 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-201` FCP 외루프 유도 프리미티브(`LOITER`/`POI_HOLD`, 3종 요 지향, 2초 범프리스 C2 연동) 구현 및 FCP 사양서 `v1.16.0 Implemented` 승격 (2026-11-11, 상세 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
-  1. `TASK-201`: FCP 사양서 v1.15.0 Implemented → v1.16.0 개정 후 `LOITER`/`POI_HOLD` 구현.
-  2. `TASK-202`: AMM v1.1.0 3분할 미션 엔진(`mission_engine`, `condition_evaluator`, `hook_runner`) 본 구현(`TASK-202-2~5`).
-  3. `TASK-010`: 플레이북 정적 검증기(`tools/verify_playbooks.py`) 및 핵심 5종 매뉴얼 작성.
+  1. `TASK-202`: AMM v1.1.0 3분할 미션 엔진(`mission_engine`, `condition_evaluator`, `hook_runner`) 본 구현 및 E2E 연동(`TASK-202-2~5`).
+  2. `TASK-010`: 플레이북 정적 검증기(`tools/verify_playbooks.py`) 및 핵심 5종 매뉴얼 작성.
+  3. `TASK-103` / `TASK-117`: 활주로(`RUNWAY` v1.10.6 Approved) 제어기 또는 OTA 서버 사양서 초안 착수.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -25,7 +25,7 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 318/318 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 330/330 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (7개 시나리오 8/8 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).

@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-11  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-121, TASK-202-1 / 진행 중: TASK-202 / 활성 대기: TASK-010, 011, 117, 119, 120, 201)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-201, TASK-202-1 / 진행 중: TASK-202 / 활성 대기: TASK-010, 011, 117, 119, 120)
 
 ---
 
@@ -61,17 +61,8 @@
     - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
-- [-] **TASK-201: FCP 외루프 유도 프리미티브(LOITER 선회 반경 제어 & POI_HOLD 관심점 지향) 확장**
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-201-fcp-loiter-poi-hold.md`
-  - **사양서 상태**: `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.15.0 Implemented → 목표 v1.16.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.26.0 Approved — `MSG_OPERATOR_CMD` 확장 파라미터는 `TASK-202-1`에서 선반영 완료; FCP v1.16.0 참조 배지 동기화), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.0 Approved — FCP v1.16.0 참조 배지 및 유도 흐름 동기화)
-  - **배경 및 목적**: 고수준 미션/편대/레이더 로직을 FCP 범위에서 제외(구 TASK-202 다이어트)하고, 상위 AMM의 전술 기동을 뒷받침할 2종 순수 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 정밀 호버/조준)와 `MSG_OPERATOR_CMD`(`Base+0`) 수신 처리 확장
-  - [x] **TASK-201-1**: FCP 사양서(→ v1.16.0 Approved) 유도 프리미티브·범프리스 전환 명세 반영 및 마스터 ICD(현재 v1.26.0)·구조도(현재 v2.12.0) 참조 버전 동기화 (`2026-11-11`)
-  - [x] **TASK-201-2**: FCP `guidance_controller.lua` 및 활성 기종 드라이버(`vectored_vtol_driver.lua`, `advanced_vtol_driver.lua`; 현행 `DEFERRED_AIRFRAMES` 4종 제외)에 `LOITER`(선회 반경/방향 속도 제어) 및 `POI_HOLD`(관심 좌표 지속 지향) 제어 루프 구현 (`2026-11-11`)
-  - [x] **TASK-201-3**: `operator_handler.lua` `MSG_OPERATOR_CMD` 신규 모드(`POI_HOLD`, `loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 수신 및 범프리스 전환 인터록 구현 (`2026-11-11`)
-  - [ ] **TASK-201-4**: FCP 단위 테스트 및 E2E 시뮬레이션 검증, 사양서 `Implemented` 환원 (`verify_spec_status.py` 기준 충족 및 신규 `src/` 파일 시 `manifest.lua` 동기화)
-
 - [-] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201 + 203 통합)**
-  - **선행 의존성**: `TASK-202-2~4`(AMM 온보드 3분할 코어·TUI·단위 테스트)는 `TASK-202-1` 사양 확정으로 즉시 독립 진행 가능; `TASK-202-5` 멀티노드 E2E 통합 시뮬레이션(`ORBIT`→FCP `LOITER` / `POI_HOLD` 실기동 연동)은 `TASK-201` 완료 필요
+  - **선행 의존성**: `TASK-202-2~4`(AMM 온보드 3분할 코어·TUI·단위 테스트)는 `TASK-202-1` 사양 확정으로 즉시 독립 진행 가능; `TASK-202-5` 멀티노드 E2E 통합 시뮬레이션(`ORBIT`→FCP `LOITER` / `POI_HOLD` 실기동 연동)은 `TASK-201` 완료로 착수 가능
   - **참조 초안 계획서**: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md` (Layer 4 AMP 설계를 AMM 3분할 코어 `mission_engine.lua`·`condition_evaluator.lua`·`hook_runner.lua`로 통합 승계)
   - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.1.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.26.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.0 Approved)
   - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 3분할 미션 코어(`src/3_planning/amm/modules/{mission_engine,condition_evaluator,hook_runner}.lua`)로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 무인기 헤드리스(`config.headless`) 및 원격 트리거(`Base+0` `MSG_MISSION_CMD`)로 겸용 구동하도록 모듈화
@@ -110,6 +101,15 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-201: FCP 외루프 유도 프리미티브(`LOITER` 선회 반경 제어 & `POI_HOLD` 관심점 지향) 확장** (완료일: 2026-11-11, 커밋 `d3c5fef`, `ddaf428`, `f218830`, `ecff4f4`, `fb08520`) (`docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Implemented), `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`, `tests/e2e/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-201-fcp-loiter-poi-hold.md`
+  - **목적 및 성과**: 상위 `AMM`(`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (v1.1.0 Approved))의 전술 기동을 지원하기 위해 `VECTORED_VTOL` 및 `ADVANCED_VTOL` 외루프 드라이버에 `LOITER`(반경 $R \ge 5.0\text{ m}$·CW/CCW 접선 벡터, 중심 특이점 회피) 및 `POI_HOLD`(관심점 조준 3D 호버)와 3종 기수 지향 모드(`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`/`ORBIT_POINT`, $<0.5\text{ m}$ 요 고정, $30.0^\circ/\text{s}$ 슬루, `LOITER`/`POI_HOLD` 중 `STRICT_LEVEL` $0.0^\circ$ 피치 강제)를 구현함 (`DEFERRED_AIRFRAMES` 4종 차단 및 `flapTarget == 0.0` 유지). 또한 `operator_handler.lua` `Base+0` 파라미터 정규화(`NaN`/`Inf` 차단 포함)·`PILOT_OVERRIDE_ACTIVE` 보호, `guidance_controller.lua` 2.0초 범프리스 램핑(`rampStartMs = -10000`, `FAILSAFE_HOLD` 복귀 시 짐벌 연속성 유지), `fcp_runtime.lua` 지상 대기 C2 중심점 동결·램프 방지 및 `distanceToWp` 다운링크를 통합함. 단위 330/330 PASS(12타겟, `fcp` 45/45), E2E 8/8 PASS(7시나리오), 돌연변이 25/25 KILLED(100.0%), 하네스 82/82 PASS, 정적 3종·사양서 15종(`9 Implemented, 6 Approved`)·Lua 126/126 PASS 달성.
+  - **구현 내용**:
+    - [x] **TASK-201-1**: FCP 사양서(v1.16.0 Approved → Implemented) 개정 및 마스터 ICD(`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.26.0 Approved))·전체 구조도(`docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (v2.12.0 Approved))·AMM 사양서 FCP 참조 배지 동기화 (`d3c5fef`)
+    - [x] **TASK-201-2**: `flight_fsm.lua` `POI_HOLD` 16상태 확장(`MUT-14` 보존), `vectored_vtol_driver.lua`·`advanced_vtol_driver.lua` `resolve_horizontal_error`/`compute_heading` 및 `fcp_config.json` 기본값 구현 (`ddaf428`)
+    - [x] **TASK-201-3**: `operator_handler.lua` `MSG_OPERATOR_CMD` 정규화·권한 보호, `guidance_controller.lua` `trigger_bumpless_transition`, `fcp_runtime.lua` C2 배선 및 `distanceToWp` 구현 (`f218830`)
+    - [x] **TASK-201-4**: E2E 시나리오 2(`test_e2e_waypoint_guidance.lua` Step 9) 검증(`ecff4f4`), 리뷰 보완 패치(`NaN`/`Inf` 방어·`FAILSAFE_HOLD` 연속성·지상 C2 가드·고도 앵커링, `fb08520`), FCP 사양서 `Implemented` 승격 및 컨텍스트 동기화
 
 - [x] **TASK-121: [하네스/거버넌스] 컨텍스트 문서 드리프트 정적 검사기(`verify_context_docs.py`) 및 Antigravity `Stop` 훅 자동 가드 구축** (완료일: 2026-11-11, 커밋 `edea694` ~ `7832914`) (`tools/verify_context_docs.py`, `.agent/hooks/`, `.agent/hooks.json`, `tests/harness/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-121-context-doc-drift-guard.md`
@@ -198,7 +198,3 @@
     - [x] **TASK-007-4**: 핵심 4대 사양서(`ICD` v1.24.0, `VAS` v1.17.0, `FCP` v1.14.0, `ASA` v1.6.0) 용어 소급 척결 및 SemVer 마이너 승격
     - [x] **TASK-007-5**: 연관 10대 사양서(`SYSTEM_DIAGRAM` v2.10.1, `ALIGNMENT` v2.5.2, `GPS` v2.2.2, `GAC` v1.4.1, `DOCKING_ARM` v1.11.1, `LANDING_PAD` v2.4.2, `RUNWAY` v1.10.6, `GCS` v1.0.1, `TCA` v1.10.1, `AMM` v1.0.1) 용어 정비 및 SemVer 패치 승격
     - [x] **TASK-007-6**: 전체 파이프라인 일괄 검증 및 사양서 상태(`VAS`, `FCP` $\to$ `Implemented`) 환원
-
-- [x] **TASK-111: 멀티노드 종단간(E2E) 패킷 시퀀스 통합 시뮬레이션 테스트 구축** (완료일: 2026-11-08, 커밋 `646d831` ~ `81e584b`) (`harness/simulation/`, `tools/run_e2e_tests.py`, `tests/e2e/`, `tests/harness/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-111-e2e-simulation.md`
-  - **목적 및 성과**: 다중 노드 격리 가상 버스(`virtual_bus.lua`), Cobalt Lua 5.2 `_ENV` 기반 게스트 샌드박스(`node_sandbox.lua`), 자동화 E2E 테스트 러너(`tools/run_e2e_tests.py`), 자동화 돌연변이 테스터(`tools/run_mutation_tests.py`) 구축 및 6대 핵심 통합 시나리오 검증 완료.
