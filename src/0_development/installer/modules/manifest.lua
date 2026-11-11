@@ -545,6 +545,7 @@ manifest.MODULES = {
             { repoPath = "src/3_planning/amm/modules/waypoint_queue.lua", dest = "/modules/waypoint_queue.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/network_manager.lua", dest = "/modules/network_manager.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/mission_engine.lua", dest = "/modules/mission_engine.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/condition_evaluator.lua", dest = "/modules/condition_evaluator.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/c2_arbiter.lua", dest = "/modules/c2_arbiter.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/input_handler.lua", dest = "/modules/input_handler.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
