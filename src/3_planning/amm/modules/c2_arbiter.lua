@@ -40,6 +40,9 @@ function c2_arbiter:handle_gcs_packet(packet, now_ms)
     local p = packet.payload
     if p.authority == "GCS_OVERRIDE" then
         self.authority = "GCS_OVERRIDE"
+        if self.engine then
+            self.engine.authority = "GCS_OVERRIDE"
+        end
         if self.queue and self.queue.state == "EN_ROUTE" then
             self.queue.state = "SUSPENDED"
         end
@@ -131,14 +134,22 @@ local function handle_cmd_stop(self, _p, now_ms)
 end
 
 local function handle_cmd_pause(self, _p, _now_ms)
-    self.engine:pause()
+    local ok = self.engine:pause()
+    if not ok then
+        send_ack(self, "PAUSE", "INVALID_CMD", "INVALID_STATE_TRANSITION")
+        return false, "INVALID_CMD"
+    end
     send_ack(self, "PAUSE", "ACCEPTED", nil)
     self.lastBanner = "MISSION PAUSED"
     return true, "ACCEPTED"
 end
 
 local function handle_cmd_resume(self, _p, now_ms)
-    self.engine:resume(now_ms)
+    local ok = self.engine:resume(now_ms)
+    if not ok then
+        send_ack(self, "RESUME", "INVALID_CMD", "INVALID_STATE_TRANSITION")
+        return false, "INVALID_CMD"
+    end
     send_ack(self, "RESUME", "ACCEPTED", nil)
     self.lastBanner = "MISSION RESUMED"
     return true, "ACCEPTED"

@@ -145,6 +145,15 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         }))
         f_def.close()
 
+        -- 0. PAUSE / RESUME while IDLE -> INVALID_CMD (INVALID_STATE_TRANSITION)
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "PAUSE" } }, 950)
+        assert_eq(tx[#tx].payload.payload.status, "INVALID_CMD")
+        assert_eq(tx[#tx].payload.payload.reason, "INVALID_STATE_TRANSITION")
+
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "RESUME" } }, 960)
+        assert_eq(tx[#tx].payload.payload.status, "INVALID_CMD")
+        assert_eq(tx[#tx].payload.payload.reason, "INVALID_STATE_TRANSITION")
+
         -- 1. Missing file -> FILE_NOT_FOUND
         arb:handle_gcs_packet({
             ver = "1.9.5", type = "MSG_MISSION_CMD",
@@ -172,6 +181,31 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_eq(ack_run.missionState, "EN_ROUTE")
         assert_eq(ack_run.activeIndex, 1)
         assert_eq(ack_run.totalCheckpoints, 2)
+
+        -- 3b. RESUME while already EN_ROUTE -> INVALID_CMD (INVALID_STATE_TRANSITION)
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "RESUME" } }, 1250)
+        assert_eq(tx[#tx].payload.payload.status, "INVALID_CMD")
+        assert_eq(tx[#tx].payload.payload.reason, "INVALID_STATE_TRANSITION")
+
+        -- 3c. GCS_OVERRIDE suspends active engine and syncs eng.authority
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "GCS_OVERRIDE",
+                command = "LOITER",
+                flightMode = "LOITER",
+                emergencyAction = "NONE",
+            },
+        }, 1260)
+        assert_eq(arb.authority, "GCS_OVERRIDE")
+        assert_eq(eng.authority, "GCS_OVERRIDE")
+        assert_eq(eng.state, "SUSPENDED")
+
+        -- Pilot resumes mission control
+        arb:handle_pilot_action("RESUME")
+        assert_eq(arb.authority, "PILOT_PRIMARY")
+        assert_eq(eng.authority, "PILOT_PRIMARY")
+        assert_eq(eng.state, "EN_ROUTE")
 
         -- 4. Duplicate RUN while EN_ROUTE with forceRestart = false -> BUSY_REJECTED
         arb:handle_gcs_packet({
