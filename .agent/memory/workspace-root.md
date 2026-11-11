@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-11 — AMM v1.2.0 호스트 PC 외부 웹 GUI 미션 에디터 및 외부 파일 즉시 구동 사양 개정 (TASK-202-1)
+
+- **결정 배경**: CC:Tweaked 인게임 `51x19` 터미널의 협소한 해상도 제약을 보완하여 13종 액션·12종 복합 조건·4종 훅을 직관적으로 설계할 수 있는 외부 에디터와, 저작한 `.json` 파일을 인게임 컴퓨터에 바로 집어넣어 구동하는 파이프라인을 명세화함.
+- **반영 내역**:
+  1. **`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (`v1.1.0` → `v1.2.0 Approved`)**: §6.6 외부 파일 다중 경로 리졸버(`resolve_path`: 원문 경로 → `.json` → `missions/` → `/disk/` → `/disk/missions/`), 프리플라이트 스키마 검증기(`validate_mission_table`, `SCHEMA_INVALID` 반환), 3대 즉시 구동 채널(CLI `run`/`load`/`files`, 셸 부팅 인자 `main.lua <spec> [loop]`, CC 창 드래그 앤 드롭 `file_transfer` 수신 및 `IDLE` 적재/`autoRunDroppedFile` 출격/비행 중 안전 저장) 및 §9 호스트 PC 무설치 단일 파일 웹 GUI 에디터(`tools/amm_mission_editor.html` — 13종 액션 카드, 조건/훅 빌더, 2D $(X,Z)$ 경로 캔버스, 실시간 스키마 검증, JSON Import/Export) 규격 신설.
+  2. **`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.26.0` → `v1.27.0 Approved`) & `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (`v2.12.0` → `v2.12.1 Approved`)**: `MSG_MISSION_CMD.payload.missionName` 외부 경로 지원 및 `MSG_MISSION_ACK.payload.status` `SCHEMA_INVALID` 코드 추가, 참조 버전 배지 동기화.
+  3. **`TASK.md` & `GEMINI.md`**: `TASK-202-1` 개정 완료 반영 및 `TASK-202-4~5` 구현 백로그 상세화.
+- **검증**: `python tools/verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `python tools/verify_spec_status.py` `9 Implemented, 6 Approved PASS`, `python tools/verify_context_docs.py` `0 findings`, `python -m unittest discover -s tests/harness -p "test_*.py"` `82/82 PASS`.
+
+---
+
 ## 2026-11-11 — AMM 미션 엔진 FSM·C2 중재·헤드리스 모드 및 5Hz 틱 연동 (TASK-202-3)
 
 - **결정 배경**: `AMM_PROGRAM_SPECIFICATION.md` (`v1.1.0 Approved`) 기반 통합 미션 시퀀서 구축의 2단계 구현으로, 다형성 미션 파일 로더(`load`/`save`/`load_table`) 및 스텝 자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `Base+0` `MSG_MISSION_CMD`/`MSG_MISSION_ACK` 중재, `main.lua` 헤드리스 모드(`config.headless`)·5Hz 타이머 틱·Zone 3(`Base+20~29`) 이벤트 라우팅을 구현함.

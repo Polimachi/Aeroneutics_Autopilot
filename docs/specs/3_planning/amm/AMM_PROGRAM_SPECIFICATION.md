@@ -6,14 +6,14 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.1.0` |
+| **문서 버전 (Version)** | `v1.2.0` |
 | **최종 수정일 (Date)** | `2026-11-11` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획 및 조종석 통합 단말 (AMM / Node 03) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.26.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.12.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.27.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.12.1)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v1.16.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.18.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 컨텍스트 및 규칙)
@@ -22,6 +22,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.2.0` | 2026-11-11 | 호스트 PC 외부 비주얼 미션 에디터(`tools/amm_mission_editor.html`) 및 외부 파일 즉시 구동 워크플로우 명세 신설: ① `mission_engine` 다중 경로 리졸버(`resolve_path`: 원문 경로, `.json` 보강, `missions/`, `/disk/`, `/disk/missions/`) 및 프리플라이트 스키마 검증기(`validate_mission_table`, `SCHEMA_INVALID` 반환), ② 3대 외부 파일 즉시 구동 채널(CLI `run`/`load`/`files`, 셸 부팅 인자 `main.lua <path> [loop]` 및 `autoStartMission`, CC 창 마우스 드래그 앤 드롭 `file_transfer` 이벤트 수신 및 `IDLE` 즉시 적재), ③ 브라우저 기반 단일 파일 웹 GUI 에디터(`tools/amm_mission_editor.html` — 13종 액션 폼, 조건/훅 빌더, 2D $(X,Z)$ 경로 프리뷰 캔버스, 실시간 검증, JSON 입출력) 규격 추가 | 외부 GUI 에디터 기반 직관적 미션 저작 및 외부 파일 무중단 투입·즉시 구동 지원 |
 | `v1.1.0` | 2026-11-11 | Layer 3(AMM) 및 구 Layer 4(AMP) 미션 시퀀서를 3분할 코어 모듈(`mission_engine`, `condition_evaluator`, `hook_runner`)로 통합: 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 복합 조건 평가기, 0-tick 비차단 라이프사이클 훅(`onEnter`/`onExit`/`onAbort`), Zone 3(`Base+20~29`) 동적 탑재체 교신(`MSG_PAYLOAD_REQ`/`ACK`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 무인기 헤드리스(`config.headless`) 겸용 토폴로지, 51x19 TUI 6행 스크롤 뷰포트 + 5행 조건 진행률 표시 및 `run`/`stop`/`next` CLI 확장 (`Implemented` $\to$ `Approved`) | TASK-202 통합 미션 시퀀서 엔진 및 조종석 단말 사양 고도화 |
 | `v1.0.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.0.0` | 2026-11-08 | AMM 상세 규격서 초안(Draft) 최초 작성: 조종석 MFD(Node 03) 일체화 분할 TUI(51x19), 단방향 순차 웨이포인트 큐, 도달 판정(2D 15m) 및 FCP(`Base+0`) 하달, GCS 원격 C2 중계 및 권한 탈환, 원터치 핫키 및 CLI 복합 입력 규격화 | Planning 계층 신규 프로그램 설계 및 조종석 C2 단말 통합 |
@@ -35,15 +36,20 @@
 
 자율 비행 생태계에서 하위 외루프 유도 컴퓨터인 **FCP (Node 04)**가 단일 목표에 대한 비선형 L1 수평 유도, 총 에너지 제어(TECS), 3축 병진 PID, 15-State FSM 및 20Hz 내루프 지령(`Base + 1`)을 전담한다면, **AMM**은 비행체가 수행해야 할 **다중 체크포인트 시퀀싱, 복합 완료/중단 조건(`completeWhen`/`abortWhen`) 평가, 라이프사이클 이벤트 훅(`onEnter`/`onExit`/`onAbort`), Zone 3 탑재체 및 로컬 레드스톤 제어, 조종사 대화형 51x19 TUI 및 지상 관제 센터(GCS)와의 원격 C2 중재**를 총괄합니다.
 
-본 `v1.1.0` 개정에서는 기존에 Layer 3(AMM 단순 웨이포인트 큐)와 Layer 4(AMP 복합 미션 플래너 초안)로 이원화되어 있던 구조를 단일 노드(Node 03) 내부의 3분할 미션 코어(`mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua`)로 통합하였습니다. 이를 통해 유인 조종석에서는 **51x19 분할 TUI**와 결합 구동되고, 무인기(UAV)나 원격 자동화 환경에서는 설정(`headless: true`)만으로 화면 출력 없이 동일한 미션 엔진 코어를 구동할 수 있습니다.
+본 `v1.1.0`~`v1.2.0` 개정에서는 기존에 Layer 3(AMM 단순 웨이포인트 큐)와 Layer 4(AMP 복합 미션 플래너 초안)로 이원화되어 있던 구조를 단일 노드(Node 03) 내부의 3분할 미션 코어(`mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua`)로 통합하고, **호스트 PC용 무설치 웹 GUI 미션 에디터(`tools/amm_mission_editor.html`)**와 **외부 미션 파일 즉시 구동 파이프라인(다중 경로 해석, 프리플라이트 스키마 검증, CC 창 드래그 앤 드롭 `file_transfer` 및 부팅 인자 실행)**을 추가하였습니다. 이를 통해 사용자는 마인크래프트 외부 브라우저에서 직관적으로 미션을 설계·검증한 뒤, 생성된 `.json` 파일을 인게임 컴퓨터에 집어넣어 즉시 구동할 수 있습니다.
 
 ```mermaid
 flowchart TD
+    subgraph HOST_PC["[호스트 PC (마인크래프트 외부)]"]
+        EXT_EDIT["외부 비주얼 미션 에디터 (tools/amm_mission_editor.html)<br/>* 13종 액션 카드 & 조건/훅 GUI 빌더<br/>* 2D (X,Z) 전술 경로 프리뷰 캔버스<br/>* 실시간 스키마 검증 & JSON 입출력"]
+    end
+
     subgraph COCKPIT["[조종석 / 임무 컴퓨터 (Node 03)]"]
-        AMM_UI["AMM TUI & Input<br/>* 51x19 분할 TUI (HUD + 6행 스크롤 뷰포트)<br/>* 모달 핫키(NAV) / CLI(run, stop, next, add...)<br/>* config.headless 시 UI 생략 구동"]
-        AMM_CORE["AMM 3분할 미션 엔진 코어<br/>* mission_engine: 13종 체크포인트 FSM (SINGLE/REPEAT)<br/>* condition_evaluator: 12종 completeWhen/abortWhen<br/>* hook_runner: 0-tick 훅 & 레드스톤/Zone 3 탑재체"]
+        AMM_UI["AMM TUI & Input / File Drop<br/>* 51x19 분할 TUI (HUD + 6행 스크롤 뷰포트)<br/>* 모달 핫키(NAV) / CLI(run, load, files, stop, next...)<br/>* file_transfer 드래그 앤 드롭 & 셸 부팅 인자 수신"]
+        AMM_CORE["AMM 3분할 미션 엔진 코어<br/>* mission_engine: 13종 FSM, 다중 경로 로더, 스키마 검증기<br/>* condition_evaluator: 12종 completeWhen/abortWhen<br/>* hook_runner: 0-tick 훅 & 레드스톤/Zone 3 탑재체"]
         AMM_ARB["C2 Arbiter & Waypoint Queue<br/>* PILOT_PRIMARY vs GCS_OVERRIDE 중재<br/>* Base+0 원격 미션 제어(MSG_MISSION_CMD) 수신"]
         AMM_UI --> AMM_ARB
+        AMM_UI -->|"file_transfer / CLI run·load"| AMM_CORE
         AMM_ARB <--> AMM_CORE
     end
 
@@ -63,7 +69,8 @@ flowchart TD
         GCS["GCS 지상 관제 콘솔<br/>* 원격 C2 오버라이드 & 원격 미션 트리거 (Base+0)"]
     end
 
-    %% Network links
+    %% Network & File links
+    EXT_EDIT ==>|".json 드래그 앤 드롭 (file_transfer)<br/>플로피(/disk) / 로컬 폴더 투입"| AMM_UI
     AMM_ARB -->|"Base+0 [I-6]<br/>MSG_OPERATOR_CMD (단일 유도 목표/회항 하달)"| FCP
     AMM_ARB -.->|"Base+1 [I-2]<br/>MSG_EMERGENCY_OVERRIDE (E_STOP 하드킬)"| VAS
     FCP -->|"Base+3 [I-6]<br/>MSG_MFD_STATE (5Hz 항법/계기 다운링크)"| AMM_ARB
@@ -72,7 +79,7 @@ flowchart TD
     AMM_CORE <==>|"Base+20~29 [I-11]<br/>MSG_PAYLOAD_REQ / ACK (동적 채널 오픈)"| PAYLOAD
 ```
 
-### 1.2 6대 설계 목표 (Goals)
+### 1.2 7대 설계 목표 (Goals)
 1. **13종 체크포인트 통합 시퀀싱 (Active 9종 + Deferred 4종)**:
    - 현행 활성 기종(`VECTORED_VTOL`, `ADVANCED_VTOL`) 및 인프라(`Landing Pad`, `GAC`)에서 즉시 운용 가능한 **활성 9종**(`FLY_OVER`, `FLY_TO`, `ORBIT`, `PATROL`, `POI_HOLD`, `TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`, `PAYLOAD_ACTION`, `REDSTONE_ACTION`)을 지원하고, 후속 과제(`TASK-103` 활주로, `TASK-104` 도킹암)에 종속된 **예약 4종**(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`)은 스키마에 정의하되 런타임 진입 시 안전 거부(`DEFERRED_ACTION_UNSUPPORTED`) 처리합니다.
 2. **AMM(5Hz 시퀀서) $\leftrightarrow$ FCP(20Hz 유도기) 명확한 책임 분리**:
@@ -85,6 +92,8 @@ flowchart TD
    - 우측 미션 패널에 **6행 활성 중심 스크롤 뷰포트**와 **하단 5행 스텝/조건 진행률**을 표출하고, `config.headless = true` 설정 시 터미널 렌더링 없이 백그라운드 데몬으로 동작합니다.
 6. **채널 추가 없는 `Base+0` 원격 미션 제어 및 조종사 즉시 권한 탈환**:
    - 별도 전용 RF 채널을 추가하지 않고 기존 `Base + 0` (`CH_OPERATOR_C2`)에서 `MSG_MISSION_CMD`(`RUN`, `STOP`, `PAUSE`, `RESUME`, `NEXT`)를 통합 수신하며, 로컬 키 입력 시 즉시 `PILOT_PRIMARY` 권한을 탈환합니다.
+7. **호스트 PC 외부 비주얼 에디터 및 외부 파일 즉시 구동**:
+   - 별도 패키지 설치 없이 브라우저에서 동작하는 단일 파일 웹 GUI 에디터(`tools/amm_mission_editor.html`)로 미션 JSON을 직관적으로 제작·검증하고, 인게임 CC:Tweaked 컴퓨터에 마우스 드래그 앤 드롭(`file_transfer`), 플로피 디스크(`/disk`), 셸 부팅 인자(`main.lua <path>`), 또는 CLI(`run <path>`)로 집어넣어 즉시 구동할 수 있습니다.
 
 ### 1.3 비목표 및 반목표 (Non-Goals & Anti-Goals)
 - **Non-Goals (보류/제외 범위)**:
@@ -197,7 +206,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
     time = 1729845010000,
     payload = {
         action = "RUN",                -- "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT"
-        missionName = "patrol_alpha",  -- "RUN" 시 로드할 미션 파일명 (생략 시 현재 로드된 큐 실행)
+        missionName = "patrol_alpha",  -- "RUN" 시 로드할 미션 식별자 또는 외부 경로 (예: "/disk/sortie.json", 생략 시 현재 큐 실행)
         executionMode = "SINGLE",      -- "SINGLE" (1회 완주) | "REPEAT" (무한 순환)
         forceRestart = false           -- 실행 중 재기동 강제 여부 (false이고 EN_ROUTE이면 BUSY_REJECTED)
     }
@@ -212,7 +221,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
     time = 1729845010020,
     payload = {
         action = "RUN",
-        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "DEFERRED_ACTION_UNSUPPORTED" | "INVALID_CMD"
+        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "SCHEMA_INVALID" | "DEFERRED_ACTION_UNSUPPORTED" | "INVALID_CMD"
         missionId = "PATROL_ALPHA",
         missionState = "EN_ROUTE",     -- "IDLE" | "EN_ROUTE" | "SUSPENDED" | "COMPLETED" | "ABORTED"
         activeIndex = 1,
@@ -560,17 +569,79 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> IDLE: 부팅 / clear
-    IDLE --> EN_ROUTE: run / goto / add / 이륙 후 CRUISE 진입
+    [*] --> IDLE: 부팅 / clear / 외부 파일 적재(load, file_transfer)
+    IDLE --> EN_ROUTE: run / 부팅 인자(main <path>) / autoRunDroppedFile / goto / add / 이륙 후 CRUISE 진입
     EN_ROUTE --> EN_ROUTE: completeWhen 충족 (다음 스텝 또는 REPEAT 순환)
     EN_ROUTE --> SUSPENDED: HOLD / RTH / LAND / GCS_OVERRIDE / pause
     SUSPENDED --> EN_ROUTE: resume / goto [idx] / run
     EN_ROUTE --> COMPLETED: 최종 스텝 완료 (SINGLE 모드)
     EN_ROUTE --> ABORTED: abortWhen 발동 / DEFERRED 거부 / stop 명령
-    COMPLETED --> IDLE: clear / load
-    ABORTED --> IDLE: clear / load
+    COMPLETED --> IDLE: clear / load / file_transfer
+    ABORTED --> IDLE: clear / load / file_transfer
     ABORTED --> EN_ROUTE: run / goto [idx]
 ```
+
+### 6.6 외부 미션 파일 다중 경로 해석, 프리플라이트 스키마 검증 및 즉시 구동 파이프라인
+
+외부 에디터(`tools/amm_mission_editor.html`)나 호스트 PC에서 작성한 `.json` 파일을 인게임 컴퓨터에 집어넣어 별도 수작업 경로 변환 없이 즉시 검증·구동하기 위해 다음 파이프라인을 제공합니다.
+
+```mermaid
+flowchart LR
+    IN1["1. CLI 명령<br/>run / load <spec> [loop]"]
+    IN2["2. 셸 부팅 인자 & Config<br/>main.lua <spec> [loop]<br/>autoStartMission"]
+    IN3["3. CC 창 드래그 앤 드롭<br/>os.pullEventRaw: file_transfer"]
+
+    RESOLVE["다중 경로 리졸버 (resolve_path)<br/>1) 원문 경로 (<spec>)<br/>2) <spec>.json<br/>3) missions/<spec>[.json]<br/>4) /disk/<spec>[.json]<br/>5) /disk/missions/<spec>[.json]"]
+
+    VALID["프리플라이트 스키마 검증기<br/>(validate_mission_table)<br/>* 액션/필수 파라미터/조건/훅 검증<br/>* 실패 시 SCHEMA_INVALID + CP# 사유"]
+
+    EXEC["시퀀서 적재 및 즉시 구동<br/>* IDLE 시 큐/엔진 즉시 적재<br/>* run / 부팅 인자 / autoRunDroppedFile 시<br/>  즉시 EN_ROUTE 및 Base+0 송출"]
+
+    IN1 --> RESOLVE
+    IN2 --> RESOLVE
+    RESOLVE --> VALID
+    IN3 -->|"missions/<name>.json 저장 전 검증"| VALID
+    VALID -->|"검증 통과"| EXEC
+```
+
+#### 1. 다중 경로 리졸버 (`mission_engine.resolve_path(spec, fs_api)`)
+사용자가 단축 미션명(`sortie_01`), 루트 파일(`/my_mission.json`), 또는 플로피 디스크 경로(`/disk/sortie_01.json`) 중 어떤 형태를 입력하더라도 다음 우선순위로 실제 존재하는 파일(`not fs.isDir(p)`)을 탐색합니다:
+1. `spec` 원문 경로 (`"/disk/sortie_01.json"`, `"custom.json"` 등)
+2. `spec .. ".json"` (`"/disk/sortie_01"` $\to$ `"/disk/sortie_01.json"`)
+3. `"missions/" .. spec` 및 `"missions/" .. spec .. ".json"`
+4. `"/disk/" .. spec` 및 `"/disk/" .. spec .. ".json"` (플로피 디스크 루트 자동 탐색)
+5. `"/disk/missions/" .. spec` 및 `"/disk/missions/" .. spec .. ".json"` (플로피 디스크 내 `missions/` 하위 폴더 탐색)
+
+#### 2. 프리플라이트 스키마 검증기 (`mission_engine.validate_mission_table(tbl)`)
+외부 파일 파싱 직후 시퀀서 상태를 변경하기 전에 정적 유효성을 검사하여 `(ok: boolean, err_code_or_nil: string, detail_or_nil: string)`을 반환합니다:
+- **최상위 구조**: `type(tbl) == "table"`이며 `checkpoints` 배열(또는 하위 호환 `items` `[DEPRECATED]` 배열)이 최소 1개 이상의 원소를 포함해야 합니다 (위반 시 `false, "SCHEMA_INVALID", "EMPTY_CHECKPOINTS"`).
+- **모드 및 정책**: `executionMode` 지정 시 `"SINGLE" | "REPEAT"`, `fallbackPolicy` 지정 시 `"RTH" | "HOVER_HOLD" | "LOITER" | "SKIP_NEXT"` 범위여야 합니다.
+- **체크포인트별 필수 파라미터 검사 (`CP#<idx>`)**:
+  - `action`이 13종 표준 액션(활성 9종 + 예약 4종)에 속하지 않으면 `false, "SCHEMA_INVALID", "CP#" .. idx .. ": UNKNOWN_ACTION"`.
+  - `FLY_OVER`, `FLY_TO`, `ORBIT`: `params.targetPos` 내 `x`, `z`(또는 단축 `params.x`, `params.z`)가 수치(`number`)여야 하며, `ORBIT`의 `radius` 지정 시 $> 0$이어야 합니다.
+  - `PATROL`: `params.waypoints`가 최소 1개 이상의 `{ x = number, z = number }` 원소를 가진 배열이어야 합니다.
+  - `POI_HOLD`: `params.poiPos`(`{ x = number, z = number }`) 또는 `params.targetPos`가 수치 좌표를 포함해야 합니다.
+  - `LAND_LAUNCHPAD`: `params.facilityId`(비어 있지 않은 문자열) 또는 `params.targetPos`(`{ x, z }`) 중 하나 이상이 존재해야 합니다.
+  - `PAYLOAD_ACTION`: `params.command`(비어 있지 않은 문자열)가 필수이며, `channelOffset` 지정 시 Zone 3 범위($20 \sim 29$) 내 정수여야 합니다.
+  - `REDSTONE_ACTION`: `params.side`가 6면(`top`, `bottom`, `left`, `right`, `front`, `back`) 중 하나여야 합니다.
+- **조건 및 훅 유효성**: `completeWhen` / `abortWhen` 지정 시 `logic`(`"ANY" | "ALL"`) 및 각 조건의 `type`이 12종 표준 조건 타입에 속해야 하며, `onEnter` / `onExit` / `onAbort` 지정 시 각 훅의 `type`이 4종 표준 훅 타입에 속해야 합니다.
+
+#### 3. 3대 외부 파일 즉시 구동 채널
+1. **CLI 대화형 즉시 로드·구동 (`run <spec> [loop]`, `load <spec>`, `files`)**:
+   - `run <spec> [loop]`: `resolve_path(spec)`로 로컬 또는 `/disk` 외부 파일을 찾아 `validate_mission_table`을 통과하면 큐/엔진에 적재하고 즉시 `start(mode, now_ms)`를 호출하여 `EN_ROUTE` 비행 지령을 송출합니다.
+   - `load <spec>`: 다중 경로 리졸버와 스키마 검증을 거쳐 미션을 적재(`IDLE` 대기)하며, 실패 시 `LOAD FAIL: <detail>` 배너를 표시합니다.
+   - `files` (별칭 `mission list`): 로컬 `missions/` 디렉토리와 마운트된 `/disk`의 `.json` 파일 목록을 스캔하여 배너에 출력합니다 (예: `FILES: patrol_alpha, /disk/sortie_01`).
+2. **셸 부팅 인자 및 설정 자동 구동 (`main.lua [mission_spec] [loop]` & `amm_config.json`)**:
+   - CC:Tweaked 셸에서 `main /disk/sortie_01.json` 또는 `main sortie_01 loop`와 같이 실행 인자를 넘기면, 부팅 즉시 해당 외부 파일을 로드·검증하여 `SINGLE`(또는 `REPEAT`) 모드로 출격합니다.
+   - 명령행 인자가 없을 때는 `config/amm_config.json`의 `autoStartMission` 및 `autoExecutionMode` 설정을 폴백으로 참조합니다.
+3. **CC:Tweaked 창 마우스 드래그 앤 드롭 (`file_transfer` 이벤트) 핫인젝션**:
+   - 사용자가 호스트 PC의 `.json` 파일을 마인크래프트 CC:Tweaked 터미널 창에 드래그 앤 드롭하면 `os.pullEventRaw()`에서 `"file_transfer"` 이벤트(`p1.getFiles()`)가 수신됩니다.
+   - `main.lua`의 `handle_file_transfer(app, transferred, now_ms)`는 드롭된 파일 중 `.json` 파일의 본문을 읽어 `textutils.unserializeJSON` 및 `validate_mission_table`로 즉시 검증합니다:
+     - **검증 실패 시**: 디스크에 덮어쓰지 않고 17행 배너에 `DROP FAIL: <detail>`을 표시합니다.
+     - **검증 통과 시**: `missions/<filename>`에 자동 저장(`fs.open`)합니다.
+     - **비행 상태별 안전 분기**:
+       - 시퀀서가 `IDLE`, `COMPLETED`, `ABORTED` 상태이면: 드롭된 미션을 즉시 엔진 및 큐에 적재(`DROP LOADED: <name>`)하고, `config.autoRunDroppedFile == true`이면 즉시 `engine:start()`까지 수행합니다.
+       - 시퀀서가 `EN_ROUTE` 또는 `SUSPENDED`(비행 중) 상태이면: 진행 중인 비행을 교란하지 않도록 디스크 저장만 수행하고 `DROP SAVED: <name> (USE 'run <name>')` 배너를 출력합니다.
 
 ---
 
@@ -599,22 +670,23 @@ stateDiagram-v2
 
 ### 7.3 대화형 커맨드라인 명령어 (CLI Commands)
 
-기존 단축 큐 편집 명령어를 유지하면서 미션 실행 제어(`run`, `stop`, `next`) 및 `mission <subcmd>` 별칭을 모두 지원합니다:
+기존 단축 큐 편집 명령어를 유지하면서 다중 경로 외부 파일 실행(`run`, `load`, `files`), 시퀀서 제어(`stop`, `next`) 및 `mission <subcmd>` 별칭을 모두 지원합니다:
 
 | 명령어 | 매개변수 | 설명 | 사용 예시 |
 | :--- | :--- | :--- | :--- |
-| **`run`** | `[name] [loop]` | 현재 큐(또는 `missions/<name>.json` 로드 후) 즉시 미션 실행 (`loop` 지정 시 `REPEAT` 모드) | `run patrol_alpha loop` |
+| **`run`** | `[spec] [loop]` | 현재 큐(또는 `<spec>` 다중 경로 해석: 원문, `missions/`, `/disk/` 로드·검증 후) 즉시 미션 실행 (`loop` 지정 시 `REPEAT` 모드) | `run /disk/sortie.json loop` |
 | **`stop`** | 없음 | 활성 미션 즉시 중단(`ABORTED`), Zone 3 동적 채널 해제 및 FCP `LOITER` 대기 전환 | `stop` |
 | **`next`** | 없음 | 현재 활성 체크포인트를 수동 스킵하고 다음 체크포인트로 즉시 전이 | `next` |
-| **`mission`**| `run\|stop\|status\|next ...` | `run`, `stop`, `next` 및 상태 요약 배너 출력(`mission status`) 통합 명령 | `mission run sortie_01` |
+| **`files`** | 없음 | 로컬 `missions/` 및 마운트된 `/disk` 내 가용 `.json` 미션 파일 목록을 상태 배너에 표시 | `files` |
+| **`mission`**| `run\|load\|list\|stop\|status\|next ...` | `run`, `load`, `files`(`mission list`), `stop`, `next` 및 상태 요약(`mission status`) 통합 명령 | `mission run /disk/sortie` |
 | **`add`** | `<x> <z> [alt] [spd] [fac]` | `FLY_OVER` 체크포인트를 큐 맨 뒤에 추가 (`waypoint_queue` 및 `mission_engine` 동기화) | `add 500 -1200 150 18` |
 | **`del`** | `<index>` | 지정한 순번의 체크포인트 삭제 | `del 2` |
 | **`clear`**| 없음 | 모든 체크포인트 초기화 및 `IDLE` 전환 | `clear` |
 | **`goto`** | `<index>` | 특정 체크포인트를 즉시 활성 스텝으로 지정하고 `EN_ROUTE` 실행 | `goto 3` |
 | **`pause`**| 없음 | 미션 시퀀서 진행을 수동 일시정지 (`SUSPENDED`) | `pause` |
 | **`resume`**| 없음 | 일시정지된 미션 시퀀서 진행 재개 (`EN_ROUTE`) | `resume` |
-| **`save`** | `<name>` | 현재 체크포인트 시퀀스를 `missions/<name>.json`으로 저장 | `save patrol_alpha` |
-| **`load`** | `<name>` | `missions/<name>.json` 파일에서 시퀀스 로드 (v1.1.0 `checkpoints` 및 v1.0.0 `items` 수용) | `load patrol_alpha` |
+| **`save`** | `<name_or_path>` | 현재 체크포인트 시퀀스를 `missions/<name>.json`(또는 지정 경로)으로 저장 | `save patrol_alpha` |
+| **`load`** | `<spec>` | 다중 경로 리졸버(`resolve_path`) 및 스키마 검증기를 통해 외부/플로피/내장 `.json` 파일 로드 | `load /disk/sortie_01.json` |
 | **`alt`**  | `<altitude>` | 전역 기본 순항 고도 변경 ($m$) | `alt 180` |
 | **`spd`**  | `<speed>` | 전역 기본 순항 속도 변경 ($m/s$) | `spd 20` |
 | **`rad`**  | `<radius>` | 기본 도달 판정 반경 변경 ($m$) | `rad 20` |
@@ -628,7 +700,7 @@ stateDiagram-v2
    - AMM은 동일 채널 재송출을 하지 않고, 내부 미션 시퀀서(`mission_engine` 및 `waypoint_queue`)를 즉시 **`SUSPENDED`**로 전환합니다.
    - 화면 17행 배너에 `[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]`를 표시합니다.
 2. **`MSG_MISSION_CMD` 수신 시**:
-   - `action == "RUN"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`로 `MSG_MISSION_ACK`를 회신합니다. 그 외에는 지정된 `missionName`(있을 경우)을 로드하고 활성 스텝을 시작하며 `status = "ACCEPTED"`를 회신합니다.
+   - `action == "RUN"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`로 `MSG_MISSION_ACK`를 회신합니다. 그 외에는 지정된 `missionName`(단축명 또는 `/disk/...` 외부 경로)을 다중 경로 리졸버 및 프리플라이트 스키마 검증기로 로드(파일 부재 시 `"FILE_NOT_FOUND"`, 스키마 오류 시 `"SCHEMA_INVALID"`, 예약 액션 포함 시 `"DEFERRED_ACTION_UNSUPPORTED"` 회신)하고 활성 스텝을 시작하며 `status = "ACCEPTED"`를 회신합니다.
    - `action == "STOP" | "PAUSE" | "RESUME" | "NEXT"`: 각각 시퀀서 중단(`ABORTED`), 일시정지(`SUSPENDED`), 재개(`EN_ROUTE`), 다음 스텝 스킵을 수행하고 결과를 `MSG_MISSION_ACK`로 회신합니다.
 
 ### 8.2 조종사 즉시 권한 탈환 (Pilot Takeover)
@@ -638,31 +710,69 @@ stateDiagram-v2
 
 ---
 
-## 9. 소프트웨어 모듈 아키텍처 (Software Architecture)
+## 9. 호스트 PC 외부 비주얼 미션 에디터 규격 (`tools/amm_mission_editor.html`)
 
-AMM 프로그램(`src/3_planning/amm/`)은 단일 함수 50줄 이하 제한과 관심사 분리를 준수하여 3분할 미션 코어를 포함한 9개 모듈로 구성됩니다:
+### 9.1 설계 목적 및 구동 환경
+CC:Tweaked 인게임 51x19 터미널의 제한된 해상도 밖에서 사용자가 복합 미션(13종 액션, 12종 조건, 4종 훅, 다중 서브웨이포인트)을 직관적으로 설계·수정할 수 있도록 **호스트 PC 브라우저 기반 단일 파일 웹 GUI 에디터(`tools/amm_mission_editor.html`)**를 제공합니다.
+- **무설치(Zero-Install) 단일 파일 구조**: 별도 웹 서버나 외부 패키지 설치 없이 HTML5/CSS/Vanilla JS 단일 파일(`tools/amm_mission_editor.html`)을 브라우저에서 직접 열어 오프라인으로 구동합니다.
+- **인게임 즉시 연동**: 에디터에서 내보낸(Export) `.json` 파일을 마인크래프트 CC:Tweaked 창에 마우스로 드래그 앤 드롭(`file_transfer`)하거나 월드 컴퓨터/디스크 폴더에 복사하여 즉시 구동합니다.
+
+### 9.2 화면 구성 및 5대 핵심 기능
+1. **미션 헤더 및 전역 기본값(`defaults`) 설정 패널**:
+   - `missionId`, `version` (`"1.2.0"`), `description`, `executionMode` (`SINGLE` / `REPEAT`), `fallbackPolicy` (`RTH` / `HOVER_HOLD` / `LOITER` / `SKIP_NEXT`) 입력 폼.
+   - 전역 `defaults` (`cruiseSpeed`, `targetAlt`, `acceptanceRadius`, `headingMode`) 설정 및 하위 체크포인트 상속 미리보기.
+2. **13종 체크포인트 카드 빌더 (Checkpoint Sequence Editor)**:
+   - 체크포인트 추가(`+ Add Checkpoint`), 복제, 삭제, 순서 이동(`▲` / `▼` 및 드래그).
+   - 선택한 `action`에 따라 필요한 `params` 입력 폼만 동적으로 전환하여 표시:
+     - `FLY_OVER` / `FLY_TO`: 목표 좌표 `(x, z)`, 고도 `targetAlt`, 속도 `cruiseSpeed`, 허용 반경 `acceptanceRadius`, 기수 모드 `headingMode`.
+     - `ORBIT`: 선회 중심 `(x, z)`, 반경 `radius`($m$), 방향 `direction`(`CW` / `CCW`), 체류 시간 `durationSec`.
+     - `PATROL`: 서브웨이포인트(`waypoints`) 동적 행 추가/삭제 테이블, 순찰 모드(`LOOP` / `PING_PONG`), 반복 횟수 `cycles`.
+     - `POI_HOLD`: 체공 좌표 `(x, z)`, 고도 `targetAlt`, 조준 대상 3D 좌표 `poiPos (x, y, z)`.
+     - `TAKEOFF_LAUNCHPAD` / `LAND_LAUNCHPAD`: 시설물 ID `facilityId`, 목표 고도 `targetAlt`, 보조 좌표 `targetPos`.
+     - `PAYLOAD_ACTION`: Zone 3 채널 오프셋 `channelOffset`($20 \sim 29$), 명령 `command`, 페이로드 JSON 편집기, 응답 대기 `waitForAck`, 기대 상태 `expectedStatus`.
+     - `REDSTONE_ACTION`: 모드(`EMIT` / `WAIT_INPUT`), 컴퓨터 6면 `side`, 16색 번들 `color`, 신호 강도 `level`($0 \sim 15$), 펄스 폭 `durationMs`.
+     - 예약 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`): 선택 시 `[DEFERRED - TASK-103/104 구현 전 런타임 안전 거부됨]` 경고 배지 표출.
+3. **12종 복합 조건(`completeWhen` / `abortWhen`) 및 4종 훅(`onEnter` / `onExit` / `onAbort`) 시각적 빌더**:
+   - `ANY` / `ALL` 논리 결합 선택기 및 12종 조건 타입 드롭다운 + 타입별 필수 파라미터(`toleranceM`, `durationSec`, `timeout`, `threshold`, `expectedStatus`, `maxDevM` 등) 전용 입력란 제공.
+   - `completeWhen`을 비워둘 경우 온보드 엔진이 자동 적용하는 **액션별 기본 완료 조건**을 카드 하단에 안내.
+   - `onEnter`, `onExit`, `onAbort` 탭별로 4종 0-tick 훅(`REDSTONE_SET`, `REDSTONE_PULSE`, `ZONE3_PAYLOAD_CMD`, `NOTIFY_OPERATOR`)을 추가·편집.
+4. **2D $(X, Z)$ 전술 경로 프리뷰 캔버스 (Interactive Tactical Canvas)**:
+   - 마인크래프트 월드 수평 좌표계($+X$ 동쪽, $-Z$ 북쪽) 위에서 체크포인트 간 비행 궤적 화살표, 도달 반경(`acceptanceRadius`), `ORBIT` 선회 원, `PATROL` 루프 다각형, `POI_HOLD` 조준선을 실시간 렌더링.
+   - 캔버스 팬/줌(Pan/Zoom) 및 마우스 클릭으로 현재 선택된 체크포인트의 $(X, Z)$ 목표 좌표를 직관적으로 지정 가능.
+5. **실시간 프리플라이트 스키마 검증 및 JSON 입출력 (Import / Export / Copy)**:
+   - 온보드 `mission_engine.validate_mission_table`과 동일한 검증 규칙을 편집 즉시 실행하여 오류 항목(`CP#idx` 및 누락/범위 위반 사유)을 상단 검증 배너에 실시간 표시.
+   - 로컬 `.json` 미션 파일 불러오기(Import, v1.0.0 `items` 포맷 자동 변환 포함), `.json` 파일 다운로드(Export), 클립보드 JSON 복사 및 실시간 Raw JSON 미리보기 지원.
+
+---
+
+## 10. 소프트웨어 모듈 아키텍처 (Software Architecture)
+
+온보드 AMM 프로그램(`src/3_planning/amm/`) 9개 모듈과 호스트 PC 외부 에디터(`tools/amm_mission_editor.html`)의 구성은 다음과 같습니다:
 
 ```
 src/3_planning/amm/
-├── main.lua                     # 진입점, 5Hz UI 타이머 / 헤드리스 분기 및 이벤트 디스패처
+├── main.lua                     # 진입점, 5Hz UI 타이머 / 헤드리스 분기, 부팅 인자 및 file_transfer 디스패처
 ├── modules/
-│   ├── mission_engine.lua       # 13종 체크포인트 시퀀서 FSM, JSON 로더, PATROL/액션 오케스트레이션
+│   ├── mission_engine.lua       # 13종 체크포인트 FSM, 다중 경로 리졸버, 프리플라이트 스키마 검증기, JSON 입출력
 │   ├── condition_evaluator.lua  # 12종 completeWhen/abortWhen 복합 조건 평가 및 기본 조건 자동 보강
 │   ├── hook_runner.lua          # 0-tick 비차단 훅(onEnter/onExit/onAbort), 레드스톤 펄스 큐, Zone 3 연동
 │   ├── waypoint_queue.lua       # 단순 FIFO 큐 및 2D 거리 판정 유틸리티 (v1.0.0 하위 호환 유지)
 │   ├── c2_arbiter.lua           # PILOT_PRIMARY vs GCS_OVERRIDE 중재 및 MSG_MISSION_CMD 연동
 │   ├── network_manager.lua      # ICD v1.9.5 인코딩/디코딩, Base+0/+1/+3 및 Zone 3(Base+20~29) 동적 바인딩
 │   ├── ui_renderer.lua          # 51x19 분할 TUI 렌더러 (6행 스크롤 뷰포트 + 5행 조건 진행률)
-│   ├── input_handler.lua        # 모달 핫키(NAV) 및 CLI(run/stop/next/mission 등) 입력 파서
+│   ├── input_handler.lua        # 모달 핫키(NAV) 및 CLI(run/load/files/stop/next/mission 등) 입력 파서
 │   └── mission_controller.lua   # 지원 기종 프로파일 판별 유틸리티
 └── config/
-    └── amm_config.json          # 기본 고도/속도/도달반경, 채널 및 headless 설정
+    └── amm_config.json          # 기본 고도/속도/반경, 채널, headless, autoStartMission, autoRunDroppedFile 설정
+
+tools/
+└── amm_mission_editor.html      # 호스트 PC 브라우저 기반 무설치 비주얼 미션 에디터 (단일 HTML5 파일)
 ```
 
 | 모듈명 | 주요 책임 | 핵심 함수 |
 | :--- | :--- | :--- |
-| **`main`** | 이벤트 루프(`os.pullEventRaw`), 5Hz 타이머(TUI/훅 틱), CLI 명령 실행 | `main_loop()`, `process_event()`, `execute_cli_command()` |
-| **`mission_engine`** | 13종 체크포인트 FSM(`SINGLE`/`REPEAT`), `PATROL` 서브웨이포인트 순환, `DEFERRED` 가드, JSON 입출력 | `new()`, `load()`, `save()`, `start()`, `stop()`, `step_telemetry()`, `advance()` |
+| **`main`** | 이벤트 루프(`os.pullEventRaw`), 5Hz 타이머, `file_transfer` 드롭 수신, 부팅 인자 즉시 실행, CLI 디스패치 | `main_loop()`, `process_event()`, `handle_file_transfer()`, `execute_cli_command()` |
+| **`mission_engine`** | 13종 체크포인트 FSM(`SINGLE`/`REPEAT`), 다중 경로 리졸버, 프리플라이트 스키마 검증, JSON 입출력 | `new()`, `resolve_path()`, `validate_mission_table()`, `load()`, `save()`, `start()`, `stop()`, `step_telemetry()` |
 | **`condition_evaluator`** | `completeWhen`/`abortWhen`(`ANY`/`ALL`) 12종 조건 판정 및 기본 조건 생성 | `resolve_default_complete()`, `evaluate_group()`, `evaluate_condition()`, `format_progress()` |
 | **`hook_runner`** | `onEnter`/`onExit`/`onAbort` 0-tick 실행, 비차단 레드스톤 펄스 데드라인 큐, `REDSTONE_ACTION`/`PAYLOAD_ACTION` 구동 | `new()`, `execute_hooks()`, `start_action()`, `tick()`, `on_payload_ack()` |
 | **`waypoint_queue`** | 기본 웨이포인트 추가/삭제/2D 도달 판정 (`MUT-04` 및 기존 API 호환 보장) | `add()`, `del()`, `check_arrival()`, `save()`, `load()` |
@@ -670,12 +780,13 @@ src/3_planning/amm/
 | **`network_manager`** | `Base+0`, `Base+1`, `Base+3` 상시 바인딩 및 Zone 3(`Base+20~29`) 동적 개폐/송수신 | `send_operator_cmd()`, `send_mission_ack()`, `open_payload_channel()`, `send_payload_req()` |
 | **`ui_renderer`** | 좌측 HUD + 우측 6행 스크롤 뷰포트 + 하단 5행 스텝/조건 상세 51x19 버퍼 출력 | `render_screen()`, `compute_viewport()`, `flush_buffer()` |
 | **`input_handler`** | `NAV`/`CLI` 모달 전환, `Ctrl+X` 하드킬, CLI 명령어 파싱 | `handle_char()`, `handle_key()`, `handle_ctrl_key()` |
+| **`amm_mission_editor.html`** | 호스트 PC 오프라인 웹 GUI 미션 저작, 2D $(X,Z)$ 경로 프리뷰, 실시간 스키마 검증, JSON Import/Export | `validateMission()`, `renderCheckpoints()`, `renderCanvas()`, `exportJson()`, `importJson()` |
 
 ---
 
-## 10. 구현 및 검증 기준 (Verification Criteria)
+## 11. 구현 및 검증 기준 (Verification Criteria)
 
-본 사양서(`v1.1.0`) 기반 구현 코드는 다음 검증 기준을 통과해야 `Implemented` 상태로 승격됩니다:
+본 사양서(`v1.2.0`) 기반 구현 코드는 다음 검증 기준을 통과해야 `Implemented` 상태로 승격됩니다:
 1. **정적 검사 및 매니페스트 정합성**:
    - `python tools/validate_lua_syntax.py` 통과 (구문 오류 0건).
    - `python tools/verify_manifest_sync.py` 통과 (`manifest.lua` 내 신규 모듈 `mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua` 등록 및 `0 Errors, 0 Warnings`).
@@ -683,8 +794,9 @@ src/3_planning/amm/
 2. **단위 테스트 (`tools/run_unit_tests.py -t 3_planning/amm`)**:
    - `condition_evaluator`: 12종 조건 타입, `ANY`/`ALL` 논리 조합, 액션별 기본 `completeWhen` 자동 보강 검증.
    - `hook_runner`: `onEnter`/`onExit`/`onAbort` 비차단 실행, `REDSTONE_PULSE` 타이머 만료 복원, Zone 3 동적 채널 오픈/해제 및 `PAYLOAD_RESP_MATCH` 검증.
-   - `mission_engine`: 활성 9종 액션(`FLY_OVER`, `FLY_TO`, `ORBIT`, `PATROL`, `POI_HOLD`, `TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`, `PAYLOAD_ACTION`, `REDSTONE_ACTION`) 전이, `DEFERRED` 4종 안전 거부, `SINGLE`/`REPEAT` 루프, `abortWhen` 발동 시 FCP 페일세이프 위임 검증.
-   - `ui_renderer` & `input_handler`: 6행 스크롤 뷰포트, 5행 조건 상세 렌더링, `run`/`stop`/`next` CLI 및 `MSG_MISSION_CMD` 원격 트리거 검증.
-3. **E2E 시뮬레이션 및 돌연변이 테스트**:
+   - `mission_engine`: 활성 9종 액션(`FLY_OVER`, `FLY_TO`, `ORBIT`, `PATROL`, `POI_HOLD`, `TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`, `PAYLOAD_ACTION`, `REDSTONE_ACTION`) 전이, `DEFERRED` 4종 안전 거부, `SINGLE`/`REPEAT` 루프, `abortWhen` 발동 시 FCP 페일세이프 위임, **다중 경로 리졸버(`resolve_path`: 원문, `missions/`, `/disk/`, `/disk/missions/`) 및 프리플라이트 스키마 검증기(`validate_mission_table`: `SCHEMA_INVALID` 검출)** 검증.
+   - `main` & `ui_renderer` & `input_handler`: 6행 스크롤 뷰포트, 5행 조건 상세 렌더링, `run`/`load`/`files`/`stop`/`next` CLI, **셸 부팅 인자 즉시 실행, `file_transfer` 드래그 앤 드롭 이벤트 수신(`IDLE` 시 즉시 적재 및 `autoRunDroppedFile` 구동 / 비행 중 안전 저장)**, `MSG_MISSION_CMD` 원격 트리거 검증.
+3. **외부 에디터 (`tools/amm_mission_editor.html`) 및 E2E/돌연변이 검증**:
+   - `tools/amm_mission_editor.html`: 13종 액션 폼, 12종 조건/4종 훅 빌더, 2D $(X,Z)$ 경로 캔버스, 스키마 검증 및 내보낸 JSON의 `mission_engine:load()` 호환성 검증.
    - `python tools/run_e2e_tests.py --clean-orphans` 전 시나리오 PASS (AMM $\leftrightarrow$ FCP $\leftrightarrow$ VAS 복합 미션 시퀀스 포함).
    - `python tools/run_mutation_tests.py` (`MUT-04`, `MUT-05` 포함) 살상률 기준 충족.

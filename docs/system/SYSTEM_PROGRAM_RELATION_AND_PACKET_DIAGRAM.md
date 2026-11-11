@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.12.0` |
+| **문서 버전 (Version)** | `v2.12.1` |
 | **최종 수정일 (Date)** | `2026-11-11` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 시스템 프로그램 관계망 및 채널 토폴로지 구조도 (Architecture Map) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.12.1` | 2026-11-11 | AMM 상세 규격서(`v1.2.0`) 및 마스터 ICD(`v1.27.0`) 버전 배지 동기화 (호스트 PC 외부 미션 에디터 및 외부 파일 즉시 구동 반영) | 사양서 간 참조 버전 정합성 유지 |
 | `v2.12.0` | 2026-11-11 | 조종석 AMM(Node 03, v1.1.0) 통합 미션 시퀀서 엔진 반영: 패킷 교환 매트릭스에 I-6 원격 미션 제어(`MSG_MISSION_CMD`/`MSG_MISSION_ACK`, `Base+0`) 및 I-11 Zone 3 탑재체 버스(`MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK`, `Base+20~29`) 추가, 마스터 채널 매트릭스 Node 03 동적 Zone 3 채널 매핑 갱신 | TASK-202 통합 미션 시퀀서 및 Zone 3 탑재체 인터페이스 토폴로지 동기화 |
 | `v2.11.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 기체 아키텍처 노드 및 패킷 흐름도 반영, 다형성 MSG_THRUST_CMD(스칼라/짐벌 테이블) 및 확장 MSG_ACTUATOR_STATUS(appliedGimbal/gimbalSaturated) 요약 매핑 | 2D 짐벌 벡터 추진 VTOL 시스템 관계망 및 패킷 인터페이스 확립 |
 | `v2.10.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
@@ -27,8 +28,8 @@
 | `v2.7.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$, $N=1\sim 1000$), 4대 Zone(Zone 1: 코어, Zone 2: 구동계, Zone 3: 탑재체, Zone 4: 편대/확장) 전면 재편, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 20채널 및 `Base+6`, `Base+7`에 `[DEPRECATED]` 배지 부여, 하위 사양서 5종 `approved/` 승격 전이 상대 링크 동기화 | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.26.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.1.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.27.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.2.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
 > - [FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v1.16.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.5.0)

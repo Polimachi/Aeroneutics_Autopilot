@@ -3,11 +3,11 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-201` FCP 외루프 유도 프리미티브(`LOITER`/`POI_HOLD`, 3종 요 지향, 2초 범프리스 C2 연동) 구현 및 FCP 사양서 `v1.16.0 Implemented` 승격 (2026-11-11, 상세 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-201`(FCP `v1.16.0 Implemented`), `TASK-202-2~3`(AMM 3분할 코어·FSM·C2·헤드리스), `TASK-202-1` 개정(AMM `v1.2.0`/ICD `v1.27.0`/구조도 `v2.12.1` `Approved` — 외부 에디터·외부 파일 즉시 구동 명세) (2026-11-11, 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
-  1. `TASK-202`: AMM v1.1.0 3분할 미션 엔진(`mission_engine`, `condition_evaluator`, `hook_runner`) 본 구현 및 E2E 연동(`TASK-202-2~5`).
+  1. `TASK-202`: AMM TUI·CLI·다중 경로·스키마 검증·`file_transfer` 즉시 구동(`TASK-202-4`), `tools/amm_mission_editor.html`·E2E 검증·사양서 `Implemented` 환원(`TASK-202-5`).
   2. `TASK-010`: 플레이북 정적 검증기(`tools/verify_playbooks.py`) 및 핵심 5종 매뉴얼 작성.
-  3. `TASK-103` / `TASK-117`: 활주로(`RUNWAY` v1.10.6 Approved) 제어기 또는 OTA 서버 사양서 초안 착수.
+  3. `TASK-103` / `TASK-117` / `TASK-204`: 활주로(`RUNWAY` v1.10.6 Approved) 제어기, OTA 서버 사양 또는 AMM 행동 진입조건 재정의 착수.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -25,12 +25,12 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 330/330 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 361/361 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (7개 시나리오 8/8 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (9 Implemented, 6 Approved).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (129 파일), `python tools/verify_spec_status.py` (9 Implemented, 6 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants

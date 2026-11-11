@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.26.0` |
+| **문서 버전 (Version)** | `v1.27.0` |
 | **최종 수정일 (Date)** | `2026-11-11` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.27.0` | 2026-11-11 | 조종석 AMM(Node 03, v1.2.0) 외부 미션 에디터(`tools/amm_mission_editor.html`) 및 외부 파일 즉시 구동 파이프라인 반영: `MSG_MISSION_CMD.payload.missionName` 다중 경로(`/disk/...` 등) 지원 및 `MSG_MISSION_ACK.payload.status`에 프리플라이트 스키마 검증 실패 코드(`SCHEMA_INVALID`) 추가 | 외부 GUI 에디터 저작 미션 및 외부 투입 파일의 스키마 검증·즉시 구동 연동 |
 | `v1.26.0` | 2026-11-11 | 조종석 AMM(Node 03, v1.1.0) 통합 미션 시퀀서 인터페이스 반영: Interface I-6(`Base+0`)에 원격 미션 제어 패킷(`MSG_MISSION_CMD`/`MSG_MISSION_ACK`) 및 `MSG_OPERATOR_CMD` 확장 파라미터(`POI_HOLD`, `loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 추가, Interface I-11(`Base+20~29` Zone 3 탑재체 버스 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK`) 명세 신설 | TASK-202 통합 미션 시퀀서 엔진 및 Zone 3 탑재체 인터페이스 확립 |
 | `v1.25.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 기체 규격 추가, MSG_THRUST_CMD 다형성(polymorphic) outputs 스키마 정의, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 확장, 순수 추력형 비공력 특성(ASA 바이패스) 명시 | 고기동 짐벌 벡터 추진 VTOL 아키텍처 및 6-DoF 의사역행렬 제어 분배 지원 |
 | `v1.24.0` | 2026-11-08 | 유선 패킷 podId를 ASA_L/R/T로 완전 단일화, 텔레메트리 헬스 키 asa 반영, 구 명칭(구버전 명칭) 전면 소급 척결 | 인터페이스 표준화 및 용어 정비 |
@@ -46,7 +47,7 @@
 > - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.1)에 상세 기술되어 있습니다.
 > - 고정익 활주로 및 항모 비행갑판의 가상 ILS, 유선 모뎀 조명망(PAPI/RWSL) 제어, 무선 상태 추적 및 유도로 GAC 연동 관제 명세는 **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.5)에 상세 기술되어 있습니다.
 > - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.11.0)에 상세 기술되어 있습니다.
-> - 조종석 통합 단말 및 미션 시퀀서(AMM, Node 03)의 3분할 미션 코어(`mission_engine`, `condition_evaluator`, `hook_runner`), 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 복합 조건 평가, 0-tick 라이프사이클 훅, Zone 3 탑재체 버스(`Base+20~29`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 무인기 헤드리스 모드 및 51x19 분할 TUI 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v1.1.0)에 상세 기술되어 있습니다.
+> - 조종석 통합 단말 및 미션 시퀀서(AMM, Node 03)의 3분할 미션 코어(`mission_engine`, `condition_evaluator`, `hook_runner`), 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 복합 조건 평가, 0-tick 라이프사이클 훅, Zone 3 탑재체 버스(`Base+20~29`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`) 및 외부 파일 즉시 구동(`file_transfer`/다중 경로), 무인기 헤드리스 모드 및 51x19 분할 TUI 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v1.2.0)에 상세 기술되어 있습니다.
 
 ### 1.1 공통 패킷 엔벨로프 (Common Message Envelope)
 CC:Tweaked Rednet 및 모뎀 전송의 직렬화 오버헤드를 최소화하고 고속 역직렬화를 보장하기 위해, 모든 메시지는 다음의 표준 공통 Lua 테이블 엔벨로프를 필수 적용합니다.
@@ -1019,7 +1020,7 @@ flowchart TD
     time = 1729845010000,
     payload = {
         action = "RUN",                -- "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT"
-        missionName = "patrol_alpha",
+        missionName = "patrol_alpha",  -- 단축 미션명 또는 외부/플로피 경로 (예: "/disk/sortie.json")
         executionMode = "SINGLE",      -- "SINGLE" | "REPEAT"
         forceRestart = false
     }
@@ -1034,7 +1035,7 @@ flowchart TD
     time = 1729845010020,
     payload = {
         action = "RUN",
-        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "DEFERRED_ACTION_UNSUPPORTED" | "INVALID_CMD"
+        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "SCHEMA_INVALID" | "DEFERRED_ACTION_UNSUPPORTED" | "INVALID_CMD"
         missionId = "PATROL_ALPHA",
         missionState = "EN_ROUTE",
         activeIndex = 1,
