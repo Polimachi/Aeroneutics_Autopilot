@@ -9,8 +9,8 @@
       "name": "installer_app.lua",
       "repoPath": "src/0_development/installer/installer_app.lua",
       "category": "bootstrap",
-      "sizeBytes": 16190,
-      "sha256": "d71f9f75048dd64201cf1217c8b9d764257e25ce822ed61f1dd8924e49a33365",
+      "sizeBytes": 22794,
+      "sha256": "b92da7ab5b87d1d70b8b94c0a1047a0ea6de68e2741d331ddc481efceae58efa",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx&export=download&confirm=t"
     },
     "src/0_development/installer/modules/manifest.lua": {
@@ -18,8 +18,8 @@
       "name": "manifest.lua",
       "repoPath": "src/0_development/installer/modules/manifest.lua",
       "category": "bootstrap",
-      "sizeBytes": 32188,
-      "sha256": "e0d28b02cfd8f63daec7fd361765662246ee1ce08d8de8902fbd1c5da164a06b",
+      "sizeBytes": 35098,
+      "sha256": "ccb766dd893606dcb9fe64a221a5fa62b01bb60430e78629fddac34bc78ab505",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX&export=download&confirm=t"
     },
     "src/0_development/installer/modules/version_registry.lua": {
@@ -63,8 +63,8 @@
       "name": "tui_view.lua",
       "repoPath": "src/0_development/installer/modules/tui_view.lua",
       "category": "bootstrap",
-      "sizeBytes": 9104,
-      "sha256": "ace9d358cfd0acb77803ac41bad514c867821c8eab01b525c694f9409e091c56",
+      "sizeBytes": 20479,
+      "sha256": "04f6e37bd089c3170cfe1e2e1e01c1e94e1e8fe503b7784e962fe8b9b44cddfe",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1O6TC-Teg0_VIifb-DzcsfCyeGrBylzRt&export=download&confirm=t"
     },
     "installer.lua": {
@@ -72,8 +72,8 @@
       "name": "installer.lua",
       "repoPath": "installer.lua",
       "category": "installer",
-      "sizeBytes": 14945,
-      "sha256": "9d4ff2e18b5d3cc1e350960e40697edae5ec79bc3e7a1418910b73f8c65ea3cf",
+      "sizeBytes": 15588,
+      "sha256": "a10cd3a5a889daf733c5866d540063838c88b42d3e9ca00bd4b6e5481d896f3a",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1FSk8Fya18HXyPdL8lhhfBGqIV500D5UN&export=download&confirm=t"
     },
     "src/0_development/sensors/avionics_sensors.lua": {
