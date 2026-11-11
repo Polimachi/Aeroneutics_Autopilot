@@ -29,10 +29,31 @@ function guidance_controller.init(config)
         config = cfg,
         airframeType = sys.airframeType or "VECTORED_VTOL",
         bumplessRampSec = safe.bumplessRampSec or 2.0,
-        rampStartMs = 0,
+        rampStartMs = -10000,
         wasInHold = false,
+        lastFsmState = nil,
+        manualRampArmed = false,
         driver_state = { prev_heading = 0.0 },
     }
+end
+
+function guidance_controller.trigger_bumpless_transition(state, now_ms)
+    if not state then return end
+    local ds = state.driver_state
+    local saved_surge = ds and ds.prev_surge
+    local saved_sway = ds and ds.prev_sway
+    local saved_heading = ds and ds.prev_heading
+    local driver = (state.airframeType == "ADVANCED_VTOL") and advanced_vtol_driver or vectored_vtol_driver
+    if driver and driver.reset_integrals then
+        driver.reset_integrals(ds)
+    end
+    if ds then
+        ds.prev_surge = saved_surge
+        ds.prev_sway = saved_sway
+        ds.prev_heading = saved_heading
+    end
+    state.rampStartMs = now_ms or 0
+    state.manualRampArmed = true
 end
 
 function guidance_controller.compute_l1(state, pos, vel, wp_prev, wp_next)
@@ -73,6 +94,10 @@ local function apply_ramping(state, raw_cmd, now_ms)
     local lambda = clamp(elapsed / ramp_duration_ms, 0.0, 1.0)
     raw_cmd.surge = raw_cmd.surge * lambda
     raw_cmd.sway = raw_cmd.sway * lambda
+    if raw_cmd.translationBias then
+        raw_cmd.translationBias.surge = (raw_cmd.translationBias.surge or raw_cmd.surge) * lambda
+        raw_cmd.translationBias.sway = (raw_cmd.translationBias.sway or raw_cmd.sway) * lambda
+    end
     return raw_cmd
 end
 
@@ -128,24 +153,38 @@ function guidance_controller.compute(state, nav, mission_target, fsm_ctx, dt)
     local now = fsm_ctx and fsm_ctx.now_ms or 0
 
     local driver = (state.airframeType == "ADVANCED_VTOL") and advanced_vtol_driver or vectored_vtol_driver
+    local active_cruise_modes = { CRUISE = true, LOITER = true, POI_HOLD = true }
 
     if fsm_state == "FAILSAFE_HOLD" then
         if not state.wasInHold then
             driver.reset_integrals(state.driver_state)
         end
         state.wasInHold = true
+        state.manualRampArmed = false
     elseif state.wasInHold and fsm_state ~= "FAILSAFE_HOLD" then
         state.wasInHold = false
         state.rampStartMs = now
+        state.manualRampArmed = false
         driver.reset_integrals(state.driver_state)
     elseif fsm_state == "DISARMED" then
+        state.manualRampArmed = false
         driver.reset_integrals(state.driver_state)
+    else
+        if (fsm_ctx and fsm_ctx.bumpless == true) or
+           (not state.manualRampArmed and state.lastFsmState ~= nil and state.lastFsmState ~= fsm_state and
+            active_cruise_modes[state.lastFsmState] and active_cruise_modes[fsm_state]) then
+            guidance_controller.trigger_bumpless_transition(state, now)
+        end
+        state.manualRampArmed = false
     end
+    state.lastFsmState = fsm_state
 
     local raw = driver.compute(state.config, nav, mission_target, fsm_state, dt, state.driver_state)
     state.driver_state.prev_heading = raw.targetHeading
 
-    if (now - state.rampStartMs) < (state.bumplessRampSec * 1000.0) and fsm_state == "CRUISE" then
+    local ramp_ms = state.bumplessRampSec * 1000.0
+    local elapsed = now - state.rampStartMs
+    if elapsed >= 0 and elapsed < ramp_ms and active_cruise_modes[fsm_state] then
         raw = apply_ramping(state, raw, now)
     end
     raw.mode = state.airframeType or "VECTORED_VTOL"

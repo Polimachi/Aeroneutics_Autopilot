@@ -452,9 +452,10 @@ end)
 describe("vectored_vtol_driver LOITER CW/CCW orbit and POI_HOLD aiming primitives", function()
     local vectored_vtol_driver = require("vectored_vtol_driver")
     local main = require("main")
+    local cfg = main.load_config()
 
     it("drives tangential East (+X) velocity in CW LOITER and West (-X) velocity in CCW LOITER when North of center", function()
-        local cfg = main.load_config()
+        local prev_env = cfg.guidance.vectored_vtol.envelopeMode
         cfg.guidance.vectored_vtol.envelopeMode = "TILT_ASSISTED"
         -- Craft is at (0, 100, -30), which is exactly 30m North of center (0, 100, 0), facing North (heading = 0)
         local nav = {
@@ -487,13 +488,13 @@ describe("vectored_vtol_driver LOITER CW/CCW orbit and POI_HOLD aiming primitive
         }
         local ds_ccw = { prev_heading = 0.0, current_pitch = 0.0 }
         local out_ccw = vectored_vtol_driver.compute(cfg, nav, target_ccw, "LOITER", 0.05, ds_ccw)
+        cfg.guidance.vectored_vtol.envelopeMode = prev_env
         -- Facing North (0 deg), Westward (-X) tangent demand projects to negative sway (-left)
         assert_true(out_ccw.sway < 0.0, "CCW loiter at North of center must command negative sway (West), got " .. tostring(out_ccw.sway))
         assert_true(out_ccw.targetHeading >= 358.49 and out_ccw.targetHeading < 360.0, "Heading must slew toward 270 deg West tangent")
     end)
 
     it("pulls craft inward when outside loiterRadius and handles zero-distance center singularity", function()
-        local cfg = main.load_config()
         -- Craft is 50m North of center (0, 100, -50), facing North (0 deg); loiterRadius = 30m -> r_err = -20m (Southward / backward)
         local nav = {
             pos = { x = 0.0, y = 100.0, z = -50.0 },
@@ -515,7 +516,6 @@ describe("vectored_vtol_driver LOITER CW/CCW orbit and POI_HOLD aiming primitive
     end)
 
     it("holds position and slews heading toward poiTarget in POI_HOLD and FIXED heading modes", function()
-        local cfg = main.load_config()
         local nav = {
             pos = { x = 10.0, y = 100.0, z = 10.0 },
             vel = { x = 0.0, y = 0.0, z = 0.0 },
@@ -544,5 +544,228 @@ describe("vectored_vtol_driver LOITER CW/CCW orbit and POI_HOLD aiming primitive
         }
         local out_fixed = vectored_vtol_driver.compute(cfg, nav, fixed_target, "CRUISE", 0.05, { prev_heading = 0.0 })
         assert_true(math.abs(out_fixed.targetHeading - 358.5) < 0.01, "FIXED 270 deg from 0 deg must slew -1.5 deg to 358.5 deg")
+    end)
+end)
+
+describe("operator_handler MSG_OPERATOR_CMD normalization, authority guard, and bumpless transition", function()
+    local operator_handler = require("operator_handler")
+    local guidance_controller = require("guidance_controller")
+    local fcp_runtime = require("fcp_runtime")
+    local main = require("main")
+    local cfg = main.load_config()
+
+    it("normalizes LOITER and POI_HOLD parameters and sanitizes out-of-range inputs", function()
+        local op = operator_handler.init({})
+        local pkt_loiter = {
+            type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "LOITER",
+                flightMode = "LOITER",
+                params = {
+                    targetWaypoint = { x = 200.0, z = -300.0 },
+                    targetAlt = 140.0,
+                    targetSpeed = 12.0,
+                    loiterRadius = -15.0,       -- invalid negative -> clamp to >= 5.0
+                    loiterDirection = "INVALID", -- invalid -> default "CW"
+                    headingMode = "FIXED",
+                    fixedHeading = -45.0,       -- normalize to 315.0
+                },
+                emergencyAction = "NONE",
+            },
+        }
+        local res = operator_handler.process_c2(op, pkt_loiter, 1000)
+        assert_true(res.accepted)
+        assert_eq(res.flightMode, "LOITER")
+        assert_eq(res.params.loiterRadius, 5.0, "Negative loiterRadius must be clamped to minimum 5.0m")
+        assert_eq(res.params.loiterDirection, "CW", "Invalid loiterDirection must default to CW")
+        assert_eq(res.params.headingMode, "FIXED")
+        assert_eq(res.params.fixedHeading, 315.0, "-45 deg fixedHeading must normalize to 315.0 deg")
+
+        -- Transition from LOITER to POI_HOLD triggers bumplessTransition
+        local pkt_poi = {
+            type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "POI_HOLD",
+                flightMode = "POI_HOLD",
+                params = {
+                    targetWaypoint = { x = 210.0, z = -310.0 },
+                    targetAlt = 135.0,
+                    poiTarget = { x = 250.0, y = 64.0, z = -350.0 },
+                },
+            },
+        }
+        local res_poi = operator_handler.process_c2(op, pkt_poi, 2000)
+        assert_true(res_poi.accepted)
+        assert_eq(res_poi.flightMode, "POI_HOLD")
+        assert_eq(res_poi.params.headingMode, "POI", "POI_HOLD must default headingMode to POI")
+        assert_not_nil(res_poi.params.poiTarget)
+        assert_eq(res_poi.params.poiTarget.x, 250.0)
+        assert_true(res_poi.bumplessTransition, "Switching LOITER -> POI_HOLD must flag bumplessTransition")
+
+        -- Unforced GCS packet while PILOT_PRIMARY is active must be rejected
+        local pkt_unforced_gcs = {
+            type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "GCS",
+                command = "CRUISE",
+                flightMode = "CRUISE",
+                params = { targetWaypoint = { x = 0.0, z = 0.0 } },
+            },
+        }
+        local res_rej = operator_handler.process_c2(op, pkt_unforced_gcs, 2500)
+        assert_false(res_rej.accepted)
+        assert_eq(res_rej.reason, "PILOT_OVERRIDE_ACTIVE")
+    end)
+
+    it("applies 2.0s bumpless linear ramp on mode transition without zeroing initial boot output", function()
+        local g_state = guidance_controller.init(cfg)
+        local nav = {
+            pos = { x = 0.0, y = 100.0, z = -30.0 },
+            vel = { x = 0.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        local target = { x = 0.0, y = 100.0, z = 0.0, loiterRadius = 30.0, loiterDirection = "CW", targetSpeed = 8.0 }
+
+        -- At now_ms = 500 on fresh boot (no prior mode switch), output must NOT be attenuated by ramp
+        local cmd_boot, _ = guidance_controller.compute(g_state, nav, target, { state = "CRUISE", flightActive = true, now_ms = 500 }, 0.05)
+        assert_true(math.abs(cmd_boot.surge) > 0.1, "Fresh boot at now_ms=500 must not be attenuated by un-triggered ramp")
+        assert_eq(cmd_boot.surge, -1.0, "Fresh boot at now_ms=500 must output full un-ramped -1.0 surge")
+
+        -- Switching CRUISE -> LOITER at now_ms = 1000 triggers bumpless ramp (elapsed = 500ms at now_ms = 1500 -> lambda = 0.25)
+        guidance_controller.trigger_bumpless_transition(g_state, 1000)
+        local cmd_mid, _ = guidance_controller.compute(g_state, nav, target, { state = "LOITER", flightActive = true, now_ms = 1500 }, 0.05)
+        local cmd_full, _ = guidance_controller.compute(g_state, nav, target, { state = "LOITER", flightActive = true, now_ms = 3500 }, 0.05)
+        assert_true(math.abs(cmd_mid.sway) > 0.0 and math.abs(cmd_mid.sway) < math.abs(cmd_full.sway), "Bumpless ramp at 500ms elapsed must partially attenuate sway compared to full 2.5s elapsed")
+        assert_eq(cmd_mid.translationBias.sway, cmd_mid.sway, "translationBias.sway must match ramped sway")
+    end)
+
+    it("wires Base+0 MSG_OPERATOR_CMD through fcp_runtime.step_tick into FSM, mission_target, and Base+1/Base+3", function()
+        local transmitted = {}
+        local mock_modem = {
+            open = function() end,
+            close = function() end,
+            isOpen = function() return true end,
+            transmit = function(ch, reply_ch, payload)
+                table.insert(transmitted, { channel = ch, replyChannel = reply_ch, payload = payload })
+            end,
+            isWireless = function() return true end,
+        }
+        local ctx = fcp_runtime.create_context(cfg, function() return mock_modem end)
+        flight_fsm.transition_to(ctx.fsm, "CRUISE")
+        ctx.nav.pos = { x = 0.0, y = 100.0, z = -40.0 }
+        ctx.nav.lastCoreRxMs = 2000
+        ctx.nav.lastGpsFixMs = 2000
+
+        local network_manager = require("network_manager")
+        network_manager.ingest_modem_event(ctx.net, "top", 10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            type = "MSG_OPERATOR_CMD",
+            seq = 10,
+            timestamp = 2000,
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "LOITER",
+                flightMode = "LOITER",
+                params = {
+                    targetWaypoint = { x = 0.0, z = 0.0 },
+                    targetAlt = 120.0,
+                    targetSpeed = 10.0,
+                    loiterRadius = 40.0,
+                    loiterDirection = "CCW",
+                },
+                emergencyAction = "NONE",
+            },
+        }, 1, 2000)
+
+        -- Advance 4 ticks so both Base+1 MSG_ATTITUDE_CMD and Base+3 MSG_MFD_STATE are emitted
+        for i = 1, 4 do
+            fcp_runtime.step_tick(ctx, 0.05, 2000 + i * 50)
+        end
+
+        assert_eq(ctx.fsm.current_state, "LOITER")
+        assert_eq(ctx.mission_target.y, 120.0)
+        assert_eq(ctx.mission_target.loiterRadius, 40.0)
+        assert_eq(ctx.mission_target.loiterDirection, "CCW")
+
+        local att_tx, mfd_tx = nil, nil
+        for _, tx in ipairs(transmitted) do
+            if tx.channel == 10001 and tx.payload.type == "MSG_ATTITUDE_CMD" then att_tx = tx end
+            if tx.channel == 10003 and tx.payload.type == "MSG_MFD_STATE" then mfd_tx = tx end
+        end
+        assert_not_nil(att_tx, "MSG_ATTITUDE_CMD must be transmitted on Base+1")
+        assert_eq(att_tx.payload.payload.flightMode, "LOITER")
+        assert_not_nil(mfd_tx, "MSG_MFD_STATE must be transmitted on Base+3")
+        assert_eq(mfd_tx.payload.payload.fsmState, "LOITER")
+        assert_eq(mfd_tx.payload.payload.navigation.distanceToWp, 40.0)
+    end)
+
+    it("freezes hold center to current nav.pos on LOITER/POI_HOLD entry when targetWaypoint is omitted", function()
+        local mock_modem = {
+            open = function() end,
+            close = function() end,
+            isOpen = function() return true end,
+            transmit = function() end,
+            isWireless = function() return true end,
+        }
+        local ctx = fcp_runtime.create_context(cfg, function() return mock_modem end)
+        flight_fsm.transition_to(ctx.fsm, "CRUISE")
+        ctx.mission_target = { x = 500.0, y = 100.0, z = -500.0 }
+        ctx.nav.pos = { x = 42.0, y = 120.0, z = -88.0 }
+        ctx.nav.lastCoreRxMs = 3000
+        ctx.nav.lastGpsFixMs = 3000
+
+        local network_manager = require("network_manager")
+        network_manager.ingest_modem_event(ctx.net, "top", 10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            type = "MSG_OPERATOR_CMD",
+            seq = 11,
+            timestamp = 3000,
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "POI_HOLD",
+                flightMode = "POI_HOLD",
+                params = {
+                    poiTarget = { x = 142.0, y = 64.0, z = -88.0 },
+                },
+                emergencyAction = "NONE",
+            },
+        }, 1, 3000)
+
+        fcp_runtime.step_tick(ctx, 0.05, 3050)
+        assert_eq(ctx.fsm.current_state, "POI_HOLD")
+        assert_eq(ctx.mission_target.x, 42.0, "Omitted targetWaypoint on POI_HOLD entry must freeze to current pos.x")
+        assert_eq(ctx.mission_target.z, -88.0, "Omitted targetWaypoint on POI_HOLD entry must freeze to current pos.z")
+        assert_eq(ctx.mission_target.headingMode, "POI")
+
+        -- Subsequent POI_HOLD parameter update while already in POI_HOLD without targetWaypoint keeps existing anchor
+        ctx.nav.pos = { x = 44.0, y = 120.0, z = -90.0 }
+        network_manager.ingest_modem_event(ctx.net, "top", 10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            type = "MSG_OPERATOR_CMD",
+            seq = 12,
+            timestamp = 3100,
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "POI_HOLD",
+                flightMode = "POI_HOLD",
+                params = {
+                    poiTarget = { x = 200.0, y = 64.0, z = -100.0 },
+                },
+                emergencyAction = "NONE",
+            },
+        }, 1, 3100)
+        fcp_runtime.step_tick(ctx, 0.05, 3150)
+        assert_eq(ctx.mission_target.x, 42.0, "Updating POI while already in POI_HOLD must preserve existing hold anchor x")
+        assert_eq(ctx.mission_target.z, -88.0, "Updating POI while already in POI_HOLD must preserve existing hold anchor z")
+        assert_eq(ctx.mission_target.poiTarget.x, 200.0)
     end)
 end)

@@ -26,6 +26,7 @@ function fcp_runtime.create_context(config, modem_lookup)
         fsm = flight_fsm.init(cfg),
         guidance = guidance_controller.init(cfg),
         lastActiveSource = "FCP",
+        pendingC2Cmd = nil,
         actuatorHealth = { tca = true, asa = true, allOk = true },
         mission_target = { x = 0.0, y = 64.0, z = -50.0 },
     }
@@ -44,6 +45,14 @@ local function ensure_modules(ctx)
 end
 
 local function send_mfd_telemetry(ctx, nav_summary)
+    local cur_x = nav_summary.pos and nav_summary.pos.x or 0.0
+    local cur_z = nav_summary.pos and nav_summary.pos.z or 0.0
+    local wp_x = ctx.mission_target and ctx.mission_target.x or 0.0
+    local wp_z = ctx.mission_target and ctx.mission_target.z or 0.0
+    local dx = wp_x - cur_x
+    local dz = wp_z - cur_z
+    local dist_wp = math.sqrt(dx * dx + dz * dz)
+
     local mfd_payload = {
         attitude = nav_summary.attitude or { pitch = 0, roll = 0, heading = 0 },
         dynamics = {
@@ -55,10 +64,10 @@ local function send_mfd_telemetry(ctx, nav_summary)
         fsmState = ctx.fsm.current_state,
         activeSource = "FCP",
         navigation = {
-            currentPos = { x = nav_summary.pos and nav_summary.pos.x or 0.0, z = nav_summary.pos and nav_summary.pos.z or 0.0 },
-            targetWaypoint = { x = ctx.mission_target.x or 0.0, z = ctx.mission_target.z or 0.0 },
+            currentPos = { x = cur_x, z = cur_z },
+            targetWaypoint = { x = wp_x, z = wp_z },
             crossTrackError = 0.0,
-            distanceToWp = 0.0,
+            distanceToWp = dist_wp,
         },
         actuatorHealth = ctx.actuatorHealth or { tca = true, asa = true, allOk = true },
     }
@@ -85,8 +94,53 @@ local function process_inbox(ctx, polled, now_ms)
     end
     if polled.c2 then
         local c2_res = operator_handler.process_c2(ctx.operator, polled.c2, now_ms)
-        if c2_res.accepted and c2_res.action then
-            flight_fsm.check_failsafes(ctx.fsm, { hasSwayLoss = (c2_res.action == "EMERGENCY_LAND") }, now_ms)
+        if c2_res.accepted then
+            if c2_res.action then
+                if ctx.fsm and ctx.fsm.inFlight then
+                    if c2_res.action == "EMERGENCY_LAND" then
+                        flight_fsm.transition_to(ctx.fsm, "EMERGENCY_LAND", "C2_EMERGENCY_LAND")
+                    elseif c2_res.action == "HOVER_HOLD" then
+                        flight_fsm.transition_to(ctx.fsm, "FAILSAFE_HOLD", "C2_HOVER_HOLD")
+                    elseif c2_res.action == "RTH" then
+                        flight_fsm.transition_to(ctx.fsm, "FAILSAFE_RTH", "C2_RTH")
+                    end
+                end
+            elseif c2_res.flightMode or c2_res.command then
+                local mode = c2_res.flightMode or c2_res.command
+                ctx.pendingC2Cmd = mode
+                local entering_hold = (mode == "LOITER" or mode == "POI_HOLD") and (ctx.fsm and ctx.fsm.current_state ~= mode)
+                if not ctx.mission_target then
+                    ctx.mission_target = { x = 0.0, y = 64.0, z = -50.0 }
+                end
+                local p = c2_res.params
+                if p then
+                    if p.targetWaypoint and p.targetWaypoint.x ~= nil and p.targetWaypoint.z ~= nil then
+                        ctx.mission_target.x = p.targetWaypoint.x
+                        ctx.mission_target.z = p.targetWaypoint.z
+                    elseif entering_hold and ctx.nav and ctx.nav.pos then
+                        ctx.mission_target.x = ctx.nav.pos.x
+                        ctx.mission_target.z = ctx.nav.pos.z
+                    end
+                    if p.targetAlt ~= nil then ctx.mission_target.y = p.targetAlt end
+                    if p.targetSpeed ~= nil then ctx.mission_target.targetSpeed = p.targetSpeed end
+                    if p.headingMode ~= nil then ctx.mission_target.headingMode = p.headingMode end
+                    if p.fixedHeading ~= nil then
+                        ctx.mission_target.fixedHeading = p.fixedHeading
+                    elseif p.headingMode ~= nil and p.headingMode ~= "FIXED" then
+                        ctx.mission_target.fixedHeading = nil
+                    end
+                    if p.poiTarget ~= nil then ctx.mission_target.poiTarget = p.poiTarget end
+                    if p.loiterRadius ~= nil then ctx.mission_target.loiterRadius = p.loiterRadius end
+                    if p.loiterDirection ~= nil then ctx.mission_target.loiterDirection = p.loiterDirection end
+                    if p.designatedFacilityId ~= nil then ctx.mission_target.designatedFacilityId = p.designatedFacilityId end
+                elseif entering_hold and ctx.nav and ctx.nav.pos then
+                    ctx.mission_target.x = ctx.nav.pos.x
+                    ctx.mission_target.z = ctx.nav.pos.z
+                end
+                if c2_res.bumplessTransition then
+                    guidance_controller.trigger_bumpless_transition(ctx.guidance, now_ms)
+                end
+            end
         end
     end
     if polled.facility and polled.facility.type == "MSG_FACILITY_BEACON" then
@@ -112,6 +166,7 @@ end
 
 local function build_fsm_context(ctx, nav_summary)
     return {
+        cmd = ctx.pendingC2Cmd,
         airframeSupported = guidance_controller.is_airframe_supported(ctx.config.system and ctx.config.system.airframeType or "VECTORED_VTOL"),
         channelAcquired = channel_sentinel.is_acquired(ctx.channel),
         channelLocked = channel_sentinel.is_locked(ctx.channel),
@@ -148,6 +203,7 @@ function fcp_runtime.step_tick(ctx, dt, now_ms)
     local nav_summary = nav_engine.update(ctx.nav, dt or 0.05, now)
     local fsm_ctx = build_fsm_context(ctx, nav_summary)
     flight_fsm.evaluate(ctx.fsm, fsm_ctx, now)
+    ctx.pendingC2Cmd = nil
 
     if ctx.fsm.current_state == "FAILSAFE_RTH" then
         local rth_eval = flight_fsm.evaluate_rth(ctx.fsm, ctx.facility, nav_summary.pos, now)

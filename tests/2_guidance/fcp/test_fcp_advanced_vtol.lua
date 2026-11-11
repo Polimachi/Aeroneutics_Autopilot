@@ -329,9 +329,10 @@ end)
 describe("advanced_vtol_driver LOITER and POI_HOLD primitives with gimbal slew limiting", function()
     local advanced_vtol_driver = require("advanced_vtol_driver")
     local main = require("main")
+    local cfg = main.load_config()
 
     it("executes CW and CCW LOITER with 2.0/s gimbal slew rate limiting and STRICT_LEVEL attitude", function()
-        local cfg = main.load_config()
+        local prev_env = cfg.guidance.advanced_vtol.envelopeMode
         cfg.guidance.advanced_vtol.envelopeMode = "TILT_ASSISTED"
         local nav = {
             pos = { x = 0.0, y = 100.0, z = -30.0 },
@@ -349,6 +350,7 @@ describe("advanced_vtol_driver LOITER and POI_HOLD primitives with gimbal slew l
         }
         local ds = { prev_surge = 0.0, prev_sway = 0.0, prev_heading = 0.0 }
         local out = advanced_vtol_driver.compute(cfg, nav, target_cw, "LOITER", 0.05, ds)
+        cfg.guidance.advanced_vtol.envelopeMode = prev_env
         assert_true(out.sway > 0.0 and out.sway <= 0.1001, "Gimbal slew limiter must cap sway step to <= 0.10 per tick")
         assert_eq(out.targetPitch, 0.0, "LOITER must enforce STRICT_LEVEL pitch 0.0")
         assert_eq(out.targetRoll, 0.0, "LOITER must enforce STRICT_LEVEL roll 0.0")
@@ -356,7 +358,6 @@ describe("advanced_vtol_driver LOITER and POI_HOLD primitives with gimbal slew l
     end)
 
     it("holds 3D hover and aims at poiTarget in POI_HOLD mode", function()
-        local cfg = main.load_config()
         local nav = {
             pos = { x = 0.0, y = 100.0, z = 0.0 },
             vel = { x = 0.0, y = 0.0, z = 0.0 },

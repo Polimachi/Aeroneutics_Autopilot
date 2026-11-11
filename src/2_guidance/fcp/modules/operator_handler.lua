@@ -1,12 +1,69 @@
 -- src/modules/operator_handler.lua
 local operator_handler = {}
 
+local VALID_HEADING_MODES = {
+    AUTO = true,
+    FIXED = true,
+    POI = true,
+    FACE_PATH = true,
+    TARGET_LOCK = true,
+    ORBIT_POINT = true,
+}
+
 function operator_handler.init(config)
     return {
         authority = "PILOT_PRIMARY",
         lastPilotOverrideMs = 0,
+        lastFlightMode = nil,
         alertQueue = {},
         latestAlertBanner = "SYSTEM_READY",
+    }
+end
+
+function operator_handler.normalize_params(raw_params, flight_mode)
+    local p = (type(raw_params) == "table") and raw_params or {}
+    local hmode = p.headingMode
+    if not VALID_HEADING_MODES[hmode] then
+        hmode = (flight_mode == "POI_HOLD") and "POI" or "AUTO"
+    end
+
+    local fixed_hdg = nil
+    if p.fixedHeading ~= nil then
+        local fh = tonumber(p.fixedHeading)
+        if fh ~= nil then
+            fixed_hdg = ((fh % 360.0) + 360.0) % 360.0
+        end
+    end
+
+    local wp = nil
+    if type(p.targetWaypoint) == "table" and p.targetWaypoint.x ~= nil and p.targetWaypoint.z ~= nil then
+        local wx = tonumber(p.targetWaypoint.x)
+        local wz = tonumber(p.targetWaypoint.z)
+        if wx and wz then
+            wp = { x = wx, z = wz }
+        end
+    end
+
+    local poi = nil
+    if type(p.poiTarget) == "table" and p.poiTarget.x ~= nil and p.poiTarget.z ~= nil then
+        local px = tonumber(p.poiTarget.x)
+        local py = tonumber(p.poiTarget.y) or 64.0
+        local pz = tonumber(p.poiTarget.z)
+        if px and pz then
+            poi = { x = px, y = py, z = pz }
+        end
+    end
+
+    return {
+        targetWaypoint = wp,
+        targetAlt = (p.targetAlt ~= nil) and tonumber(p.targetAlt) or nil,
+        targetSpeed = (p.targetSpeed ~= nil) and tonumber(p.targetSpeed) or nil,
+        designatedFacilityId = p.designatedFacilityId,
+        loiterRadius = math.max(5.0, tonumber(p.loiterRadius) or 30.0),
+        loiterDirection = (p.loiterDirection == "CCW") and "CCW" or "CW",
+        headingMode = hmode,
+        fixedHeading = fixed_hdg,
+        poiTarget = poi,
     }
 end
 
@@ -49,7 +106,23 @@ function operator_handler.process_c2(state, packet, now_ms)
             return { accepted = true, action = em_action, emergencyAction = em_action }
         end
 
-        return { accepted = true, command = payload.command, flightMode = payload.flightMode, params = payload.params }
+        local mode = payload.flightMode or payload.command
+        local active_modes = {
+            CRUISE = true, LOITER = true, POI_HOLD = true,
+            APPROACH_LAND = true, LANDING = true,
+        }
+        local bumpless = (state.lastFlightMode ~= nil and mode ~= nil and state.lastFlightMode ~= mode and active_modes[mode] == true)
+        if mode ~= nil and active_modes[mode] then
+            state.lastFlightMode = mode
+        end
+        local norm_params = operator_handler.normalize_params(payload.params, mode)
+        return {
+            accepted = true,
+            command = payload.command or mode,
+            flightMode = mode,
+            params = norm_params,
+            bumplessTransition = bumpless,
+        }
     end
 
     return { accepted = false, reason = "UNKNOWN_CMD_TYPE" }
