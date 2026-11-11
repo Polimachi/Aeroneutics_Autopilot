@@ -97,8 +97,18 @@ local function inherit_flight_defaults(p, defaults, opts, default_radius)
     end
 end
 
+local function extract_target_pos(p)
+    if type(p) ~= "table" then return nil end
+    if is_pos_xz(p.targetPos) then return p.targetPos end
+    if is_finite(p.x) and is_finite(p.z) then
+        p.targetPos = { x = p.x, z = p.z }
+        return p.targetPos
+    end
+    return nil
+end
+
 local function validate_fly_over(p, defaults, opts)
-    if not is_pos_xz(p.targetPos) then return false, "INVALID_TARGET_POS" end
+    if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
     inherit_flight_defaults(p, defaults, opts)
     if p.acceptanceRadius ~= nil and (not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0) then
         return false, "INVALID_ACCEPTANCE_RADIUS"
@@ -107,7 +117,7 @@ local function validate_fly_over(p, defaults, opts)
 end
 
 local function validate_fly_to(p, defaults, opts)
-    if not is_pos_xz(p.targetPos) then return false, "INVALID_TARGET_POS" end
+    if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
     local explicit_rad = p.acceptanceRadius
     inherit_flight_defaults(p, defaults, opts, explicit_rad or 5.0)
     if not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0 then
@@ -117,7 +127,7 @@ local function validate_fly_to(p, defaults, opts)
 end
 
 local function validate_orbit(p, defaults, opts)
-    if not is_pos_xz(p.targetPos) then return false, "INVALID_TARGET_POS" end
+    if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
     inherit_flight_defaults(p, defaults, opts)
     p.radius = (p.radius ~= nil) and p.radius or 30.0
     if not is_finite(p.radius) or p.radius <= 0 then
@@ -342,6 +352,288 @@ local function convert_legacy_items(data)
     }
 end
 
+local SCHEMA_PARAM_CHECKS = {
+    FLY_OVER = function(p)
+        if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
+        if p.acceptanceRadius ~= nil and (not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0) then
+            return false, "INVALID_ACCEPTANCE_RADIUS"
+        end
+        return true
+    end,
+    FLY_TO = function(p)
+        if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
+        if p.acceptanceRadius ~= nil and (not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0) then
+            return false, "INVALID_ACCEPTANCE_RADIUS"
+        end
+        return true
+    end,
+    ORBIT = function(p)
+        if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
+        if p.radius ~= nil and (not is_finite(p.radius) or p.radius <= 0) then
+            return false, "INVALID_ORBIT_RADIUS"
+        end
+        if p.direction ~= nil and p.direction ~= "CW" and p.direction ~= "CCW" then
+            return false, "INVALID_ORBIT_DIRECTION"
+        end
+        return true
+    end,
+    PATROL = function(p)
+        if type(p.waypoints) ~= "table" or #p.waypoints < 1 then
+            return false, "INVALID_PATROL_WAYPOINTS"
+        end
+        for _, wp in ipairs(p.waypoints) do
+            if not is_pos_xz(wp) then return false, "INVALID_PATROL_WAYPOINTS" end
+        end
+        if p.patrolMode ~= nil and p.patrolMode ~= "LOOP" and p.patrolMode ~= "PING_PONG" then
+            return false, "INVALID_PATROL_MODE"
+        end
+        if p.cycles ~= nil and (not is_finite_int(p.cycles) or p.cycles < 1) then
+            return false, "INVALID_PATROL_CYCLES"
+        end
+        return true
+    end,
+    POI_HOLD = function(p)
+        local has_tgt = (p.targetPos ~= nil) or (is_finite(p.x) and is_finite(p.z))
+        local has_poi = (p.poiPos ~= nil)
+        if not has_tgt and not has_poi then
+            return false, "MISSING_POI_OR_TARGET"
+        end
+        if has_tgt and not extract_target_pos(p) then
+            return false, "INVALID_TARGET_POS"
+        end
+        if has_poi then
+            if not is_pos_xz(p.poiPos) or (p.poiPos.y ~= nil and not is_finite(p.poiPos.y)) then
+                return false, "INVALID_POI_POS"
+            end
+        end
+        return true
+    end,
+    TAKEOFF_LAUNCHPAD = function(p)
+        if p.targetPos ~= nil and not is_pos_xz(p.targetPos) then
+            return false, "INVALID_TARGET_POS"
+        end
+        if p.targetAlt ~= nil and not is_finite(p.targetAlt) then
+            return false, "INVALID_TARGET_ALT"
+        end
+        if p.facilityId ~= nil and (type(p.facilityId) ~= "string" or p.facilityId == "") then
+            return false, "INVALID_FACILITY_ID"
+        end
+        return true
+    end,
+    LAND_LAUNCHPAD = function(p)
+        local has_fac = type(p.facilityId) == "string" and p.facilityId ~= ""
+        local has_pos = is_pos_xz(p.targetPos) or (is_finite(p.x) and is_finite(p.z))
+        if not has_fac and not has_pos then
+            return false, "INVALID_LAND_PARAMS"
+        end
+        if p.targetPos ~= nil and not is_pos_xz(p.targetPos) then
+            return false, "INVALID_TARGET_POS"
+        end
+        return true
+    end,
+    PAYLOAD_ACTION = function(p, opts)
+        local base_ch = opts and opts.baseChannel
+        if not is_zone3_spec(p, base_ch) then
+            return false, "INVALID_ZONE3_CHANNEL"
+        end
+        if type(p.command) ~= "string" or p.command == "" then
+            return false, "MISSING_PAYLOAD_COMMAND"
+        end
+        return true
+    end,
+    REDSTONE_ACTION = function(p)
+        if p.mode ~= "EMIT" and p.mode ~= "WAIT_INPUT" then
+            return false, "INVALID_REDSTONE_MODE"
+        end
+        if not VALID_SIDES[p.side] then
+            return false, "INVALID_REDSTONE_SIDE"
+        end
+        if p.durationMs ~= nil and (not is_finite(p.durationMs) or p.durationMs < 0) then
+            return false, "INVALID_REDSTONE_DURATION"
+        end
+        return true
+    end,
+    TAKEOFF_RUNWAY = function() return true end,
+    LAND_RUNWAY = function() return true end,
+    DOCK_ARM = function() return true end,
+    UNDOCK_ARM = function() return true end,
+}
+
+local function validate_conditions_list(cond_block)
+    if type(cond_block) ~= "table" then return false, "INVALID_COND_BLOCK" end
+    if cond_block.logic ~= nil and cond_block.logic ~= "ANY" and cond_block.logic ~= "ALL" then
+        return false, "INVALID_LOGIC"
+    end
+    if type(cond_block.conditions) ~= "table" then return false, "INVALID_CONDITIONS" end
+    for _, cond in ipairs(cond_block.conditions) do
+        if type(cond) ~= "table" or not condition_evaluator.CONDITION_TYPES[cond.type] then
+            return false, "INVALID_CONDITION_TYPE " .. tostring(type(cond) == "table" and cond.type or cond)
+        end
+    end
+    return true
+end
+
+local function validate_hooks_list(hooks)
+    if type(hooks) ~= "table" then return false, "INVALID_HOOK_BLOCK" end
+    for _, h in ipairs(hooks) do
+        if type(h) ~= "table" or not hook_runner.VALID_HOOK_TYPES[h.type] then
+            return false, "INVALID_HOOK_TYPE " .. tostring(type(h) == "table" and h.type or h)
+        end
+    end
+    return true
+end
+
+local function validate_cp_schema(cp, i, opts)
+    if type(cp) ~= "table" or type(cp.action) ~= "string" then
+        return false, string.format("CP#%d: INVALID_CHECKPOINT", i)
+    end
+    if not mission_engine.ACTION_TAXONOMY[cp.action] then
+        return false, string.format("CP#%d: UNKNOWN_ACTION '%s'", i, tostring(cp.action))
+    end
+    local checker = SCHEMA_PARAM_CHECKS[cp.action]
+    local p = (type(cp.params) == "table") and cp.params or {}
+    if checker then
+        local ok_p, err_p = checker(p, opts)
+        if not ok_p then
+            return false, string.format("CP#%d: %s", i, tostring(err_p))
+        end
+    end
+    if cp.completeWhen ~= nil then
+        local ok_c, err_c = validate_conditions_list(cp.completeWhen)
+        if not ok_c then return false, string.format("CP#%d: completeWhen %s", i, err_c) end
+    end
+    if cp.abortWhen ~= nil then
+        local ok_a, err_a = validate_conditions_list(cp.abortWhen)
+        if not ok_a then return false, string.format("CP#%d: abortWhen %s", i, err_a) end
+    end
+    for _, hkey in ipairs({ "onEnter", "onExit", "onAbort" }) do
+        if cp[hkey] ~= nil then
+            local ok_h, err_h = validate_hooks_list(cp[hkey])
+            if not ok_h then return false, string.format("CP#%d: %s %s", i, hkey, err_h) end
+        end
+    end
+    return true
+end
+
+function mission_engine.validate_mission_table(tbl, opts)
+    if type(tbl) ~= "table" then
+        return false, "SCHEMA_INVALID", "NOT_A_TABLE"
+    end
+    if tbl.executionMode ~= nil and tbl.executionMode ~= "SINGLE" and tbl.executionMode ~= "REPEAT" then
+        return false, "SCHEMA_INVALID", "INVALID_EXECUTION_MODE"
+    end
+    if tbl.fallbackPolicy ~= nil and tbl.fallbackPolicy ~= "RTH"
+       and tbl.fallbackPolicy ~= "HOVER_HOLD" and tbl.fallbackPolicy ~= "LOITER"
+       and tbl.fallbackPolicy ~= "SKIP_NEXT" then
+        return false, "SCHEMA_INVALID", "INVALID_FALLBACK_POLICY"
+    end
+    local raw = tbl
+    if type(tbl.items) == "table" and type(tbl.checkpoints) ~= "table" then
+        raw = convert_legacy_items(tbl)
+    end
+    local cps = raw.checkpoints
+    if type(cps) ~= "table" or #cps == 0 then
+        return false, "SCHEMA_INVALID", "EMPTY_CHECKPOINTS"
+    end
+    for i, cp in ipairs(cps) do
+        local ok_cp, detail = validate_cp_schema(cp, i, opts)
+        if not ok_cp then
+            return false, "SCHEMA_INVALID", detail
+        end
+    end
+    return true, nil, nil
+end
+
+function mission_engine.resolve_path(spec, fs_api)
+    if type(spec) ~= "string" or spec == "" or string.find(spec, "%.%.") then
+        return nil, "INVALID_PATH"
+    end
+    local fs_obj = fs_api or fs
+    if not fs_obj then
+        return nil, "FS_UNAVAILABLE"
+    end
+    local candidates = {}
+    local function add_cand(c)
+        candidates[#candidates + 1] = c
+        if not string.match(c, "%.json$") then
+            candidates[#candidates + 1] = c .. ".json"
+        end
+    end
+    add_cand(spec)
+    if not string.match(spec, "^/") then
+        add_cand("missions/" .. spec)
+        add_cand("/disk/" .. spec)
+        add_cand("/disk/missions/" .. spec)
+    end
+    for _, cand in ipairs(candidates) do
+        if fs_obj.exists(cand) and not (fs_obj.isDir and fs_obj.isDir(cand)) then
+            return cand, nil
+        end
+    end
+    return nil, "FILE_NOT_FOUND"
+end
+
+function mission_engine.list_mission_files(fs_api)
+    local fs_obj = fs_api or fs
+    local results = {}
+    local seen = {}
+    if not fs_obj then return results end
+    local dirs = {
+        { path = "missions", prefix = "" },
+        { path = "/disk", prefix = "/disk/" },
+        { path = "/disk/missions", prefix = "/disk/missions/" },
+    }
+    for _, d in ipairs(dirs) do
+        if fs_obj.exists(d.path) and (not fs_obj.isDir or fs_obj.isDir(d.path)) then
+            local items = fs_obj.list(d.path)
+            for _, item in ipairs(items or {}) do
+                local full = d.path .. "/" .. item
+                if string.match(item, "%.json$") and not (fs_obj.isDir and fs_obj.isDir(full)) then
+                    local stem = string.sub(item, 1, -6)
+                    local entry = d.prefix .. stem
+                    if not seen[entry] then
+                        seen[entry] = true
+                        results[#results + 1] = entry
+                    end
+                end
+            end
+        end
+    end
+    table.sort(results)
+    return results
+end
+
+function mission_engine.preflight_file(spec, opts, fs_api)
+    local resolved, err_path = mission_engine.resolve_path(spec, fs_api)
+    if not resolved then
+        return nil, err_path, nil
+    end
+    local fs_obj = fs_api or fs
+    local h = fs_obj.open(resolved, "r")
+    if not h then
+        return nil, "FS_OPEN_ERROR", nil
+    end
+    local raw = h.readAll()
+    h.close()
+    local data = textutils.unserializeJSON(raw)
+    if type(data) ~= "table" then
+        return nil, "PARSE_ERROR", "INVALID_JSON"
+    end
+    local ok_v, err_v, det_v = mission_engine.validate_mission_table(data, opts)
+    if not ok_v then
+        return nil, err_v, det_v
+    end
+    local allow_def = opts and opts.allowDeferred
+    if not allow_def and type(data.checkpoints) == "table" then
+        for i, cp in ipairs(data.checkpoints) do
+            if type(cp) == "table" and mission_engine.DEFERRED_ACTIONS[cp.action] then
+                return nil, mission_engine.DEFERRED_ERROR, string.format("CP#%d: %s", i, tostring(cp.action))
+            end
+        end
+    end
+    return data, nil, nil
+end
+
 function mission_engine.new(opts)
     local o = opts or {}
     local cfg = o.config or {}
@@ -418,14 +710,15 @@ function mission_engine:load_table(data)
     return true, nil
 end
 
-function mission_engine:load(filepath)
-    if not fs.exists(filepath) then return false, "FILE_NOT_FOUND" end
-    local h = fs.open(filepath, "r")
-    if not h then return false, "FS_OPEN_ERROR" end
-    local raw = h.readAll()
-    h.close()
-    local data = textutils.unserializeJSON(raw)
-    if type(data) ~= "table" then return false, "PARSE_ERROR" end
+function mission_engine:load(filepath, fs_api)
+    local opts = {
+        baseChannel = self.baseChannel,
+        defaultAlt = self.defaults and self.defaults.targetAlt,
+        defaultSpeed = self.defaults and self.defaults.cruiseSpeed,
+        arrivalRadius = self.defaults and self.defaults.acceptanceRadius,
+    }
+    local data, err, detail = mission_engine.preflight_file(filepath, opts, fs_api)
+    if not data then return false, err, detail end
     return self:load_table(data)
 end
 

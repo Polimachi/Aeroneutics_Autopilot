@@ -242,4 +242,60 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         fs.delete("missions/patrol_alpha.json")
         fs.delete("missions/runway_sortie.json")
     end)
+
+    it("maps SCHEMA_INVALID on bad mission JSON, resolves /disk paths, and preserves active flight on failed forceRestart", function()
+        local mission_engine = require("mission_engine")
+        local q, net, arb, tx = create_fixture()
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        if not fs.exists("/disk") then fs.makeDir("/disk") end
+        local f_bad = fs.open("/disk/bad_schema.json", "w")
+        f_bad.write(textutils.serializeJSON({
+            missionId = "BAD_SCHEMA",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "FLY_OVER", params = { targetPos = { x = 10, z = 20 } } },
+                { checkpointId = "CP_02", action = "PAYLOAD_ACTION", params = { channelOffset = 20 } }, -- missing command
+            },
+        }))
+        f_bad.close()
+
+        local f_disk = fs.open("/disk/disk_sortie.json", "w")
+        f_disk.write(textutils.serializeJSON({
+            missionId = "DISK_SORTIE",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "FLY_OVER", params = { x = 400, z = -500 } },
+            },
+        }))
+        f_disk.close()
+
+        -- 1. Schema error -> SCHEMA_INVALID with CP#2 detail
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "/disk/bad_schema", executionMode = "SINGLE" },
+        }, 1000)
+        local ack_bad = tx[#tx].payload.payload
+        assert_eq(ack_bad.status, "SCHEMA_INVALID")
+        assert_true(string.find(tostring(ack_bad.reason), "CP#2", 1, true) ~= nil)
+
+        -- 2. Valid /disk path without .json suffix -> ACCEPTED
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "/disk/disk_sortie", executionMode = "SINGLE" },
+        }, 1100)
+        assert_eq(tx[#tx].payload.payload.status, "ACCEPTED")
+        assert_eq(eng.state, "EN_ROUTE")
+
+        -- 3. Failed forceRestart targeting bad_schema must NOT stop active DISK_SORTIE
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "/disk/bad_schema.json", forceRestart = true },
+        }, 1200)
+        assert_eq(tx[#tx].payload.payload.status, "SCHEMA_INVALID")
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_eq(eng.missionId, "DISK_SORTIE")
+
+        fs.delete("/disk/bad_schema.json")
+        fs.delete("/disk/disk_sortie.json")
+    end)
 end)

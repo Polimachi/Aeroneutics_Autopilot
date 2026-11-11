@@ -1,5 +1,7 @@
 -- src/3_planning/amm/modules/c2_arbiter.lua
 -- AMM C2 Arbiter: Authority Switching, Queue FSM & Handover
+local mission_engine = require("mission_engine")
+
 local c2_arbiter = {}
 c2_arbiter.__index = c2_arbiter
 
@@ -53,19 +55,13 @@ function c2_arbiter:handle_gcs_packet(packet, now_ms)
     end
 end
 
-local function normalize_mission_path(name)
-    if type(name) ~= "string" or name == "" or string.find(name, "%.%.") then
-        return nil, "INVALID_CMD"
-    end
-    local path = name
-    if not string.match(path, "^missions/") and not string.match(path, "^/missions/") then
-        path = "missions/" .. path
-    end
-    if not string.match(path, "%.json$") then
-        path = path .. ".json"
-    end
-    return path, nil
-end
+local LOAD_ERR_TO_ACK = {
+    INVALID_PATH = "INVALID_CMD",
+    FILE_NOT_FOUND = "FILE_NOT_FOUND",
+    SCHEMA_INVALID = "SCHEMA_INVALID",
+    PARSE_ERROR = "SCHEMA_INVALID",
+    DEFERRED_ACTION_UNSUPPORTED = "DEFERRED_ACTION_UNSUPPORTED",
+}
 
 local function send_ack(self, action, status, reason)
     if not self.net or not self.net.send_mission_ack then return false end
@@ -88,30 +84,33 @@ local function handle_cmd_run(self, p, now_ms)
         return false, "BUSY_REJECTED"
     end
 
-    if p.forceRestart then
-        eng:stop(now_ms)
-    end
-
+    local data = nil
     if p.missionName then
-        local path, err = normalize_mission_path(p.missionName)
-        if not path then
-            send_ack(self, "RUN", "INVALID_CMD", err)
-            return false, "INVALID_CMD"
-        end
-        local ok_load, err_load = eng:load(path)
-        if not ok_load then
-            local status = "INVALID_CMD"
-            if err_load == "FILE_NOT_FOUND" then
-                status = "FILE_NOT_FOUND"
-            elseif err_load == "DEFERRED_ACTION_UNSUPPORTED" then
-                status = "DEFERRED_ACTION_UNSUPPORTED"
-            end
-            send_ack(self, "RUN", status, err_load)
+        local pre_data, err_load, detail = mission_engine.preflight_file(
+            p.missionName,
+            { baseChannel = eng.baseChannel }
+        )
+        if not pre_data then
+            local status = LOAD_ERR_TO_ACK[err_load] or "INVALID_CMD"
+            send_ack(self, "RUN", status, detail or err_load)
             return false, status
         end
+        data = pre_data
     elseif eng:count() == 0 then
         send_ack(self, "RUN", "INVALID_CMD", "NO_MISSION")
         return false, "INVALID_CMD"
+    end
+
+    if p.forceRestart and (eng.state == "EN_ROUTE" or eng.state == "SUSPENDED") then
+        eng:stop(now_ms)
+    end
+
+    if data then
+        local ok_lt, err_lt = eng:load_table(data)
+        if not ok_lt then
+            send_ack(self, "RUN", "SCHEMA_INVALID", err_lt)
+            return false, "SCHEMA_INVALID"
+        end
     end
 
     local ok_start, err_start = eng:start(p.executionMode, now_ms)
