@@ -3,7 +3,7 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-116` 통합 인스톨러(`installer.lua`) 역할/도메인별 2계층 폴더 TUI 개편, `manifest` v1.1.0 카테고리 API·12행 뷰포트 스크롤 및 규격서 v1.1.0 `Implemented` 승격 (2026-11-10, 상세 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-121` 컨텍스트 문서 드리프트 가드(`verify_context_docs.py`, `Stop`/`PreToolUse` 훅, `git.exe` 경로 차단) 및 워크플로우 연동 (2026-11-11, 상세 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
   1. `TASK-201`: FCP 사양서 v1.15.0 Implemented → v1.16.0 개정 후 `LOITER`/`POI_HOLD` 구현.
   2. `TASK-202`: AMM 사양서 v1.0.1 Implemented → v1.1.0 개정 후 미션 엔진 구현.
@@ -17,7 +17,7 @@
 - `docs/superpowers/plans/`: 태스크별 실행 계획서 (`YYYY-MM-DD-task-<id>-*.md`).
 - `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`, `tools/verify_manifest_sync.py`).
+- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`, `tools/verify_manifest_sync.py`, `tools/verify_context_docs.py`).
 - `config/gdrive_mapping.json` & `dist_gdrive/` & `tools/sync_gdrive.py`: GDrive 배포 매핑 SSOT, 격리 스테이징, 동기화 CLI (가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
@@ -28,7 +28,8 @@
 - **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 318/318 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (7개 시나리오 8/8 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (50/50 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).
+- **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
 - **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (10 Implemented, 5 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
@@ -43,3 +44,4 @@
 - **`ion_thruster` 충돌 조정**: `Create Propulsion: Simulated`의 `ion_thruster` 페리페럴은 허용하며, 금지 규칙은 `kontraption:` 네임스페이스만 차단한다.
 - **온보드 제어기 20Hz 헤드리스 원칙**: VAS/TCA/ASA는 터미널 UI 블로킹 방지를 위해 헤드리스가 기본이며, 디버그 TUI는 `config.json`의 `debug: true` 시 비동기(`parallel`)로만 격리 구동한다.
 - **멀티노드 E2E 시뮬레이션 원칙**: 가상 버스/샌드박스 기반 멀티노드 테스트는 각 노드의 고유 `_ENV` 격리 및 채널 배타성을 준수하며, 테스트 종료 시 `os.shutdown()` 핸드셰이크를 수행한다.
+- **컨텍스트 문서 Stop 훅**: `.agent/hooks.json`이 작업 종료 시 `verify_context_docs` 위반을 검사해 재개시킨다 (새 대화부터 적용, 동일 위반 2회 상한, 오류 시 종료 허용; `git-guardrails`가 `git.exe` 포함 위험 명령 차단).

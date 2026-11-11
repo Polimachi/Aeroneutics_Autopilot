@@ -30,11 +30,12 @@ Before claiming any task completion or fix:
 4. **VERIFY**: Confirm the output directly proves the requirement:
    - If **NO**: Report actual failure status and log output honestly.
    - If **YES**: Proceed to step 5.
-5. **PROMOTE SPEC (Lightweight Exception, If Applicable)**: When the verified implementation fulfills a specification in `docs/specs/<domain>/<subsystem>/<SPEC>.md`:
+5. **CONTEXT DOCS**: Run `python tools/verify_context_docs.py`. Fix every finding caused by this task (memory entry, TASK.md markers, spec versions, README counts, banned terms) and re-run until `0 findings`. Report pre-existing findings in one line instead of fixing them out of scope.
+6. **PROMOTE SPEC (Lightweight Exception, If Applicable)**: When the verified implementation fulfills a specification in `docs/specs/<domain>/<subsystem>/<SPEC>.md`:
    - Keep the file path unchanged (Permanent Unified Spec Path: no moving files to `implemented/`). Update the in-document metadata table `문서 상태` from `Approved` to `Implemented` and sync `최종 수정일` in-place.
    - Run verification tools (`python tools/verify_all_specs.py`) to confirm metadata and specification integrity.
    - **Scope Boundary**: This promotion involves no specification contract change; it is exempt from Mixed-Scope Hard Stop and does **not** invoke `specification-lifecycle-manager`.
-6. **CLAIM**: State the result alongside concrete command output evidence.
+7. **CLAIM**: State the result alongside concrete command output evidence.
 
 ## Red Flags — Never Say Without Fresh Evidence
 

@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-11 — 컨텍스트 문서 드리프트 가드 및 git.exe 차단 확장 (TASK-121)
+
+- **결정 배경**: 앞선 Mode B 감사에서 드러난 테스트 수치 3중 수기 관리(R1), 과장 금지어 검사기 부재(R2), Mode A 조건 제한에 의한 Tier 3 메모리 누락(R8), 사양서 버전·마커 어긋남(R3~R7)이 작업 완료 시 재발하지 않도록, 에이전트가 턴 종료 전 스스로 검출·수정하게 만드는 자동 가드를 구축함.
+- **반영 내역**:
+  1. **정적 검사기 (`tools/verify_context_docs.py`, `edea694`·`a2cf19a`)**: 단일 문서(R1·R2·R3·R6·R7) 및 교차 참조(R4·R5·R8) 8개 규칙과 `--json` CLI 구현, `tests/harness/test_context_docs.py` 18건(실저장소 0건 회귀 포함) 및 `test_tools_integrity.py` 편입.
+  2. **SessionStart/Stop 훅 (`.agent/hooks/context_doc_guard.py`, `97b2654`)**: 작업 트리 dirty 또는 세션 시작 `HEAD` 대비 커밋 이동 시에만 실행, 동일 위반 서명(SHA-1)당 `continue` 최대 2회 제한 및 내부 오류/비JSON 입력 시 fail-open(`allow`) 처리. 단위 테스트 10건(`test_context_doc_guard_hook.py`) 및 `stop` 실측 실행 시간 `204.15 ms` 확인.
+  3. **훅 등록 및 `git.exe` 차단 보완 (`.agent/hooks.json`, `b12782a`·`f38356a`)**: `context-doc-guard`와 기존 `block_dangerous_git.py`(`PreToolUse`)를 함께 등록. 새 대화 스모크 1번(`a3ee0ef6`)에서 `Stop` 훅의 `[R1]` 차단 및 에이전트 자가 원복 확인; 2번 스모크(`4d9832e0`)에서 Windows 절대 경로 `& "C:\Program Files\Git\cmd\git.exe" push` 미매치 우회를 확인하여 `block_dangerous_git.py` 정규식에 `\b[Gg][Ii][Tt](?:\.[Ee][Xx][Ee])?["']?\s+` 적용 및 단위 테스트 4건(`test_git_guardrails_hook.py`) 추가.
+  4. **워크플로우 연동**: `verification-before-completion` Step 5(`CONTEXT DOCS`), `md-management` Mode A(모든 `TASK-ID` 완료 시 메모리 기록), `skill-workflows.md`, `GEMINI.md`(47줄 유지), `TASK.md` 동기화.
+- **검증**: `python tools/verify_context_docs.py` `0 findings`, `python -m unittest discover -s tests/harness -p "test_*.py"` `82/82 PASS`, `verify_all_specs.py` `0 Errors, 0 Warnings`, `verify_manifest_sync.py` `0 Errors, 0 Warnings`.
+
+---
+
 ## 2026-11-10 — 통합 인스톨러(installer.lua) 도메인별 2계층 폴더 TUI 개편 (TASK-116)
 
 - **결정 배경**: `manifest.lua` 등록 모듈이 12개에 도달하면서 `tui_view.lua`의 `51x19` 터미널 12행 뷰포트(`y = 4..15`)가 포화되어 후속 모듈(`runway`, `asa`, `docking_arm` 등) 추가 시 화면 이탈 위험이 발생했고, 통합 인스톨러 공식 규격서도 부재한 상태였음.

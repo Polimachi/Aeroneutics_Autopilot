@@ -28,7 +28,7 @@ Antigravity loads **both** root `AGENTS.md` and `GEMINI.md` into `<user_rules>` 
 
 ## 2. Mode A — Milestone Context Sync (Automatic on Structural Milestones)
 
-Run **only** after completing work that changes phases, directory layout, standard CLI/harness commands, or key architectural gotchas:
+Run after **every TASK-ID completion** (append one `.agent/memory/<dir-slug>.md` entry whose heading contains the TASK-ID; enforced by `tools/verify_context_docs.py` rule R8). Update `GEMINI.md` only when phases, directory layout, standard CLI/harness commands, or key architectural gotchas change:
 
 1. **Update `./GEMINI.md` (In-Place Replace, <= 80 lines)**:
    - Keep strictly the 4 fixed sections:
