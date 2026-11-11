@@ -105,7 +105,7 @@ function network_manager.encode_envelope(ctx, packetType, payload)
         senderId = ctx.hardwareUuid,
         type = packetType,
         seq = ctx.seq,
-        timestamp = now_epoch,
+        time = now_epoch,
         payload = payload or {},
     }
 end
@@ -128,6 +128,11 @@ function network_manager.verify_packet(ctx, packet)
     }
     if d ~= ctx.domainId and not allowed_infra[d] then
         return false
+    end
+    if pkt.type == "MSG_GPS_RESPONSE" then
+        if type(pkt.payload) ~= "table" or not ctx.domainId or pkt.payload.targetClient ~= ctx.domainId then
+            return false
+        end
     end
     return true
 end

@@ -1,6 +1,10 @@
 -- src/modules/nav_engine.lua
 local nav_engine = {}
 
+local function is_finite_number(v)
+    return type(v) == "number" and v == v and v > -math.huge and v < math.huge
+end
+
 function nav_engine.init(config)
     local cfg = config or {}
     local nav = cfg.navigation or {}
@@ -23,6 +27,7 @@ function nav_engine.init(config)
         lastGpsFixMs = 0,
         lastGpsReqMs = 0,
         gpsReqSeq = 0,
+        lastGpsFixSeq = 0,
         spikeStreak = 0,
         validStreak = 0,
     }
@@ -40,6 +45,7 @@ end
 
 function nav_engine.integrate_dr(state, telemetry, dt, now_ms)
     if not state or not telemetry then return end
+    local step_dt = dt or 0.05
     local dyn = telemetry.dynamics or {}
     local v = dyn.velocity or telemetry.velocity or {}
     local vx = v.vx or v.x or 0.0
@@ -47,9 +53,17 @@ function nav_engine.integrate_dr(state, telemetry, dt, now_ms)
     local vz = v.vz or v.z or 0.0
     state.vel = { x = vx, y = vy, z = vz }
     state.groundSpeed = math.sqrt(vx * vx + vz * vz)
-    state.pos.x = state.pos.x + vx * dt
-    state.pos.y = state.pos.y + vy * dt
-    state.pos.z = state.pos.z + vz * dt
+    state.pos.x = state.pos.x + vx * step_dt
+    local altY = dyn.altitudeY
+    if not is_finite_number(altY) then
+        altY = telemetry.altitudeY
+    end
+    if is_finite_number(altY) then
+        state.pos.y = altY
+    else
+        state.pos.y = state.pos.y + vy * step_dt
+    end
+    state.pos.z = state.pos.z + vz * step_dt
 
     local att = telemetry.attitude or {}
     state.attitude.pitch = att.pitch or telemetry.pitch or state.attitude.pitch
@@ -87,13 +101,28 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
     if fix_payload.status and fix_payload.status ~= "FIX_OK" and fix_payload.status ~= "FIX_DEGRADED" then
         return false
     end
+
+    local cSeq = nil
+    if fix_payload.clientSeq ~= nil then
+        cSeq = tonumber(fix_payload.clientSeq)
+        if not is_finite_number(cSeq) or cSeq <= (state.lastGpsFixSeq or 0) or ((state.gpsReqSeq or 0) > 0 and cSeq > state.gpsReqSeq) then
+            return false
+        end
+    end
+
     local pos = fix_payload.position or fix_payload
     local gx = (pos and pos.x) or fix_payload.x
     local gz = (pos and pos.z) or fix_payload.z
-    if gx == nil or gz == nil then return false end
+    if not is_finite_number(gx) or not is_finite_number(gz) then return false end
 
     local acc = fix_payload.accuracy or 1.0
-    local delta_t = dt or 0.05
+    local fallback_dt = dt or 0.05
+    local delta_t = fallback_dt
+    if (state.lastGpsFixMs or 0) > 0 and now_ms and now_ms > state.lastGpsFixMs then
+        local elapsed = (now_ms - state.lastGpsFixMs) / 1000.0
+        local maxSpanSec = (state.gpsTimeoutMs or 5000) / 1000.0
+        delta_t = math.max(fallback_dt, math.min(elapsed, maxSpanSec))
+    end
     local max_allowed = math.max(state.kinematicLimitM, state.groundSpeed * delta_t * 1.5 + 3.0 * acc)
     local dx = gx - state.pos.x
     local dz = gz - state.pos.z
@@ -109,12 +138,14 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
             state.hdop = fix_payload.hdop or state.hdop
             state.spikeStreak = 0
             state.validStreak = 1
+            if cSeq then state.lastGpsFixSeq = cSeq end
             return true
         end
         return false
     end
 
     apply_fix_fusion(state, fix_payload, now_ms)
+    if cSeq then state.lastGpsFixSeq = cSeq end
     return true
 end
 
