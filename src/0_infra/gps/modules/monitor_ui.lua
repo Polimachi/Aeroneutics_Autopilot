@@ -85,7 +85,7 @@ local function renderOverviewTab(mon, state, w)
         string.format("  Total Solved Requests : %d", state.totalSolves or 0),
         string.format("  Active Swarm Nodes   : %d online", state.activeNodes or 0),
         string.format("  Tracked Clients      : %d active", state.clientCount or 0),
-        string.format("  Channel Freq         : %d (Listen) / %d (Data)", state.listenChan or 854, state.dataChan or 855),
+        string.format("  Channel Freq         : %d (Listen) / %d (Data)", state.listenChan or 60001, state.dataChan or 60002),
         string.format("  System Health        : %s", (state.activeNodes or 0) >= 3 and "OPTIMAL" or "DEGRADED"),
         "  ------------------------------------------------------------",
         "  Swarm Constellation  : 3D Spherical Trilateration Active",
@@ -99,14 +99,15 @@ local function renderOverviewTab(mon, state, w)
 end
 
 local function renderClientsTab(mon, state, w)
-    local header, hf, hb = padLine("  ID    CLIENT POSITION (X, Y, Z)          LAST SEEN (s)", "d", "f", w)
+    local header, hf, hb = padLine("  ID         CLIENT POSITION (X, Y, Z)     LAST SEEN (s)", "d", "f", w)
     mon:setCursorPos(1, 4)
     mon:blit(header, hf, hb)
     local clients = state.clients or {}
     for i = 1, math.min(#clients, 25) do
         local c = clients[i]
-        local row = string.format("  #%-4d (%7.1f, %5.1f, %7.1f)      %5.1fs ago",
-            c.id or 0, c.x or 0, c.y or 0, c.z or 0, c.lastSeen or 0)
+        local idStr = string.sub(tostring(c.id or "?"), 1, 16)
+        local row = string.format("  %-10s (%7.1f, %5.1f, %7.1f)  %5.1fs ago",
+            idStr, tonumber(c.x) or 0, tonumber(c.y) or 0, tonumber(c.z) or 0, tonumber(c.lastSeen) or 0)
         local t, f, b = padLine(row, "0", "f", w)
         mon:setCursorPos(1, 4 + i)
         mon:blit(t, f, b)
@@ -114,14 +115,15 @@ local function renderClientsTab(mon, state, w)
 end
 
 local function renderNodesTab(mon, state, w)
-    local header, hf, hb = padLine("  ID    NODE POSITION (X, Y, Z)            STATUS       PING", "b", "f", w)
+    local header, hf, hb = padLine("  ID         NODE POSITION (X, Y, Z)       STATUS       PING", "b", "f", w)
     mon:setCursorPos(1, 4)
     mon:blit(header, hf, hb)
     local nodes = state.nodes or {}
     for i = 1, math.min(#nodes, 25) do
         local n = nodes[i]
-        local row = string.format("  #%-4d (%7.1f, %5.1f, %7.1f)      %-10s %dms",
-            n.id or 0, n.x or 0, n.y or 0, n.z or 0, n.status or "OK", n.ping or 0)
+        local idStr = string.sub(tostring(n.id or "?"), 1, 16)
+        local row = string.format("  %-10s (%7.1f, %5.1f, %7.1f)  %-10s %dms",
+            idStr, tonumber(n.x) or 0, tonumber(n.y) or 0, tonumber(n.z) or 0, tostring(n.status or "OK"), tonumber(n.ping) or 0)
         local t, f, b = padLine(row, (n.status == "ONLINE" and "5" or "e"), "f", w)
         mon:setCursorPos(1, 4 + i)
         mon:blit(t, f, b)
@@ -160,6 +162,11 @@ function UI:render(mon, state)
     local w = self.width
     local h = self.height
     renderHeader(mon, self.currentTab, w)
+    local blankT, blankFg, blankBg = padLine("", "0", "f", w)
+    for row = 3, h - 2 do
+        mon:setCursorPos(1, row)
+        mon:blit(blankT, blankFg, blankBg)
+    end
     if self.currentTab == 1 then renderOverviewTab(mon, state, w)
     elseif self.currentTab == 2 then renderClientsTab(mon, state, w)
     elseif self.currentTab == 3 then renderNodesTab(mon, state, w)

@@ -76,7 +76,7 @@ local function tryEarlySolve(self, session, registry, nowMs)
         nodeCount = sol.nodeCount,
         selectedNodes = sol.selectedNodes,
     }, nowMs)
-    return resp.payload
+    return resp.payload, session.replyChannel
 end
 
 function session_scheduler:ingestReport(reportPayload, registry, nowMs)
@@ -104,8 +104,8 @@ function session_scheduler:ingestReport(reportPayload, registry, nowMs)
         session.reports[resolved.id] = resolved
         table.insert(session.reportsList, resolved)
     end
-    local earlyPayload = tryEarlySolve(self, session, registry, nowMs)
-    if earlyPayload then return "EARLY_SOLVED", earlyPayload end
+    local earlyPayload, earlyReplyCh = tryEarlySolve(self, session, registry, nowMs)
+    if earlyPayload then return "EARLY_SOLVED", earlyPayload, earlyReplyCh end
     return "BUFFERED"
 end
 
@@ -121,7 +121,7 @@ function session_scheduler:flushExpired(registry, nowMs)
         local count = #session.reportsList
         if count >= 3 then
             local bbox = config_store.computeSwarmBBox(registry, session.reportsList)
-            local sol = trilateration.solve(session.reportsList, session.clientAltitudeY, bbox)
+            local sol, solErr = trilateration.solve(session.reportsList, session.clientAltitudeY, bbox)
             if sol then
                 self:addTombstone(sKey, nowMs + self.tombstoneTtlMs)
                 self.client_last_solved[session.targetClient] = math.max(
@@ -139,17 +139,40 @@ function session_scheduler:flushExpired(registry, nowMs)
                     nodeCount = sol.nodeCount,
                     selectedNodes = sol.selectedNodes,
                 }, nowMs)
-                table.insert(responses, { replyChannel = session.replyChannel, payload = resp.payload })
+                table.insert(responses, {
+                    replyChannel = session.replyChannel,
+                    clientAltitudeY = session.clientAltitudeY,
+                    payload = resp.payload,
+                })
+            else
+                self:addTombstone(sKey, nowMs + 150)
+                local failGeom = protocol.buildResponse("GPS_BASE_NET", 1, {
+                    targetClient = session.targetClient,
+                    clientSeq = session.clientSeq,
+                    status = solErr or "FAIL_GEOMETRY",
+                    nodeCount = count,
+                    selectedNodes = {},
+                }, nowMs)
+                table.insert(responses, {
+                    replyChannel = session.replyChannel,
+                    clientAltitudeY = session.clientAltitudeY,
+                    payload = failGeom.payload,
+                })
             end
-        end
-        if count < 3 then
+        else
             self:addTombstone(sKey, nowMs + 150)
             local failResp = protocol.buildResponse("GPS_BASE_NET", 1, {
                 targetClient = session.targetClient,
                 clientSeq = session.clientSeq,
                 status = "FAIL_INSUFFICIENT",
+                nodeCount = count,
+                selectedNodes = {},
             }, nowMs)
-            table.insert(responses, { replyChannel = session.replyChannel, payload = failResp.payload })
+            table.insert(responses, {
+                replyChannel = session.replyChannel,
+                clientAltitudeY = session.clientAltitudeY,
+                payload = failResp.payload,
+            })
         end
     end
     return responses
