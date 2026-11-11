@@ -174,7 +174,7 @@ local function process_event(app, ev, p1, p2, p3, p4, p5)
     end
 end
 
-local function try_auto_start_mission(engine, auto_spec, now_ms)
+local function try_auto_start_mission(engine, auto_spec, now_ms, cfg)
     if not auto_spec or auto_spec == "" or not engine then return end
     local ok = false
     if type(auto_spec) == "table" then
@@ -194,7 +194,8 @@ local function try_auto_start_mission(engine, auto_spec, now_ms)
         end
     end
     if ok then
-        engine:start("SINGLE", now_ms)
+        local mode = (cfg and cfg.autoExecutionMode) or engine.executionMode or "SINGLE"
+        engine:start(mode, now_ms)
     end
 end
 
@@ -216,7 +217,7 @@ local function main_loop(config_path)
     if modem then net:bind_modem(modem) end
 
     local now_ms = (os.epoch and os.epoch("utc")) or (os.time() * 1000)
-    try_auto_start_mission(engine, cfg.autoStartMission, now_ms)
+    try_auto_start_mission(engine, cfg.autoStartMission, now_ms, cfg)
 
     local app = {
         config = cfg,
@@ -249,4 +250,5 @@ return {
     execute_cli_command = execute_cli_command,
     process_event = process_event,
     main_loop = main_loop,
+    try_auto_start_mission = try_auto_start_mission,
 }

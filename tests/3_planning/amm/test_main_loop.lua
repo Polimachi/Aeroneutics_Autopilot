@@ -159,4 +159,47 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_false(m.isOpen(10020))
         assert_eq(eng.active_index, 2)
     end)
+
+    it("preserves mission executionMode = REPEAT when auto-starting missions from file or table", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+
+        -- 1. Test auto-start from mission file with executionMode = "REPEAT"
+        local temp_path = "missions/test_auto_repeat.json"
+        if not fs.exists("missions") then fs.makeDir("missions") end
+        local f = fs.open(temp_path, "w")
+        assert_true(f ~= nil)
+        f.write(textutils.serializeJSON({
+            version = "1.1.0",
+            missionId = "PATROL_REPEAT",
+            executionMode = "REPEAT",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "FLY_TO", params = { targetPos = { x = 10, z = 20 } } },
+                { checkpointId = "CP_02", action = "FLY_TO", params = { targetPos = { x = 30, z = 40 } } },
+            },
+        }))
+        f.close()
+
+        main_mod.try_auto_start_mission(eng, "test_auto_repeat", 1000)
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_eq(eng.executionMode, "REPEAT")
+        assert_eq(eng.active_index, 1)
+
+        -- Clean up temp file
+        if fs.exists(temp_path) then fs.delete(temp_path) end
+
+        -- 2. Test auto-start with config override cfg.autoExecutionMode
+        local eng2 = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        main_mod.try_auto_start_mission(eng2, {
+            missionId = "OVERRIDE_TEST",
+            executionMode = "SINGLE",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "FLY_TO", params = { targetPos = { x = 50, z = 60 } } },
+            },
+        }, 2000, { autoExecutionMode = "REPEAT" })
+        assert_eq(eng2.state, "EN_ROUTE")
+        assert_eq(eng2.executionMode, "REPEAT")
+    end)
 end)
