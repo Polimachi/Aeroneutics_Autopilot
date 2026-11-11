@@ -80,6 +80,12 @@ function nav_engine.integrate_dr(state, telemetry, dt, now_ms)
     state.lastCoreRxMs = now_ms or 0
 end
 
+local function maybe_update_fix_ms(state, now_ms)
+    if is_finite_number(now_ms) and now_ms >= (state.lastGpsFixMs or 0) then
+        state.lastGpsFixMs = now_ms
+    end
+end
+
 local function apply_fix_fusion(state, fix, now_ms)
     local a = state.alpha
     if (fix.hdop and fix.hdop > state.maxHdop) or (fix.accuracy and fix.accuracy > 2.0) then
@@ -91,13 +97,14 @@ local function apply_fix_fusion(state, fix, now_ms)
     state.pos.x = (1.0 - a) * state.pos.x + a * gx
     state.pos.z = (1.0 - a) * state.pos.z + a * gz
     state.hdop = fix.hdop or state.hdop
-    state.lastGpsFixMs = now_ms or 0
+    maybe_update_fix_ms(state, now_ms)
     state.validStreak = state.validStreak + 1
     state.spikeStreak = 0
 end
 
 function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
     if not state or not fix_payload then return false end
+    if now_ms ~= nil and not is_finite_number(now_ms) then return false end
     if fix_payload.status and fix_payload.status ~= "FIX_OK" and fix_payload.status ~= "FIX_DEGRADED" then
         return false
     end
@@ -118,7 +125,7 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
     local acc = fix_payload.accuracy or 1.0
     local fallback_dt = dt or 0.05
     local delta_t = fallback_dt
-    if (state.lastGpsFixMs or 0) > 0 and now_ms and now_ms > state.lastGpsFixMs then
+    if (state.lastGpsFixMs or 0) > 0 and is_finite_number(now_ms) and now_ms > state.lastGpsFixMs then
         local elapsed = (now_ms - state.lastGpsFixMs) / 1000.0
         local maxSpanSec = (state.gpsTimeoutMs or 5000) / 1000.0
         delta_t = math.max(fallback_dt, math.min(elapsed, maxSpanSec))
@@ -134,7 +141,7 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
         if state.spikeStreak >= 3 then
             state.pos.x = gx
             state.pos.z = gz
-            state.lastGpsFixMs = now_ms or 0
+            maybe_update_fix_ms(state, now_ms)
             state.hdop = fix_payload.hdop or state.hdop
             state.spikeStreak = 0
             state.validStreak = 1
