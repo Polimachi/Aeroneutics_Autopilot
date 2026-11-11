@@ -20,6 +20,14 @@ function operator_handler.init(config)
     }
 end
 
+local function finite_num(v)
+    local n = tonumber(v)
+    if n and n == n and n ~= math.huge and n ~= -math.huge then
+        return n
+    end
+    return nil
+end
+
 function operator_handler.normalize_params(raw_params, flight_mode)
     local p = (type(raw_params) == "table") and raw_params or {}
     local hmode = p.headingMode
@@ -29,7 +37,7 @@ function operator_handler.normalize_params(raw_params, flight_mode)
 
     local fixed_hdg = nil
     if p.fixedHeading ~= nil then
-        local fh = tonumber(p.fixedHeading)
+        local fh = finite_num(p.fixedHeading)
         if fh ~= nil then
             fixed_hdg = ((fh % 360.0) + 360.0) % 360.0
         end
@@ -37,8 +45,8 @@ function operator_handler.normalize_params(raw_params, flight_mode)
 
     local wp = nil
     if type(p.targetWaypoint) == "table" and p.targetWaypoint.x ~= nil and p.targetWaypoint.z ~= nil then
-        local wx = tonumber(p.targetWaypoint.x)
-        local wz = tonumber(p.targetWaypoint.z)
+        local wx = finite_num(p.targetWaypoint.x)
+        local wz = finite_num(p.targetWaypoint.z)
         if wx and wz then
             wp = { x = wx, z = wz }
         end
@@ -46,9 +54,9 @@ function operator_handler.normalize_params(raw_params, flight_mode)
 
     local poi = nil
     if type(p.poiTarget) == "table" and p.poiTarget.x ~= nil and p.poiTarget.z ~= nil then
-        local px = tonumber(p.poiTarget.x)
-        local py = tonumber(p.poiTarget.y) or 64.0
-        local pz = tonumber(p.poiTarget.z)
+        local px = finite_num(p.poiTarget.x)
+        local py = finite_num(p.poiTarget.y) or 64.0
+        local pz = finite_num(p.poiTarget.z)
         if px and pz then
             poi = { x = px, y = py, z = pz }
         end
@@ -56,10 +64,10 @@ function operator_handler.normalize_params(raw_params, flight_mode)
 
     return {
         targetWaypoint = wp,
-        targetAlt = (p.targetAlt ~= nil) and tonumber(p.targetAlt) or nil,
-        targetSpeed = (p.targetSpeed ~= nil) and tonumber(p.targetSpeed) or nil,
+        targetAlt = finite_num(p.targetAlt),
+        targetSpeed = finite_num(p.targetSpeed),
         designatedFacilityId = p.designatedFacilityId,
-        loiterRadius = math.max(5.0, tonumber(p.loiterRadius) or 30.0),
+        loiterRadius = math.max(5.0, finite_num(p.loiterRadius) or 30.0),
         loiterDirection = (p.loiterDirection == "CCW") and "CCW" or "CW",
         headingMode = hmode,
         fixedHeading = fixed_hdg,

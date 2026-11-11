@@ -378,4 +378,30 @@ describe("advanced_vtol_driver LOITER and POI_HOLD primitives with gimbal slew l
         assert_eq(out.flapTarget, 0.0)
         assert_true(math.abs(out.targetHeading - 91.5) < 0.01, "Heading must slew from 90.0 toward 180.0 by +1.5 deg")
     end)
+
+    it("preserves gimbal prev_surge/prev_sway continuity across FAILSAFE_HOLD exit for ADVANCED_VTOL", function()
+        local guidance_controller = require("guidance_controller")
+        local prev_af = cfg.system.airframeType
+        cfg.system.airframeType = "ADVANCED_VTOL"
+        local g_state = guidance_controller.init(cfg)
+        cfg.system.airframeType = prev_af
+        local nav = {
+            pos = { x = 0.0, y = 100.0, z = 0.0 },
+            vel = { x = 0.0, y = 0.0, z = 0.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            groundSpeed = 0.0,
+        }
+        local target = { x = 0.0, y = 100.0, z = -100.0 }
+
+        -- Enter FAILSAFE_HOLD and establish active gimbal bias
+        guidance_controller.compute(g_state, nav, target, { state = "FAILSAFE_HOLD", flightActive = true, now_ms = 1000 }, 0.05)
+        g_state.driver_state.prev_surge = 0.60
+        g_state.driver_state.prev_sway = -0.40
+
+        -- Recover FAILSAFE_HOLD -> CRUISE: trigger_bumpless_transition must preserve prev_surge/prev_sway across reset
+        guidance_controller.compute(g_state, nav, target, { state = "CRUISE", flightActive = true, now_ms = 1050 }, 0.05)
+        -- With gimbalSlewRate = 2.0/s and dt = 0.05, max step is 0.10 -> prev_surge must be >= 0.50 (never reset to 0.0 -> <= 0.10)
+        assert_true(g_state.driver_state.prev_surge >= 0.50,
+            "FAILSAFE_HOLD exit must preserve prev_surge continuity, got " .. tostring(g_state.driver_state.prev_surge))
+    end)
 end)

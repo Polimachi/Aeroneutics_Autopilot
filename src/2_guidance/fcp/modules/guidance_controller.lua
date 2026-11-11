@@ -161,14 +161,14 @@ function guidance_controller.compute(state, nav, mission_target, fsm_ctx, dt)
         end
         state.wasInHold = true
         state.manualRampArmed = false
+    elseif fsm_state == "DISARMED" then
+        state.wasInHold = false
+        state.manualRampArmed = false
+        driver.reset_integrals(state.driver_state)
     elseif state.wasInHold and fsm_state ~= "FAILSAFE_HOLD" then
         state.wasInHold = false
-        state.rampStartMs = now
+        guidance_controller.trigger_bumpless_transition(state, now)
         state.manualRampArmed = false
-        driver.reset_integrals(state.driver_state)
-    elseif fsm_state == "DISARMED" then
-        state.manualRampArmed = false
-        driver.reset_integrals(state.driver_state)
     else
         if (fsm_ctx and fsm_ctx.bumpless == true) or
            (not state.manualRampArmed and state.lastFsmState ~= nil and state.lastFsmState ~= fsm_state and

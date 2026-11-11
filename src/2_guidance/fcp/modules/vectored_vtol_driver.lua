@@ -54,7 +54,10 @@ function vectored_vtol_driver.compute_heading(cfg, nav, target, dt, prev_heading
 
     local target_h = prev_h
     if mode == "FIXED" and target and target.fixedHeading ~= nil then
-        target_h = ((tonumber(target.fixedHeading) or prev_h) % 360.0 + 360.0) % 360.0
+        local fh = tonumber(target.fixedHeading)
+        if fh and fh == fh and fh ~= math.huge and fh ~= -math.huge then
+            target_h = ((fh % 360.0) + 360.0) % 360.0
+        end
     elseif mode == "POI" or mode == "TARGET_LOCK" or mode == "ORBIT_POINT" or fsm_state == "POI_HOLD" then
         local poi = (target and target.poiTarget) or g.targetPoint or target
         if poi and poi.x and poi.z and nav and nav.pos then

@@ -108,7 +108,8 @@ local function process_inbox(ctx, polled, now_ms)
             elseif c2_res.flightMode or c2_res.command then
                 local mode = c2_res.flightMode or c2_res.command
                 ctx.pendingC2Cmd = mode
-                local entering_hold = (mode == "LOITER" or mode == "POI_HOLD") and (ctx.fsm and ctx.fsm.current_state ~= mode)
+                local in_flight = (ctx.fsm and ctx.fsm.inFlight == true)
+                local entering_hold = in_flight and (mode == "LOITER" or mode == "POI_HOLD") and (ctx.fsm.current_state ~= mode)
                 if not ctx.mission_target then
                     ctx.mission_target = { x = 0.0, y = 64.0, z = -50.0 }
                 end
@@ -121,7 +122,11 @@ local function process_inbox(ctx, polled, now_ms)
                         ctx.mission_target.x = ctx.nav.pos.x
                         ctx.mission_target.z = ctx.nav.pos.z
                     end
-                    if p.targetAlt ~= nil then ctx.mission_target.y = p.targetAlt end
+                    if p.targetAlt ~= nil then
+                        ctx.mission_target.y = p.targetAlt
+                    elseif entering_hold and ctx.nav and ctx.nav.pos and ctx.nav.pos.y ~= nil then
+                        ctx.mission_target.y = ctx.nav.pos.y
+                    end
                     if p.targetSpeed ~= nil then ctx.mission_target.targetSpeed = p.targetSpeed end
                     if p.headingMode ~= nil then ctx.mission_target.headingMode = p.headingMode end
                     if p.fixedHeading ~= nil then
@@ -135,9 +140,10 @@ local function process_inbox(ctx, polled, now_ms)
                     if p.designatedFacilityId ~= nil then ctx.mission_target.designatedFacilityId = p.designatedFacilityId end
                 elseif entering_hold and ctx.nav and ctx.nav.pos then
                     ctx.mission_target.x = ctx.nav.pos.x
+                    if ctx.nav.pos.y ~= nil then ctx.mission_target.y = ctx.nav.pos.y end
                     ctx.mission_target.z = ctx.nav.pos.z
                 end
-                if c2_res.bumplessTransition then
+                if c2_res.bumplessTransition and in_flight then
                     guidance_controller.trigger_bumpless_transition(ctx.guidance, now_ms)
                 end
             end

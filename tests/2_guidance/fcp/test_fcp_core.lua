@@ -617,6 +617,22 @@ describe("operator_handler MSG_OPERATOR_CMD normalization, authority guard, and 
         local res_rej = operator_handler.process_c2(op, pkt_unforced_gcs, 2500)
         assert_false(res_rej.accepted)
         assert_eq(res_rej.reason, "PILOT_OVERRIDE_ACTIVE")
+
+        -- NaN / Infinity sanitization in normalize_params (Issue 2)
+        local nan_val = 0 / 0
+        local norm_nan = operator_handler.normalize_params({
+            fixedHeading = nan_val,
+            loiterRadius = nan_val,
+            targetAlt = math.huge,
+            targetSpeed = -math.huge,
+        }, "LOITER")
+        assert_nil(norm_nan.fixedHeading, "NaN fixedHeading must be rejected as nil")
+        assert_eq(norm_nan.loiterRadius, 30.0, "NaN loiterRadius must fall back to default 30.0")
+        assert_nil(norm_nan.targetAlt, "Inf targetAlt must be rejected as nil")
+        assert_nil(norm_nan.targetSpeed, "-Inf targetSpeed must be rejected as nil")
+
+        local norm_inf = operator_handler.normalize_params({ fixedHeading = math.huge }, "CRUISE")
+        assert_nil(norm_inf.fixedHeading, "Inf fixedHeading must be rejected as nil")
     end)
 
     it("applies 2.0s bumpless linear ramp on mode transition without zeroing initial boot output", function()
@@ -741,6 +757,7 @@ describe("operator_handler MSG_OPERATOR_CMD normalization, authority guard, and 
         fcp_runtime.step_tick(ctx, 0.05, 3050)
         assert_eq(ctx.fsm.current_state, "POI_HOLD")
         assert_eq(ctx.mission_target.x, 42.0, "Omitted targetWaypoint on POI_HOLD entry must freeze to current pos.x")
+        assert_eq(ctx.mission_target.y, 120.0, "Omitted targetAlt on POI_HOLD entry must freeze to current pos.y")
         assert_eq(ctx.mission_target.z, -88.0, "Omitted targetWaypoint on POI_HOLD entry must freeze to current pos.z")
         assert_eq(ctx.mission_target.headingMode, "POI")
 
@@ -767,5 +784,46 @@ describe("operator_handler MSG_OPERATOR_CMD normalization, authority guard, and 
         assert_eq(ctx.mission_target.x, 42.0, "Updating POI while already in POI_HOLD must preserve existing hold anchor x")
         assert_eq(ctx.mission_target.z, -88.0, "Updating POI while already in POI_HOLD must preserve existing hold anchor z")
         assert_eq(ctx.mission_target.poiTarget.x, 200.0)
+    end)
+
+    it("does not freeze ground coordinates or arm bumpless ramp on ground C2 commands", function()
+        local mock_modem = {
+            open = function() end,
+            close = function() end,
+            isOpen = function() return true end,
+            transmit = function() end,
+            isWireless = function() return true end,
+        }
+        local ctx = fcp_runtime.create_context(cfg, function() return mock_modem end)
+        flight_fsm.transition_to(ctx.fsm, "DISARMED")
+        ctx.mission_target = { x = 500.0, y = 100.0, z = -500.0 }
+        ctx.nav.pos = { x = 5.0, y = 64.0, z = 5.0 }
+        ctx.nav.lastCoreRxMs = 2000
+        ctx.nav.lastGpsFixMs = 2000
+        -- Seed operator lastFlightMode so C2 would otherwise emit bumplessTransition = true
+        ctx.operator.lastFlightMode = "CRUISE"
+
+        local network_manager = require("network_manager")
+        network_manager.ingest_modem_event(ctx.net, "top", 10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            type = "MSG_OPERATOR_CMD",
+            seq = 13,
+            timestamp = 2000,
+            payload = {
+                authority = "PILOT_PRIMARY",
+                command = "LOITER",
+                flightMode = "LOITER",
+                params = {},
+                emergencyAction = "NONE",
+            },
+        }, 1, 2000)
+
+        fcp_runtime.step_tick(ctx, 0.05, 2050)
+        assert_eq(ctx.fsm.current_state, "DISARMED")
+        assert_eq(ctx.mission_target.x, 500.0, "Ground C2 must not overwrite mission_target.x with ground coordinates")
+        assert_eq(ctx.mission_target.z, -500.0, "Ground C2 must not overwrite mission_target.z with ground coordinates")
+        assert_eq(ctx.guidance.rampStartMs, -10000, "Ground C2 must not arm bumpless rampStartMs")
     end)
 end)
