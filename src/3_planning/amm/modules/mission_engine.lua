@@ -612,7 +612,7 @@ end
 function mission_engine:update_patrol(cp, mfd_payload, t_ms)
     local nav = mfd_payload and mfd_payload.navigation
     local cur = nav and nav.currentPos
-    if not cur or not self.patrolState or self.patrolState.completed then
+    if not cur or type(cur.x) ~= "number" or type(cur.z) ~= "number" or not self.patrolState or self.patrolState.completed then
         return nil
     end
     local p = cp.params or {}
@@ -683,10 +683,10 @@ local FALLBACK_HANDLERS = {
 
 function mission_engine:apply_abort(cp, now_ms)
     local policy = cp.fallbackPolicy or self.fallbackPolicy or "RTH"
+    self.hook_runner:cleanup()
     if cp.onAbort then
         self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms)
     end
-    self.hook_runner:cleanup()
     local handler = FALLBACK_HANDLERS[policy]
     if handler then
         return handler(self, cp, now_ms)
@@ -837,6 +837,7 @@ function mission_engine:start(execution_mode, now_ms)
     if #self.checkpoints == 0 then return false, "NO_CHECKPOINTS" end
     if execution_mode then self.executionMode = execution_mode end
     for _, cp in ipairs(self.checkpoints) do cp.status = nil end
+    self.touchdownArmed = false
     self.state = "EN_ROUTE"
     local ok, err = self:enter_checkpoint(1, now_ms)
     if not ok then
@@ -847,10 +848,10 @@ end
 
 function mission_engine:stop(now_ms)
     local cp = self:get_active()
+    self.hook_runner:cleanup()
     if cp and cp.onAbort then
         self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms)
     end
-    self.hook_runner:cleanup()
     self.state = "ABORTED"
     if self.net then
         self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)

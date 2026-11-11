@@ -202,4 +202,44 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(eng2.state, "EN_ROUTE")
         assert_eq(eng2.executionMode, "REPEAT")
     end)
+
+    it("cleanly stops active mission, turns off active redstone pulses, and closes Zone 3 channels on shutdown_app", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local m = mock.modem({ wireless = true })
+        net:bind_modem(m)
+        local rs = mock.redstone()
+        local eng = mission_engine.new({ net = net, redstone = rs, colors = colors, config = { baseChannel = 10000 } })
+
+        assert_true(eng:load_table({
+            missionId = "SHUTDOWN_TEST",
+            checkpoints = {
+                {
+                    checkpointId = "CP_01",
+                    action = "PAYLOAD_ACTION",
+                    params = { channelOffset = 20, command = "COLLECT" },
+                    onEnter = { { type = "REDSTONE_PULSE", side = "bottom", durationMs = 5000 } },
+                },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_true(rs.getOutput("bottom"))
+        assert_true(m.isOpen(10020))
+
+        local app = {
+            engine = eng,
+            running = true,
+            now_ms = 1100,
+        }
+
+        assert_true(type(main_mod.shutdown_app) == "function")
+        main_mod.shutdown_app(app)
+
+        assert_false(app.running)
+        assert_eq(eng.state, "ABORTED")
+        assert_false(rs.getOutput("bottom"))
+        assert_false(m.isOpen(10020))
+    end)
 end)

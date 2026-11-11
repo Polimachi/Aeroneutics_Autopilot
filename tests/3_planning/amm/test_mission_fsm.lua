@@ -278,4 +278,90 @@ describe("AMM Mission Engine Polymorphic Loader and Sequencer FSM", function()
         assert_eq(reason, "DEFERRED_ACTION_UNSUPPORTED")
         assert_eq(eng.state, "ABORTED")
     end)
+
+    it("preserves onAbort REDSTONE_PULSE on abort/stop and expires pulse via engine:tick", function()
+        local eng, _, _, rs = create_engine_fixture()
+        assert_true(eng:load_table({
+            missionId = "ABORT_PULSE_TEST",
+            checkpoints = {
+                {
+                    checkpointId = "CP_01",
+                    action = "FLY_TO",
+                    params = { targetPos = { x = 100, z = 100 } },
+                    onAbort = { { type = "REDSTONE_PULSE", side = "left", durationMs = 600 } },
+                    abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 2 } } },
+                },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        assert_false(rs.getOutput("left"))
+
+        -- Timeout triggers abort at 3500ms
+        local st = eng:tick(3500)
+        assert_eq(st, "ABORTED")
+        assert_eq(eng.state, "ABORTED")
+        -- Pulse must be ACTIVE right after abort
+        assert_true(rs.getOutput("left"))
+
+        -- Intermediate tick before expiration (3800ms < 3500 + 600 = 4100ms)
+        eng:tick(3800)
+        assert_true(rs.getOutput("left"))
+
+        -- Tick at 4100ms expires pulse
+        eng:tick(4100)
+        assert_false(rs.getOutput("left"))
+    end)
+
+    it("resets touchdownArmed in start() so restarting mission does not falsely complete touchdown while DISARMED", function()
+        local eng = create_engine_fixture()
+        assert_true(eng:load_table({
+            missionId = "LAND_RESTART_TEST",
+            checkpoints = {
+                {
+                    checkpointId = "CP_LAND",
+                    action = "LAND_LAUNCHPAD",
+                    params = { facilityId = "PAD_01" },
+                },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        -- Arm touchdown by simulating APPROACH_LAND state
+        eng:step_telemetry({ fsmState = "APPROACH_LAND" }, 1500)
+        assert_true(eng.touchdownArmed)
+
+        -- Complete touchdown by entering DISARMED
+        local st1 = eng:step_telemetry({ fsmState = "DISARMED" }, 2000)
+        assert_eq(st1, "COMPLETED")
+        assert_eq(eng.state, "COMPLETED")
+        assert_true(eng.touchdownArmed)
+
+        -- Restart mission in-place via start() without load_table()
+        assert_true(eng:start("SINGLE", 3000))
+        assert_false(eng.touchdownArmed)
+        -- When DISARMED telemetry arrives on launchpad, it must NOT immediately complete!
+        local st2 = eng:step_telemetry({ fsmState = "DISARMED" }, 3100)
+        assert_eq(st2, "ACTIVE")
+        assert_eq(eng.state, "EN_ROUTE")
+    end)
+
+    it("handles malformed currentPos = {} in PATROL without crashing step_telemetry", function()
+        local eng = create_engine_fixture()
+        assert_true(eng:load_table({
+            missionId = "PATROL_MALFORMED_TEST",
+            checkpoints = {
+                {
+                    checkpointId = "CP_PAT",
+                    action = "PATROL",
+                    params = {
+                        waypoints = { { x = 10, z = 20 }, { x = 30, z = 40 } },
+                    },
+                },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        -- Send telemetry with empty currentPos table {} (GPS fix loss)
+        local st = eng:step_telemetry({ fsmState = "CRUISE", navigation = { currentPos = {} } }, 1200)
+        assert_eq(st, "ACTIVE")
+        assert_eq(eng.state, "EN_ROUTE")
+    end)
 end)

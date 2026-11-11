@@ -199,6 +199,18 @@ local function try_auto_start_mission(engine, auto_spec, now_ms, cfg)
     end
 end
 
+local function shutdown_app(app)
+    if not app then return end
+    if app.engine then
+        local now_ms = get_now_ms(app)
+        app.engine:stop(now_ms)
+        if app.engine.hook_runner then
+            app.engine.hook_runner:cleanup()
+        end
+    end
+    app.running = false
+end
+
 local function main_loop(config_path)
     local cfg = load_config(config_path)
     local queue = waypoint_queue.new(cfg)
@@ -234,11 +246,12 @@ local function main_loop(config_path)
     while app.running do
         local ev, p1, p2, p3, p4, p5 = os.pullEventRaw()
         if ev == "terminate" then
-            app.running = false
+            shutdown_app(app)
         else
             process_event(app, ev, p1, p2, p3, p4, p5)
         end
     end
+    shutdown_app(app)
 end
 
 if _G.describe == nil and (...) ~= "main" and (not ... or type(...) == "string") then
@@ -251,4 +264,5 @@ return {
     process_event = process_event,
     main_loop = main_loop,
     try_auto_start_mission = try_auto_start_mission,
+    shutdown_app = shutdown_app,
 }
