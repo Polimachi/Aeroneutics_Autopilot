@@ -62,7 +62,7 @@ local function standaloneLocate(altitudeY, timeoutSec)
             local timerId = eventData[2]
             if timerId == tHalf and not retried then
                 retried = true
-                local _, retryPkt = instance:nextRequestPacket(altitudeY, os.epoch("utc"), seq)
+                local _, retryPkt = instance:nextRequestPacket(altitudeY, os.epoch and os.epoch("utc") or 0, seq)
                 modem.transmit(protocol.CH_GPS_PING, instance.replyChannel, retryPkt)
             elseif timerId == tEnd then
                 return nil, nil, nil, { status = "TIMEOUT" }
@@ -84,20 +84,77 @@ end
 
 function gps_client.locate(altitudeY, timeoutSec)
     if instance.isManaged then
-        local seq = gps_client.request(altitudeY)
-        local totalTimeout = tonumber(timeoutSec) or 0.5
-        local deadline = (os.epoch and os.epoch("utc") or 0) + totalTimeout * 1000
-        while (os.epoch and os.epoch("utc") or 0) < deadline do
+        local modem = peripheral and peripheral.find and peripheral.find("modem")
+        if not modem then return nil, nil, nil, { status = "NO_MODEM" } end
+        local startMs = os.epoch and os.epoch("utc") or 0
+        local seq, pkt = instance:nextRequestPacket(altitudeY, startMs)
+        modem.transmit(protocol.CH_GPS_PING, instance.replyChannel, pkt)
+        local totalMs = (tonumber(timeoutSec) or 0.5) * 1000
+        local halfAtMs = startMs + totalMs * 0.5
+        local deadline = startMs + totalMs
+        local retried = false
+        while true do
             local fix = instance:poll(seq)
             if fix then
                 if fix.position then return fix.position.x, altitudeY, fix.position.z, fix end
                 return nil, nil, nil, fix
+            end
+            local nowMs = os.epoch and os.epoch("utc") or 0
+            if nowMs >= deadline then break end
+            if not retried and nowMs >= halfAtMs then
+                retried = true
+                local _, retryPkt = instance:nextRequestPacket(altitudeY, nowMs, seq)
+                modem.transmit(protocol.CH_GPS_PING, instance.replyChannel, retryPkt)
             end
             sleep(0.05)
         end
         return nil, nil, nil, { status = "TIMEOUT" }
     else
         return standaloneLocate(altitudeY, timeoutSec)
+    end
+end
+
+function gps_client.requestStatus(queryType, replyChannel)
+    local modem = peripheral and peripheral.find and peripheral.find("modem")
+    if not modem then error("No modem attached for GPS client", 2) end
+    local nowMs = os.epoch and os.epoch("utc") or 0
+    local seq, pkt = instance:nextStatusRequestPacket(queryType, nowMs)
+    modem.transmit(protocol.CH_GPS_SERVICE, tonumber(replyChannel) or protocol.CH_GPS_SERVICE, pkt)
+    return seq
+end
+
+function gps_client.pollStatus()
+    return instance:pollStatus()
+end
+
+function gps_client.queryStatus(timeoutSec, queryType)
+    if instance.isManaged then
+        gps_client.requestStatus(queryType, protocol.CH_GPS_SERVICE)
+        local deadline = (os.epoch and os.epoch("utc") or 0) + (tonumber(timeoutSec) or 0.5) * 1000
+        while (os.epoch and os.epoch("utc") or 0) < deadline do
+            local st = instance:pollStatus()
+            if st then return st, nil end
+            sleep(0.05)
+        end
+        return nil, "TIMEOUT"
+    end
+    local modem = peripheral and peripheral.find and peripheral.find("modem")
+    if not modem then return nil, "NO_MODEM" end
+    modem.open(protocol.CH_GPS_SERVICE)
+    local nowMs = os.epoch and os.epoch("utc") or 0
+    local _, pkt = instance:nextStatusRequestPacket(queryType, nowMs)
+    modem.transmit(protocol.CH_GPS_SERVICE, protocol.CH_GPS_SERVICE, pkt)
+    local tEnd = os.startTimer(tonumber(timeoutSec) or 0.5)
+    while true do
+        local evData = { os.pullEvent() }
+        if evData[1] == "timer" and evData[2] == tEnd then
+            return nil, "TIMEOUT"
+        elseif evData[1] == "modem_message" then
+            if instance:handleMessage(evData[3], evData[5], os.epoch and os.epoch("utc") or 0) then
+                local st = instance:pollStatus()
+                if st then return st, nil end
+            end
+        end
     end
 end
 

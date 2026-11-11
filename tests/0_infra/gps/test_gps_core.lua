@@ -647,3 +647,113 @@ describe("gps server handlers, CH 60002 status, nodes.json schema, and monitor_u
         assert_true(m._transmitted[2].pkt.payload.status == "FIX_OK" or m._transmitted[2].pkt.payload.status == "FIX_DEGRADED")
     end)
 end)
+
+describe("gps client_core TTL pruning and CH 60002 status dispatch", function()
+    it("prunes pendingResponses older than 5000ms while preserving active entries", function()
+        local c = client_core.new()
+        c:init("AIRCRAFT_01", "AIRCRAFT")
+        local r1 = protocol.buildResponse("GPS_BASE_NET", 1, {
+            targetClient = "AIRCRAFT_01", clientSeq = 1, status = "FIX_OK",
+            position = { x = 10, z = 20 }, accuracy = 0.1, hdop = 1.0, nodeCount = 4
+        }, 1000)
+        local r2 = protocol.buildResponse("GPS_BASE_NET", 2, {
+            targetClient = "AIRCRAFT_01", clientSeq = 2, status = "FIX_OK",
+            position = { x = 30, z = 40 }, accuracy = 0.1, hdop = 1.0, nodeCount = 4
+        }, 5500)
+        assert_true(c:handleMessage(10005, r1, 1000))
+        assert_true(c:handleMessage(10005, r2, 5500))
+        -- Advance beyond 1000 + 5000 = 6000 on next request or message
+        local _, _ = c:nextRequestPacket(80, 6200)
+        assert_nil(c:poll(1), "Expired unpolled entry (>5000ms) must be pruned")
+        local live = c:poll(2)
+        assert_not_nil(live)
+        assert_eq(live.position.x, 30)
+    end)
+
+    it("builds MSG_GPS_STATUS_REQ and consumes MSG_GPS_STATUS_RESP on CH 60002", function()
+        local c = client_core.new()
+        c:init("AIRCRAFT_01", "AIRCRAFT")
+        local seq, reqPkt = c:nextStatusRequestPacket("SUMMARY", 1000)
+        assert_eq(seq, 1)
+        assert_true(protocol.validatePacket(reqPkt, protocol.MSG_STATUS_REQ))
+
+        local stResp = protocol.buildStatusResp("GPS_BASE_NET", 5, {
+            activeNodes = 4, uptime = 120, totalSolved = 42, version = "1.9.5"
+        }, 1020)
+        assert_false(c:handleMessage(99999, stResp, 1020))
+        assert_true(c:handleMessage(protocol.CH_GPS_SERVICE, stResp, 1020))
+
+        local polled = c:pollStatus()
+        assert_not_nil(polled)
+        assert_eq(polled.activeNodes, 4)
+        assert_eq(polled.totalSolved, 42)
+        assert_nil(c:pollStatus())
+    end)
+end)
+
+describe("gps_client HAL managed retry parity and status query", function()
+    local gps_client = require("gps_client")
+
+    it("retries once at half-timeout with identical clientSeq when isManaged is true", function()
+        local m = mock.modem({ wireless = true })
+        sdk.patch(peripheral, "find", function(ptype)
+            if ptype == "modem" then return m end
+            return nil
+        end)
+        gps_client.init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        gps_client.setManaged(true)
+
+        local nowMs = 1000
+        local sleepCalls = 0
+        sdk.with_events_allowed(function()
+            sdk.patch(os, "epoch", function() return nowMs end)
+            sdk.patch(_G, "sleep", function(sec)
+                sleepCalls = sleepCalls + 1
+                nowMs = nowMs + math.floor((tonumber(sec) or 0.05) * 1000)
+                if sleepCalls == 6 and #m._transmitted >= 2 then
+                    local secondSeq = m._transmitted[2].pkt.payload.clientSeq
+                    local resp = protocol.buildResponse("GPS_BASE_NET", 1, {
+                        targetClient = "AIRCRAFT_01",
+                        clientSeq = secondSeq,
+                        status = "FIX_OK",
+                        position = { x = 250.0, z = -125.0 },
+                        accuracy = 0.2,
+                        hdop = 1.1,
+                        nodeCount = 4,
+                    }, nowMs)
+                    gps_client.handleMessage("top", 10005, 60002, resp, 10)
+                end
+            end)
+            local x, y, z, meta = gps_client.locate(120.0, 0.5)
+            assert_near(x, 250.0, 1e-4)
+            assert_eq(y, 120.0)
+            assert_near(z, -125.0, 1e-4)
+            assert_eq(meta.status, "FIX_OK")
+        end)
+        gps_client.setManaged(false)
+        assert_eq(#m._transmitted, 2, "isManaged locate must emit initial + 1 half-timeout retry")
+        assert_eq(m._transmitted[1].pkt.payload.clientSeq, m._transmitted[2].pkt.payload.clientSeq)
+    end)
+
+    it("exposes requestStatus and pollStatus over CH 60002", function()
+        local m = mock.modem({ wireless = true })
+        sdk.patch(peripheral, "find", function(ptype)
+            if ptype == "modem" then return m end
+            return nil
+        end)
+        gps_client.init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        local seq = gps_client.requestStatus("SUMMARY", protocol.CH_GPS_SERVICE)
+        assert_true(seq >= 1)
+        assert_eq(m._transmitted[1].tx, protocol.CH_GPS_SERVICE)
+        assert_eq(m._transmitted[1].rx, protocol.CH_GPS_SERVICE)
+        assert_eq(m._transmitted[1].pkt.type, protocol.MSG_STATUS_REQ)
+
+        local resp = protocol.buildStatusResp("GPS_BASE_NET", 2, {
+            activeNodes = 5, uptime = 60, totalSolved = 9, version = "1.9.5"
+        }, 2000)
+        assert_true(gps_client.handleMessage("top", protocol.CH_GPS_SERVICE, protocol.CH_GPS_SERVICE, resp, 0))
+        local polled = gps_client.pollStatus()
+        assert_not_nil(polled)
+        assert_eq(polled.activeNodes, 5)
+    end)
+end)
