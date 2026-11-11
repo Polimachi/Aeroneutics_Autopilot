@@ -702,6 +702,12 @@ end
 function mission_engine:enter_checkpoint(index, now_ms)
     local cp = self.checkpoints[index]
     if not cp then return false, "INVALID_INDEX" end
+    if mission_engine.is_action_deferred(cp.action) then
+        self.hook_runner:cleanup()
+        cp.status = "ABORTED"
+        self.state = "ABORTED"
+        return false, mission_engine.DEFERRED_ERROR
+    end
     self.active_index = index
     self.enteredAtMs = get_time_ms(now_ms)
     cp.status = "ACTIVE"
@@ -731,7 +737,10 @@ function mission_engine:advance(now_ms)
     self.hook_runner:clear_step_state()
     local next_idx = self.active_index + 1
     if next_idx <= #self.checkpoints then
-        self:enter_checkpoint(next_idx, now_ms)
+        local ok, err = self:enter_checkpoint(next_idx, now_ms)
+        if not ok then
+            return "ABORTED", err
+        end
         return "ADVANCED"
     end
     if self.executionMode == "REPEAT" then
@@ -740,7 +749,10 @@ function mission_engine:advance(now_ms)
         if self.checkpoints[1] and self.checkpoints[1].action == "TAKEOFF_LAUNCHPAD" and #self.checkpoints >= 2 then
             wrap_idx = 2
         end
-        self:enter_checkpoint(wrap_idx, now_ms)
+        local ok, err = self:enter_checkpoint(wrap_idx, now_ms)
+        if not ok then
+            return "ABORTED", err
+        end
         return "LOOPED"
     end
     self.state = "COMPLETED"
@@ -765,6 +777,12 @@ function mission_engine:evaluate_active(now_ms)
         checkpoint = cp,
     }
     local res = condition_evaluator.evaluate_checkpoint(cp, ctx, self.defaults)
+    if res.error == mission_engine.DEFERRED_ERROR then
+        self.hook_runner:cleanup()
+        cp.status = "ABORTED"
+        self.state = "ABORTED"
+        return "ABORTED", mission_engine.DEFERRED_ERROR
+    end
     self.lastConditionSummary = res.summary or "NONE"
     if res.aborted then
         return self:apply_abort(cp, now_ms)
@@ -820,7 +838,10 @@ function mission_engine:start(execution_mode, now_ms)
     if execution_mode then self.executionMode = execution_mode end
     for _, cp in ipairs(self.checkpoints) do cp.status = nil end
     self.state = "EN_ROUTE"
-    self:enter_checkpoint(1, now_ms)
+    local ok, err = self:enter_checkpoint(1, now_ms)
+    if not ok then
+        return false, err
+    end
     return true, nil
 end
 
@@ -840,7 +861,7 @@ end
 function mission_engine:pause()
     if self.state ~= "EN_ROUTE" then return false end
     self.hook_runner:cleanup()
-    self.state = "PAUSED"
+    self.state = "SUSPENDED"
     if self.net then
         self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
     end
@@ -848,7 +869,7 @@ function mission_engine:pause()
 end
 
 function mission_engine:resume(now_ms)
-    if self.state ~= "PAUSED" then return false end
+    if self.state ~= "SUSPENDED" then return false end
     self.state = "EN_ROUTE"
     self:enter_checkpoint(self.active_index, now_ms)
     return true
@@ -865,7 +886,10 @@ function mission_engine:skip_next(now_ms)
     self.hook_runner:cleanup()
     local next_idx = self.active_index + 1
     if next_idx <= #self.checkpoints then
-        self:enter_checkpoint(next_idx, now_ms)
+        local ok, err = self:enter_checkpoint(next_idx, now_ms)
+        if not ok then
+            return false, err
+        end
         return true, "ADVANCED"
     end
     self.state = "COMPLETED"
@@ -878,7 +902,10 @@ function mission_engine:goto_index(index, now_ms)
     end
     self.hook_runner:cleanup()
     self.state = "EN_ROUTE"
-    self:enter_checkpoint(index, now_ms)
+    local ok, err = self:enter_checkpoint(index, now_ms)
+    if not ok then
+        return false, err
+    end
     return true
 end
 

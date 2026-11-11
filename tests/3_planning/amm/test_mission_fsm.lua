@@ -231,4 +231,51 @@ describe("AMM Mission Engine Polymorphic Loader and Sequencer FSM", function()
         eng:step_telemetry({ fsmState = "CRUISE", fuel = 0.20, dynamics = { altitudeY = 150 }, navigation = { currentPos = { x = 100, z = 100 } } }, 9100)
         assert_eq(m._transmitted[#m._transmitted].pkt.payload.flightMode, "LOITER")
     end)
+
+    it("transitions pause and resume through canonical SUSPENDED state and rejects deferred actions at runtime", function()
+        local eng, _, m = create_engine_fixture()
+        assert_true(eng:load_table({
+            missionId = "SUSPEND_TEST",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "FLY_OVER", params = { targetPos = { x = 100, z = 100 } } },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        assert_eq(eng.state, "EN_ROUTE")
+
+        -- Pause transitions to SUSPENDED and commands LOITER standby
+        assert_true(eng:pause())
+        assert_eq(eng.state, "SUSPENDED")
+        assert_false(eng:pause()) -- Already SUSPENDED
+        local pause_cmd = m._transmitted[#m._transmitted].pkt.payload
+        assert_eq(pause_cmd.command, "LOITER")
+        assert_eq(pause_cmd.flightMode, "LOITER")
+
+        -- Resume restores EN_ROUTE and re-dispatches checkpoint
+        assert_true(eng:resume(1500))
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_false(eng:resume(1600)) -- Already EN_ROUTE
+        local resume_cmd = m._transmitted[#m._transmitted].pkt.payload
+        assert_eq(resume_cmd.command, "CRUISE")
+
+        -- Inject deferred action and verify runtime rejection in enter_checkpoint / goto_index
+        table.insert(eng.checkpoints, {
+            checkpointId = "CP_DEF_RUNWAY",
+            action = "TAKEOFF_RUNWAY",
+            params = {},
+        })
+        local ok_goto, err_goto = eng:goto_index(2, 2000)
+        assert_false(ok_goto)
+        assert_eq(err_goto, "DEFERRED_ACTION_UNSUPPORTED")
+        assert_eq(eng.state, "ABORTED")
+        assert_eq(eng.checkpoints[2].status, "ABORTED")
+
+        -- Also verify evaluate_active handles DEFERRED_ACTION_UNSUPPORTED
+        eng.state = "EN_ROUTE"
+        eng.active_index = 2
+        local st, reason = eng:evaluate_active(3000)
+        assert_eq(st, "ABORTED")
+        assert_eq(reason, "DEFERRED_ACTION_UNSUPPORTED")
+        assert_eq(eng.state, "ABORTED")
+    end)
 end)
