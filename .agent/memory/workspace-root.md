@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-12 — TASK-122 GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 보완 완료
+
+- **결정 배경**: 중앙 GPS 클러스터(`server.lua`, `session_scheduler.lua`, `node.lua`, `monitor_ui.lua`, `wizard_cli.lua`), GPS Client HAL(`client_core.lua`, `gps_client.lua`), 착륙패드(`src/0_infra/landing_pad/`) 및 FCP(`src/2_guidance/fcp/`) 간 패킷 스키마(`"FACILITY"`, `"FIX_OK"`/`"FIX_DEGRADED"`, `time` 헤더), 응답 채널(`replyChannel`/`50206`), 재시도·만료·TTL 처리가 서로 어긋나 있던 결함을 사양서 기준으로 단일화하고 실노드 폐루프 E2E로 검증함.
+- **반영 내역**:
+  1. **사양서 개정 및 배지·의사코드 동기화 (`TASK-122-1`, `1bf123a`, `83f8758` → `Implemented` 승격)**: `docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md` (`v2.2.2` → `v2.3.0 Approved` → `2026-11-12 Implemented`), 마스터 ICD(`v1.27.0`), 전체 구조도(`v2.12.1`), 착륙패드(`v2.4.2`), FCP(`v1.16.0`) 참조 배지 및 `isManaged` 재시도/`fix.position` 가드 정합화.
+  2. **GPS 클러스터 서버·노드·UI·커미셔닝 (`TASK-122-2`, `195cf8f`, `53aa25f`)**: `EARLY_SOLVED` 원요청 `replyChannel` 반환, `FAIL_GEOMETRY` 150ms 단기 툼스톤(250ms 재시도 허용) 및 HWM 비갱신, 만료 세션 결정론적 정렬, 미등록 하트비트 게이트, `CH 60002` 클러스터 상태 응답, `payload.pos`, `monitor_ui.lua` `%-10s`, `wizard_cli.writeJsonAtomic` 적용.
+  3. **GPS Client HAL (`TASK-122-3`, `bece209`, `aa7a52c`)**: `client_core.lua` `pendingResponses` 5000ms TTL 정리, `gps_client.lua` `isManaged` 50% 타임아웃 재시도 동등성, 채널 정리, `CH 60002` `queryStatus` API 및 비진행 epoch 루프 방어 구현.
+  4. **착륙패드 & FCP 클라이언트 (`TASK-122-4` `bf1353f`·`133bc49`, `TASK-122-5` `b6db171`·`ead5a56`)**: 착륙패드 Zero-Fallback `config_store.normalize_config`·이중 주기(`1Hz`/`5Hz`/`STATIC`)·`Base_sec+5`(`50206`)·`"FACILITY"`/`"FIX_OK"`/`"FIX_DEGRADED"` 정합화; FCP `time` 엔벨로프 표준화·`targetClient`/`clientSeq` 및 `now_ms` 방어·경과시간 `delta_t`·`altitudeY` 동기화.
+  5. **실노드 폐루프 E2E (`TASK-122-6`, `tests/e2e/test_e2e_gps_triangulation.lua`)**: 가상 버스 상에서 4노드 `EARLY_SOLVED` + 스푸핑 차단 + `altitudeY` 동기화, 3노드 공선 `FAIL_GEOMETRY`(`bus.time = 2.080` >= `2070ms` 만료) + 250ms 재시도, `CH 60002` `SUMMARY` 상태 조회, 착륙패드 `FACILITY`(`50206`) + 재전송 차단을 폐루프로 검증. (참고: `virtual_bus:find_packets()`는 `bus:step()` 배달 이후 `packet_log`에 적재되며, `--headless` CraftOS-PC 4KB stdout 파이프 교착 방지를 위해 4노드 생성 전 `sdk.patch(_G, "print", function() end)` 적용.)
+- **검증**: 단위 12타겟 `390/390 PASS`(`gps` `27/27`, `landing_pad` `43/43`, `fcp` `49/49`, `ui_violation_count=0`, `event_swallow_count=0`, `static_violations=[]`), E2E 7시나리오 `8/8 PASS`(`gps_triangulation` `508.99ms`), 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `82/82 PASS`, Lua `129/129 PASS`, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_spec_status.py` `9 Implemented, 6 Approved PASS`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-11 — AMM v1.2.0 호스트 PC 외부 웹 GUI 미션 에디터 및 외부 파일 즉시 구동 사양 개정 (TASK-202-1)
 
 - **결정 배경**: CC:Tweaked 인게임 `51x19` 터미널의 협소한 해상도 제약을 보완하여 13종 액션·12종 복합 조건·4종 훅을 직관적으로 설계할 수 있는 외부 에디터와, 저작한 `.json` 파일을 인게임 컴퓨터에 바로 집어넣어 구동하는 파이프라인을 명세화함.

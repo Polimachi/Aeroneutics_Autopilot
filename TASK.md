@@ -1,8 +1,8 @@
 # Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
-> **최종 갱신일**: 2026-11-11  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-201, TASK-202-1~3 / 진행 중: TASK-202-4~5 / 활성 대기: TASK-010, 011, 117, 120, 122, 204, 401)
+> **최종 갱신일**: 2026-11-12  
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202-1~3 / 진행 중: TASK-202-4~5 / 활성 대기: TASK-010, 011, 117, 120, 204, 401)
 
 ---
 
@@ -59,18 +59,6 @@
     - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
-- [-] **TASK-122: GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 보강** (`src/0_infra/gps/`, `src/0_infra/landing_pad/`, `src/2_guidance/fcp/`, `tests/e2e/test_e2e_gps_triangulation.lua`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-122-gps-client-protocol-sync.md`
-  - **사양서 상태**: `docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md` (현재 v2.3.0 Approved → 목표 v2.3.0 Implemented), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.27.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.12.1 Approved), `docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md` (현재 v2.4.2 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v1.16.0 Implemented)
-  - **배경 및 목적**: 중앙 GPS 클러스터, GPS Client HAL, 착륙패드(`landing_pad`), FCP(`network_manager`/`nav_engine`) 간 와이어 프로토콜 불일치(`"FACILITY"`, `"FIX_OK"`/`"FIX_DEGRADED"`, `time` 헤더), `monitor_ui` 문자열 포맷 오류, `FAIL_GEOMETRY` 250ms 재시도 차단, `isManaged` 재시도 누락 및 채널 폴백(`60001`→`50206`)을 정합화하고 실노드 폐루프 E2E 시뮬레이션으로 검증
-  - **주요 작업**:
-    - [x] **TASK-122-1**: GPS 사양서 개정(`v2.3.0 Approved`) 및 마스터 ICD·전체 구조도·FCP·착륙패드 사양서 GPS 참조 배지 동기화
-    - [ ] **TASK-122-2**: GPS 서버·스케줄러·노드·모니터 UI·커미셔닝 수정 (`FAIL_GEOMETRY` 150ms 단기 툼스톤/HWM 비갱신, `EARLY_SOLVED` `replyChannel` 반환, `CH 60002` 상태 응답, `payload.pos`, `monitor_ui` `%-10s`, `wizard_cli.writeJsonAtomic`)
-    - [ ] **TASK-122-3**: GPS Client HAL 보강 (`client_core.lua` `pendingResponses` 5000ms TTL 정리, `gps_client.lua` `isManaged` 50% 타임아웃 재시도 동등성 및 `CH 60002` 상태 조회 API)
-    - [ ] **TASK-122-4**: 착륙패드 GPS 클라이언트 Zero-Fallback·설정 정규화 및 이중 주기(`1Hz`/`5Hz`/`STATIC`) 구현 (`config_store.normalize_config`, `setup_wizard`, `Base_sec+5` `50206`, `"FACILITY"`/`"FIX_OK"`/`"FIX_DEGRADED"`)
-    - [ ] **TASK-122-5**: FCP GPS 엔벨로프 `time` 표준화, `targetClient`/`clientSeq` 방어, 경과시간 기반 동역학 게이트 `delta_t` 및 `altitudeY` 동기화 (`network_manager.lua`, `nav_engine.lua`)
-    - [ ] **TASK-122-6**: Scenario 3 실노드 폐루프 E2E 검증(`test_e2e_gps_triangulation.lua`), GPS 사양서 `Implemented` 승격, 전계층 회귀 및 컨텍스트 문서 동기화
-
 - [-] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201[AMP 초안] + 203 통합)**
   - **선행 의존성**: `TASK-202-1~3` 및 `TASK-201` 완료로 `TASK-202-4`(TUI/CLI 확장) 및 `TASK-202-5`(멀티노드 E2E 시뮬레이션·사양서 승격) 즉시 진행 가능
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-2-amm-mission-core-hooks-zone3.md`, `docs/superpowers/plans/2026-11-11-task-202-3-amm-mission-fsm-c2-headless.md`, `docs/superpowers/plans/2026-11-11-task-202-4-amm-tui-resolver-drop-cli.md` (초안: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`)
@@ -118,6 +106,17 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-122: GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 보강** (완료일: 2026-11-12, 커밋 `1bf123a`, `83f8758`, `195cf8f`, `53aa25f`, `bece209`, `aa7a52c`, `bf1353f`, `133bc49`, `b6db171`, `ead5a56`) (`docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md` (v2.3.0 Implemented), `src/0_infra/gps/`, `src/0_infra/landing_pad/`, `src/2_guidance/fcp/`, `tests/e2e/test_e2e_gps_triangulation.lua`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-122-gps-client-protocol-sync.md`
+  - **목적 및 성과**: 중앙 GPS 클러스터(`server.lua`, `session_scheduler.lua`, `node.lua`, `monitor_ui.lua`, `wizard_cli.lua`), GPS Client HAL(`client_core.lua`, `gps_client.lua`), 착륙패드(`docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md` (v2.4.2 Implemented)), FCP(`docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Implemented)) 간 와이어 프로토콜 및 런타임 불일치를 정합화하고, Scenario 3 실노드 폐루프 E2E 검증으로 통합 동작을 확인함 (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (v1.27.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (v2.12.1 Approved)). 단위 390/390 PASS(12타겟: `gps` 27/27, `landing_pad` 43/43, `fcp` 49/49), E2E 8/8 PASS(7시나리오), 돌연변이 25/25 KILLED(100.0%), 하네스 82/82 PASS, Lua 129/129 PASS, 정적·사양서 15종(9 Implemented, 6 Approved) `0 Errors, 0 Warnings` 달성.
+  - **구현 내용**:
+    - [x] **TASK-122-1**: GPS 사양서(v2.3.0 Approved → Implemented) 개정 및 마스터 ICD(`v1.27.0`)·전체 구조도(`v2.12.1`)·FCP·착륙패드 사양서 GPS 참조 배지·재시도 의사코드 동기화 (`1bf123a`, `83f8758`)
+    - [x] **TASK-122-2**: GPS 서버·스케줄러·노드·모니터 UI·커미셔닝 수정 (`EARLY_SOLVED` `replyChannel` 반환, `FAIL_GEOMETRY` 150ms 단기 툼스톤 및 HWM 비갱신, 만료 세션 결정론적 정렬, 미등록 하트비트 게이트, `CH 60002` 상태 응답, `payload.pos`, `monitor_ui` `%-10s`, `wizard_cli.writeJsonAtomic`) (`195cf8f`, `53aa25f`)
+    - [x] **TASK-122-3**: GPS Client HAL 보강 (`client_core.lua` `pendingResponses` 5000ms TTL 정리, `gps_client.lua` `isManaged` 50% 타임아웃 재시도 동등성, 채널 정리 및 `CH 60002` `queryStatus` API) (`bece209`, `aa7a52c`)
+    - [x] **TASK-122-4**: 착륙패드 GPS 클라이언트 Zero-Fallback·설정 정규화 및 이중 주기(`1Hz`/`5Hz`/`STATIC`) 구현 (`config_store.normalize_config`, `setup_wizard`, `Base_sec+5` `50206`, `"FACILITY"`/`"FIX_OK"`/`"FIX_DEGRADED"`, 이동성 정규화 및 플랫 채널 우선순위) (`bf1353f`, `133bc49`)
+    - [x] **TASK-122-5**: FCP GPS 엔벨로프 `time` 표준화, `targetClient`/`clientSeq` 및 `now_ms` 방어, 경과시간 기반 동역학 게이트 `delta_t` 및 `altitudeY` 동기화 (`network_manager.lua`, `nav_engine.lua`) (`b6db171`, `ead5a56`)
+    - [x] **TASK-122-6**: Scenario 3 실노드 폐루프 E2E 검증(`test_e2e_gps_triangulation.lua`: FCP 4노드 `EARLY_SOLVED`/스푸핑 차단/`altitudeY`, 3노드 공선 `FAIL_GEOMETRY` 및 250ms 재시도, `CH 60002` 상태 조회, 착륙패드 `FACILITY` `50206`/재전송 거부), GPS 사양서 `Implemented` 승격, 전계층 회귀 및 컨텍스트 동기화
 
 - [x] **TASK-201: FCP 외루프 유도 프리미티브(`LOITER` 선회 반경 제어 & `POI_HOLD` 관심점 지향) 확장** (완료일: 2026-11-11, 커밋 `d3c5fef`, `ddaf428`, `f218830`, `ecff4f4`, `fb08520`) (`docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (v1.16.0 Implemented), `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`, `tests/e2e/`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-201-fcp-loiter-poi-hold.md`
@@ -204,14 +203,3 @@
     - [x] **TASK-115-5**: FCP 외루프 `advanced_vtol_driver.lua` 및 가이던스 연동 (`src/2_guidance/fcp/`)
     - [x] **TASK-115-6**: 지상 인프라 및 미션 시스템 호환 (GAC, Landing Pad, GCS, Installer)
     - [x] **TASK-115-7**: 전계층 검증(293/293 unit, 6/6 E2E, 20/20 mutation, 33/33 harness), 사양서 4종 `Implemented` 승격
-
-- [x] **TASK-007: 구버전 명칭(UAP/SAS/WAP) 전면 척결 및 회귀 방지 테스트 슈트 구축** (완료일: 2026-11-08) (`tests/harness/test_terminology_guard.py`, `tools/verify_all_specs.py`, `src/`, `tests/`, `docs/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-legacy-terminology-elimination-and-test-suite.md`
-  - **목적 및 성과**: 비행 제어 및 공력 구동계 관련 구버전 잔존 명칭(`UAP`, `SAS`, `WAP`) 소급 전면 삭제(Zero-Tolerance Purge) 및 풀 마이그레이션(Full Migration) 완료. 유선 패킷 `podId`(`"ASA_L"`, `"ASA_R"`, `"ASA_T"`), 텔레메트리 헬스 키(`actuatorHealth.asa`), 모듈 파일명(`actuator_adapter_asa.lua`, `node_asa.lua`, `node_asa_sim.lua`) 일체 통일. 회귀 방지 테스트(`test_terminology_guard.py`) 및 정적 분석기(`verify_all_specs.py` Rule 8) 구축하여 14대 사양서 및 런타임/테스트 코드 0건 검출 확인(2026-11-08 실행 기준). 전체 12개 타겟 단위 테스트 248/248 PASS, E2E 시뮬레이션 6/6 PASS, 돌연변이 살상률 100.0%(20/20 KILLED), 하네스 테스트 33/33 PASS, 14대 사양서 0 Errors/0 Warnings(8 Implemented, 6 Approved) 달성.
-  - **구현 내용**:
-    - [x] **TASK-007-1**: 워크트리(`.worktrees/task-legacy-terminology`) 격리 및 회귀 테스트(`tests/harness/test_terminology_guard.py`, 4/4 PASS) 신설
-    - [x] **TASK-007-2**: 사양서 무결성 검증기(`tools/verify_all_specs.py`) Rule 8 용어 위생 검사 통합
-    - [x] **TASK-007-3**: 런타임 모듈 파일 개명 및 소스/테스트 코드 내 식별자 치환 (`actuator_adapter_asa.lua`, `node_asa.lua`, `node_asa_sim.lua`, `state_machine.lua`, `core_daemon.lua`, `network_manager.lua` 등 22개 파일)
-    - [x] **TASK-007-4**: 핵심 4대 사양서(`ICD` v1.24.0, `VAS` v1.17.0, `FCP` v1.14.0, `ASA` v1.6.0) 용어 소급 척결 및 SemVer 마이너 승격
-    - [x] **TASK-007-5**: 연관 10대 사양서(`SYSTEM_DIAGRAM` v2.10.1, `ALIGNMENT` v2.5.2, `GPS` v2.2.2, `GAC` v1.4.1, `DOCKING_ARM` v1.11.1, `LANDING_PAD` v2.4.2, `RUNWAY` v1.10.6, `GCS` v1.0.1, `TCA` v1.10.1, `AMM` v1.0.1) 용어 정비 및 SemVer 패치 승격
-    - [x] **TASK-007-6**: 전체 파이프라인 일괄 검증 및 사양서 상태(`VAS`, `FCP` $\to$ `Implemented`) 환원
