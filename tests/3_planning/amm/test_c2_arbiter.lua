@@ -3,7 +3,7 @@ local waypoint_queue = require("waypoint_queue")
 local network_manager = require("network_manager")
 local c2_arbiter = require("c2_arbiter")
 
-describe("AMM C2 Arbiter, Authority Switching & Queue FSM", function()
+describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", function()
     local function create_fixture()
         local q = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
@@ -117,5 +117,95 @@ describe("AMM C2 Arbiter, Authority Switching & Queue FSM", function()
         local final_tx = tx[#tx].payload.payload
         assert_eq(final_tx.flightMode, "LANDING")
         assert_eq(final_tx.params.designatedFacilityId, "PAD_BRAVO_01")
+    end)
+
+    it("arbitrates Base+0 MSG_MISSION_CMD (RUN, BUSY_REJECTED, forceRestart, FILE_NOT_FOUND, DEFERRED, STOP/PAUSE/RESUME/NEXT) and sends MSG_MISSION_ACK", function()
+        local mission_engine = require("mission_engine")
+        local q, net, arb, tx = create_fixture()
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        -- Write valid and deferred mission files
+        local f_ok = fs.open("missions/patrol_alpha.json", "w")
+        f_ok.write(textutils.serializeJSON({
+            missionId = "PATROL_ALPHA",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "FLY_OVER", params = { targetPos = { x = 100, z = 200 }, targetAlt = 150, cruiseSpeed = 18 } },
+                { checkpointId = "CP_02", action = "ORBIT", params = { targetPos = { x = 300, z = 400 }, radius = 35, direction = "CW" } },
+            },
+        }))
+        f_ok.close()
+
+        local f_def = fs.open("missions/runway_sortie.json", "w")
+        f_def.write(textutils.serializeJSON({
+            missionId = "RUNWAY_SORTIE",
+            checkpoints = {
+                { checkpointId = "CP_RWY", action = "TAKEOFF_RUNWAY", params = {} },
+            },
+        }))
+        f_def.close()
+
+        -- 1. Missing file -> FILE_NOT_FOUND
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "nonexistent_mission", executionMode = "SINGLE" },
+        }, 1000)
+        assert_eq(tx[#tx].payload.type, "MSG_MISSION_ACK")
+        assert_eq(tx[#tx].payload.payload.status, "FILE_NOT_FOUND")
+
+        -- 2. Deferred action -> DEFERRED_ACTION_UNSUPPORTED
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "runway_sortie", executionMode = "SINGLE" },
+        }, 1100)
+        assert_eq(tx[#tx].payload.type, "MSG_MISSION_ACK")
+        assert_eq(tx[#tx].payload.payload.status, "DEFERRED_ACTION_UNSUPPORTED")
+
+        -- 3. Valid RUN -> ACCEPTED, engine EN_ROUTE at index 1
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "patrol_alpha", executionMode = "SINGLE", forceRestart = false },
+        }, 1200)
+        local ack_run = tx[#tx].payload.payload
+        assert_eq(ack_run.status, "ACCEPTED")
+        assert_eq(ack_run.missionId, "PATROL_ALPHA")
+        assert_eq(ack_run.missionState, "EN_ROUTE")
+        assert_eq(ack_run.activeIndex, 1)
+        assert_eq(ack_run.totalCheckpoints, 2)
+
+        -- 4. Duplicate RUN while EN_ROUTE with forceRestart = false -> BUSY_REJECTED
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "patrol_alpha", forceRestart = false },
+        }, 1300)
+        assert_eq(tx[#tx].payload.payload.status, "BUSY_REJECTED")
+
+        -- 5. NEXT -> advances to index 2 and replies ACCEPTED
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "NEXT" },
+        }, 1400)
+        assert_eq(tx[#tx].payload.payload.status, "ACCEPTED")
+        assert_eq(tx[#tx].payload.payload.activeIndex, 2)
+
+        -- 5b. RUN while EN_ROUTE with forceRestart = true -> resets to index 1 and replies ACCEPTED
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionName = "patrol_alpha", forceRestart = true },
+        }, 1450)
+        assert_eq(tx[#tx].payload.payload.status, "ACCEPTED")
+        assert_eq(tx[#tx].payload.payload.activeIndex, 1)
+
+        -- 6. PAUSE / RESUME / STOP
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "PAUSE" } }, 1500)
+        assert_eq(eng.state, "SUSPENDED")
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "RESUME" } }, 1600)
+        assert_eq(eng.state, "EN_ROUTE")
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "STOP" } }, 1700)
+        assert_eq(eng.state, "ABORTED")
+        assert_eq(tx[#tx].payload.payload.missionState, "ABORTED")
+
+        fs.delete("missions/patrol_alpha.json")
+        fs.delete("missions/runway_sortie.json")
     end)
 end)
