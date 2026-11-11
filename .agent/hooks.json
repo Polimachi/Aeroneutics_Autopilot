@@ -1,0 +1,20 @@
+{
+  "context-doc-guard": {
+    "SessionStart": [
+      { "type": "command", "command": "python hooks/context_doc_guard.py session-start", "timeout": 10 }
+    ],
+    "Stop": [
+      { "type": "command", "command": "python hooks/context_doc_guard.py stop", "timeout": 15 }
+    ]
+  },
+  "git-guardrails": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          { "type": "command", "command": "python hooks/block_dangerous_git.py", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
