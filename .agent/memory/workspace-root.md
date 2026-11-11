@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-11 — AMM v1.1.0 통합 미션 시퀀서 사양서 및 마스터 ICD·구조도 개정 (TASK-202-1)
+
+- **결정 배경**: 기존 Layer 3(AMM 단순 웨이포인트 큐)와 Layer 4(AMP 복합 미션 플래너 초안)로 이원화되어 있던 미션 시퀀서를 Node 03 단일 컴퓨터 내 3분할 코어(`mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua`)로 통합하고, 별도 RF 채널 추가 없이 `Base+0` 원격 미션 제어와 Zone 3(`Base+20~29`) 동적 탑재체 버스를 규격화함.
+- **반영 내역**:
+  1. **`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (`v1.0.1 Implemented` → `v1.1.0 Approved`)**: 13종 체크포인트 스키마(활성 9종 + 예약 4종 `DEFERRED_ACTION_UNSUPPORTED`), 12종 `completeWhen`/`abortWhen` 복합 조건 평가기, 0-tick 비차단 라이프사이클 훅(`onEnter`/`onExit`/`onAbort`), Zone 3(`Base+20~29`) 동적 탑재체 교신(`MSG_PAYLOAD_REQ`/`ACK`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 무인기 헤드리스(`config.headless`) 겸용 토폴로지, `51x19` TUI 6행 스크롤 뷰포트 + 5행 조건 진행률 및 `run`/`stop`/`next`/`mission` CLI 규격 수립 (`waypoint_queue.lua` 하위 호환 유지).
+  2. **`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.25.0` → `v1.26.0 Approved`)**: Interface I-6(`Base+0`)에 `MSG_MISSION_CMD`/`MSG_MISSION_ACK` 및 `MSG_OPERATOR_CMD` 확장 파라미터(`POI_HOLD`, `loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 반영, Interface I-11(`Base+20~29` Zone 3 탑재체 버스) 신설.
+  3. **`docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (`v2.11.0` → `v2.12.0 Approved`) & `tools/verify_spec_status.py`**: 패킷 교환 매트릭스(I-6, I-11) 및 Node 03 채널 매핑 갱신, 사양서 상태 분포(`9 Implemented, 6 Approved`) 및 `GEMINI.md`·`TASK.md` 동기화.
+- **검증**: `python tools/verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `python tools/verify_spec_status.py` `9 Implemented, 6 Approved` PASS, `python tools/verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-11 — 컨텍스트 문서 드리프트 가드 및 git.exe 차단 확장 (TASK-121)
 
 - **결정 배경**: 앞선 Mode B 감사에서 드러난 테스트 수치 3중 수기 관리(R1), 과장 금지어 검사기 부재(R2), Mode A 조건 제한에 의한 Tier 3 메모리 누락(R8), 사양서 버전·마커 어긋남(R3~R7)이 작업 완료 시 재발하지 않도록, 에이전트가 턴 종료 전 스스로 검출·수정하게 만드는 자동 가드를 구축함.

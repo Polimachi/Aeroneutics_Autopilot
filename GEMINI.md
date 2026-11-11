@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-121` 컨텍스트 문서 드리프트 가드(`verify_context_docs.py`, `Stop`/`PreToolUse` 훅, `git.exe` 경로 차단) 및 워크플로우 연동 (2026-11-11, 상세 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-202-1` AMM 통합 미션 엔진 사양서(`v1.1.0 Approved`), 마스터 ICD(`v1.26.0`), 구조도(`v2.12.0`) 개정 및 동기화 (2026-11-11, 상세 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
   1. `TASK-201`: FCP 사양서 v1.15.0 Implemented → v1.16.0 개정 후 `LOITER`/`POI_HOLD` 구현.
-  2. `TASK-202`: AMM 사양서 v1.0.1 Implemented → v1.1.0 개정 후 미션 엔진 구현.
+  2. `TASK-202`: AMM v1.1.0 3분할 미션 엔진(`mission_engine`, `condition_evaluator`, `hook_runner`) 본 구현(`TASK-202-2~5`).
   3. `TASK-010`: 플레이북 정적 검증기(`tools/verify_playbooks.py`) 및 핵심 5종 매뉴얼 작성.
 
 ## 2. Confirmed Architecture & Paths
@@ -21,7 +21,7 @@
 - `config/gdrive_mapping.json` & `dist_gdrive/` & `tools/sync_gdrive.py`: GDrive 배포 매핑 SSOT, 격리 스테이징, 동기화 CLI (가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
-- `.agent/`: 온디맨드 이력(`memory/workspace-root.md`), 규칙 3종(`rules/`), 전문 스킬 13종(`skills/`), 안전 훅(`hooks/`).
+- `.agent/`: 온디맨드 이력(`memory/workspace-root.md`), 규칙 3종(`rules/`), 전문 스킬 13종(`skills/`), 안전 훅(`hooks/`, `hooks.json`).
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
@@ -30,7 +30,7 @@
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (10 Implemented, 5 Approved).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (126 파일), `python tools/verify_spec_status.py` (9 Implemented, 6 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants

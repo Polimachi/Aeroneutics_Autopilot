@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.25.0` |
-| **최종 수정일 (Date)** | `2026-11-09` |
+| **문서 버전 (Version)** | `v1.26.0` |
+| **최종 수정일 (Date)** | `2026-11-11` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.26.0` | 2026-11-11 | 조종석 AMM(Node 03, v1.1.0) 통합 미션 시퀀서 인터페이스 반영: Interface I-6(`Base+0`)에 원격 미션 제어 패킷(`MSG_MISSION_CMD`/`MSG_MISSION_ACK`) 및 `MSG_OPERATOR_CMD` 확장 파라미터(`POI_HOLD`, `loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 추가, Interface I-11(`Base+20~29` Zone 3 탑재체 버스 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK`) 명세 신설 | TASK-202 통합 미션 시퀀서 엔진 및 Zone 3 탑재체 인터페이스 확립 |
 | `v1.25.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 기체 규격 추가, MSG_THRUST_CMD 다형성(polymorphic) outputs 스키마 정의, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 확장, 순수 추력형 비공력 특성(ASA 바이패스) 명시 | 고기동 짐벌 벡터 추진 VTOL 아키텍처 및 6-DoF 의사역행렬 제어 분배 지원 |
 | `v1.24.0` | 2026-11-08 | 유선 패킷 podId를 ASA_L/R/T로 완전 단일화, 텔레메트리 헬스 키 asa 반영, 구 명칭(구버전 명칭) 전면 소급 척결 | 인터페이스 표준화 및 용어 정비 |
 | `v1.23.0` | 2026-11-08 | ASA 적용 기체 범위 축소: VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체에서 ASA 동작 배제 및 FCP/VAS 비활성화 규격 동기화 | 비공력 순수 추력형 기체에서 공력 타면 지령 차단 및 스키마 직교성 확보 |
@@ -45,6 +46,7 @@
 > - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.1)에 상세 기술되어 있습니다.
 > - 고정익 활주로 및 항모 비행갑판의 가상 ILS, 유선 모뎀 조명망(PAPI/RWSL) 제어, 무선 상태 추적 및 유도로 GAC 연동 관제 명세는 **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.5)에 상세 기술되어 있습니다.
 > - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.11.0)에 상세 기술되어 있습니다.
+> - 조종석 통합 단말 및 미션 시퀀서(AMM, Node 03)의 3분할 미션 코어(`mission_engine`, `condition_evaluator`, `hook_runner`), 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 복합 조건 평가, 0-tick 라이프사이클 훅, Zone 3 탑재체 버스(`Base+20~29`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 무인기 헤드리스 모드 및 51x19 분할 TUI 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v1.1.0)에 상세 기술되어 있습니다.
 
 ### 1.1 공통 패킷 엔벨로프 (Common Message Envelope)
 CC:Tweaked Rednet 및 모뎀 전송의 직렬화 오버헤드를 최소화하고 고속 역직렬화를 보장하기 위해, 모든 메시지는 다음의 표준 공통 Lua 테이블 엔벨로프를 필수 적용합니다.
@@ -966,17 +968,17 @@ flowchart TD
 - **MFD 계기 화면 갱신 채널**: `CH_MFD_STATE` (`Base + 3`, 평시 FCP 5Hz / 급기동 Core 20Hz 직접 송출)
 
 #### 1. 오퍼레이터 명령 패킷 (`MSG_OPERATOR_CMD`, Base+0)
-- **C2 단일 진입 원칙**: MFD 및 GCS의 모든 일반 비행 모드(`TAKEOFF`, `CRUISE`, `LOITER`, `LANDING`, `DOCKING`), 웨이포인트, 목표 시설물 지정뿐만 아니라, **`RTH(자동 귀환)`**, **`HOVER_HOLD(긴급 홀드)`**, **`EMERGENCY_LAND(비상 착륙)`** 조작은 모두 `Base + 0`을 통해 fcp로 진입합니다.
+- **C2 단일 진입 원칙**: MFD(AMM) 및 GCS의 모든 일반 비행 모드(`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `LANDING`, `DOCKING`), 웨이포인트, 선회/관심점 파라미터, 목표 시설물 지정뿐만 아니라, **`RTH(자동 귀환)`**, **`HOVER_HOLD(긴급 홀드)`**, **`EMERGENCY_LAND(비상 착륙)`** 조작은 모두 `Base + 0`을 통해 FCP로 진입합니다.
 - **제어 권한 (`authority`)**: `PILOT_PRIMARY` (조종석 조종사 우선권) vs `GCS_OVERRIDE` (지상 관제 원격 권한).
 - **비상 조치 (`emergencyAction`)**:
   1. `NONE`: 정상 임무/비행 지령.
-  2. `RTH`: Return to Home (출발 기지 복귀 및 외루프 자동 착륙 기동).
+  2. `RTH`: Return to Home (출발 기지/최단거리 가용 패드 복귀 및 외루프 자동 착륙 기동).
   3. `HOVER_HOLD`: 현 위치 긴급 수평 복원 및 정지 체공 (외루프 위치 제어로 풍속 드리프트 억제).
   4. `EMERGENCY_LAND`: 동체 자세 제어형 비상 착륙 (선회 감속, 활공각 유도 및 정속 강하).
   *(참고: 하드 비상 차단인 `E_STOP`은 FCP를 우회하여 MFD/GCS에서 `Base + 1`로 `MSG_EMERGENCY_OVERRIDE`를 직결 송출)*
 
 ```lua
--- 조종석 MFD -> FCP 명령 예시 (Base+0)
+-- 조종석 MFD(AMM) -> FCP 명령 예시 (Base+0)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -985,13 +987,59 @@ flowchart TD
     time = 1729845000000,
     payload = {
         authority = "PILOT_PRIMARY",
+        command = "CRUISE",
         flightMode = "LANDING",
         params = {
+            targetWaypoint = { x = 450.0, z = -1200.0 },
             targetAlt = 72.0,
             targetSpeed = 10.0,
-            designatedFacilityId = "PAD_BRAVO_02"
+            designatedFacilityId = "PAD_BRAVO_02",
+            headingMode = "AUTO",        -- "AUTO" | "FIXED" | "POI"
+            fixedHeading = nil,          -- headingMode == "FIXED" 시 0~360 deg
+            poiTarget = nil,             -- headingMode == "POI" 또는 POI_HOLD 시 { x, y, z }
+            loiterRadius = 40.0,         -- LOITER(ORBIT) 반경 (m)
+            loiterDirection = "CW"       -- "CW" | "CCW"
         },
         emergencyAction = "NONE"
+    }
+}
+```
+
+#### 1-B. 원격 미션 시퀀서 제어 패킷 (`MSG_MISSION_CMD` / `MSG_MISSION_ACK`, Base+0)
+- **수신/발신자**: `GCS` $\leftrightarrow$ `AMM` (Node 03)
+- **동작 원리**: 별도 채널을 추가하지 않고 `Base + 0` (`CH_OPERATOR_C2`)에서 AMM이 `MSG_MISSION_CMD`를 수신하여 온보드 미션 시퀀서(`RUN`, `STOP`, `PAUSE`, `RESUME`, `NEXT`)를 제어한 뒤 `MSG_MISSION_ACK`를 회신합니다.
+
+```lua
+-- 1. GCS -> AMM: 원격 미션 제어 요청 (MSG_MISSION_CMD, Base+0)
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_01",
+    seq = 610,
+    type = "MSG_MISSION_CMD",
+    time = 1729845010000,
+    payload = {
+        action = "RUN",                -- "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT"
+        missionName = "patrol_alpha",
+        executionMode = "SINGLE",      -- "SINGLE" | "REPEAT"
+        forceRestart = false
+    }
+}
+
+-- 2. AMM -> GCS: 원격 미션 제어 응답 (MSG_MISSION_ACK, Base+0)
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_01",
+    seq = 502,
+    type = "MSG_MISSION_ACK",
+    time = 1729845010020,
+    payload = {
+        action = "RUN",
+        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "DEFERRED_ACTION_UNSUPPORTED" | "INVALID_CMD"
+        missionId = "PATROL_ALPHA",
+        missionState = "EN_ROUTE",
+        activeIndex = 1,
+        totalCheckpoints = 4,
+        reason = nil
     }
 }
 ```
@@ -1323,6 +1371,45 @@ flowchart TD
             ["FLAP_L"] = { side = "right", mode = "API" }
         },
         healthStatus = "NOMINAL"
+    }
+}
+```
+
+---
+
+### [Interface I-11] 기체 탑재체 버스 (`AMM` $\leftrightarrow$ `Payload Nodes`)
+- **통신 채널**: `CH_PAYLOAD_BUS` (`Base + 20 ~ 29`, Zone 3 탑재체 전용 블록)
+- **수신/발신자**: `AMM (Node 03, mission_engine / hook_runner)` $\leftrightarrow$ `Payload Nodes (화물 투하, 마그넷 래치, 레이더/무장 제어 컴퓨터)`
+- **동적 채널 관리**: AMM은 평시 Zone 3 채널을 닫아두며, `PAYLOAD_ACTION` 체크포인트 또는 `ZONE3_PAYLOAD_CMD` 라이프사이클 훅 실행 시에만 지정된 `Base + offset` ($20 \le \text{offset} \le 29$) 채널을 동적 개방(`modem.open`)하여 명령을 송출하고 `MSG_PAYLOAD_ACK` 수신 즉시 해제(`modem.close`)합니다.
+
+```lua
+-- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Base+20..29)
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_01",
+    seq = 503,
+    type = "MSG_PAYLOAD_REQ",
+    time = 1729845020000,
+    payload = {
+        checkpointId = "CP_04_CARGO_DROP",
+        command = "RELEASE_BAY",
+        replyChannel = 10020,
+        params = { bayId = 1 }
+    }
+}
+
+-- 2. Payload Node -> AMM: 탑재체 동작 완료 응답 (MSG_PAYLOAD_ACK, Base+20..29)
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_01",
+    seq = 88,
+    type = "MSG_PAYLOAD_ACK",
+    time = 1729845020250,
+    payload = {
+        checkpointId = "CP_04_CARGO_DROP",
+        command = "RELEASE_BAY",
+        status = "DROPPED",
+        detail = { bayId = 1, empty = true }
     }
 }
 ```
