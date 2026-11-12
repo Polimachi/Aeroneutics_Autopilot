@@ -123,20 +123,19 @@ local function render_hud_pane(buf, mfd, app)
     draw_text(buf, 11, 2, "ACTR : ALL_HEALTHY", "5", "f")
 
     local nav = mfd and mfd.navigation
-    local is_stale = (nav and (nav.gpsTimedOut or nav.gpsStale)) or (mfd and mfd.gpsStale)
-    local is_valid = (nav and nav.navValid) or (mfd and mfd.navValid)
-    local nav_status = is_stale and "DR_STALE" or ((is_valid ~= false) and "GPS_OK" or "NO_FIX")
-    local nav_col = is_stale and "e" or "5"
+    local is_stale = (app and app.gpsTimedOut == true) or (nav and nav.gpsTimedOut == true)
+    local is_valid = (app and app.navValid) or (nav and nav.navValid) or false
+    local nav_status = is_stale and "DR_STALE" or (is_valid and "GPS_OK" or "NO_FIX")
+    local nav_col = is_stale and "e" or (is_valid and "5" or "8")
     draw_text(buf, 12, 2, pad("NAV  : " .. nav_status, 24), nav_col, "f")
 
-    local fcp_to = (app and app.fcpTimedOut) or (mfd and mfd.fcpTimedOut)
-    local fcp_trk = (mfd and (mfd.trackingStatus or mfd.fcpStatus)) or "TRACKING"
+    local fcp_to = (app and app.fcpTimedOut == true)
+    local fcp_trk = (app and app.trackingStatus) or (mfd and mfd.trackingStatus) or "TRACKING"
     local fcp_status = fcp_to and "TIMEOUT" or fcp_trk
     local fcp_col = fcp_to and "e" or "5"
     draw_text(buf, 13, 2, pad("FCP  : " .. fcp_status, 24), fcp_col, "f")
 
-    local fac_id = (mfd and (mfd.designatedFacilityId or mfd.facilityId or mfd.activePadId))
-        or (app and app.activePadId) or "NONE"
+    local fac_id = (app and app.facilityId) or (mfd and mfd.facilityId) or "NONE"
     draw_text(buf, 14, 2, pad("FAC  : " .. tostring(fac_id), 24), "8", "f")
     draw_text(buf, 15, 2, pad("", 24), "0", "f")
 end

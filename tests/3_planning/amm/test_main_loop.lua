@@ -466,4 +466,64 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
         assert_eq(#mfd_tx, 1) -- Still 1, suppressed!
     end)
+
+    it("routes Base+5 MSG_GPS_RESPONSE through filter_gps updating app.nav.pos and posEpoch without crashing", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({ domainId = "AIRCRAFT_01", baseChannel = 10000, headless = true }, { top = top_m, back = back_m })
+
+        assert_eq(app.nav.posEpoch, 0)
+        local gps_pkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 1,
+            type = "MSG_GPS_RESPONSE",
+            time = 1000,
+            payload = {
+                targetClient = "AIRCRAFT_01",
+                status = "FIX_OK",
+                clientSeq = 1,
+                position = { x = 123.4, y = 70.0, z = -567.8 },
+                hdop = 1.2,
+                accuracy = 0.5,
+            }
+        }
+        app.nav.gpsReqSeq = 1
+        main_mod.process_event(app, "modem_message", "top", 10005, 10005, gps_pkt, 10)
+
+        assert_true(app.nav.posEpoch > 0)
+        assert_true(math.abs(app.nav.pos.x - 43.19) < 0.001)
+        assert_true(math.abs(app.nav.pos.z - (-198.73)) < 0.001)
+        assert_true(app.nav.navValid)
+    end)
+
+    it("executes non-headless Coroutine B timer rendering without double-ticking app.engine:tick", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({ domainId = "AIRCRAFT_01", baseChannel = 10000, headless = false }, { top = top_m, back = back_m })
+
+        local blit_count = 0
+        app.term_obj = {
+            setCursorPos = function() end,
+            blit = function() blit_count = blit_count + 1 end,
+        }
+
+        local tick_count = 0
+        app.engine.tick = function(self, now_ms)
+            tick_count = tick_count + 1
+        end
+
+        -- 1. Direct render_ui_frame execution renders 19 rows with 0 engine ticks
+        main_mod.render_ui_frame(app, 1000)
+        assert_eq(blit_count, 19)
+        assert_eq(tick_count, 0)
+
+        -- 2. handle_timer_event with coroutineActive = true renders without double-ticking
+        app.coroutineActive = true
+        main_mod.handle_timer_event(app, app.render_timer, 1200)
+        assert_eq(blit_count, 38)
+        assert_eq(tick_count, 0)
+    end)
 end)

@@ -429,25 +429,45 @@ local function execute_cli_command(app, cmd, now_ms)
     end
 end
 
+local function render_ui_frame(app, now_ms)
+    if not app or (app.config and app.config.headless == true) or not app.screen_buf then
+        return
+    end
+    local t_ms = now_ms or get_now_ms(app)
+    local nav = app.nav
+    local arb = app.arbiter
+    local fac = app.fac
+    local mfd = arb and arb.latest_mfd_payload
+
+    local app_state = {
+        domainId = (app.config and app.config.domainId) or "AIRCRAFT_01",
+        authority = (arb and arb.authority) or "PILOT_PRIMARY",
+        banner = (arb and arb.lastBanner) or "SYSTEM READY",
+        input_mode = (app.input and app.input.mode) or "NAV",
+        input_buffer = (app.input and app.input.buffer) or "",
+        now_ms = t_ms,
+        gpsTimedOut = (nav and nav.gpsTimedOut) or false,
+        navValid = (nav and nav.navValid) or (mfd and mfd.navigation and mfd.navigation.navValid) or false,
+        fcpTimedOut = (arb and arb.fcpTimedOut) or false,
+        trackingStatus = (arb and arb.fcpTrackingStatus)
+            or (arb and arb.latest_outer_status and arb.latest_outer_status.trackingStatus) or "TRACKING",
+        facilityId = (fac and fac.activePadId)
+            or (arb and arb.activeGoal and arb.activeGoal.facilityId) or "NONE",
+    }
+    local src_data = (app.engine and app.engine:count() > 0) and app.engine or app.queue
+    ui_renderer.render_screen(app.screen_buf, mfd, src_data, app_state)
+    ui_renderer.flush_buffer(app.screen_buf, app.term_obj or term)
+end
+
 local function handle_timer_event(app, timer_id, now_ms)
-    if timer_id ~= app.render_timer then return end
-    app.render_timer = os.startTimer(0.2)
-    if app.engine then
+    if timer_id ~= app.render_timer and app.render_timer ~= nil then return end
+    if app.render_timer and os.startTimer then
+        app.render_timer = os.startTimer(0.2)
+    end
+    if app.engine and not app.coroutineActive then
         app.engine:tick(now_ms)
     end
-    if not (app.config and app.config.headless == true) and app.screen_buf then
-        local app_state = {
-            domainId = app.config.domainId,
-            authority = app.arbiter.authority,
-            banner = app.arbiter.lastBanner,
-            input_mode = app.input.mode,
-            input_buffer = app.input.buffer,
-            now_ms = now_ms,
-        }
-        local src_data = (app.engine and app.engine:count() > 0) and app.engine or app.queue
-        ui_renderer.render_screen(app.screen_buf, app.arbiter.latest_mfd_payload, src_data, app_state)
-        ui_renderer.flush_buffer(app.screen_buf, app.term_obj or term)
-    end
+    render_ui_frame(app, now_ms)
 end
 
 local function handle_modem_message(app, chan, raw_msg, now_ms)
@@ -471,7 +491,7 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
             channel_sentinel.on_rebind_ack(app.sentinel, pkt, now_ms)
         end
     elseif chan == base + 5 and app.nav and pkt.type == "MSG_GPS_RESPONSE" then
-        nav_engine.process_gps_response(app.nav, pkt.payload, now_ms)
+        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, now_ms)
     elseif chan == base + 0 and app.arbiter and app.arbiter.handle_gcs_packet then
         app.arbiter:handle_gcs_packet(pkt, now_ms)
     elseif chan == 50000 and app.sentinel then
@@ -666,6 +686,7 @@ end
 
 local function make_coroutine_a(app)
     return function()
+        app.coroutineActive = true
         local timer20 = os.startTimer(0.05)
         while app.running do
             local ev, p1, p2, p3, p4 = os.pullEventRaw()
@@ -701,16 +722,16 @@ end
 
 local function make_coroutine_b(app)
     return function()
-        local render_timer = os.startTimer(0.2)
+        app.render_timer = os.startTimer(0.2)
         while app.running do
             local ev, p1, p2, p3, p4 = os.pullEventRaw()
             local now_ms = get_now_ms(app)
             if ev == "terminate" then
                 shutdown_app(app)
                 break
-            elseif ev == "timer" and p1 == render_timer then
-                handle_timer_event(app, p1, now_ms)
-                render_timer = os.startTimer(0.2)
+            elseif ev == "timer" and p1 == app.render_timer then
+                render_ui_frame(app, now_ms)
+                app.render_timer = os.startTimer(0.2)
             else
                 handle_input_event(app, ev, p1, now_ms)
             end
@@ -755,4 +776,8 @@ return {
     create_app = create_app,
     step_20hz_tick = step_20hz_tick,
     step_5hz_downlink = step_5hz_downlink,
+    render_ui_frame = render_ui_frame,
+    handle_timer_event = handle_timer_event,
+    make_coroutine_a = make_coroutine_a,
+    make_coroutine_b = make_coroutine_b,
 }
