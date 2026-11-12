@@ -758,6 +758,13 @@ local FCP_DISPATCHERS = {
         if fsm == "DISARMED" and self.net then
             self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", self.authority)
         end
+        self.currentGoal = {
+            flightMode = "TAKEOFF",
+            arm = true,
+            flightActive = true,
+            targetAlt = p.targetAlt or self.defaults.targetAlt,
+            facilityId = p.facilityId or p.designatedFacilityId,
+        }
         if self.net then
             self.net:send_operator_cmd("TAKEOFF", "TAKEOFF", {
                 targetAlt = p.targetAlt or self.defaults.targetAlt,
@@ -767,43 +774,90 @@ local FCP_DISPATCHERS = {
         return true
     end,
     FLY_OVER = function(self, cp, _now_ms)
-        if not self.net then return false end
         local p = cp.params or {}
-        return self.net:send_operator_cmd("CRUISE", "CRUISE", {
-            targetWaypoint = p.targetPos,
+        self.currentGoal = {
+            flightMode = "CRUISE",
+            arm = true,
+            flightActive = true,
+            targetPos = p.targetPos,
             targetAlt = p.targetAlt or self.defaults.targetAlt,
-            cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-        }, "NONE", self.authority)
+            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+            headingMode = p.headingMode or "AUTO",
+            acceptanceRadius = p.acceptanceRadius,
+        }
+        if self.net then
+            self.net:send_operator_cmd("CRUISE", "CRUISE", {
+                targetWaypoint = p.targetPos,
+                targetAlt = p.targetAlt or self.defaults.targetAlt,
+                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+            }, "NONE", self.authority)
+        end
+        return true
     end,
     FLY_TO = function(self, cp, _now_ms)
-        if not self.net then return false end
         local p = cp.params or {}
-        return self.net:send_operator_cmd("CRUISE", "CRUISE", {
-            targetWaypoint = p.targetPos,
+        self.currentGoal = {
+            flightMode = "CRUISE",
+            arm = true,
+            flightActive = true,
+            targetPos = p.targetPos,
             targetAlt = p.targetAlt or self.defaults.targetAlt,
-            cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-        }, "NONE", self.authority)
+            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+            headingMode = p.headingMode or "AUTO",
+            acceptanceRadius = p.acceptanceRadius,
+        }
+        if self.net then
+            self.net:send_operator_cmd("CRUISE", "CRUISE", {
+                targetWaypoint = p.targetPos,
+                targetAlt = p.targetAlt or self.defaults.targetAlt,
+                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+            }, "NONE", self.authority)
+        end
+        return true
     end,
     ORBIT = function(self, cp, _now_ms)
-        if not self.net then return false end
         local p = cp.params or {}
-        return self.net:send_operator_cmd("LOITER", "LOITER", {
-            targetWaypoint = p.targetPos,
+        self.currentGoal = {
+            flightMode = "LOITER",
+            arm = true,
+            flightActive = true,
+            targetPos = p.targetPos,
             targetAlt = p.targetAlt or self.defaults.targetAlt,
-            cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
             loiterRadius = p.radius,
             loiterDirection = p.direction,
-        }, "NONE", self.authority)
+        }
+        if self.net then
+            self.net:send_operator_cmd("LOITER", "LOITER", {
+                targetWaypoint = p.targetPos,
+                targetAlt = p.targetAlt or self.defaults.targetAlt,
+                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+                loiterRadius = p.radius,
+                loiterDirection = p.direction,
+            }, "NONE", self.authority)
+        end
+        return true
     end,
     POI_HOLD = function(self, cp, _now_ms)
-        if not self.net then return false end
         local p = cp.params or {}
-        return self.net:send_operator_cmd("POI_HOLD", "POI_HOLD", {
-            targetWaypoint = p.targetPos,
-            poiTarget = p.poiPos,
+        self.currentGoal = {
+            flightMode = "POI_HOLD",
+            arm = true,
+            flightActive = true,
+            targetPos = p.targetPos,
+            poiPos = p.poiPos,
             targetAlt = p.targetAlt or self.defaults.targetAlt,
-            cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-        }, "NONE", self.authority)
+            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+        }
+        if self.net then
+            self.net:send_operator_cmd("POI_HOLD", "POI_HOLD", {
+                targetWaypoint = p.targetPos,
+                poiTarget = p.poiPos,
+                targetAlt = p.targetAlt or self.defaults.targetAlt,
+                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
+            }, "NONE", self.authority)
+        end
+        return true
     end,
     PATROL = function(self, cp, _now_ms)
         local p = cp.params or {}
@@ -811,6 +865,16 @@ local FCP_DISPATCHERS = {
             self.patrolState = { subIndex = 1, dir = 1, completedCycles = 0, completed = false }
         end
         local wp = p.waypoints and p.waypoints[self.patrolState.subIndex]
+        if wp then
+            self.currentGoal = {
+                flightMode = "CRUISE",
+                arm = true,
+                flightActive = true,
+                targetPos = wp,
+                targetAlt = wp.alt or p.targetAlt or self.defaults.targetAlt,
+                targetSpeed = wp.speed or p.cruiseSpeed or self.defaults.cruiseSpeed,
+            }
+        end
         if not wp or not self.net then return false end
         return self.net:send_operator_cmd("CRUISE", "CRUISE", {
             targetWaypoint = wp,
@@ -819,13 +883,23 @@ local FCP_DISPATCHERS = {
         }, "NONE", self.authority)
     end,
     LAND_LAUNCHPAD = function(self, cp, _now_ms)
-        if not self.net then return false end
         local p = cp.params or {}
-        return self.net:send_operator_cmd("LANDING", "LANDING", {
-            designatedFacilityId = p.facilityId or p.designatedFacilityId,
-            targetWaypoint = p.targetPos,
+        self.currentGoal = {
+            flightMode = "LANDING",
+            arm = true,
+            flightActive = true,
+            facilityId = p.facilityId or p.designatedFacilityId,
+            targetPos = p.targetPos,
             targetAlt = p.targetAlt,
-        }, "NONE", self.authority)
+        }
+        if self.net then
+            self.net:send_operator_cmd("LANDING", "LANDING", {
+                designatedFacilityId = p.facilityId or p.designatedFacilityId,
+                targetWaypoint = p.targetPos,
+                targetAlt = p.targetAlt,
+            }, "NONE", self.authority)
+        end
+        return true
     end,
     PAYLOAD_ACTION = function(self, cp, now_ms)
         return self.hook_runner:start_action(cp, now_ms)
@@ -1201,6 +1275,10 @@ function mission_engine:goto_index(index, now_ms)
         return false, err
     end
     return true
+end
+
+function mission_engine:get_trajectory_goal()
+    return self.currentGoal
 end
 
 return mission_engine

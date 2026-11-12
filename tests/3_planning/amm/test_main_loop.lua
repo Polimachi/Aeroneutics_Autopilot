@@ -413,4 +413,57 @@ describe("AMM Main Event Pump and Command Processing", function()
 
         if fs.exists("/disk/boot_sortie.json") then fs.delete("/disk/boot_sortie.json") end
     end)
+
+    it("runs closed-loop 20Hz tick step transmitting canonical setpoint on Base+4 and 5Hz MFD state on Base+3", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({ domainId = "AIRCRAFT_01", baseChannel = 10000, headless = true }, { top = top_m, back = back_m })
+
+        assert_not_nil(app.nav)
+        assert_not_nil(app.sentinel)
+        assert_not_nil(app.fac)
+        assert_not_nil(app.traj)
+
+        -- Ingest flight telemetry on Base+2 (simulated incoming)
+        app.nav:integrate_dr({
+            dynamics = { velocity = { vx = 10.0, vy = 1.0, vz = 0.0 }, altitudeY = 120.0, groundSpeed = 10.0, verticalSpeed = 1.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 90.0 },
+            fuel = 0.95,
+        }, 0.05, 1000)
+
+        -- Execute 4 ticks to trigger 20Hz trajectory and 5Hz MFD state downlink
+        local sp1 = main_mod.step_20hz_tick(app, 0.05, 1050)
+        assert_not_nil(sp1)
+        assert_not_nil(sp1.feedforwardAccel)
+        assert_not_nil(sp1.targetHeading)
+        assert_not_nil(sp1.currentPos)
+
+        main_mod.step_20hz_tick(app, 0.05, 1100)
+        main_mod.step_20hz_tick(app, 0.05, 1150)
+        local sp4 = main_mod.step_20hz_tick(app, 0.05, 1200)
+        assert_eq(app.tickCount, 4)
+
+        -- Verify Base+4 setpoint packets transmitted
+        local setpoint_tx = {}
+        local mfd_tx = {}
+        for _, tx in ipairs(top_m._transmitted) do
+            if tx.tx == 10004 then
+                table.insert(setpoint_tx, tx)
+            elseif tx.tx == 10003 then
+                table.insert(mfd_tx, tx)
+            end
+        end
+        assert_eq(#setpoint_tx, 4)
+        assert_eq(#mfd_tx, 1)
+        assert_eq(setpoint_tx[4].pkt.type, "MSG_TRAJECTORY_SETPOINT")
+        assert_eq(mfd_tx[1].pkt.type, "MSG_MFD_STATE")
+
+        -- Verify MFD state suppression when activeSource is MFD_ACRO
+        app.arbiter.activeSource = "MFD_ACRO"
+        for _ = 1, 4 do
+            main_mod.step_20hz_tick(app, 0.05, 1250)
+        end
+        assert_eq(#mfd_tx, 1) -- Still 1, suppressed!
+    end)
 end)

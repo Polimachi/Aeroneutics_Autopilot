@@ -109,12 +109,13 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         assert_eq(fin.flightMode, "LANDING")
         assert_eq(fin.params.designatedFacilityId, "PAD_BRAVO_01")
 
-        -- Step 9: Emergency E-STOP hotkey fires CUTOFF to Base+1
+        -- Step 9: Emergency E-STOP hotkey fires E_STOP to Base+1
         arbiter:handle_pilot_action("ESTOP")
         assert_eq(#sent_packets, 8)
         assert_eq(sent_packets[8].chan, 10001) -- Base+1
         assert_eq(sent_packets[8].payload.type, "MSG_EMERGENCY_OVERRIDE")
-        assert_eq(sent_packets[8].payload.payload.action, "CUTOFF")
+        assert_eq(sent_packets[8].payload.payload.action, "E_STOP")
+        assert_eq(sent_packets[8].payload.payload.authKey, "ESTOP_CONFIRM_KEY")
 
         -- Verify TUI rendering executes cleanly
         local app_state = { domainId = "AIRCRAFT_01", authority = arbiter.authority, banner = arbiter.lastBanner, input_mode = "NAV" }

@@ -59,7 +59,7 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(transmitted[1].payload.payload.authority, "PILOT_PRIMARY")
     end)
 
-    it("builds and sends MSG_EMERGENCY_OVERRIDE onto Base+1", function()
+    it("builds and sends MSG_EMERGENCY_OVERRIDE onto Base+1 with E_STOP and ESTOP_CONFIRM_KEY", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local transmitted = {}
         local mock_modem = {
@@ -69,14 +69,104 @@ describe("AMM Network Manager and Packet Protocol", function()
         }
         net.modem = mock_modem
 
-        local ok = net:send_emergency_override("CUTOFF", "PILOT_ESTOP_HOTKEY")
+        local ok = net:send_emergency_override()
         assert_true(ok)
         assert_eq(#transmitted, 1)
         assert_eq(transmitted[1].chan, 10001) -- Base+1
         assert_eq(transmitted[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
-        assert_eq(transmitted[1].payload.payload.action, "CUTOFF")
+        assert_eq(transmitted[1].payload.payload.action, "E_STOP")
         assert_eq(transmitted[1].payload.payload.reason, "PILOT_ESTOP_HOTKEY")
-        assert_eq(transmitted[1].payload.payload.source, "MFD")
+        assert_eq(transmitted[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")
+        assert_eq(transmitted[1].payload.payload.source, "AMM")
+    end)
+
+    it("binds dual modems opening onboard Base+0,2,3,4,5 and infra 50000,50001,50003,50004,60002", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+
+        net:bind_modems(top_m, back_m, 10000)
+        assert_false(net.modemFallbackActive)
+        assert_true(top_m.isOpen(10000))
+        assert_true(top_m.isOpen(10002))
+        assert_true(top_m.isOpen(10003))
+        assert_true(top_m.isOpen(10004))
+        assert_true(top_m.isOpen(10005))
+        assert_false(top_m.isOpen(50000))
+
+        assert_true(back_m.isOpen(50000))
+        assert_true(back_m.isOpen(50001))
+        assert_true(back_m.isOpen(50003))
+        assert_true(back_m.isOpen(50004))
+        assert_true(back_m.isOpen(60002))
+        assert_false(back_m.isOpen(10000))
+    end)
+
+    it("falls back to single modem binding when only one modem is provided", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local single_m = mock.modem({ wireless = true })
+
+        net:bind_modems(single_m, nil, 10000)
+        assert_true(net.modemFallbackActive)
+        assert_true(single_m.isOpen(10000))
+        assert_true(single_m.isOpen(10004))
+        assert_true(single_m.isOpen(50000))
+        assert_true(single_m.isOpen(60002))
+    end)
+
+    it("transmits MSG_TRAJECTORY_SETPOINT on Base+4 via onboard modem", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        net:bind_modems(top_m, back_m, 10000)
+
+        local ok = net:send_trajectory_setpoint({ flightMode = "CRUISE", targetHeading = 180.0 })
+        assert_true(ok)
+        assert_eq(#top_m._transmitted, 1)
+        assert_eq(top_m._transmitted[1].tx, 10004)
+        assert_eq(top_m._transmitted[1].pkt.type, "MSG_TRAJECTORY_SETPOINT")
+        assert_eq(top_m._transmitted[1].pkt.payload.flightMode, "CRUISE")
+        assert_eq(#back_m._transmitted, 0)
+    end)
+
+    it("transmits MSG_CHANNEL_REBIND on Base+4 and applies channel rebind cleanly", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        net:bind_modems(top_m, back_m, 10000)
+        net:open_payload_channel(20)
+        assert_true(top_m.isOpen(10020))
+
+        local ok = net:send_rebind_command("PREPARE", "TX-01", 10000, 10040)
+        assert_true(ok)
+        assert_eq(#top_m._transmitted, 1)
+        assert_eq(top_m._transmitted[1].tx, 10004)
+        assert_eq(top_m._transmitted[1].pkt.payload.action, "PREPARE")
+
+        local reb_ok = net:apply_rebind(10040)
+        assert_true(reb_ok)
+        assert_eq(net.baseChannel, 10040)
+        assert_false(top_m.isOpen(10000))
+        assert_false(top_m.isOpen(10004))
+        assert_true(top_m.isOpen(10040))
+        assert_true(top_m.isOpen(10044))
+        assert_true(top_m.isOpen(10020)) -- Zone 3 payload channel preserved
+    end)
+
+    it("suppresses MSG_MFD_STATE transmission when activeSource is MFD_ACRO", function()
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local top_m = mock.modem({ wireless = true })
+        net:bind_modems(top_m, top_m, 10000)
+
+        local ok_normal = net:send_mfd_state({ fsmState = "CRUISE" }, "FCP")
+        assert_true(ok_normal)
+        assert_eq(#top_m._transmitted, 1)
+        assert_eq(top_m._transmitted[1].tx, 10003)
+
+        local ok_yield, reason = net:send_mfd_state({ fsmState = "CRUISE" }, "MFD_ACRO")
+        assert_false(ok_yield)
+        assert_eq(reason, "YIELDED_TO_MFD_ACRO")
+        assert_eq(#top_m._transmitted, 1) -- No new transmission!
     end)
 
     it("enforces Zone 3 (Base+20..29) bounds and manages dynamic channel open/close without closing Base+0/+3", function()

@@ -101,7 +101,7 @@ local function render_header(buf, mfd, app)
     draw_text(buf, 2, 1, div, "7", "f")
 end
 
-local function render_hud_pane(buf, mfd)
+local function render_hud_pane(buf, mfd, app)
     draw_text(buf, 3, 2, pad("[HUD INSTRUMENTS]", 24), "d", "f")
     local att = mfd and mfd.attitude or {}
     local dyn = mfd and mfd.dynamics or {}
@@ -121,9 +121,24 @@ local function render_hud_pane(buf, mfd)
     draw_text(buf, 9, 2, fuel_str, fuel_col, "f")
     draw_text(buf, 10, 2, string.format("SRC  : %s", pad(mfd and mfd.activeSource or "FCP", 12)), "8", "f")
     draw_text(buf, 11, 2, "ACTR : ALL_HEALTHY", "5", "f")
-    for y = 12, 15 do
-        draw_text(buf, y, 2, pad("", 24), "0", "f")
-    end
+
+    local nav = mfd and mfd.navigation
+    local is_stale = (nav and (nav.gpsTimedOut or nav.gpsStale)) or (mfd and mfd.gpsStale)
+    local is_valid = (nav and nav.navValid) or (mfd and mfd.navValid)
+    local nav_status = is_stale and "DR_STALE" or ((is_valid ~= false) and "GPS_OK" or "NO_FIX")
+    local nav_col = is_stale and "e" or "5"
+    draw_text(buf, 12, 2, pad("NAV  : " .. nav_status, 24), nav_col, "f")
+
+    local fcp_to = (app and app.fcpTimedOut) or (mfd and mfd.fcpTimedOut)
+    local fcp_trk = (mfd and (mfd.trackingStatus or mfd.fcpStatus)) or "TRACKING"
+    local fcp_status = fcp_to and "TIMEOUT" or fcp_trk
+    local fcp_col = fcp_to and "e" or "5"
+    draw_text(buf, 13, 2, pad("FCP  : " .. fcp_status, 24), fcp_col, "f")
+
+    local fac_id = (mfd and (mfd.designatedFacilityId or mfd.facilityId or mfd.activePadId))
+        or (app and app.activePadId) or "NONE"
+    draw_text(buf, 14, 2, pad("FAC  : " .. tostring(fac_id), 24), "8", "f")
+    draw_text(buf, 15, 2, pad("", 24), "0", "f")
 end
 
 local function format_mission_header(source, is_engine)
@@ -350,7 +365,7 @@ function ui_renderer.render_screen(buf, mfd_state, source_data, app_state)
         draw_text(buf, y, 26, "|", "7", "f")
     end
     render_header(buf, mfd_state, app_state)
-    render_hud_pane(buf, mfd_state)
+    render_hud_pane(buf, mfd_state, app_state)
     render_mission_pane(buf, mfd_state, source_data, app_state)
     render_footer(buf, app_state)
 end

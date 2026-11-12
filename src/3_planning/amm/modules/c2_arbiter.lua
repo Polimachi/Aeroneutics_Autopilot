@@ -18,6 +18,13 @@ function c2_arbiter.new(queue, net, config, engine)
         lastBanner = "SYSTEM_READY",
         fcpTakeoffActive = false,
         latest_mfd_payload = nil,
+        latest_outer_status = nil,
+        latest_telem = nil,
+        lastOuterStatusMs = 0,
+        lastTelemMs = 0,
+        fcpTimedOut = false,
+        emergencyGoal = nil,
+        activeGoal = nil,
     }, c2_arbiter)
     if self.engine then
         self.engine.authority = self.authority
@@ -50,6 +57,13 @@ function c2_arbiter:handle_gcs_packet(packet, now_ms)
         end
         if self.engine and self.engine.state == "EN_ROUTE" then
             self.engine:pause()
+        end
+        if p.command == "HOLD" or p.flightMode == "HOVER_HOLD" then
+            self.emergencyGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
+        elseif p.command == "RTH" or p.flightMode == "FAILSAFE_RTH" then
+            self.emergencyGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
+        elseif p.command == "LAND" or p.flightMode == "EMERGENCY_LAND" then
+            self.emergencyGoal = { flightMode = "EMERGENCY_LAND", arm = true, flightActive = true }
         end
         self.lastBanner = "[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]"
     end
@@ -272,36 +286,57 @@ end
 
 local PILOT_ACTION_HANDLERS = {
     ARM = function(self, _par, _now_ms)
-        self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", "PILOT_PRIMARY")
+        self.activeGoal = { flightMode = "IDLE", arm = true, flightActive = false }
+        if self.net and self.net.send_operator_cmd then
+            self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", "PILOT_PRIMARY")
+        end
         self.lastBanner = "PILOT: CMD ARM"
     end,
     TAKEOFF = function(self, par, _now_ms)
         self.fcpTakeoffActive = true
-        self.net:send_operator_cmd("TAKEOFF", "TAKEOFF", { targetAlt = par.targetAlt }, "NONE", "PILOT_PRIMARY")
+        self.emergencyGoal = nil
+        self.activeGoal = { flightMode = "TAKEOFF", arm = true, flightActive = true, targetAlt = par.targetAlt }
+        if self.net and self.net.send_operator_cmd then
+            self.net:send_operator_cmd("TAKEOFF", "TAKEOFF", { targetAlt = par.targetAlt }, "NONE", "PILOT_PRIMARY")
+        end
         self.lastBanner = "PILOT: CMD TAKEOFF"
     end,
     HOLD = function(self, _par, _now_ms)
         if self.queue then self.queue.state = "SUSPENDED" end
         if self.engine and self.engine.pause then self.engine:pause() end
-        self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "HOVER_HOLD", "PILOT_PRIMARY")
+        self.emergencyGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
+        self.activeGoal = self.emergencyGoal
+        if self.net and self.net.send_operator_cmd then
+            self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "HOVER_HOLD", "PILOT_PRIMARY")
+        end
         self.lastBanner = "PILOT: EMERGENCY HOVER_HOLD"
     end,
     RTH = function(self, _par, _now_ms)
         if self.queue then self.queue.state = "SUSPENDED" end
         if self.engine and self.engine.pause then self.engine:pause() end
-        self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "RTH", "PILOT_PRIMARY")
+        self.emergencyGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
+        self.activeGoal = self.emergencyGoal
+        if self.net and self.net.send_operator_cmd then
+            self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "RTH", "PILOT_PRIMARY")
+        end
         self.lastBanner = "PILOT: EMERGENCY RTH"
     end,
     LAND = function(self, _par, _now_ms)
         if self.queue then self.queue.state = "SUSPENDED" end
         if self.engine and self.engine.pause then self.engine:pause() end
-        self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "EMERGENCY_LAND", "PILOT_PRIMARY")
+        self.emergencyGoal = { flightMode = "EMERGENCY_LAND", arm = true, flightActive = true }
+        self.activeGoal = self.emergencyGoal
+        if self.net and self.net.send_operator_cmd then
+            self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "EMERGENCY_LAND", "PILOT_PRIMARY")
+        end
         self.lastBanner = "PILOT: EMERGENCY LAND"
     end,
     ESTOP = function(self, _par, _now_ms)
         if self.queue then self.queue.state = "SUSPENDED" end
         if self.engine and self.engine.pause then self.engine:pause() end
-        self.net:send_emergency_override("CUTOFF", "PILOT_ESTOP_HOTKEY")
+        self.emergencyGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+        self.activeGoal = self.emergencyGoal
+        self.net:send_emergency_override("E_STOP", "PILOT_ESTOP_HOTKEY", "ESTOP_CONFIRM_KEY", "AMM")
         self.lastBanner = "PILOT: E_STOP TRANSMITTED"
     end,
     PAUSE = function(self, _par, _now_ms)
@@ -310,6 +345,7 @@ local PILOT_ACTION_HANDLERS = {
         self.lastBanner = "MISSION QUEUE PAUSED"
     end,
     RESUME = function(self, _par, now_ms)
+        self.emergencyGoal = nil
         if self.engine and self.engine:count() > 0 then
             self.engine:resume(now_ms)
         end
@@ -317,7 +353,7 @@ local PILOT_ACTION_HANDLERS = {
             self.queue.state = "EN_ROUTE"
             if not self.engine or self.engine:count() == 0 then
                 local active_wp = self.queue:get_active()
-                if active_wp then
+                if active_wp and self.net and self.net.send_operator_cmd then
                     self.net:send_operator_cmd("CRUISE", "CRUISE", build_params(active_wp), "NONE", "PILOT_PRIMARY")
                 end
             end
@@ -325,6 +361,71 @@ local PILOT_ACTION_HANDLERS = {
         self.lastBanner = "MISSION RESUMED"
     end,
 }
+
+function c2_arbiter:handle_outer_loop_status(packet, now_ms)
+    if not packet or type(packet.payload) ~= "table" then return end
+    local p = packet.payload
+    self.latest_outer_status = p
+    self.lastOuterStatusMs = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
+    self.fcpTimedOut = false
+    if p.trackingStatus then self.fcpTrackingStatus = p.trackingStatus end
+end
+
+function c2_arbiter:handle_flight_telemetry(packet, now_ms)
+    if not packet or type(packet.payload) ~= "table" then return end
+    local p = packet.payload
+    self.latest_telem = p
+    self.lastTelemMs = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
+    if p.activeSource then self.activeSource = p.activeSource end
+    local fuel = p.fuel
+    if type(fuel) == "number" then
+        if fuel < 0.10 then
+            self.emergencyGoal = { flightMode = "EMERGENCY_LAND", arm = true, flightActive = true }
+            self.lastBanner = "[CRITICAL FUEL: EMERGENCY LAND]"
+        elseif fuel < 0.20 and (not self.emergencyGoal or self.emergencyGoal.flightMode ~= "EMERGENCY_LAND") then
+            self.emergencyGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
+            self.lastBanner = "[LOW FUEL: FAILSAFE RTH]"
+        end
+    end
+end
+
+function c2_arbiter:check_timeouts(now_ms)
+    local now = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
+    if self.lastOuterStatusMs and self.lastOuterStatusMs > 0 then
+        if (now - self.lastOuterStatusMs) > 500 then
+            self.fcpTimedOut = true
+            self.lastBanner = "[ALERT: FCP TIMEOUT - HOVER HOLD]"
+            if not self.emergencyGoal then
+                self.emergencyGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
+            end
+        end
+    end
+end
+
+function c2_arbiter:get_effective_goal()
+    if self.emergencyGoal then
+        return self.emergencyGoal
+    end
+    if self.engine and self.engine.state == "EN_ROUTE" and self.engine.get_trajectory_goal then
+        local g = self.engine:get_trajectory_goal()
+        if g then return g end
+    end
+    if self.queue and self.queue.state == "EN_ROUTE" then
+        local wp = self.queue:get_active()
+        if wp then
+            return {
+                flightMode = "CRUISE",
+                arm = true,
+                flightActive = true,
+                targetPos = { x = wp.x, z = wp.z },
+                targetAlt = wp.alt,
+                targetSpeed = wp.speed,
+                facilityId = wp.facilityId,
+            }
+        end
+    end
+    return self.activeGoal or { flightMode = "IDLE", arm = (self.authority ~= "DISARMED"), flightActive = false }
+end
 
 function c2_arbiter:handle_pilot_action(action, params, now_ms)
     self.authority = "PILOT_PRIMARY"

@@ -298,4 +298,61 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         fs.delete("/disk/bad_schema.json")
         fs.delete("/disk/disk_sortie.json")
     end)
+
+    it("emits E_STOP with ESTOP_CONFIRM_KEY and source AMM on ESTOP pilot action", function()
+        local q, net, arb, tx = create_fixture()
+        arb:handle_pilot_action("ESTOP", {}, 1000)
+        assert_eq(#tx, 1)
+        assert_eq(tx[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
+        assert_eq(tx[1].payload.payload.action, "E_STOP")
+        assert_eq(tx[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")
+        assert_eq(tx[1].payload.payload.source, "AMM")
+        local goal = arb:get_effective_goal()
+        assert_eq(goal.flightMode, "IDLE")
+        assert_false(goal.arm)
+    end)
+
+    it("triggers FCP 500ms timeout raising alert banner and HOVER_HOLD fallback", function()
+        local q, net, arb, tx = create_fixture()
+        arb:handle_outer_loop_status({
+            type = "MSG_OUTER_LOOP_STATUS",
+            payload = { trackingStatus = "TRACKING", flightMode = "CRUISE" }
+        }, 1000)
+        assert_false(arb.fcpTimedOut)
+
+        arb:check_timeouts(1400)
+        assert_false(arb.fcpTimedOut)
+
+        arb:check_timeouts(1600)
+        assert_true(arb.fcpTimedOut)
+        assert_true(string.find(arb.lastBanner, "FCP TIMEOUT") ~= nil)
+        local goal = arb:get_effective_goal()
+        assert_eq(goal.flightMode, "HOVER_HOLD")
+    end)
+
+    it("enforces fuel failsafe thresholds with FAILSAFE_RTH and EMERGENCY_LAND", function()
+        local q, net, arb, tx = create_fixture()
+        arb:handle_flight_telemetry({
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { fuel = 0.25, activeSource = "FCP" }
+        }, 1000)
+        assert_nil(arb.emergencyGoal)
+
+        -- Fuel drops below 0.20 -> FAILSAFE_RTH
+        arb:handle_flight_telemetry({
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { fuel = 0.18, activeSource = "FCP" }
+        }, 1100)
+        assert_not_nil(arb.emergencyGoal)
+        assert_eq(arb.emergencyGoal.flightMode, "FAILSAFE_RTH")
+        assert_true(string.find(arb.lastBanner, "LOW FUEL") ~= nil)
+
+        -- Fuel drops below 0.10 -> EMERGENCY_LAND
+        arb:handle_flight_telemetry({
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { fuel = 0.08, activeSource = "FCP" }
+        }, 1200)
+        assert_eq(arb.emergencyGoal.flightMode, "EMERGENCY_LAND")
+        assert_true(string.find(arb.lastBanner, "CRITICAL FUEL") ~= nil)
+    end)
 end)
