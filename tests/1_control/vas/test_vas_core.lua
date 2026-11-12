@@ -204,10 +204,11 @@ describe("vas 40-channel 4-zone layout and network manager initialization", func
         assert_eq(net.channels.guidance, 10001)
         assert_eq(net.channels.telemetry, 10002)
         assert_eq(net.channels.mfd, 10003)
-        assert_eq(net.channels.navSensor, 10004)
+        assert_eq(net.channels.trajectory, 10004)
         assert_eq(net.channels.clientReply, 10005)
         assert_eq(net.channels.actuation, 10010)
         assert_eq(net.channels.aero, 10011)
+        assert_eq(net.channels.asaActuation, 10011)
         assert_eq(net.channels.payloadBus, 10020)
         assert_eq(net.channels.weaponBus, 10021)
         assert_eq(net.channels.formationLink, 10030)
@@ -260,12 +261,22 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
             telemetry_feeder.tick(tf, net, comState, fsmAcro, mixerState, diagState)
         end
         local acro10003 = 0
+        local lastAcroPkt = nil
         for _, tx in ipairs(wirelessModem._transmitted) do
             if tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" then
                 acro10003 = acro10003 + 1
+                lastAcroPkt = tx.pkt
             end
         end
         assert_eq(acro10003, 3)
+        assert_not_nil(lastAcroPkt)
+        assert_eq(lastAcroPkt.payload.source, "CORE_ACRO_TAKEOVER")
+        assert_eq(lastAcroPkt.payload.flightMode, "ACRO")
+        assert_true(lastAcroPkt.payload.acroActive)
+        assert_not_nil(lastAcroPkt.payload.attitude)
+        assert_not_nil(lastAcroPkt.payload.angularRates)
+        assert_not_nil(lastAcroPkt.payload.dynamics)
+        assert_not_nil(lastAcroPkt.payload.actuatorHealth)
 
         -- FAILSAFE_HOLD mode: transmits 1 every 4 ticks (5Hz)
         wirelessModem._transmitted = {}
@@ -275,12 +286,18 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
             telemetry_feeder.tick(tf, net, comState, fsmFailsafe, mixerState, diagState)
         end
         local failsafe10003 = 0
+        local lastFailsafePkt = nil
         for _, tx in ipairs(wirelessModem._transmitted) do
             if tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" then
                 failsafe10003 = failsafe10003 + 1
+                lastFailsafePkt = tx.pkt
             end
         end
         assert_eq(failsafe10003, 1)
+        assert_not_nil(lastFailsafePkt)
+        assert_eq(lastFailsafePkt.payload.source, "CORE_FAILSAFE")
+        assert_eq(lastFailsafePkt.payload.flightMode, "FAILSAFE_HOLD")
+        assert_false(lastFailsafePkt.payload.acroActive)
     end)
 end)
 
@@ -868,5 +885,175 @@ describe("vas mutation hardening invariants", function()
         })
         assert_true(ok)
         assert_eq(fsm.currentState, "E_STOP")
+    end)
+end)
+
+describe("vas [I-10] surface discovery and attitude command type validation", function()
+    local actuator_adapter_asa = require("actuator_adapter_asa")
+
+    it("broadcasts both MSG_ACTUATOR_DISCOVER_REQ on Base+10 and MSG_SURFACE_DISCOVER_REQ on Base+11", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem }
+        })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 })
+        wirelessModem._transmitted = {}
+
+        local ok = network_manager.broadcast_discovery(net)
+        assert_true(ok)
+
+        local sentActuator = false
+        local sentSurface = false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10010 and tx.pkt.type == "MSG_ACTUATOR_DISCOVER_REQ" then
+                sentActuator = true
+                assert_eq(tx.pkt.payload.targetGroup, "ALL")
+            end
+            if tx.tx == 10011 and tx.pkt.type == "MSG_SURFACE_DISCOVER_REQ" then
+                sentSurface = true
+                assert_eq(tx.pkt.payload.targetPod, "ALL")
+            end
+        end
+        assert_true(sentActuator, "Must send MSG_ACTUATOR_DISCOVER_REQ on Base+10")
+        assert_true(sentSurface, "Must send MSG_SURFACE_DISCOVER_REQ on Base+11")
+    end)
+
+    it("dispatches MSG_SURFACE_DISCOVER_ACK and MSG_AERO_STATUS to adapterAsa", function()
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local adapterAsa = actuator_adapter_asa.init({})
+        net.adapterAsa = adapterAsa
+
+        local ackPacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_SURFACE_DISCOVER_ACK",
+            payload = {
+                podId = "ASA_L",
+                managedSurfaces = { "AIL_L", "FLAP_L" },
+                boundPorts = { ["AIL_L"] = { side = "left", mode = "API" } },
+                healthStatus = "NOMINAL"
+            }
+        }
+        local okAck = network_manager.dispatch(net, nil, nil, nil, 10011, 10011, ackPacket)
+        assert_true(okAck)
+        assert_not_nil(adapterAsa.discoveredPods)
+        assert_not_nil(adapterAsa.discoveredPods["ASA_L"])
+        assert_eq(adapterAsa.discoveredPods["ASA_L"].podId, "ASA_L")
+
+        local statusPacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_AERO_STATUS",
+            payload = {
+                surfaceId = "AIL_L",
+                appliedDeg = -12.5,
+                healthStatus = "API_NOMINAL"
+            }
+        }
+        local okStatus = network_manager.dispatch(net, nil, nil, nil, 10011, 10011, statusPacket)
+        assert_true(okStatus)
+        assert_not_nil(adapterAsa.surfacesFeedback["AIL_L"])
+        assert_eq(adapterAsa.surfacesFeedback["AIL_L"].appliedDeg, -12.5)
+    end)
+
+    it("rejects MSG_ATTITUDE_CMD unless commandType is QUATERNION_RATE or RATE_COMMAND", function()
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local fsm = state_machine.init({}, true)
+        fsm.currentState = "NORMAL"
+
+        -- Stale ATTITUDE_ANGLE: must be rejected!
+        local stalePacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 10,
+            type = "MSG_ATTITUDE_CMD",
+            payload = {
+                commandType = "ATTITUDE_ANGLE",
+                targetQuaternion = { w = 1.0, x = 0.0, y = 0.0, z = 0.0 }
+            }
+        }
+        local okStale = network_manager.dispatch(net, fsm, nil, nil, 10001, 10001, stalePacket)
+        assert_false(okStale, "Stale ATTITUDE_ANGLE must be rejected")
+
+        -- Missing commandType: must be rejected!
+        local untypedPacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 11,
+            type = "MSG_ATTITUDE_CMD",
+            payload = {
+                targetQuaternion = { w = 1.0, x = 0.0, y = 0.0, z = 0.0 }
+            }
+        }
+        local okUntyped = network_manager.dispatch(net, fsm, nil, nil, 10001, 10001, untypedPacket)
+        assert_false(okUntyped, "Untyped MSG_ATTITUDE_CMD must be rejected")
+
+        -- QUATERNION_RATE: accepted
+        local quatPacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 12,
+            type = "MSG_ATTITUDE_CMD",
+            payload = {
+                commandType = "QUATERNION_RATE",
+                targetQuaternion = { w = 1.0, x = 0.0, y = 0.0, z = 0.0 },
+                targetRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 }
+            }
+        }
+        local okQuat = network_manager.dispatch(net, fsm, nil, nil, 10001, 10001, quatPacket)
+        assert_true(okQuat, "QUATERNION_RATE must be accepted")
+        assert_eq(net.latestCommand.commandType, "QUATERNION_RATE")
+
+        -- RATE_COMMAND: accepted
+        local ratePacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 13,
+            type = "MSG_ATTITUDE_CMD",
+            payload = {
+                commandType = "RATE_COMMAND",
+                targetRates = { pitchRate = 5.0, rollRate = -2.0, yawRate = 0.0 }
+            }
+        }
+        local okRate = network_manager.dispatch(net, fsm, nil, nil, 10001, 10001, ratePacket)
+        assert_true(okRate, "RATE_COMMAND must be accepted")
+        assert_eq(net.latestCommand.commandType, "RATE_COMMAND")
+    end)
+end)
+
+describe("vas core daemon identifier normalization and flap limit", function()
+    local core_daemon = require("core_daemon")
+
+    it("loads flapVfeLimit from stallGuard config into policy", function()
+        local daemonState = core_daemon.init({
+            system = {
+                vehicleType = "WINGED_VTOL",
+                aircraftDomainId = "AIRCRAFT_01",
+                stallGuard = { flapVfeLimit = 15.0 }
+            },
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        })
+        assert_not_nil(daemonState.policy)
+        assert_eq(daemonState.policy.vFe, 15.0)
+    end)
+end)
+
+describe("vas main boot state without harness override", function()
+    local vas_main = require("main")
+
+    it("does not force fsm currentState to NORMAL on boot when _G.harness_set_state is absent", function()
+        sdk.patch(parallel, "waitForAny", function(...) end)
+        sdk.patch(_G, "term", mock.term(51, 19))
+        sdk.patch(_G, "print", function() end)
+
+        local prevHarness = _G.harness_set_state
+        _G.harness_set_state = nil
+
+        local cfg = {
+            system = { vehicleType = "WINGED_VTOL", aircraftDomainId = "AIRCRAFT_01", debug = true },
+            thrusters = {},
+            surfaces = {},
+            sensors = {},
+            pid = {}
+        }
+        local state = vas_main.main(cfg)
+        _G.harness_set_state = prevHarness
+
+        assert_not_nil(state)
+        assert_not_nil(state.fsm)
+        assert_eq(state.fsm.currentState, "DISARMED", "Boot FSM state must be DISARMED when uncalibrated and without harness override")
     end)
 end)

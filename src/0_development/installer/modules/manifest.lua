@@ -107,7 +107,7 @@ manifest.MODULES = {
         id = "vas",
         name = "VAS",
         category = "control",
-        version = "1.15.0",
+        version = "1.19.0",
         installDir = "/",
         startup = {
             enabled = true,
@@ -120,6 +120,25 @@ manifest.MODULES = {
                 aircraftIndexN = 1,
                 baseChannel = 10000,
                 bandwidth = 40,
+                channels = {
+                    c2 = 0,
+                    guidance = 1,
+                    telemetry = 2,
+                    mfd = 3,
+                    trajectory = 4,
+                    clientReply = 5,
+                    actuation = 10,
+                    asaActuation = 11,
+                },
+                timeouts = {
+                    fcpCommandTimeoutMs = 1500,
+                    sensorLossDebounceTicks = 1,
+                    calibrationTimeoutSec = 120,
+                },
+                stallGuard = {
+                    flapVfeLimit = 15.0,
+                },
+                debug = false,
             },
         },
         files = {

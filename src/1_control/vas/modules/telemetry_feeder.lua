@@ -25,17 +25,19 @@ local function build_telem_payload(comState, fsmState, mixerState, diagState)
     }
 end
 
-local function build_mfd_payload(comState, fsmState, mixerState, diagState)
+local function build_mfd_payload(comState, fsmState, mixerState, diagState, isAcro)
     return {
+        source = isAcro and "CORE_ACRO_TAKEOVER" or "CORE_FAILSAFE",
         fsmState = fsmState.currentState,
-        pitch = comState.attitude.pitch,
-        roll = comState.attitude.roll,
-        yaw = comState.attitude.yaw,
-        altitude = comState.dynamics.altitudeY,
-        vy = comState.dynamics.verticalSpeed,
+        flightMode = isAcro and "ACRO" or fsmState.currentState,
+        acroActive = isAcro == true,
+        attitude = comState.attitude,
+        angularRates = comState.rates,
+        dynamics = comState.dynamics,
         fuel = comState.fuel,
         dynamicLoad = (mixerState and mixerState.dynamicLoad) or 0.0,
-        sensorHealth = diagState.sensorHealth
+        sensorHealth = diagState.sensorHealth,
+        actuatorHealth = diagState.actuatorHealth or { tap = true, asa = true }
     }
 end
 
@@ -52,7 +54,7 @@ function telemetry_feeder.tick(state, netState, comState, fsmState, mixerState, 
     local isFailsafe = (fsmState and (fsmState.currentState == "FAILSAFE_HOLD" or fsmState.currentState == "EMERGENCY_LAND"))
 
     if isAcro or (isFailsafe and (state.tickCounter % 4 == 0)) then
-        local mfdPayload = build_mfd_payload(comState, fsmState, mixerState, diagState)
+        local mfdPayload = build_mfd_payload(comState, fsmState, mixerState, diagState, isAcro)
         network_manager.send_packet(netState, netState.channels.mfd, "MSG_MFD_STATE", mfdPayload)
     end
 end

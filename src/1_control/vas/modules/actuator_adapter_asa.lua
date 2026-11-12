@@ -3,7 +3,7 @@ local actuator_adapter_asa = {}
 
 function actuator_adapter_asa.init(surfacesConfig)
     local cfg = surfacesConfig or {}
-    return {
+    local adapter = {
         surfaceMix = cfg.surfaceMix or {},
         aeroEnvelope = cfg.aeroEnvelope or {},
         speedLimits = cfg.speedLimits or {},
@@ -13,8 +13,23 @@ function actuator_adapter_asa.init(surfacesConfig)
             axisSaturatedNeg = { pitch = false, roll = false, yaw = false }
         },
         surfacesFeedback = {},
+        discoveredPods = {},
         healthStatus = "API_NOMINAL"
     }
+
+    adapter.register_surface_node = function(self, payload)
+        return actuator_adapter_asa.register_surface_node(self, payload)
+    end
+    adapter.update_feedback = function(self, payload)
+        return actuator_adapter_asa.update_feedback(self, payload)
+    end
+    adapter.compute_q_scaling = function(self, airspeed)
+        return actuator_adapter_asa.compute_q_scaling(self, airspeed)
+    end
+    adapter.allocate = function(self, wrench, airspeed, flapTarget)
+        return actuator_adapter_asa.allocate(self, wrench, airspeed, flapTarget)
+    end
+    return adapter
 end
 
 function actuator_adapter_asa.compute_q_scaling(state, airspeed)
@@ -46,7 +61,7 @@ end
 
 function actuator_adapter_asa.allocate(state, wrench, airspeed, flapTarget)
     local qScale = actuator_adapter_asa.compute_q_scaling(state, airspeed)
-    local sat = {
+    local satAsa = {
         axisSaturatedPos = { pitch = false, roll = false, yaw = false },
         axisSaturatedNeg = { pitch = false, roll = false, yaw = false }
     }
@@ -69,12 +84,25 @@ function actuator_adapter_asa.allocate(state, wrench, airspeed, flapTarget)
             local clamped = math.max(rng[1], math.min(rng[2], raw))
             local step = math.floor(clamped * 15.0 + 0.5)
             outputs[name] = step
-            if step >= 15 then check_axis_sat(sat, mix, true)
-            elseif step <= -15 then check_axis_sat(sat, mix, false) end
+            if step >= 15 then check_axis_sat(satAsa, mix, true)
+            elseif step <= -15 then check_axis_sat(satAsa, mix, false) end
         end
     end
-    state.saturationStatus = sat
-    return outputs, sat
+    state.saturationStatus = satAsa
+    return outputs, satAsa
+end
+
+function actuator_adapter_asa.register_surface_node(state, payload)
+    if not state or not payload then return false end
+    state.discoveredPods = state.discoveredPods or {}
+    local podId = payload.podId or ("POD_" .. tostring(#state.discoveredPods + 1))
+    state.discoveredPods[podId] = {
+        podId = podId,
+        managedSurfaces = payload.managedSurfaces or {},
+        boundPorts = payload.boundPorts or {},
+        healthStatus = payload.healthStatus or "NOMINAL"
+    }
+    return true
 end
 
 function actuator_adapter_asa.update_feedback(state, payload)

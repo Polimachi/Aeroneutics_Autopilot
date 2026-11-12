@@ -55,9 +55,8 @@ end
 
 local function main(configDirOrTable)
     local state = core_daemon.init(configDirOrTable or "config")
-    state.fsm.currentState = "NORMAL"
-
     if _G.harness_set_state then
+        state.fsm.currentState = "NORMAL"
         state.sensors.devices.gimbal = state.sensors.devices.gimbal or {
             getReading = function() return { pitch = 0, roll = 0, yaw = 0, pitchRate = 0, rollRate = 0, yawRate = 0 } end
         }

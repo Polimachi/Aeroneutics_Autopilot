@@ -57,6 +57,29 @@ end
 
 pcall(load_configs, "config")
 
+local function resolve_debug_flag(cfg)
+    if cfg.system.debug == nil and cfg.debug ~= nil then cfg.system.debug = cfg.debug end
+    if cfg.system.debug == nil and fs and fs.exists and fs.exists("config.json") then
+        local rootCfg = load_json("config.json")
+        if rootCfg and rootCfg.debug ~= nil then cfg.system.debug = (rootCfg.debug == true) end
+    end
+    if cfg.system.debug == nil then cfg.system.debug = true
+    else cfg.system.debug = (cfg.system.debug == true) end
+end
+
+local function resolve_thruster_config(cfg)
+    local thrusterCfg = cfg.thrusters or {}
+    if (cfg.system and (cfg.system.vehicleType == "ADVANCED_VTOL" or cfg.system.airframeType == "ADVANCED_VTOL" or cfg.system.isVectorVtol)) then
+        thrusterCfg.isVectorVtol = true
+        thrusterCfg.airframeType = "ADVANCED_VTOL"
+    end
+    if cfg.system and cfg.system.pseudoInverseMatrix and not thrusterCfg.pseudoInverseMatrix then
+        thrusterCfg.pseudoInverseMatrix = cfg.system.pseudoInverseMatrix
+        thrusterCfg.controlEffectivenessMatrix = cfg.system.controlEffectivenessMatrix
+    end
+    return thrusterCfg
+end
+
 function core_daemon.init(configDirOrTable)
     local cfg
     local dir = "config"
@@ -68,23 +91,7 @@ function core_daemon.init(configDirOrTable)
     end
     cfg = cfg or {}
     cfg.system = cfg.system or {}
-
-    if cfg.system.debug == nil and cfg.debug ~= nil then
-        cfg.system.debug = cfg.debug
-    end
-
-    if cfg.system.debug == nil and fs and fs.exists and fs.exists("config.json") then
-        local rootCfg = load_json("config.json")
-        if rootCfg and rootCfg.debug ~= nil then
-            cfg.system.debug = (rootCfg.debug == true)
-        end
-    end
-
-    if cfg.system.debug == nil then
-        cfg.system.debug = true
-    else
-        cfg.system.debug = (cfg.system.debug == true)
-    end
+    resolve_debug_flag(cfg)
 
     local sensors = sensor_pipeline.init(cfg.sensors)
     local fsm = state_machine.init(cfg.system)
@@ -92,16 +99,7 @@ function core_daemon.init(configDirOrTable)
     local fdCore = flight_dynamics_core.init(cfg.pid)
     local policy = vehicle_policy.init(cfg.system)
 
-    local thrusterCfg = cfg.thrusters or {}
-    if (cfg.system and (cfg.system.vehicleType == "ADVANCED_VTOL" or cfg.system.airframeType == "ADVANCED_VTOL" or cfg.system.isVectorVtol)) then
-        thrusterCfg.isVectorVtol = true
-        thrusterCfg.airframeType = "ADVANCED_VTOL"
-    end
-    if cfg.system and cfg.system.pseudoInverseMatrix and not thrusterCfg.pseudoInverseMatrix then
-        thrusterCfg.pseudoInverseMatrix = cfg.system.pseudoInverseMatrix
-        thrusterCfg.controlEffectivenessMatrix = cfg.system.controlEffectivenessMatrix
-    end
-
+    local thrusterCfg = resolve_thruster_config(cfg)
     local adapter = actuator_adapter_tca.init(thrusterCfg)
     local adapterAsa = actuator_adapter_asa.init(cfg.surfaces)
     local feeder = telemetry_feeder.init(cfg.system)
@@ -138,15 +136,37 @@ local function step_kinematics(state, dt, nowMs)
     return comState, healthMap, sensorOk
 end
 
+local function apply_gimbal_saturation(combSat, compWrench, adapter)
+    if not (adapter and adapter.groupStatus) then return end
+    local anyGimbalSaturated = false
+    for _, gst in pairs(adapter.groupStatus) do
+        if gst.gimbalSaturated == true then
+            anyGimbalSaturated = true
+            break
+        end
+    end
+    if not anyGimbalSaturated then return end
+    if (compWrench.surge or 0) > 0.05 then combSat.axisSaturatedPos.surge = true
+    elseif (compWrench.surge or 0) < -0.05 then combSat.axisSaturatedNeg.surge = true end
+    if (compWrench.sway or 0) > 0.05 then combSat.axisSaturatedPos.sway = true
+    elseif (compWrench.sway or 0) < -0.05 then combSat.axisSaturatedNeg.sway = true end
+    if (compWrench.pitchTorque or 0) > 0.05 then combSat.axisSaturatedPos.pitch = true
+    elseif (compWrench.pitchTorque or 0) < -0.05 then combSat.axisSaturatedNeg.pitch = true end
+    if (compWrench.rollTorque or 0) > 0.05 then combSat.axisSaturatedPos.roll = true
+    elseif (compWrench.rollTorque or 0) < -0.05 then combSat.axisSaturatedNeg.roll = true end
+    if (compWrench.yawTorque or 0) > 0.05 then combSat.axisSaturatedPos.yaw = true
+    elseif (compWrench.yawTorque or 0) < -0.05 then combSat.axisSaturatedNeg.yaw = true end
+end
+
 local function step_actuation(state, comState, dt)
     state.policy.isDerated = (state.adapter and state.adapter.isStaticFallback == true)
-    local rawCmd = state_machine.get_effective_command(state.fsm, comState)
-    local condCmd = vehicle_policy.pre_process_guidance(state.policy, comState, rawCmd, state.fsm.currentState)
+    local fcpCmd = state_machine.get_effective_command(state.fsm, comState)
+    local condCmd = vehicle_policy.pre_process_guidance(state.policy, comState, fcpCmd, state.fsm.currentState)
     local sat = state.fdCore.saturationStatus or state.adapter.saturationStatus
     local baseWrench = flight_dynamics_core.compute(state.fdCore, comState, condCmd, dt, sat)
     local compWrench = vehicle_policy.post_process_wrench(state.policy, baseWrench, comState, condCmd)
 
-    local rawTap, satTap = actuator_adapter_tca.allocate(state.adapter, compWrench)
+    local rawTap, satTca = actuator_adapter_tca.allocate(state.adapter, compWrench)
     local isAero = vehicle_policy.is_aerodynamic(state.policy)
     local rawAsa, satAsa = nil, nil
     if isAero then
@@ -155,35 +175,8 @@ local function step_actuation(state, comState, dt)
         rawAsa, satAsa = actuator_adapter_asa.allocate(state.adapterAsa, compWrench, airspeed, condCmd.flapTarget)
     end
 
-    local combSat = isAero and vehicle_policy.combine_saturation(satTap, satAsa, condCmd.transitionAlpha) or satTap
-
-    -- Integrate TCA gimbalSaturated feedback into directional anti-windup
-    if state.adapter and state.adapter.groupStatus then
-        local anyGimbalSaturated = false
-        for _, gst in pairs(state.adapter.groupStatus) do
-            if gst.gimbalSaturated == true then
-                anyGimbalSaturated = true
-                break
-            end
-        end
-        if anyGimbalSaturated then
-            if (compWrench.surge or 0) > 0.05 then combSat.axisSaturatedPos.surge = true
-            elseif (compWrench.surge or 0) < -0.05 then combSat.axisSaturatedNeg.surge = true end
-
-            if (compWrench.sway or 0) > 0.05 then combSat.axisSaturatedPos.sway = true
-            elseif (compWrench.sway or 0) < -0.05 then combSat.axisSaturatedNeg.sway = true end
-
-            if (compWrench.pitchTorque or 0) > 0.05 then combSat.axisSaturatedPos.pitch = true
-            elseif (compWrench.pitchTorque or 0) < -0.05 then combSat.axisSaturatedNeg.pitch = true end
-
-            if (compWrench.rollTorque or 0) > 0.05 then combSat.axisSaturatedPos.roll = true
-            elseif (compWrench.rollTorque or 0) < -0.05 then combSat.axisSaturatedNeg.roll = true end
-
-            if (compWrench.yawTorque or 0) > 0.05 then combSat.axisSaturatedPos.yaw = true
-            elseif (compWrench.yawTorque or 0) < -0.05 then combSat.axisSaturatedNeg.yaw = true end
-        end
-    end
-
+    local combSat = isAero and vehicle_policy.combine_saturation(satTca, satAsa, condCmd.transitionAlpha) or satTca
+    apply_gimbal_saturation(combSat, compWrench, state.adapter)
     state.fdCore.saturationStatus = combSat
 
     local safeTap = state_machine.apply_output_safety_rule(state.fsm, rawTap, false)
