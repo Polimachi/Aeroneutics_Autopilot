@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-12  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202-1~4, TASK-206 / 진행 중: TASK-202 [202-5 대기] / 활성 대기: TASK-010, 011, 013, 117, 120, 204, 207, 208, 209, 210, 401, 402)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202, TASK-206 / 활성 대기: TASK-010, 011, 013, 117, 120, 204, 207, 208, 209, 210, 401, 402)
 
 ---
 
@@ -62,17 +62,6 @@
     - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
-- [-] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201[AMP 초안] + 203 통합)**
-  - **선행 의존성**: `TASK-202-1~4` 및 `TASK-201` 완료로 `TASK-202-5`(호스트 PC 외부 비주얼 에디터 `tools/amm_mission_editor.html` 사양서 생성) 즉시 진행 가능 (HTML 파일 직접 구현은 `TASK-402`로 분리)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-2-amm-mission-core-hooks-zone3.md`, `docs/superpowers/plans/2026-11-11-task-202-3-amm-mission-fsm-c2-headless.md`, `docs/superpowers/plans/2026-11-11-task-202-4-amm-tui-resolver-drop-cli.md`, `docs/superpowers/plans/2026-11-11-amm-webui-editor-spec-draft.md` (초안: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`)
-  - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.28.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.13.0 Approved)
-  - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 3분할 미션 코어(`src/3_planning/amm/modules/{mission_engine,condition_evaluator,hook_runner}.lua`)로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 무인기 헤드리스(`config.headless`) 및 원격 트리거(`Base+0` `MSG_MISSION_CMD`)로 겸용 구동하며, 호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`) 저작 및 외부 파일 즉시 구동 파이프라인을 통합 지원하도록 모듈화
-  - [x] **TASK-202-1**: AMM 사양서(v1.2.0 Approved), 마스터 ICD(v1.27.0 Approved), 전체 구조도(v2.12.1 Approved) 통합 미션 스키마·Zone 3 인터페이스·호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`) 및 외부 파일 즉시 구동(`resolve_path`, `validate_mission_table`, `file_transfer`, 부팅 인자) 규격 반영 완료 (2026-11-11)
-  - [x] **TASK-202-2**: 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 조건 평가기(`condition_evaluator.lua`) 및 0-tick 비차단 훅/디바이스 실행기(`hook_runner.lua`), `network_manager.lua` Zone 3(`Base+20~29`) 동적 채널 연동 구현 완료 (2026-11-11, `3_planning/amm` 48/48 PASS)
-  - [x] **TASK-202-3**: `missions/*.json` 다형성 시퀀스 파일 로더 및 스텝 자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `Base+0` `MSG_MISSION_CMD`/`ACK` 중재 및 `config.headless` 분기 구현 완료 (2026-11-11, 단위 12타겟 361/361 PASS, `3_planning/amm` 60/60 PASS)
-  - [x] **TASK-202-4**: AMM 51x19 TUI 6행 스크롤 뷰포트 + 5행 조건 진행률 시각화(`ui_renderer.lua`), 다중 경로 리졸버(`resolve_path`)·프리플라이트 스키마 검증기(`validate_mission_table`), `c2_arbiter.lua` `SCHEMA_INVALID` ACK 매핑, `file_transfer` 드롭/부팅 인자 즉시 실행(`main.lua`) 및 CLI 명령어(`run/load/files/stop/next/mission`, `input_handler.lua`) 확장 구현 완료 (2026-11-12, 커밋 `fa91084`, `064a706`, `dfb3029`, `d3b3b8b`, 단위 12타겟 372/372 PASS·`3_planning/amm` 71/71 PASS, E2E 8/8 PASS, 돌연변이 25/25 KILLED)
-  - [ ] **TASK-202-5**: 호스트 PC 브라우저 기반 단일 파일 비주얼 미션 에디터(`tools/amm_mission_editor.html`)의 사양서 생성 (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` 작성 — `docs/superpowers/plans/2026-11-11-amm-webui-editor-spec-draft.md`를 현행 `AMM v1.3.0`·`ICD v1.28.0`·`Diagram v2.13.0` 배지 기준으로 적용; `tools/amm_mission_editor.html` 직접 생성·E2E 검증은 별도 과제 `TASK-402`로 분리)
-
 - [ ] **TASK-204: AMM의 미션 관리 시스템용 표준 행동 리스트 재정의: 진입조건 및 계층별 분류** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `src/3_planning/amm/modules/`)
   - **배경 및 목적**: 현행 AMM의 3도메인(항법/인프라/특수) 13종 평면적 체크포인트 분류 및 사후 조건(`completeWhen`/`abortWhen`) 중심 스키마를 재검토하여, 각 표준 행동(Action)의 **진입조건(Entry Preconditions / State Guards)**과 **계층별 분류(Hierarchical Taxonomy)**를 체계적으로 재정의하고 사양서 및 미션 엔진 검증/실행 모델에 반영
 
@@ -96,8 +85,8 @@
   - **사양서 상태**: PAYLOAD 계층 전용 사양서 미작성 (Draft → Approved 수립 및 마스터 ICD Interface I-11·전체 구조도·AMM 사양서 동기화 필요)
   - **배경 및 목적**: 현행 마스터 ICD Interface I-11(`Base+20~29`, Zone 3 탑재체 버스)에는 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK` 기본 예시 패킷만 정의되어 있으며, 전체 구조도의 세부 채널 구분(`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` 예비) 및 다양한 탑재체 노드(화물 투하, 마그넷 래치, 엄빌리컬 급유/충전, `CC:Radars`/터렛 무장 제어 등) 간 표준 통신 계약이 미비함. 탐색/기능 등록(Discovery & Capability), 상태/헬스 텔레메트리, 명령·응답(`ACK`/`NACK`)·오류 코드, 안전 인터록 및 채널 오프셋 배분 규칙을 포함한 PAYLOAD 계층 표준 통신 스키마를 정의함
 
-- [ ] **TASK-402: 호스트 PC 브라우저 기반 단일 파일 비주얼 미션 에디터(`tools/amm_mission_editor.html`) HTML 구현 및 검증** (`tools/amm_mission_editor.html`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md`, `tests/3_planning/amm/`)
-  - **선행 의존성**: `TASK-202-5` 완료 (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` 사양서 작성 필요)
+- [ ] **TASK-402: 호스트 PC 브라우저 기반 단일 파일 비주얼 미션 에디터(`tools/amm_mission_editor.html`) HTML 구현 및 검증** (`tools/amm_mission_editor.html`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.1.0 Draft), `tests/3_planning/amm/`)
+  - **선행 의존성**: `TASK-202-5` 완료 (`AMM_MISSION_EDITOR_SPECIFICATION.md` `v0.1.0 Draft` 수립 완료 — 구현 착수 전 `Approved` 승격 리뷰 권장)
   - **배경 및 목적**: `TASK-202-5`에서 수립한 `AMM_MISSION_EDITOR_SPECIFICATION.md`를 기반으로 오프라인 `file://` 호환 단일 파일 HTML5/CSS/Vanilla JS 비주얼 미션 에디터(`tools/amm_mission_editor.html`)를 직접 생성하고, AMM 단위 테스트·E2E 시뮬레이션 검증, `manifest.lua`·`verify_manifest_sync.py`·`verify_spec_status.py` 동기화 및 WebUI 에디터 사양서 `Implemented` 승격을 수행함 (`TASK-206` 완료에 따라 `AMM v1.3.0`은 `TASK-207` 완료 시까지 `Approved` 유지)
 
 ---
@@ -128,6 +117,16 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 유지)
+
+- [x] **TASK-202: UAFS 통합 미션 시퀀서 엔진, AMM 조종석 단말 및 WebUI 에디터 사양 수립 (구 TASK-201[AMP 초안] + 203 통합)** (완료일: 2026-11-12) (`src/3_planning/amm/`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.1.0 Draft))
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-2-amm-mission-core-hooks-zone3.md`, `docs/superpowers/plans/2026-11-11-task-202-3-amm-mission-fsm-c2-headless.md`, `docs/superpowers/plans/2026-11-11-task-202-4-amm-tui-resolver-drop-cli.md`, `docs/superpowers/plans/2026-11-12-task-202-5-amm-webui-editor-spec.md` (초안: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`, `docs/superpowers/plans/2026-11-11-amm-webui-editor-spec-draft.md`)
+  - **목적 및 성과**: Layer 3(AMM)과 구 Layer 4(AMP) 미션 시퀀서를 3분할 코어(`mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua`)로 통합하고 51x19 6행 스크롤 뷰포트·다중 경로 리졸버·프리플라이트 검증기·`file_transfer` 핫인젝션·헤드리스 C2(`Base+0`)를 구현했으며(`TASK-202-1~4`), 호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`)의 `AMM v1.3.0` 정합 상세 규격서(`AMM_MISSION_EDITOR_SPECIFICATION.md` `v0.1.0 Draft`)를 수립해 후속 HTML 구현(`TASK-402`)으로 인계함 (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` 현재 v1.3.0 Approved, `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` 현재 v1.28.0 Approved, `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` 현재 v2.13.0 Approved).
+  - **구현 내용**:
+    - [x] **TASK-202-1**: AMM 사양서(당시 v1.2.0 Approved), 마스터 ICD(당시 v1.27.0 Approved), 전체 구조도(당시 v2.12.1 Approved) 통합 미션 스키마·Zone 3·외부 파일 즉시 구동 규격 반영 완료 (2026-11-11)
+    - [x] **TASK-202-2**: 13종 체크포인트 스키마, 12종 조건 평가기(`condition_evaluator.lua`), 0-tick 훅(`hook_runner.lua`), Zone 3(`Base+20~29`) 연동 구현 완료 (2026-11-11, `3_planning/amm` 48/48 PASS)
+    - [x] **TASK-202-3**: 다형성 로더·자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `MSG_MISSION_CMD`/`ACK` 중재 및 `config.headless` 분기 구현 완료 (2026-11-11, 단위 361/361 PASS, `3_planning/amm` 60/60 PASS)
+    - [x] **TASK-202-4**: 51x19 TUI 6행 뷰포트·5행 조건 진행률(`ui_renderer.lua`), `resolve_path`·`validate_mission_table`, `SCHEMA_INVALID` ACK, `file_transfer` 드롭/부팅 인자·CLI 확장 완료 (2026-11-12, `fa91084`..`d3b3b8b`, 단위 372/372 PASS·`3_planning/amm` 71/71 PASS, E2E 8/8 PASS, 돌연변이 25/25 KILLED)
+    - [x] **TASK-202-5**: 호스트 PC 외부 비주얼 미션 에디터 사양서 `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.1.0 Draft`) 작성 완료 (`AMM v1.3.0` / `ICD v1.28.0` / `Diagram v2.13.0` 정합화, `version: "1.3.0"` 출력 및 `v1.0.0`~`v1.2.0` 호환, 13종 액션·12종 조건·4종 훅·`validateMission()` 카탈로그·2D `(X,Z)` 캔버스·`TASK-402` 인수 기준 명세; HTML 구현은 `TASK-402` 분리) (2026-11-12)
 
 - [x] **TASK-206: FCP 외루프 경량화 및 AMM 상위 계층 이관을 위한 15대 사양서 전면 개편** (완료일: 2026-11-12) (`docs/system/*.md`, `docs/specs/**/*.md`, `tools/verify_spec_status.py`)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-fcp-amm-role-refactor-specs.md`
@@ -215,13 +214,3 @@
     - [x] **TASK-009-3**: 동기화/업로드 CLI 도구(`tools/sync_gdrive.py`) 개발, 하네스 무결성 테스트 구축 및 운영 가이드라인(`docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`) 문서화
     - [x] **TASK-009-4**: Google Drive 공식 폴더 동기화 및 부트스트랩 파일 ID 프리셋 내장
     - [x] **TASK-009-5**: 전계층 회귀 검증 및 마일스톤 동기화
-
-- [x] **TASK-008: 구버전 잔존 명칭(VAS-Core, VAS-Align, VAC-Align) 전면 검수·치환 및 회귀 방지 정비** (완료일: 2026-11-09) (`tests/harness/test_terminology_guard.py`, `tools/verify_all_specs.py`, `src/`, `tests/`, `docs/`)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-09-task-008-legacy-terminology-purge.md`
-  - **목적 및 성과**: 비행 제어 및 교정 지상 콘솔 관련 구버전 잔존 명칭(`VAS-Core` $\to$ `VAS`, `VAS-Align` $\to$ `Alignment`, `VAC-Align` $\to$ `Alignment`, `VAC-Core` $\to$ `VAS`, TCA 내 잔존 `VAC` 링크 스트림 명칭) 전면 소급 척결 및 단일 표준화 완료. 회귀 방지 테스트(`test_terminology_guard.py` 7/7 PASS) 및 사양서 무결성 검증기(`verify_all_specs.py` Rule 8) 확장으로 재유입 시 자동 검출되도록 구성. 런타임 모듈(`preflight_bit.lua`, `channel_rebind_handler.lua`, `tca_daemon.lua`, `tui_dashboard.lua`, `node_core_sim.lua`) 및 7대 사양서 전수 치환 완료. 12개 타겟 단위 테스트 293/293 PASS, E2E 시뮬레이션 6/6 PASS, 돌연변이 살상률 100.0%(20/20 KILLED), 하네스 36/36 PASS, 14대 사양서 0 Errors/0 Warnings 달성.
-  - **구현 내용**:
-    - [x] **TASK-008-1**: 회귀 방지 테스트(`tests/harness/test_terminology_guard.py`)에 `VAS-Core`, `VAS-Align`, `VAC-Align`, `VAC-Core` 금지 패턴 등록 및 Red 검증
-    - [x] **TASK-008-2**: 사양서 무결성 검증 도구(`tools/verify_all_specs.py` Rule 8) 용어 위생 검사 규칙 확장
-    - [x] **TASK-008-3**: 전체 사양서(`ALIGNMENT`, `ASA`, `TCA`, `VAS`, `FCP`, `SYSTEM_ARCHITECTURE`, `SYSTEM_PACKET`) 내 잔존 식별자 전수 치환
-    - [x] **TASK-008-4**: 런타임 소스(`src/1_control/`) 및 테스트 코드(`tests/1_control/tca/`) 내 주석·식별자 치환
-    - [x] **TASK-008-5**: 단위 테스트(293/293), E2E(6/6), 돌연변이(20/20) 및 사양서 무결성 검증기 일괄 통과 검증

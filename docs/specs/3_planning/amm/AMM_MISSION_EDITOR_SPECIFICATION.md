@@ -40,7 +40,7 @@
 - **무설치(Zero-Install) 단일 파일 구조**: `tools/amm_mission_editor.html`은 별도 빌드 도구, 로컬 HTTP 서버, npm 패키지 없이 단일 `.html` 파일(인라인 `<style>` + `<script>`)로 완결되어야 하며 `file://` 프로토콜에서 즉시 열려야 합니다.
 - **외부 네트워크·CDN 차단**: `<script src="http...">`, `<link href="https...">`, Google Fonts, `fetch()`, `XMLHttpRequest`, `WebSocket` 등 어떠한 외부 네트워크 요청도 허용하지 않습니다.
 - **DOM XSS 안전성**: 사용자가 불러오거나 붙여넣은 미션 JSON 내부 문자열(`missionId`, `description`, `checkpointId`, `facilityId`, `command`, `message`, 오류 문구 등)을 DOM에 출력할 때는 반드시 `document.createElement` + `textContent` (또는 `value`)만 사용하며, 비신뢰 문자열을 `innerHTML` / `insertAdjacentHTML`에 직접 결합하지 않습니다.
-- **생태계 용어 및 금지 모드 준수**: Valkyrien Skies(`valkyrien`, `vs2`, `cc_vs` 등) 및 `kontraption:` 네임스페이스, 구버전 용어(`UAP`, `SAS`, `WAP`, `VAS-Core`, `VAS-Align`, `VAC-Align`, `VAC-Core`)를 UI·주석·식별자 어디에도 포함하지 않습니다.
+- **생태계 용어 및 금지 모드 준수**: `.agent/rules/domain-aeronautics.md`의 금지 모드·네임스페이스 및 `tests/harness/test_terminology_guard.py`의 금지 구버전 용어를 UI·주석·식별자 어디에도 포함하지 않습니다.
 
 ### 1.3 비목표 (Non-Goals)
 - 인게임 CC:Tweaked 모뎀 RF 채널(`Base+0..5`, `50000..60002`)과의 실시간 소켓 브리지 또는 실시간 텔레메트리 스트리밍은 범위 밖입니다.
@@ -396,3 +396,105 @@ type ValidationIssue = {
 ### 7.3 진단 인터랙션 규칙
 - `errors.length > 0` 상태에서도 `Export .json` 버튼은 클릭 가능하게 두되, 내보내기 전 비차단 확인 대화창(`"Preflight detected N error(s). Export anyway?"`)으로 사용자 실수를 방지합니다.
 - 하단 검증 바의 `CP#k` 이슈 칩을 클릭하면 즉시 `selectedIndex = k - 1`로 이동하고, 해당 체크포인트가 좌표를 가지면 캔버스 카메라(`camX, camZ`)를 해당 위치로 센터링합니다.
+
+---
+
+## 8. 2D `(X, Z)` 전술 경로 프리뷰 캔버스 규격 (§8)
+
+### 8.1 마인크래프트 `(X, Z)` 아핀 좌표 변환 및 HiDPI 스케일링
+- **좌표계 규약**: 마인크래프트 수평 평면에서 $+X$는 동쪽(화면 우측), $-Z$는 북쪽(화면 상단), $+Z$는 남쪽(화면 하단)입니다.
+- **World $\leftrightarrow$ Screen 변환**:
+  - $\text{sx} = \frac{W}{2} + (\text{wx} - \text{camX}) \cdot \text{zoom}$, $\quad \text{sy} = \frac{H}{2} + (\text{wz} - \text{camZ}) \cdot \text{zoom}$
+  - $\text{wx} = \text{camX} + \frac{\text{sx} - W / 2}{\text{zoom}}$, $\quad \text{wz} = \text{camZ} + \frac{\text{sy} - H / 2}{\text{zoom}}$
+  - 격자 스냅(`gridSnapM` ∈ `{0, 1, 10, 50}`): 활성 시 $v_{\text{snap}} = \text{Math.round}(v / g) \cdot g$.
+- **방위각 변환**: 진북 $0^\circ$($-Z$) $\to$ 캔버스 라디안 $\theta = (\text{headingDeg} - 90) \cdot \frac{\pi}{180}$. `ORBIT`의 `CW` 회전은 화면상 시계 방향($+X \to +Z \to -X \to -Z$) 화살표로 표시합니다.
+- **HiDPI 스케일링**: 리사이즈마다 `dpr = window.devicePixelRatio || 1`를 반영해 `canvas.width = rect.width * dpr`, `canvas.height = rect.height * dpr`, `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`를 적용합니다.
+
+### 8.2 8계층 순차 렌더링 파이프라인
+1. **배경 및 적응형 격자**: 줌 레벨에 따라 `10m` / `50m` / `100m` / `500m` 간격 중 화면상 `40..120px` 간격이 되는 축척 자동 선택, 원점 `(0, 0)` 십자선, 우상단 `N(-Z) / E(+X) / S(+Z) / W(-X)` 나침반 표시.
+2. **주 비행 경로선 (Primary Trajectory Legs)**: 공간 좌표를 가진 체크포인트(`FLY_OVER`, `FLY_TO`, `ORBIT`, `POI_HOLD`, `PATROL` 진입/이탈, `targetPos`가 있는 `TAKEOFF_LAUNCHPAD`/`LAND_LAUNCHPAD`)를 순차 연결하고 구간 중앙에 방향 화살표를 렌더링합니다. `executionMode === "REPEAT"`일 때는 마지막 공간 체크포인트에서 첫 번째 비행 체크포인트(첫 항목이 `TAKEOFF_LAUNCHPAD`이고 길이가 `2` 이상이면 인덱스 `1`, 아니면 인덱스 `0` — `mission_engine.lua` 순환 규칙 일치)로 이어지는 점선 귀환 레그를 그립니다.
+3. **도달 허용 반경 및 `ORBIT` 선회원**: `FLY_OVER` / `FLY_TO`의 해석된 `acceptanceRadius` 점선 원, `ORBIT`의 `params.radius` 점선 원 및 원주 위 `CW`/`CCW` 접선 방향 화살표.
+4. **`PATROL` 서브웨이포인트 다각형**: `P1`, `P2`, ... 번호가 붙은 폴리라인, `LOOP` 모드 시 `P_n -> P_1` 폐합선, `PING_PONG` 모드 시 양방향 셰브런 화살표.
+5. **`POI_HOLD` 조준선**: `targetPos`에서 `poiPos`까지 이어지는 호박색(`--accent-amber`) 점선 시선 및 `+POI` 표적 십자 마커.
+6. **체크포인트 노드 글리프 및 비공간 배지**:
+   - `TAKEOFF_LAUNCHPAD`: 상향 삼각형(`▲`), `LAND_LAUNCHPAD`: 하향 착륙 패드 사각형(`▼`), `ORBIT`: 이중 링, `POI_HOLD`: 다이아몬드(`◆`), `PATROL`: 다각형 허브, `FLY_OVER`/`FLY_TO`: 원형 마커 및 순번 `1..N`.
+   - `PAYLOAD_ACTION` / `REDSTONE_ACTION` 등 좌표 없는 비공간 스텝은 직전 공간 체크포인트 옆에 위성 배지(`P#idx`, `R#idx`)로 부착해 시퀀스 내 위치를 시각화합니다.
+   - 선택 체크포인트는 시안(`--accent-cyan`) 외곽선, 오류 체크포인트는 적색(`--accent-red`), `DEFERRED` 체크포인트는 호박색 점선 외곽선을 부여합니다.
+7. **`FIXED` 기수 방위 벡터**: 유효 `headingMode == "FIXED"`이고 유한 `fixedHeading`이 지정된 노드에 짧은 노즈 방향 화살표를 렌더링합니다.
+8. **좌상단 캔버스 HUD 오버레이**: `Cursor (X, Z)`, `Zoom`, `Legs`, `Total 2D Path (m)`, `Est. Transit Time (s)` (`defaults.cruiseSpeed` 및 구간별 속도 기준 합산).
+
+### 8.3 포인터 상태 머신 및 `Fit All`
+- **줌**: 마우스 휠로 커서 위치 월드 좌표를 고정한 채 `0.05 .. 10.0 px/m` 범위 줌 인/아웃.
+- **팬(Pan)**: 마우스 중클릭 드래그, 우클릭 드래그, 또는 `Space + 좌클릭 드래그`(`cursor: grab`).
+- **도구 모드 (`ui.activeTool`)**:
+  - `SELECT`: 노드 클릭 시 선택, 드래그 시 `targetPos` / `poiPos` / `PATROL` 서브웨이포인트 이동(드롭 시 `history` 스냅샷 적재).
+  - `ADD_FLY_OVER`: 캔버스 클릭 위치(스냅 적용)에 `FLY_OVER` 체크포인트 추가.
+  - `PICK_TARGET`: 캔버스 클릭 위치로 현재 선택된 체크포인트의 `targetPos` 지정/갱신.
+  - `PICK_POI`: 캔버스 클릭 위치로 현재 선택된 `POI_HOLD`의 `poiPos.{x, z}` 지정/갱신.
+  - `ADD_PATROL_WP`: 캔버스 클릭 위치에 현재 선택된 `PATROL`의 `waypoints[]` 행 추가.
+- **`Fit All`**: 모든 공간 좌표(`targetPos`, `poiPos`, `PATROL.waypoints`) 및 `ORBIT.radius`의 바운딩 박스를 계산해 `15%` 여백으로 뷰포트를 맞춥니다(공간 좌표가 없으면 `(0, 0)` 중심 `[-200, +200]` 기본 뷰).
+
+---
+
+## 9. JSON 입출력, 스타터 프리셋 및 단축키 규격 (§9)
+
+### 9.1 스타터 프리셋 (`Presets`)
+1. **`Sortie Alpha (Full Example)`**: `AMM_PROGRAM_SPECIFICATION.md` §6.2의 5-체크포인트 복합 소티(`TAKEOFF_LAUNCHPAD` $\to$ `FLY_OVER` $\to$ `ORBIT` $\to$ `PAYLOAD_ACTION` $\to$ `LAND_LAUNCHPAD`)를 `"version": "1.3.0"` 기준으로 제공합니다.
+2. **`Patrol Perimeter`**: `TAKEOFF_LAUNCHPAD` $\to$ 4점 사각 `PATROL (LOOP)` $\to$ `LAND_LAUNCHPAD` (`REPEAT` / `SINGLE` 예시).
+3. **`Payload Delivery`**: `FLY_OVER` $\to$ `FLY_TO` $\to$ `PAYLOAD_ACTION` + `REDSTONE_PULSE` 훅 $\to$ `LAND_LAUNCHPAD`.
+4. **`Empty Draft`**: 기본 헤더와 빈 체크포인트 `[]` (사용자가 캔버스에서 `ADD_FLY_OVER`로 즉시 구축 시작).
+
+### 9.2 JSON 임포트 · 내보내기 · Raw JSON 드로어
+- **임포트 (`importJson(rawTextOrObject)`)**:
+  - 지원 경로: 상단 `Import .json` 파일 선택(`<input type="file" accept=".json">`), 브라우저 창 전체 `dragover`/`drop`, Raw JSON 드로어 `Apply JSON`.
+  - 처리 순서: `JSON.parse` $\to$ `v1.0.0` `items[]` 감지 시 `convertLegacyItems` $\to$ `params.{x, z}` 단축 좌표 승격 $\to$ `_extra` 미지 키 분리 보존 $\to$ `validateMission()` $\to$ UI/캔버스 갱신.
+- **내보내기 (`exportJson()` / `Copy JSON`)**:
+  - 2-space 들여쓰기 정식 JSON 생성.
+  - `"version"`은 `"1.3.0"` 출력, 빈 `description`·미지정 선택 파라미터·`(Inherit Mission)`·**빈 `completeWhen`/`abortWhen` 및 빈 훅 배열(`onEnter`/`onExit`/`onAbort`) 키는 생략**, `_extra` 보존 키는 재병합.
+  - `Export .json`: `${missionId.toLowerCase().replace(/[^a-z0-9_-]+/g, "_") || "mission"}.json` 파일명으로 브라우저 다운로드 트리거.
+  - `Copy JSON`: `navigator.clipboard.writeText()` 실행(오프라인 `file://` 권한 제한 시 숨김 `<textarea>` + `execCommand("copy")` 폴백) 후 토스트 알림 표시.
+- **Raw JSON Drawer**: 실시간 JSON 동기화 미리보기(구문 강조 시 반드시 `<span>` + `textContent`만 생성해 DOM XSS 차단) 및 수동 편집 후 `Apply JSON` 지원.
+
+### 9.3 키보드 단축키
+| 단축키 | 동작 | 활성 조건 |
+| :---: | :--- | :--- |
+| **`Ctrl+Z`** | 실행 취소 (`Undo`) | 전역 (`undoStack` > 0) |
+| **`Ctrl+Y` / `Ctrl+Shift+Z`** | 다시 실행 (`Redo`) | 전역 (`redoStack` > 0) |
+| **`F`** | 캔버스 `Fit All` | 텍스트 입력 포커스 비활성 시 |
+| **`Delete`** | 선택 체크포인트 삭제 | 텍스트 입력 포커스 비활성 시 |
+| **`1` / `2` / `3`** | 도구 전환 (`SELECT` / `ADD_FLY_OVER` / `PICK_TARGET`) | 텍스트 입력 포커스 비활성 시 |
+
+---
+
+## 10. 내부 모듈 아키텍처 및 `TASK-402` 인수 기준 (§10)
+
+### 10.1 단일 파일 내부 IIFE 모듈 구조 (`tools/amm_mission_editor.html`)
+`tools/amm_mission_editor.html`은 단일 `<script>` 블록 내부를 아래 9개 IIFE/네임스페이스 섹션으로 구조화하여 전역 오염 없이 유지보수성을 확보합니다.
+
+| 내부 모듈 | 주요 책임 | `AMM` §10 공개 심볼 매핑 |
+| :--- | :--- | :--- |
+| **`SchemaConstants`** | 13종 액션, 12종 조건, 4종 훅, 6면, 16색, `AMM v1.3.0` §10.2 기본값, 프리셋 정의 | — |
+| **`LegacyMigrator`** | `v1.0.0` `items[]` $\to$ `v1.3.0` 업그레이드, `v1.1.0`/`v1.2.0` 버전 표기, `params.{x,z}` 승격, `_extra` 추출/병합 | `convertLegacyItems()` |
+| **`DefaultResolver`** | 액션별 `defaults` 상속 해석(`FLY_TO` `5.0m` vs `FLY_OVER` `20.0m`), 기본 `completeWhen` 프리뷰 텍스트 산출 | — |
+| **`Validator`** | 13종 액션·12종 조건·4종 훅·JSON 페이로드 실시간 Lua 동등성 검증 | `validateMission()` |
+| **`Store`** | `EditorState`, `undo`/`redo`(깊은 50), `500ms` `localStorage` 자동 저장·복구, 구독자 디스패치 | — |
+| **`CanvasRenderer`** | `(X, Z)` 아핀 변환, HiDPI 스케일링, 8계층 렌더링, 줌/팬/드래그/클릭 도구 상태 머신 | `renderCanvas()` |
+| **`InspectorUI`** | 5영역 DOM 안전 렌더러(`textContent` 전용), 체크포인트 레일, 13종 동적 폼, 조건/훅 빌더, 검증 드로어 | `renderCheckpoints()` |
+| **`JsonIO`** | 파일 `<input>`/드롭 임포트, 정규 JSON 직렬화, 다운로드/클립보드 복사, Raw JSON 드로어 | `importJson()`, `exportJson()` |
+| **`AppBootstrap`** | DOM 초기화, 단축키 바인딩, 자동 저장 복구 배너 및 초기 프리셋/빈 초안 로드 | *(선택적 읽기전용 테스트 훅 `window.__AMM_EDITOR__`)* |
+
+### 10.2 `TASK-402` 구현 및 검증 인수 기준 (Acceptance Criteria)
+후속 구현 태스크(`TASK-402`)에서 `tools/amm_mission_editor.html`을 작성·검증할 때 다음 4대 게이트를 모두 통과해야 합니다:
+
+1. **정적·보안 게이트**:
+   - `tools/amm_mission_editor.html` 내 외부 `http://` · `https://` `<script>`/`<link>`/`fetch()`/`WebSocket` 호출 `0`건.
+   - 비신뢰 JSON 문자열(테스트용 `<img src=x onerror=...>` 포함 `missionId`/`message`) 임포트 및 Raw JSON 프리뷰 시 `innerHTML` 실행 없이 리터럴 텍스트로 렌더링됨을 확인.
+   - Valkyrien Skies / `kontraption:` / 금지 레거시 용어 `0`건.
+2. **스키마 및 Lua/CraftOS-PC 라운드트립 게이트**:
+   - `Sortie Alpha`, 9종 활성 액션 전체, 12종 조건, 4종 훅, `v1.0.0` 레거시 변환 결과를 내보낸 `"version": "1.3.0"` JSON 파일이 CraftOS-PC `mission_engine:load()` 및 `validate_mission_table()`에서 `ok == true`로 적재됨을 검증(`tools/run_unit_tests.py` 및 `tools/run_e2e_tests.py` 통과).
+   - 예약 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 포함 내보내기 파일이 `validate_mission_table()`은 통과하고 `enter_checkpoint()`에서 `DEFERRED_ACTION_UNSUPPORTED`를 반환함을 확인.
+   - `empty completeWhen`/`abortWhen` 생략 규칙으로 인해 `ORBIT`/`PATROL` 등이 `evaluate_group(..., {})` `false` 함정에 빠지지 않음을 확인.
+3. **브라우저 실동작 수동 검증 (`file://`)**:
+   - 로컬 브라우저에서 `file:///.../tools/amm_mission_editor.html` 직접 실행 후 데스크톱(`>= 1280px`) 및 축소 뷰포트(`~1024px`)에서 캔버스 팬/줌/클릭/드래그, `Undo`/`Redo`, 파일 드롭 임포트/내보내기, CC:Tweaked 창 `file_transfer` 드롭 즉시 적재 동작을 확인.
+4. **사양서 상태 전이 규칙**:
+   - 본 규격서 `Draft` $\to$ `Approved` 리뷰 승격 후 `TASK-402` 구현·검증 완료 시 `AMM_MISSION_EDITOR_SPECIFICATION.md` 상태를 `Implemented`로 승격하고 `tools/verify_all_specs.py` 및 `tools/verify_spec_status.py`에 편입합니다. *(단, 상위 `AMM_PROGRAM_SPECIFICATION.md` `v1.3.0 Approved`는 `TASK-402`와 `TASK-207`이 모두 완료될 때까지 `Approved`를 유지합니다.)*
