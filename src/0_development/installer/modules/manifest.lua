@@ -554,6 +554,7 @@ manifest.MODULES = {
             { repoPath = "src/3_planning/amm/modules/input_handler.lua", dest = "/modules/input_handler.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/mission_controller.lua", dest = "/modules/mission_controller.lua", gdriveId = nil },
+            { repoPath = "src/3_planning/amm/modules/trajectory_generator.lua", dest = "/modules/trajectory_generator.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
