@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-12  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202, TASK-206 / 활성 대기: TASK-010, 011, 013, 117, 120, 204, 207, 208, 209, 210, 401, 402)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202, TASK-206 / 진행 중: TASK-207 [`feat/task-207-208-209` 워크트리] / 활성 대기: TASK-010, 011, 013, 117, 120, 123, 204, 208, 209, 210, 401, 402)
 
 ---
 
@@ -62,18 +62,32 @@
     - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
+- [ ] **TASK-123: GPS 고부하 경합·위상 버스트·모뎀 채널 오염 결함 수정** (`src/0_infra/gps/`, `src/0_infra/landing_pad/modules/gps_client.lua`, `src/2_guidance/fcp/modules/network_manager.lua`, `tests/`)
+  - **선행 참고**: `TASK-122` 후속 고부하 시나리오 검증 보고서(2026-11-12) 기반 결함 보완 (`TASK-207` `AMM v1.3.0` 외부 게이트웨이·`nav_engine` 구현 시 동일 위상 분산 및 `CH 60001` 미개방 원칙 승계)
+  - **사양서 상태**: `docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md` (현재 v2.3.1 Implemented), `docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md` (현재 v2.4.3 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved) — 선제 세션 대체·위상 분산·채널 인터록 규격 명문화 필요 시 착수 전 사양서 `Approved` 개정 검토
+  - **배경 및 목적**: `20Hz × 3기+` 및 `5Hz × 15기+` 고부하 검증에서 식별된 3대 구조적 위험(1-A/1-B: `50ms` Window-Solve와 `20Hz` 요청 경합에 의한 응답 순서 역전 및 구형 미결 세션 `FAIL_*` 패킷 낭비, 2-A: `5Hz` 동시 기동 In-cast 버스트로 인한 CC 256-이벤트 큐 포화, 2-B: 클라이언트 측 `CH 60001` 개방에 따른 타 기체 핑·진단 핑 역유입)을 수정하여 고밀도 다기체 운용 안정성을 확보함
+  - **주요 작업**:
+    - [ ] **TASK-123-1**: `session_scheduler.lua` 구형 미결 세션 선제 폐기 및 Window-Solve HWM 역전 가드 구현 — `ingestReport` 내 동일 `targetClient`의 더 낮은 `clientSeq` 미결 세션(`client_pending_key`) 즉시 회수(Preemptive Supersede) 및 `flushExpired` 풀이 직전 `clientSeq > client_last_solved[targetClient]` 재검증으로 `20Hz` 환경 50ms 만료 세션의 과거 해 역전 송출·불필요 `FAIL_*` 패킷 발송 방지 (`src/0_infra/gps/modules/session_scheduler.lua`, `tests/0_infra/gps/`)
+    - [ ] **TASK-123-2**: GPS 클라이언트 `client_core.lua` 단조 증가 시퀀스 수신 필터 및 `CH 60001` 미개방 인터록 보강 — `client_core:handleMessage` 내 `lastReceivedSeq` 추적으로 구형/역전 `MSG_GPS_RESPONSE` 무시(재부팅·`overrideSeq` 경계 고려) 및 `gps_client.lua` 내 `CH_GPS_PING`(`60001`) 수신 미개방 검증 (`src/0_infra/gps/modules/client_core.lua`, `src/0_infra/gps/hal/gps_client.lua`, `tests/0_infra/gps/`)
+    - [ ] **TASK-123-3**: 클라이언트 결정론적 틱 위상 분산(Deterministic Tick Phase Staggering) 적용 — `os.getComputerID() % interval` 기반 틱 오프셋으로 동시 기동 시 `5Hz` In-cast 버스트 평탄화; `landing_pad` 동적 패드 `should_query_gps`(`interval = 4` / `20`) 우선 적용 (`src/0_infra/landing_pad/modules/gps_client.lua`, `tests/0_infra/landing_pad/`)
+    - [ ] **TASK-123-4**: FCP 현행 `bind_bootstrap_channels`의 `CH 60001`(`gpsPingChannel`) 모뎀 개방 결함 제거 — `m.open(ctx.gpsPingChannel or 60001)` 제거로 타 기체 핑 및 `MSG_GPS_DIAG_PING`의 온보드 큐 유입 차단 (`TASK-208` FCP 경량화 전 과도기 기체 보호; `src/2_guidance/fcp/modules/network_manager.lua`, `tests/2_guidance/fcp/`)
+    - [ ] **TASK-123-5**: 고부하 경합·위상 분산·채널 미개방 단위 및 E2E 회귀 검증 — `20Hz` Early-Solve vs Window-Solve 경합 역전 차단, 다기체 위상 분산 분포, `CH 60001` 미개방 시나리오 검증(`tests/e2e/test_e2e_gps_triangulation.lua`) 및 전계층 회귀·사양서 상태 동기화
+
 - [ ] **TASK-204: AMM의 미션 관리 시스템용 표준 행동 리스트 재정의: 진입조건 및 계층별 분류** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `src/3_planning/amm/modules/`)
   - **배경 및 목적**: 현행 AMM의 3도메인(항법/인프라/특수) 13종 평면적 체크포인트 분류 및 사후 조건(`completeWhen`/`abortWhen`) 중심 스키마를 재검토하여, 각 표준 행동(Action)의 **진입조건(Entry Preconditions / State Guards)**과 **계층별 분류(Hierarchical Taxonomy)**를 체계적으로 재정의하고 사양서 및 미션 엔진 검증/실행 모델에 반영
 
-- [ ] **TASK-207: AMM v1.3.0 외부 게이트웨이·항법 융합·20Hz 궤적 생성기 구현** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `src/3_planning/amm/`, `tests/3_planning/amm/`)
-  - **선행 의존성**: `TASK-206` 사양 개편 완료 / `TASK-202-5`(WebUI 에디터 사양서)·`TASK-402`(WebUI 에디터 HTML 구현 및 `v1.2.0` 코어 검증)와 병렬 또는 순차 진행 (`TASK-208`·`TASK-209`와 3노드 폐루프 E2E 연동 검증 필요; `TASK-402`와 `TASK-207` 모두 완료 시 `AMM` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신)
-  - **배경 및 목적**: `AMM (Node 03)`이 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), `nav_engine`(GPS+DR 상보필터 $\alpha = 0.35$·`5,000ms` DR 선회, `TASK-122` 기체 GPS 클라이언트 이관 통합), `facility_client`(Tower ATC/GAC/Runway/Docking Arm/Landing Pad 2차 테일러 외삽·`300ms` 워치독 복행·`-0.8` 도킹 이탈), `channel_sentinel`(Base 충돌 탐지·4계층 재바인딩 발령), `trajectory_generator`(11종 비행 상태 궤적·`LOITER`/`POI_HOLD`·피드포워드 가속도 산출), `[I-12]` `Base+4` 송수신, `Base+0` 단일 C2 중재 및 `Base+3` 5Hz 송출(`MFD_ACRO` 시 양보)을 수행하고 `20Hz`/`5Hz` 듀얼 코루틴 분리(`parallel.waitForAny`) 및 듀얼 모뎀(`top`+`back`, 단일 모뎀 폴백)을 구현함 (신규 모듈 추가 시 `manifest.lua`·`config/gdrive_mapping.json`·`verify_manifest_sync.py` 동기화 필수)
+- [-] **TASK-207: AMM v1.3.0 외부 게이트웨이·항법 융합·20Hz 궤적 생성기 구현** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `src/3_planning/amm/`, `tests/3_planning/amm/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-12-task-207-208-209-sequential-plan.md`
+  - **선행 의존성**: `TASK-206` 사양 개편 및 `TASK-202-5` 완료 / `TASK-402`(WebUI 에디터 HTML 구현 및 `v1.2.0` 코어 검증)와 병렬 또는 순차 진행 (`TASK-208`·`TASK-209`와 3노드 폐루프 E2E 연동 검증 필요; `TASK-402`와 `TASK-207` 모두 완료 시 `AMM` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신; `feat/task-207-208-209` 워크트리 진행 중)
+  - **배경 및 목적**: `AMM (Node 03)`이 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5` — 단, `CH 60001`은 송신 전용으로 `modem.open` 금지), `nav_engine`(GPS+DR 상보필터 $\alpha = 0.35$·`5,000ms` DR 선회, `TASK-122` 기체 GPS 클라이언트 이관 통합 및 `TASK-123` 결정론적 틱 위상 분산·단조 시퀀스 필터 승계), `facility_client`(Tower ATC/GAC/Runway/Docking Arm/Landing Pad 2차 테일러 외삽·`300ms` 워치독 복행·`-0.8` 도킹 이탈), `channel_sentinel`(Base 충돌 탐지·4계층 재바인딩 발령), `trajectory_generator`(11종 비행 상태 궤적·`LOITER`/`POI_HOLD`·피드포워드 가속도 산출), `[I-12]` `Base+4` 송수신, `Base+0` 단일 C2 중재 및 `Base+3` 5Hz 송출(`MFD_ACRO` 시 양보)을 수행하고 `20Hz`/`5Hz` 듀얼 코루틴 분리(`parallel.waitForAny`) 및 듀얼 모뎀(`top`+`back`, 단일 모뎀 폴백)을 구현함 (신규 모듈 추가 시 `manifest.lua`·`config/gdrive_mapping.json`·`verify_manifest_sync.py` 동기화 필수)
 
 - [ ] **TASK-208: FCP v2.0.0 SE(3) 외루프 제어기 경량화 전면 개편** (`docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.0.0 Approved), `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-12-task-207-208-209-sequential-plan.md`
   - **선행 의존성**: `TASK-206` 완료 및 `TASK-207`(AMM `Base+4` `[I-12]` 송출)·`TASK-209`(VAS `Base+1` `QUATERNION_RATE`)와 3노드 폐루프 E2E 연동 검증 (`TASK-201` 전략 기동 로직을 AMM `trajectory_generator`로 이관한 뒤 순수 외루프로 정리; 완료 시 `FCP` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신)
   - **배경 및 목적**: `FCP (Node 04)`를 단일 `top` 모뎀 3채널(`Base+4`, `Base+2`, `Base+1`)만 사용하는 온보드 `SE(3)` 외루프 제어기($g = 11.0\text{ m/s}^2$, $\mathbf{a}_{\text{des}}$ 적분·항력/안티와인드업, 6대 기체 `QUATERNION_RATE` 투영, `STRICT_LEVEL`/`TILT_ASSISTED` + 스웨이 결손 틸트 폴백)로 축소하고, `state_propagator.lua` 속도 전파·`outer_loop_controller.lua`·`flight_fsm.lua` 6상태 FSM(`PASSIVE_TRACKING` 2.0초 범프리스 램핑, `AMM_TIMEOUT_HOLD` `500ms` $\to$ 10초 $\to$ `EMERGENCY_LAND`)을 구현하며 레거시 외부 RF·GPS·C2·`/etc/vac/`·`MSG_SURFACE_CMD`·`ATTITUDE_ANGLE` 경로를 제거함 (모듈 삭제/개편 시 `manifest.lua`·`config/gdrive_mapping.json`·`verify_manifest_sync.py` 동기화 필수)
 
 - [ ] **TASK-209: VAS v1.19.0 `QUATERNION_RATE` 내루프 정규화 및 ACRO/페일세이프 정합화** (`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.19.0 Approved), `src/1_control/vas/`, `tests/1_control/vas/`)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-12-task-207-208-209-sequential-plan.md`
   - **선행 의존성**: `TASK-206` 완료 및 `TASK-207`/`TASK-208`과 3노드 E2E 폐루프 검증 (완료 시 `VAS` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신; `TASK-207~209` 3자 폐루프 완료 시 `docs/system/` 마스터 ICD·전체 구조도 상태 전이 검토 포함)
   - **배경 및 목적**: `Base+1` `[I-2]` 수신 스키마를 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias {surge, sway}`) 단일 경로(Zero-Fallback, `ATTITUDE_ANGLE` 제거)로 정규화하고, 정상 비행 중 `compute_climb_wrench` 승강 PI 루프를 제거해 `FAILSAFE_HOLD`(`FCP_TIMEOUT` `1,500ms` $\to$ 10초 $\to$ `EMERGENCY_LAND`) 한정 유지로 격리함. 아울러 `E_STOP (AMM/MFD/GCS) > MFD_ACRO > FCP` 중재, `Base+2` `AMM` 수신 및 `activeSource = "MFD_ACRO"` 전파, `MFD_ACRO` 중 `Base+3` 20Hz HUD 인계, `[I-10]` `MSG_AERO_CMD`/`STATUS`·`MSG_SURFACE_DISCOVER_*`, `config/system.json`(`trajectory: 4`, `actuation: 10`, `asaActuation: 11`, `fcpCommandTimeoutMs: 1500`) 및 `SatAsa`/`satTca`/`fcpCmd` 식별자 정합화를 반영함
 
