@@ -58,7 +58,8 @@ local function handlePingMessage(modem, nodeCfg, channel, msg, distance, state)
     local req = msg.payload
     local nowMs = os.epoch and os.epoch("utc") or 0
     local measuredDist = tonumber(distance) or 0.0
-    local reportPkt = protocol.buildNodeReport(nodeCfg.nodeId, 1, {
+    state.reportSeq = (state.reportSeq or 0) + 1
+    local reportPkt = protocol.buildNodeReport(nodeCfg.nodeId, state.reportSeq, {
         targetClient = msg.domainId,
         clientSeq = req.clientSeq,
         nodeId = nodeCfg.nodeId,
@@ -130,9 +131,20 @@ local function main(...)
     print(string.format("Pos: (%d, %d, %d)", nodeCfg.position.x, nodeCfg.position.y, nodeCfg.position.z))
     print(string.format("CH %d -> CH %d", protocol.CH_GPS_PING, protocol.CH_GPS_NODE_IN))
 
-    local state = { reportsSent = 0, heartbeatsSent = 0, hbSeq = 0, ticks = 0 }
+    local state = { reportsSent = 0, reportSeq = 0, heartbeatsSent = 0, hbSeq = 0, ticks = 0 }
     if harness_set_state then harness_set_state("reports_sent", 0) end
     nodeEventLoop(modem, nodeCfg, state)
 end
 
-main(...)
+local args = { ... }
+local isRequired = (_G.describe ~= nil) or (type(args[2]) == "string" and args[2]:sub(-4) == ".lua")
+if not isRequired then
+    main(...)
+end
+
+return {
+    loadOrCommissionNode = loadOrCommissionNode,
+    handlePingMessage = handlePingMessage,
+    sendHeartbeat = sendHeartbeat,
+    run = main,
+}

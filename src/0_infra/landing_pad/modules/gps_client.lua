@@ -5,28 +5,68 @@ local gps_client = {}
 
 local WIRE_VERSION = "1.9.5"
 local GPS_TIMEOUT_SEC = 2.0
+local VALID_RESPONSE_STATUS = {
+    FIX_OK = true,
+    FIX_DEGRADED = true,
+    FAIL_INSUFFICIENT = true,
+    FAIL_GEOMETRY = true,
+}
+
+local function non_empty_str(v)
+    if type(v) == "string" and v ~= "" then
+        return v
+    end
+    return nil
+end
+
+local function is_finite_number(v)
+    return type(v) == "number" and v == v and v > -math.huge and v < math.huge
+end
+
+local function resolve_mobility(config)
+    local raw = non_empty_str(config.mobility) or non_empty_str(config.mode) or "STATIC"
+    local upper = string.upper(raw)
+    if upper ~= "STATIC" and upper ~= "DYNAMIC" then
+        error("INVALID_MOBILITY: " .. tostring(raw), 2)
+    end
+    return upper
+end
 
 function gps_client.create(config, offsetTransform)
     if not config then error("config table required", 2) end
     if not offsetTransform then error("offset_transform module required", 2) end
 
+    local facilityId = non_empty_str(config.facilityId) or non_empty_str(config.padId) or "PAD"
+    local mobility = resolve_mobility(config)
+    local sectorId = tonumber(config.sectorId or config.sectorIndex) or 1
+    local replyChannel = tonumber(config.sectorGpsReplyChannel)
+        or (config.channels and tonumber(config.channels.sectorGpsReplyChannel))
+        or (50001 + sectorId * 200 + 5)
+
     local state = {
         config = config,
+        facilityId = facilityId,
+        mobility = mobility,
+        replyChannel = replyChannel,
         seq = 0,
         compPos = {
-            x = config.position and config.position.x or 0.0,
-            y = config.position and config.position.y or 64.0,
-            z = config.position and config.position.z or 0.0
+            x = config.position and tonumber(config.position.x) or 0.0,
+            y = config.position and tonumber(config.position.y) or 64.0,
+            z = config.position and tonumber(config.position.z) or 0.0
         },
         padPos = {
-            x = config.position and config.position.x or 0.0,
-            y = config.position and config.position.y or 64.0,
-            z = config.position and config.position.z or 0.0
+            x = config.position and tonumber(config.position.x) or 0.0,
+            y = config.position and tonumber(config.position.y) or 64.0,
+            z = config.position and tonumber(config.position.z) or 0.0
         },
         yaw = 0.0,
         lastGpsTime = 0.0,
         isDegraded = false,
-        pendingSeq = nil
+        pendingSeq = nil,
+        hasValidFix = false,
+        lastStatus = nil,
+        lastAccuracy = nil,
+        lastHdop = nil
     }
 
     local client = {}
@@ -51,18 +91,17 @@ function gps_client.create(config, offsetTransform)
         state.pendingSeq = state.seq
 
         local timeMs = nowMs or (os.epoch and os.epoch("utc") or 0)
-        local replyChannel = state.config.channels and state.config.channels.sectorGpsReplyChannel or 60001
 
         return {
             ver = WIRE_VERSION,
-            domainId = state.config.padId or "PAD",
+            domainId = state.facilityId,
             seq = state.seq,
             type = "MSG_GPS_REQUEST",
             time = timeMs,
             payload = {
-                replyChannel = replyChannel,
-                altitudeY = altitudeY or state.compPos.y,
-                clientType = "LANDING_PAD",
+                replyChannel = state.replyChannel,
+                altitudeY = is_finite_number(altitudeY) and altitudeY or state.compPos.y,
+                clientType = "FACILITY",
                 clientSeq = state.seq
             }
         }
@@ -70,32 +109,37 @@ function gps_client.create(config, offsetTransform)
 
     function client:handle_response_packet(msg, nowSec)
         if type(msg) ~= "table" then return false end
-        if msg.type ~= "MSG_GPS_RESPONSE" then return false end
+        if msg.ver ~= WIRE_VERSION or msg.type ~= "MSG_GPS_RESPONSE" then return false end
         local payload = msg.payload
         if type(payload) ~= "table" then return false end
+        if payload.targetClient ~= state.facilityId then return false end
+        if not VALID_RESPONSE_STATUS[payload.status] then return false end
+        local cSeq = tonumber(payload.clientSeq)
+        if state.pendingSeq == nil or not cSeq or cSeq ~= state.pendingSeq then return false end
+        state.pendingSeq = nil
+        state.lastStatus = payload.status
 
-        if payload.targetClient and payload.targetClient ~= state.config.padId then
+        if payload.status ~= "FIX_OK" and payload.status ~= "FIX_DEGRADED" then
+            return false
+        end
+        if type(payload.position) ~= "table" or not is_finite_number(payload.position.x) or not is_finite_number(payload.position.z) then
             return false
         end
 
-        if payload.status == "OK" or payload.status == "SUCCESS" then
-            if payload.position then
-                state.compPos.x = tonumber(payload.position.x) or state.compPos.x
-                state.compPos.z = tonumber(payload.position.z) or state.compPos.z
-            end
-            local t = nowSec or (os.clock and os.clock() or 0)
-            state.lastGpsTime = t
-            state.isDegraded = false
-            recalculate_pad_pos()
-            return true
-        end
-
-        return false
+        state.compPos.x = payload.position.x
+        state.compPos.z = payload.position.z
+        state.lastAccuracy = tonumber(payload.accuracy)
+        state.lastHdop = tonumber(payload.hdop)
+        state.hasValidFix = true
+        state.lastGpsTime = is_finite_number(nowSec) and nowSec or (os.clock and os.clock() or 0)
+        state.isDegraded = false
+        recalculate_pad_pos()
+        return true
     end
 
     function client:update_dead_reckoning(dt, kinematics)
         local delta = dt or 0.05
-        if kinematics and state.config.mode == "DYNAMIC" then
+        if kinematics and state.mobility == "DYNAMIC" then
             local vel = kinematics.velocity or {}
             local acc = kinematics.acceleration or {}
 
@@ -120,6 +164,10 @@ function gps_client.create(config, offsetTransform)
     end
 
     function client:check_gps_health(nowSec)
+        if state.mobility == "STATIC" and state.hasValidFix then
+            state.isDegraded = false
+            return true
+        end
         local t = nowSec or (os.clock and os.clock() or 0)
         if (t - state.lastGpsTime) > GPS_TIMEOUT_SEC then
             state.isDegraded = true
@@ -127,6 +175,20 @@ function gps_client.create(config, offsetTransform)
         end
         state.isDegraded = false
         return true
+    end
+
+    function client:has_valid_fix()
+        return state.hasValidFix == true
+    end
+
+    function client:should_query_gps(fsmState, tickCount)
+        local tick = tonumber(tickCount) or 0
+        if tick <= 0 then return false end
+        if state.mobility == "STATIC" then
+            return (not state.hasValidFix) and (tick % 20 == 0)
+        end
+        local interval = (fsmState == "RESERVED" or fsmState == "APPROACH_DYNAMIC") and 4 or 20
+        return (tick % interval) == 0
     end
 
     function client:is_degraded()

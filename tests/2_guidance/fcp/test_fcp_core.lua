@@ -226,6 +226,292 @@ describe("network_manager and fcp_runtime 40-channel binding and Base+5 GPS link
         assert_true(ctx.nav.pos.x > 0.0, "nav_engine horizontal X must be updated via complementary filter")
         assert_true(ctx.nav.pos.z < 0.0, "nav_engine horizontal Z must be updated via complementary filter")
     end)
+
+    it("encodes envelope with time field and filters foreign MSG_GPS_RESPONSE targetClient", function()
+        local net = network_manager.init({ system = { domainId = "AIRCRAFT_01" } })
+        local env = network_manager.encode_envelope(net, "MSG_GPS_REQUEST", {
+            replyChannel = 10005, altitudeY = 80, clientType = "AIRCRAFT", clientSeq = 1
+        })
+        assert_not_nil(env.time)
+        assert_nil(env.timestamp, "FCP envelope must emit time instead of legacy timestamp")
+
+        local foreignResp = {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 2, type = "MSG_GPS_RESPONSE", time = 1100,
+            payload = {
+                targetClient = "AIRCRAFT_02", clientSeq = 1, status = "FIX_OK",
+                position = { x = 999, z = 999 }, accuracy = 0.1, hdop = 1.0, nodeCount = 4
+            }
+        }
+        assert_false(network_manager.ingest_modem_event(net, "back", 10005, 60002, foreignResp, 10, 1100))
+        assert_nil(net.queues.gps)
+
+        local malformedResp = {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 3, type = "MSG_GPS_RESPONSE", time = 1120,
+            payload = "not-a-table"
+        }
+        assert_false(network_manager.ingest_modem_event(net, "back", 10005, 60002, malformedResp, 10, 1120))
+        assert_nil(net.queues.gps)
+
+        -- verify_packet must reject MSG_GPS_RESPONSE when ctx.domainId is nil or empty string
+        local respNilTarget = {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 4, type = "MSG_GPS_RESPONSE", time = 1130,
+            payload = { status = "FIX_OK", position = { x = 1, z = 1 } }
+        }
+        local respAir01Target = {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 5, type = "MSG_GPS_RESPONSE", time = 1140,
+            payload = { targetClient = "AIRCRAFT_01", status = "FIX_OK", position = { x = 1, z = 1 } }
+        }
+        assert_false(network_manager.verify_packet({ domainId = nil }, respNilTarget))
+        assert_false(network_manager.verify_packet({ domainId = nil }, respAir01Target))
+        assert_false(network_manager.verify_packet({ domainId = "" }, respAir01Target))
+
+        -- Empty system.domainId in init must normalize to "AIRCRAFT_01" and reject empty targetClient
+        local netEmptyInit = network_manager.init({ system = { domainId = "" } })
+        assert_eq(netEmptyInit.domainId, "AIRCRAFT_01")
+        local respEmptyTarget = {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 6, type = "MSG_GPS_RESPONSE", time = 1150,
+            payload = { targetClient = "", status = "FIX_OK", position = { x = 1, z = 1 } }
+        }
+        assert_false(network_manager.verify_packet(netEmptyInit, respEmptyTarget))
+        assert_false(network_manager.ingest_modem_event(netEmptyInit, "back", 10005, 60002, respEmptyTarget, 10, 1150))
+
+        -- Directly mutated net.domainId = "" must also fail closed on targetClient = ""
+        netEmptyInit.domainId = ""
+        assert_false(network_manager.verify_packet(netEmptyInit, respEmptyTarget))
+        assert_false(network_manager.verify_packet(netEmptyInit, respAir01Target))
+    end)
+
+    it("enforces monotonic bounded clientSeq, elapsed kinematic delta_t, and altitude sync in nav_engine", function()
+        local nav_engine = require("nav_engine")
+        local st = nav_engine.init({
+            navigation = { drComplementaryAlpha = 0.5, kinematicGateLimitM = 8.0, gpsTimeoutMs = 5000 }
+        })
+        nav_engine.integrate_dr(st, {
+            dynamics = { altitudeY = 142.5, velocity = { vx = 50.0, vy = 0.0, vz = 0.0 } }
+        }, 0.05, 1000)
+        assert_near(st.pos.y, 142.5, 1e-4, "integrate_dr must synchronize pos.y to dynamics.altitudeY")
+
+        local ok1, reqSeq1 = nav_engine.should_query_gps(st, 1000)
+        assert_true(ok1)
+        assert_eq(reqSeq1, 1)
+        assert_true(nav_engine.filter_gps(st, {
+            clientSeq = 1, status = "FIX_OK", position = { x = 0.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1000))
+        assert_eq(st.lastGpsFixSeq, 1)
+
+        -- Duplicate / replayed clientSeq = 1 and future clientSeq = 99 must be rejected
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 1, status = "FIX_OK", position = { x = 1.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1100))
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 99, status = "FIX_OK", position = { x = 1.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1100))
+
+        -- Craft moves at 50 m/s for 500ms -> 25m actual travel; elapsed delta_t=0.5 allows max_allowed ~39m
+        local ok2, reqSeq2 = nav_engine.should_query_gps(st, 1500)
+        assert_true(ok2)
+        assert_eq(reqSeq2, 2)
+        assert_true(nav_engine.filter_gps(st, {
+            clientSeq = 2, status = "FIX_OK", position = { x = 25.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1500))
+        assert_eq(st.lastGpsFixSeq, 2)
+        assert_near(st.pos.x, 13.125, 1e-4)
+
+        -- Upper clamp check: elapsed 10s (11000 - 1000) must clamp delta_t to maxSpanSec=5.0s (max_allowed=76.5m)
+        local st_clamp = nav_engine.init({
+            navigation = { drComplementaryAlpha = 0.5, kinematicGateLimitM = 8.0, gpsTimeoutMs = 5000 }
+        })
+        nav_engine.integrate_dr(st_clamp, {
+            dynamics = { altitudeY = 80.0, velocity = { vx = 10.0, vy = 0.0, vz = 0.0 } }
+        }, 0.05, 1000)
+        assert_true(nav_engine.filter_gps(st_clamp, {
+            status = "FIX_OK", position = { x = 0.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1000))
+        -- dist=100.0 > 76.5 (clamped 5s), even though < 151.5 (unclamped 10s) -> must reject
+        assert_false(nav_engine.filter_gps(st_clamp, {
+            status = "FIX_OK", position = { x = 100.25, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 11000))
+        assert_eq(st_clamp.lastGpsFixMs, 1000)
+        -- dist=70.0 <= 76.5 (clamped 5s) -> must accept
+        assert_true(nav_engine.filter_gps(st_clamp, {
+            status = "FIX_OK", position = { x = 70.25, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 11000))
+        assert_eq(st_clamp.lastGpsFixMs, 11000)
+    end)
+
+    it("handles nav_engine edge cases: altitude fallbacks, non-numeric clientSeq, nil clientSeq, and 3-streak seq sync", function()
+        local nav_engine = require("nav_engine")
+        local st = nav_engine.init({
+            navigation = { drComplementaryAlpha = 0.5, kinematicGateLimitM = 8.0, gpsTimeoutMs = 5000 }
+        })
+
+        -- Fallback to vy * dt when both dynamics and altitudeY are completely omitted (nil)
+        nav_engine.integrate_dr(st, {
+            velocity = { vx = 0.0, vy = 20.0, vz = 0.0 }
+        }, 0.1, 900)
+        assert_near(st.pos.y, 66.0, 1e-4, "integrate_dr must integrate vy * dt when dynamics and altitudeY are nil")
+
+        -- Fallback to telemetry.altitudeY when dynamics.altitudeY is omitted
+        nav_engine.integrate_dr(st, {
+            altitudeY = 95.0,
+            dynamics = { velocity = { vx = 0.0, vy = 4.0, vz = 0.0 } }
+        }, 0.05, 1000)
+        assert_near(st.pos.y, 95.0, 1e-4, "integrate_dr must fall back to telemetry.altitudeY")
+
+        -- Fallback to vy * dt when neither dynamics.altitudeY nor telemetry.altitudeY is a number
+        nav_engine.integrate_dr(st, {
+            altitudeY = "invalid",
+            dynamics = { altitudeY = false, velocity = { vx = 0.0, vy = 10.0, vz = 0.0 } }
+        }, 0.1, 1050)
+        assert_near(st.pos.y, 96.0, 1e-4, "integrate_dr must integrate vy * dt when no numeric altitudeY exists")
+
+        -- Nil clientSeq remains tolerated for legacy unit fixtures
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 1.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1050))
+        assert_eq(st.lastGpsFixSeq, 0, "nil clientSeq must not modify lastGpsFixSeq")
+
+        -- Non-numeric clientSeq must be rejected cleanly without throwing
+        local _, req1 = nav_engine.should_query_gps(st, 1100)
+        assert_eq(req1, 1)
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = "bad", status = "FIX_OK", position = { x = 1.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1100))
+        assert_eq(st.lastGpsFixSeq, 0)
+
+        -- 3-streak spike rejection must NOT update lastGpsFixSeq on spikes 1 & 2, only on 3rd snap
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 1, status = "FIX_OK", position = { x = 500.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1150))
+        assert_eq(st.lastGpsFixSeq, 0, "spike 1 rejection must not update lastGpsFixSeq")
+
+        local _, req2 = nav_engine.should_query_gps(st, 1250)
+        assert_eq(req2, 2)
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 2, status = "FIX_OK", position = { x = 501.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1250))
+        assert_eq(st.lastGpsFixSeq, 0, "spike 2 rejection must not update lastGpsFixSeq")
+
+        local _, req3 = nav_engine.should_query_gps(st, 1350)
+        assert_eq(req3, 3)
+        assert_true(nav_engine.filter_gps(st, {
+            clientSeq = 3, status = "FIX_OK", position = { x = 502.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1350))
+        assert_eq(st.lastGpsFixSeq, 3, "3-streak snap acceptance must update lastGpsFixSeq")
+        assert_near(st.pos.x, 502.0, 1e-4)
+
+        -- NaN position coordinates must be rejected without poisoning state.pos
+        local _, req4 = nav_engine.should_query_gps(st, 1450)
+        assert_eq(req4, 4)
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 4, status = "FIX_OK", position = { x = 0 / 0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1450))
+        assert_near(st.pos.x, 502.0, 1e-4)
+        assert_eq(st.lastGpsFixSeq, 3)
+    end)
+
+    it("guards now_ms against nil, zero, rewind, non-number, NaN, and Inf in filter_gps", function()
+        local nav_engine = require("nav_engine")
+        local st = nav_engine.init({
+            navigation = { drComplementaryAlpha = 0.5, kinematicGateLimitM = 8.0, gpsTimeoutMs = 5000 }
+        })
+
+        -- now_ms = 0 on fresh state is valid and keeps lastGpsFixMs = 0
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 1.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 0))
+        assert_eq(st.lastGpsFixMs, 0)
+
+        -- Advance to now_ms = 2000
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 2.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 2000))
+        assert_eq(st.lastGpsFixMs, 2000)
+
+        -- now_ms = nil must leave lastGpsFixMs unchanged (not clobbered to 0)
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 2.5, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, nil))
+        assert_eq(st.lastGpsFixMs, 2000, "nil now_ms must preserve existing lastGpsFixMs")
+
+        -- Rewind now_ms (< lastGpsFixMs) and 0 after 2000 must not rewind lastGpsFixMs
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 3.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1500))
+        assert_eq(st.lastGpsFixMs, 2000, "smaller now_ms must not rewind lastGpsFixMs")
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 3.5, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 0))
+        assert_eq(st.lastGpsFixMs, 2000, "now_ms = 0 must not rewind lastGpsFixMs")
+
+        -- Non-nil invalid now_ms (string, NaN, +Inf, -Inf) must return false without throwing or poisoning state
+        local prev_x = st.pos.x
+        assert_false(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 4.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, "bad-time"))
+        assert_false(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 4.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 0 / 0))
+        assert_false(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 4.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, math.huge))
+        assert_false(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 4.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, -math.huge))
+        assert_eq(st.lastGpsFixMs, 2000)
+        assert_near(st.pos.x, prev_x, 1e-6)
+
+        -- 3-streak snap branch with nil now_ms must preserve existing lastGpsFixMs
+        assert_false(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 500.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, nil))
+        assert_false(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 501.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, nil))
+        assert_true(nav_engine.filter_gps(st, {
+            status = "FIX_OK", position = { x = 502.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, nil))
+        assert_eq(st.lastGpsFixMs, 2000, "3-streak snap with nil now_ms must preserve lastGpsFixMs")
+    end)
+
+    it("rejects replayed spike packets with duplicate clientSeq while allowing advancing-seq 3-spike snap", function()
+        local nav_engine = require("nav_engine")
+        local st = nav_engine.init({
+            navigation = { drComplementaryAlpha = 0.5, kinematicGateLimitM = 8.0, gpsTimeoutMs = 5000 }
+        })
+        local _, req1 = nav_engine.should_query_gps(st, 1000)
+        assert_eq(req1, 1)
+
+        -- Replay same clientSeq = 1 three times with spike coordinates
+        for i = 1, 3 do
+            assert_false(nav_engine.filter_gps(st, {
+                clientSeq = 1, status = "FIX_OK", position = { x = 500.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+            }, 0.05, 1000 + i * 20))
+        end
+        assert_eq(st.spikeStreak, 1, "replayed clientSeq = 1 must not advance spikeStreak beyond 1")
+        assert_eq(st.lastGpsFixSeq, 0)
+        assert_eq(st.lastGpsSeqSeen, 1)
+        assert_near(st.pos.x, 0.0, 1e-6, "replayed spike packets must not snap pos")
+
+        -- Advancing clientSeq = 2 and 3 must advance spikeStreak and snap on the 3rd distinct spike
+        local _, req2 = nav_engine.should_query_gps(st, 1200)
+        assert_eq(req2, 2)
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 2, status = "FIX_OK", position = { x = 501.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1200))
+        assert_eq(st.spikeStreak, 2)
+        assert_eq(st.lastGpsSeqSeen, 2)
+
+        local _, req3 = nav_engine.should_query_gps(st, 1300)
+        assert_eq(req3, 3)
+        assert_true(nav_engine.filter_gps(st, {
+            clientSeq = 3, status = "FIX_OK", position = { x = 502.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1300))
+        assert_eq(st.spikeStreak, 0)
+        assert_eq(st.lastGpsFixSeq, 3)
+        assert_eq(st.lastGpsSeqSeen, 3)
+        assert_near(st.pos.x, 502.0, 1e-4)
+    end)
 end)
 
 describe("fcp flight FSM state transitions and failsafes", function()

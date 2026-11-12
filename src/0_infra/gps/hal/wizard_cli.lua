@@ -89,7 +89,10 @@ local function stepCommit(modem, fsm, nodeCfgPath)
         channels = { ping = protocol.CH_GPS_PING, service = protocol.CH_GPS_SERVICE, nodeIn = protocol.CH_GPS_NODE_IN, mgmt = protocol.CH_GPS_MGMT },
         modemSide = "top",
     }
-    storage_hal.writeJson(nodeCfgPath or "/gps_data/node.json", cfg)
+    local okWrite, errWrite = storage_hal.writeJsonAtomic(nodeCfgPath or "/gps_data/node.json", cfg)
+    if not okWrite then
+        error("Failed to write node config: " .. tostring(errWrite), 2)
+    end
     print("  > Configuration saved to " .. (nodeCfgPath or "/gps_data/node.json"))
     return cfg
 end

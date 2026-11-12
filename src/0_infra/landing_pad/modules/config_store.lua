@@ -5,6 +5,25 @@ local config_store = {}
 
 local DEFAULT_CONFIG_PATH = "/landing_pad/config.json"
 
+local function non_empty_str(v)
+    if type(v) == "string" and v ~= "" then
+        return v
+    end
+    return nil
+end
+
+local function normalize_mobility(v, fallback)
+    local raw = non_empty_str(v)
+    if not raw then
+        return fallback
+    end
+    local upper = string.upper(raw)
+    if upper == "STATIC" or upper == "DYNAMIC" then
+        return upper
+    end
+    return raw
+end
+
 function config_store.get_default_config()
     return {
         version = "2.4.0",
@@ -45,6 +64,56 @@ end
 
 config_store.create_default = config_store.get_default_config
 
+function config_store.normalize_config(raw)
+    local cfg = {}
+    if type(raw) == "table" then
+        for k, v in pairs(raw) do cfg[k] = v end
+    end
+    local def = config_store.get_default_config()
+    local fid = non_empty_str(cfg.facilityId) or non_empty_str(cfg.padId) or def.facilityId
+    local secId = tonumber(cfg.sectorId or cfg.sectorIndex) or def.sectorId
+    local pIdx = tonumber(cfg.padIndex) or def.padIndex
+    local mob = normalize_mobility(non_empty_str(cfg.mobility) or non_empty_str(cfg.mode), def.mobility)
+    local baseSec = 50001 + secId * 200
+    local inCh = type(cfg.channels) == "table" and cfg.channels or {}
+
+    local gacCh = tonumber(cfg.gacChannel) or tonumber(inCh.sectorChannel) or baseSec
+    local facCh = tonumber(cfg.sectorFacilityChannel) or tonumber(inCh.sectorFacilityChannel) or (baseSec + 1)
+    local gpsCh = tonumber(cfg.sectorGpsReplyChannel) or tonumber(inCh.sectorGpsReplyChannel) or (baseSec + 5)
+    local tacCh = tonumber(cfg.tacticalChannel) or tonumber(inCh.tacticalChannel) or (baseSec + 10 + (pIdx - 1))
+
+    local verStr = non_empty_str(cfg.version) or non_empty_str(cfg.ver) or def.version
+    cfg.version = verStr
+    cfg.ver = non_empty_str(cfg.ver) or verStr
+    cfg.facilityId = fid
+    cfg.padId = fid
+    cfg.sectorId = secId
+    cfg.sectorIndex = secId
+    cfg.padIndex = pIdx
+    cfg.mobility = mob
+    cfg.mode = mob
+    cfg.gacChannel = gacCh
+    cfg.sectorFacilityChannel = facCh
+    cfg.sectorGpsReplyChannel = gpsCh
+    cfg.tacticalChannel = tacCh
+    cfg.channels = {
+        sectorChannel = gacCh,
+        sectorFacilityChannel = facCh,
+        sectorGpsReplyChannel = gpsCh,
+        tacticalChannel = tacCh,
+    }
+    cfg.mountingYawOffset = tonumber(cfg.mountingYawOffset) or def.mountingYawOffset
+    cfg.bodyOffset = type(cfg.bodyOffset) == "table" and cfg.bodyOffset or { forward = 0.0, right = 0.0, up = 0.0 }
+    cfg.position = type(cfg.position) == "table" and cfg.position or { x = 0.0, y = 64.0, z = 0.0 }
+    cfg.approachHeading = tonumber(cfg.approachHeading) or def.approachHeading
+    cfg.safeDescentRate = tonumber(cfg.safeDescentRate) or def.safeDescentRate
+    cfg.clearanceZoneRadius = tonumber(cfg.clearanceZoneRadius) or def.clearanceZoneRadius
+    cfg.maxSupportedWeight = tonumber(cfg.maxSupportedWeight) or def.maxSupportedWeight
+    cfg.wirelessModemSide = non_empty_str(cfg.wirelessModemSide) or def.wirelessModemSide
+    cfg.slotDurationSec = tonumber(cfg.slotDurationSec) or def.slotDurationSec
+    return cfg
+end
+
 function config_store.validate_config(cfg)
     if type(cfg) ~= "table" then
         return false, "CONFIG_NOT_A_TABLE"
@@ -57,6 +126,9 @@ function config_store.validate_config(cfg)
     end
     if type(cfg.padIndex) ~= "number" then
         return false, "MISSING_OR_INVALID_PAD_INDEX"
+    end
+    if cfg.mobility ~= nil and cfg.mobility ~= "STATIC" and cfg.mobility ~= "DYNAMIC" then
+        return false, "INVALID_MOBILITY"
     end
     if type(cfg.tacticalChannel) ~= "number" then
         return false, "MISSING_OR_INVALID_TACTICAL_CHANNEL"
@@ -93,12 +165,23 @@ function config_store.load_config(path)
         return nil, "JSON_PARSE_ERROR"
     end
 
-    local ok, err = config_store.validate_config(data)
+    if not (non_empty_str(data.facilityId) or non_empty_str(data.padId)) then
+        return nil, "VALIDATION_FAILED: MISSING_OR_INVALID_FACILITY_ID"
+    end
+    if type(data.sectorId) ~= "number" and type(data.sectorIndex) ~= "number" then
+        return nil, "VALIDATION_FAILED: MISSING_OR_INVALID_SECTOR_ID"
+    end
+    if type(data.padIndex) ~= "number" then
+        return nil, "VALIDATION_FAILED: MISSING_OR_INVALID_PAD_INDEX"
+    end
+
+    local normalized = config_store.normalize_config(data)
+    local ok, err = config_store.validate_config(normalized)
     if not ok then
         return nil, "VALIDATION_FAILED: " .. tostring(err)
     end
 
-    return data, nil
+    return normalized, nil
 end
 
 function config_store.save_config(path, cfg)

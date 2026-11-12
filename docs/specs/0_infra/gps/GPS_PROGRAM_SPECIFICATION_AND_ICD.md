@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.2.2` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v2.3.0` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |
 | **주관 도메인 (Domain)** | 중앙 고정밀 GPS 서버 및 분산 노드 군 (GPS Infrastructure) |
 
@@ -16,22 +16,23 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.3.0` | 2026-11-11 | `FAIL_GEOMETRY` 세션 만료 응답 및 150ms 단기 툼스톤(HWM 비갱신으로 250ms 재시도 허용), `CH 60002` 상태 조회 API(`requestStatus`/`pollStatus`/`queryStatus`), `isManaged` 50% 타임아웃 재시도 동등성, 멀티 코드베이스 독립 완결 클라이언트 와이어 호환 규칙 및 `/gps_data/node.json` 설정 경로 명시 (`Implemented` $\to$ `Approved`) | TASK-122 GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 누락 보완 |
 | `v2.2.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.2.1` | 2026-11-08 | 지상 시설물 전용 응답 채널($Base_{\text{sec}}+5$) 및 클라이언트 타입(`"FACILITY"`) 규격 명시 | 지상 인프라 착륙패드(v2.4.0) 및 GAC(v1.2.0) 연동 동기화 |
 | `v2.2.0` | 2026-11-08 | 독자 `gps/installer.lua` 및 `installer_core.lua` 폐기(`[DEPRECATED]`), 전역 통합 코드베이스 인스톨러(`installer.lua` / `src/0_development/installer/`) 연계 규격화 (직접 업로드, `/disk/installer.lua`, `wget run`, GitHub/Google Drive 이중 소스, `/.version.json` 추적) | 단일 진입점 기반 전역 모듈 일괄 설치 및 버전 관리 체계 확립 |
 | `v2.1.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 반영, 01호기 회신 채널 `Base+5` (`10005`, 구 10045 [DEPRECATED]) 동기화, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
   
 > **연계 규격**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.23.0 동기화)  
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.4.0 동기화)  
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 비행 제어 클라이언트 연계 (v1.13.0 동기화)  
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.16.0 동기화)  
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.10.0 동기화)  
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.10.0 동기화)  
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.5.1 동기화)  
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.11.0 동기화)  
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.1 동기화)  
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.10.5 동기화)  
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.27.0 동기화)  
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.4.1 동기화)  
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 비행 제어 클라이언트 연계 (v1.16.0 동기화)  
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.18.0 동기화)  
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.12.1 동기화)  
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.11.0 동기화)  
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.6.0 동기화)  
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.11.1 동기화)  
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.2 동기화)  
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.10.6 동기화)  
 
 ---
 
@@ -70,7 +71,7 @@
    - 동기식 `gpsClient.locate(alt, timeout)` 편의 함수(기본 500ms 타임아웃, 250ms 경과 시 1회 자동 재전송, 20Hz 비행 제어 루프 내 호출 엄격 금지)와 20Hz 제어루프용 비동기 `request(alt)` / `poll(seq)` 함수를 동시 제공합니다.
    - FCP 등 멀티 채널을 운용하는 상위 항법 스택과의 연동 시 이벤트 큐 오염을 방지하기 위해 외부 수신 패킷 직접 주입 인터페이스(`gpsClient.handleMessage(...)`) 및 관리 모드(`isManaged`)를 제공합니다.
 10. **전역 통합 코드베이스 인스톨러 및 기존 데이터 보존 업데이트 (`installer.lua`, 구 `gps/installer.lua` [DEPRECATED])**:
-    - 플로피 디스크(`/disk/installer.lua`), 웹 다운로드(`wget run`), 또는 루트 직접 업로드(`/installer.lua`) 환경에서 Unified Installer를 통해 3대 GPS 타겟(`gps_server`, `gps_node`, `gps_client`)을 일괄 설치 및 `startup/00_gps.lua` 분리 등록을 완료하며, 재설치/업데이트 시 기존 `/gps_data/` 설정 파일(`nodes.json`, `node_cfg.json`)을 안전하게 보존합니다.
+    - 플로피 디스크(`/disk/installer.lua`), 웹 다운로드(`wget run`), 또는 루트 직접 업로드(`/installer.lua`) 환경에서 Unified Installer를 통해 3대 GPS 타겟(`gps_server`, `gps_node`, `gps_client`)을 일괄 설치 및 `startup/00_gps.lua` 분리 등록을 완료하며, 재설치/업데이트 시 기존 `/gps_data/` 설정 파일(`nodes.json`, `node.json`, 구 `node_cfg.json` `[DEPRECATED]`)을 안전하게 보존합니다.
 
 ### 1.2 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서 내에 `[DEPRECATED]` 배지를 부여하고 대체 신규 필드명과 변경 이력을 명시하여 문서상에 보존합니다.
@@ -231,7 +232,7 @@ flowchart TD
 ---
 
 ### 3.4 [Server $\rightarrow$ Client] 최종 정밀 측위 응답 (`MSG_GPS_RESPONSE`)
-- **채널**: 클라이언트가 지정한 `replyChannel` (예: `10045`)
+- **채널**: 클라이언트가 지정한 `replyChannel` (예: `10005`, 구 `10045` `[DEPRECATED]`)
 - **전송 시점**: Early-Solve 만족 즉시 또는 50ms 윈도우 마감 직후
 - **필드 명세**:
   | 필드 경로 | 타입 | 필수 | 설명 |
@@ -845,7 +846,7 @@ active_sessions[sessionKey] = {
     targetClient = "AIRCRAFT_01",
     clientSeq = 8412,
     clientAltitudeY = 125.40,
-    replyChannel = 10065,
+    replyChannel = 10005,
     reports = {
         -- [nodeId] = { nodePos = {x,y,z}, distance = 64.25 }
     },
@@ -874,9 +875,10 @@ client_last_solved[targetClient] = maxSolvedClientSeq
 3. **단일 틱 통합 타이머 만료 (50ms Tick Dispatcher)**:
    - 서버 메인 루프는 50ms(1틱) 주기 타이머를 단 1개만 상시 순환 가동합니다.
    - 타이머 발화 시 만료 틱에 도달한 미완료 세션들을 일괄 수합:
-     - 수집 노드가 3개인 경우: WLS + 가우스-뉴턴 해법으로 연산 후 최종 HDOP 판정($\text{HDOP} \le 5.0 \text{ AND } \text{RMS}_{\text{res}} \le 1.5\text{m} \implies \text{FIX\_OK}$, 그 외 $\text{FIX\_DEGRADED}$) 회신 및 하이워터마크 갱신.
-     - 수집 노드가 $< 3$개인 경우: `status = "FAIL_INSUFFICIENT"`, `position = nil` 회신.
-   - 세션 키를 툼스톤에 등록 후 세션 메모리를 일괄 회수합니다.
+     - 수집 노드가 3개 이상이고 연산에 성공한 경우: WLS + 가우스-뉴턴 해법으로 연산 후 최종 HDOP 판정($\text{HDOP} \le 5.0 \text{ AND } \text{RMS}_{\text{res}} \le 1.5\text{m} \implies \text{FIX\_OK}$, 그 외 $\text{FIX\_DEGRADED}$) 회신, `client_last_solved[targetClient]` 하이워터마크 갱신 및 1.0초 정규 툼스톤 등록.
+     - 수집 노드가 3개 이상이나 `trilateration.solve()`가 기하 결함으로 실패(`FAIL_GEOMETRY`)한 경우: `status = "FAIL_GEOMETRY"`, `position = nil`, `nodeCount = count`, `selectedNodes = {}` 회신, **150ms 단기 툼스톤(`nowMs + 150`) 등록**, 그리고 **`client_last_solved[targetClient]`를 갱신하지 않음**(클라이언트의 250ms 재시도가 동일 `clientSeq`로 유입될 때 하이워터마크에 의해 조기 폐기되지 않고 재평가받을 수 있도록 허용).
+     - 수집 노드가 $< 3$개인 경우: `status = "FAIL_INSUFFICIENT"`, `position = nil`, `nodeCount = count`, `selectedNodes = {}` 회신, **150ms 단기 툼스톤(`nowMs + 150`) 등록**, 및 `client_last_solved[targetClient]` 비갱신.
+   - 처리 완료된 세션은 해당 툼스톤(정규 1.0초 또는 단기 150ms)에 등록 후 `active_sessions`에서 메모리를 일괄 회수합니다.
 
 ### 7.2 컴퓨터 ID 기반 영구 바인딩 및 결번 우선 재사용 DB (`gps_data/nodes.json`)
 서버는 스웜 노드 목록을 영구 보존하며, 원자적 저장(Atomic File Write)을 통해 전원 차단 시에도 DB 무결성을 보장합니다.
@@ -944,6 +946,11 @@ local handled = gpsClient.handleMessage(side, channel, replyChannel, message, di
 
 -- 5. 클라이언트 상태 및 연결 진단
 local status = gpsClient.getStatus()
+
+-- 6. CH 60002 서비스 상태 조회 인터페이스 (비동기 요청 / 폴링 / 동기 편의 함수)
+gpsClient.requestStatus([queryType], [replyChannel])                -- CH 60002 MSG_GPS_STATUS_REQ 송출
+local statusData = gpsClient.pollStatus()                           -- MSG_GPS_STATUS_RESP 도착 시 테이블, 미도착 시 nil 반환
+local statusData = gpsClient.queryStatus([timeoutSec], [queryType]) -- 동기 블로킹 상태 조회 (기본 1.0초 타임아웃)
 ```
 
 ### 8.2 동기식 편의 함수 `gpsClient.locate(altitudeY, timeout)` 동작 규격 및 20Hz 비행 루프 호출 엄격 금지
@@ -968,9 +975,13 @@ local status = gpsClient.getStatus()
 - **`poll(clientSeq) -> fixData or nil`**:
   - 수신 패킷 큐에서 해당 `clientSeq`와 일치하는 `MSG_GPS_RESPONSE`가 존재하는지 검사합니다.
   - 응답이 도착했으면 파싱된 테이블을 반환하고, 아직 미도착 상태면 `nil`을 반환하여 비행 제어 루프가 블로킹 없이 추측항법(DR)을 병행할 수 있도록 합니다.
+- **`requestStatus([queryType], [replyChannel])` 및 `pollStatus()`**:
+  - `CH_GPS_SERVICE` (`60002`)으로 `MSG_GPS_STATUS_REQ`를 방출하고, 수신 큐에 도착한 `MSG_GPS_STATUS_RESP`를 비차단 폴링합니다.
+- **`queryStatus([timeoutSec], [queryType]) -> statusData or nil`**:
+  - `requestStatus` 후 지정 타임아웃(기본 1.0초) 동안 `pollStatus`를 수행하는 동기 편의 함수입니다.
 - **`setManaged(isManaged)` 및 관리 모드 인터록**:
   - FCP 환경에서 실수로 `locate()`를 호출하여 `os.pullEvent`가 작동하는 것을 차단하기 위해 관리 모드 플래그(`isManaged`)를 지원합니다.
-  - `isManaged == true`일 때 `locate()`는 `os.pullEvent` 대신 비동기 poll 루프로 자동 전환되어 타 시스템의 이벤트 가로채기를 방지합니다:
+  - `isManaged == true`일 때 `locate()`는 `os.pullEvent` 대신 비동기 poll 루프로 자동 전환되며, `standaloneLocate`와 동등하게 50% 타임아웃(`totalTimeout * 0.5`) 시점에 동일 `clientSeq`로 1회 재전송을 수행하여 이벤트 가로채기 방지와 패킷 드롭 보정을 동시 지원합니다:
 
   ```lua
   local isManaged = false
@@ -980,12 +991,30 @@ local status = gpsClient.getStatus()
 
   function gpsClient.locate(altitudeY, timeoutSec)
       if isManaged then
-          -- Managed 모드에서는 os.pullEvent 대신 비동기 poll 루프로 안전 전환
+          -- Managed 모드: os.pullEvent 대신 비동기 poll 루프 운용 및 50% 타임아웃 시 1회 동일 clientSeq 재전송
+          local totalTimeout = tonumber(timeoutSec) or 0.5
+          local retryDelay = totalTimeout * 0.5
           local seq = gpsClient.request(altitudeY)
-          local deadline = os.epoch("utc") + (timeoutSec or 0.5) * 1000
-          while os.epoch("utc") < deadline do
+          local startTime = os.epoch and os.epoch("utc") or 0
+          local deadline = startTime + totalTimeout * 1000
+          local retryTime = startTime + retryDelay * 1000
+          local retried = false
+
+          while (os.epoch and os.epoch("utc") or 0) < deadline do
               local fix = gpsClient.poll(seq)
-              if fix then return fix.position.x, altitudeY, fix.position.z, fix end
+              if fix then
+                  if fix.position then
+                      return fix.position.x, altitudeY, fix.position.z, fix
+                  end
+                  return nil, nil, nil, fix
+              end
+
+              if not retried and (os.epoch and os.epoch("utc") or 0) >= retryTime then
+                  local nowMs = os.epoch and os.epoch("utc") or 0
+                  local _, retryPkt = instance:nextRequestPacket(altitudeY, nowMs, seq)
+                  modem.transmit(protocol.CH_GPS_PING, instance.replyChannel, retryPkt)
+                  retried = true
+              end
               os.sleep(0.05)
           end
           return nil, nil, nil, { status = "TIMEOUT" }
@@ -996,8 +1025,14 @@ local status = gpsClient.getStatus()
   ```
 
 - **`handleMessage(side, channel, replyChannel, message, distance) -> boolean`**:
-  - FCP의 전담 `NET_MGR`이 모든 모뎀 이벤트를 일원화 수신하고, GPS 응답 패킷만 `gpsClient.handleMessage()`로 주입합니다.
-  - 수신된 메시지가 자신의 `replyChannel` 및 `type == "MSG_GPS_RESPONSE"`인 경우에만 내부 수신 큐에 적재하고 `true`를 반환하며, `client.lua`가 독자적으로 `os.pullEvent`를 호출하지 않으므로 CC 이벤트 큐 오염을 100% 구조적 차단합니다.
+  - FCP의 전담 `NET_MGR` 또는 상위 네트워크 데몬이 모든 모뎀 이벤트를 일원화 수신하고, GPS 관련 패킷만 `gpsClient.handleMessage()`로 주입합니다.
+  - 수신된 메시지가 자신의 `replyChannel` 및 `type == "MSG_GPS_RESPONSE"`인 경우 측위 큐에 적재하고 `true`를 반환합니다.
+  - 수신된 메시지가 자신의 `replyChannel` 또는 `CH_GPS_SERVICE`(`60002`)이고 `type == "MSG_GPS_STATUS_RESP"`인 경우 상태 응답 큐에 적재하고 `true`를 반환합니다.
+  - 이를 통해 `client.lua`가 독자적으로 `os.pullEvent`를 호출하지 않으므로 CC 이벤트 큐 오염을 방지합니다.
+
+- **멀티 코드베이스 독립 완결 클라이언트 와이어 호환 규칙 (Multi-Codebase Isolation & Wire Contract)**:
+  - FCP(`src/2_guidance/fcp/modules/network_manager.lua` + `nav_engine.lua`) 및 착륙패드(`src/0_infra/landing_pad/modules/gps_client.lua`) 등 타 도메인 노드는 저장소 전역 아키텍처 원칙에 따라 `/apis/gps_client.lua`를 교차 참조(`require`)하지 않고 독립 완결 구조를 유지합니다.
+  - 이들 독립 클라이언트는 중앙 GPS 서버 및 노드 스웜과 통신할 때 본 ICD에 정의된 표준 `v1.9.5` 와이어 프로토콜 계약(`MSG_GPS_REQUEST` 필수 필드 `altitudeY`, `clientSeq`, `clientType`, `replyChannel`, 그리고 `MSG_GPS_RESPONSE` 수신 필드 `targetClient`, `clientSeq`, `status`, `position`, `time` 등)을 각자 내부 구현체에서 직접 준수하여 전역 호환성을 유지합니다.
 
 ---
 
@@ -1031,7 +1066,7 @@ src/0_infra/gps/
 
 /gps_data/                           -- 영구 설정 디렉터리 (재설치/업데이트 시 안전 보존)
 ├── nodes.json                       -- 서버 전용 노드 레지스트리 DB (computerId 바인딩)
-└── node_cfg.json                    -- 스웜 노드 전용 로컬 설정 파일 (좌표 및 역할)
+└── node.json                        -- 스웜 노드 전용 로컬 설정 파일 (좌표 및 역할, 구 node_cfg.json [DEPRECATED])
 
 /startup/00_gps.lua                  -- 멀티부트 분리 후크 (기존 startup.lua 보존 공존)
 /.version.json                       -- 설치된 타겟, 버전, 설치 일시, 체크섬 메타데이터 추적
@@ -1070,7 +1105,7 @@ Select target to install:
 Enter target: 2
 
 Installing [gps_node] ...
-  > Preserving existing config in /gps_data/node_cfg.json ... [OK]
+  > Preserving existing config in /gps_data/node.json ... [OK]
   > Preserving existing config in /gps_data/nodes.json ... [OK]
   > Writing /gps/node.lua ... [OK]
   > Registering boot hook in /startup/00_gps.lua ... [OK]
@@ -1080,8 +1115,8 @@ Installing [gps_node] ...
 
 | 타겟 식별자 (Target ID) | 대상 역할 (Role Bundle) | 배포 및 복사 파일 목록 | `startup` 자동 등록 경로 | 설정 보존 정책 및 비고 |
 | :--- | :--- | :--- | :--- | :--- |
-| `gps_server` | 중앙 연산 서버 (Central Server) | `/gps/server.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/server.lua")`) | `/gps_data/nodes.json` 및 `node_cfg.json` 안전 보존 |
-| `gps_node` | 스웜 측위 비콘 노드 (Swarm Node) | `/gps/node.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/node.lua")`) | `/gps_data/node_cfg.json` 및 `nodes.json` 안전 보존 |
+| `gps_server` | 중앙 연산 서버 (Central Server) | `/gps/server.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/server.lua")`) | `/gps_data/nodes.json` 및 `node.json` 안전 보존 |
+| `gps_node` | 스웜 측위 비콘 노드 (Swarm Node) | `/gps/node.lua`, `/gps/modules/*`, `/gps/hal/*` | `/startup/00_gps.lua` (`shell.run("/gps/node.lua")`) | `/gps_data/node.json` 및 `nodes.json` 안전 보존 |
 | `gps_client` | 비행체 클라이언트 API (Client API) | `/apis/gps_client.lua`, `/gps/modules/client_core.lua`, `/gps/modules/protocol.lua` | 자동 실행 등록 없음 (`require("gps_client")`) | 설정 파일 없음 |
 
 > [!NOTE]

@@ -3,11 +3,11 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-201`(FCP `v1.16.0 Implemented`), `TASK-202-1~4`(AMM v1.2.0 3분할 코어·FSM·C2·헤드리스·51x19 TUI 뷰포트·다중 경로/스키마 검증·`file_transfer`/CLI 확장; 2026-11-12, 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-122`(GPS `v2.3.0 Implemented`·착륙패드/FCP 프로토콜 정합화 및 실노드 폐루프 E2E), `TASK-201`(FCP `v1.16.0 Implemented`), `TASK-202-1~4`(AMM v1.2.0 3분할 코어·FSM·C2·헤드리스·51x19 TUI 뷰포트·다중 경로/스키마 검증·`file_transfer`/CLI 확장; 2026-11-12, 이력 `.agent/memory/workspace-root.md`).
 - **다음 액션**:
   1. `TASK-202-5`: 호스트 PC 비주얼 에디터(`tools/amm_mission_editor.html`)·AMM E2E 시뮬레이션 검증·사양서 `Implemented` 환원.
   2. `TASK-010`: 플레이북 정적 검증기(`tools/verify_playbooks.py`) 및 핵심 5종 매뉴얼 작성.
-  3. `TASK-103` / `TASK-117` / `TASK-122` / `TASK-204`: 활주로 제어기, OTA 서버, GPS 프로토콜 정합화 또는 AMM 행동 진입조건 재정의.
+  3. `TASK-206` / `TASK-103` / `TASK-117` / `TASK-204`: FCP-AMM 역할 분리 15대 사양서 개편, 활주로, OTA 또는 AMM 행동 재정의.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -25,7 +25,7 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 372/372 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 403/403 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (7개 시나리오 8/8 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).
