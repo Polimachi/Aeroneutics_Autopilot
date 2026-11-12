@@ -5,6 +5,12 @@
 package.path = package.path .. ";/modules/?.lua;/?/init.lua"
 local outer_loop_controller = require("outer_loop_controller")
 
+local function clamp(val, min_v, max_v)
+    if val < min_v then return min_v end
+    if val > max_v then return max_v end
+    return val
+end
+
 local function make_base_cfg(airframe)
     return {
         system = {
@@ -339,6 +345,103 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
         local emgCmd = outer_loop_controller.compute(state, nav, sp, emgCtx, 0.05)
         assert_eq(emgCmd.flightMode, "EMERGENCY_LAND")
         assert_true(emgCmd.collectiveThrust < 0.635, "EMERGENCY_LAND should command descent thrust < hover")
+    end)
+
+    it("verifies compute() freezes integration when fsmCtx.vasSat indicates saturation", function()
+        local cfg = make_base_cfg("VECTORED_VTOL")
+        local state = outer_loop_controller.init(cfg)
+        local nav = make_nav(0, 64, 0, 0, 0, 0, 0, 0, 0)
+        local sp = make_setpoint(10, 64, 0, 5, 0, 0, 0, "CRUISE", "STRICT_LEVEL")
+
+        -- Saturated X in fsmCtx.vasSat
+        local fsmCtx = {
+            currentState = "ACTIVE_TRACKING",
+            rampAlpha = 1.0,
+            vasSat = {
+                axisSaturatedPos = { surge = true, x = true },
+                axisSaturatedNeg = {},
+            },
+        }
+        outer_loop_controller.compute(state, nav, sp, fsmCtx, 0.05)
+        assert_true(state.integrators.x <= 1e-6, "Integrator X must not increase via compute() when fsmCtx.vasSat is saturated")
+
+        -- Opposing error unwinds through compute()
+        local sp_neg = make_setpoint(-10, 64, 0, -5, 0, 0, 0, "CRUISE", "STRICT_LEVEL")
+        outer_loop_controller.compute(state, nav, sp_neg, fsmCtx, 0.05)
+        assert_true(state.integrators.x < -1e-6, "Integrator X must unwind opposing error through compute()")
+    end)
+
+    it("verifies EMERGENCY_LAND on QUADROTOR and VECTORED_VTOL yields reduced collectiveThrust < 0.635 without climb", function()
+        for _, af in ipairs({ "QUADROTOR", "VECTORED_VTOL" }) do
+            local cfg = make_base_cfg(af)
+            local state = outer_loop_controller.init(cfg)
+            local nav = make_nav(50.0, 100.0, 50.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            local sp = make_setpoint(50.0, 100.0, 50.0, 0.0, 0.0, 0.0, 0.0, "CRUISE", "STRICT_LEVEL")
+            local emgCtx = { currentState = "EMERGENCY_LAND", rampAlpha = 1.0 }
+
+            local cmd = outer_loop_controller.compute(state, nav, sp, emgCtx, 0.05)
+            assert_eq(cmd.flightMode, "EMERGENCY_LAND")
+            assert_true(cmd.collectiveThrust < 0.635, af .. " EMERGENCY_LAND thrust must be strictly < hoverThrust (0.635), got: " .. tostring(cmd.collectiveThrust))
+            assert_true(cmd.collectiveThrust > 0.0, af .. " EMERGENCY_LAND thrust must be > 0.0")
+        end
+    end)
+
+    it("verifies TILT_ASSISTED inhibits pitch tilt in LOITER and POI_HOLD modes", function()
+        local cfg = make_base_cfg("VECTORED_VTOL")
+        local state = outer_loop_controller.init(cfg)
+        -- High speed (20 m/s > 15 m/s threshold) with large forward surge demand
+        local nav = make_nav(0, 100, 0, 0, 0, -20, 0, 0, 0)
+        local sp_cruise = make_setpoint(0, 100, -50, 0, 0, -20, 0, "CRUISE", "TILT_ASSISTED")
+        local fsmCtx = { currentState = "ACTIVE_TRACKING", rampAlpha = 1.0 }
+
+        -- In CRUISE mode with TILT_ASSISTED, pitch tilts up to assist forward thrust
+        local cmd_cruise = outer_loop_controller.compute(state, nav, sp_cruise, fsmCtx, 0.05)
+        local q_cruise = cmd_cruise.targetQuaternion
+        local sinp_c = 2.0 * (q_cruise.w * q_cruise.y - q_cruise.z * q_cruise.x)
+        local pitch_c = math.abs(math.deg(math.asin(clamp(sinp_c, -1.0, 1.0))))
+        assert_true(pitch_c > 0.1, "CRUISE TILT_ASSISTED must command non-zero pitch, got: " .. tostring(pitch_c))
+
+        -- In LOITER mode with TILT_ASSISTED, pitch must be inhibited (0.0)
+        local state_loiter = outer_loop_controller.init(cfg)
+        local sp_loiter = make_setpoint(0, 100, -50, 0, 0, -20, 0, "LOITER", "TILT_ASSISTED")
+        local cmd_loiter = outer_loop_controller.compute(state_loiter, nav, sp_loiter, fsmCtx, 0.05)
+        local q_loiter = cmd_loiter.targetQuaternion
+        local sinp_l = 2.0 * (q_loiter.w * q_loiter.y - q_loiter.z * q_loiter.x)
+        local pitch_l = math.abs(math.deg(math.asin(clamp(sinp_l, -1.0, 1.0))))
+        assert_true(pitch_l < 0.01, "LOITER TILT_ASSISTED must inhibit pitch tilt, got: " .. tostring(pitch_l))
+
+        -- In POI_HOLD mode with TILT_ASSISTED, pitch must also be inhibited (0.0)
+        local state_poi = outer_loop_controller.init(cfg)
+        local sp_poi = make_setpoint(0, 100, -50, 0, 0, -20, 0, "POI_HOLD", "TILT_ASSISTED")
+        local cmd_poi = outer_loop_controller.compute(state_poi, nav, sp_poi, fsmCtx, 0.05)
+        local q_poi = cmd_poi.targetQuaternion
+        local sinp_p = 2.0 * (q_poi.w * q_poi.y - q_poi.z * q_poi.x)
+        local pitch_p = math.abs(math.deg(math.asin(clamp(sinp_p, -1.0, 1.0))))
+        assert_true(pitch_p < 0.01, "POI_HOLD TILT_ASSISTED must inhibit pitch tilt, got: " .. tostring(pitch_p))
+    end)
+
+    it("verifies FIXED_WING respects rotation speed and stall speed limits", function()
+        local cfg = make_base_cfg("FIXED_WING")
+        local state = outer_loop_controller.init(cfg)
+
+        -- 1. TAKEOFF below rotation speed (gs = 5 m/s < rotationSpeed = 12 m/s): pitch held at 0
+        local nav_roll = make_nav(0, 100, 0, 0, 0, -5, 0, 0, 0)
+        local sp_takeoff = make_setpoint(0, 120, -50, 0, 5, -15, 0, "TAKEOFF", "FIXED_WING_NOMINAL")
+        local fsmCtx = { currentState = "ACTIVE_TRACKING", rampAlpha = 1.0 }
+        local cmd_takeoff = outer_loop_controller.compute(state, nav_roll, sp_takeoff, fsmCtx, 0.05)
+        local q_to = cmd_takeoff.targetQuaternion
+        local sinp_to = 2.0 * (q_to.w * q_to.y - q_to.z * q_to.x)
+        local pitch_to = math.deg(math.asin(clamp(sinp_to, -1.0, 1.0)))
+        assert_true(math.abs(pitch_to) < 0.01, "TAKEOFF below rotation speed must keep pitch at 0, got: " .. tostring(pitch_to))
+
+        -- 2. Below stall speed (gs = 6 m/s < stallSpeed = 10 m/s): pitch-up clamped to <= 5 deg
+        local nav_slow = make_nav(0, 100, 0, 0, 0, -6, 0, 0, 0)
+        local sp_cruise_slow = make_setpoint(0, 150, -50, 0, 10, -15, 0, "CRUISE", "FIXED_WING_NOMINAL")
+        local cmd_slow = outer_loop_controller.compute(state, nav_slow, sp_cruise_slow, fsmCtx, 0.05)
+        local q_sl = cmd_slow.targetQuaternion
+        local sinp_sl = 2.0 * (q_sl.w * q_sl.y - q_sl.z * q_sl.x)
+        local pitch_sl = math.deg(math.asin(clamp(sinp_sl, -1.0, 1.0)))
+        assert_true(pitch_sl <= 5.01, "Pitch below stall speed must be clamped to <= 5.0 deg, got: " .. tostring(pitch_sl))
     end)
 
 end)

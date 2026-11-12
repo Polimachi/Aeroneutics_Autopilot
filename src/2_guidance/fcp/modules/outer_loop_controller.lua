@@ -116,16 +116,17 @@ end
 
 local function check_sat_flags(satFlags, axis, surgeOrSwayOrHeave)
     if not satFlags then return false, false end
-    local posTable = satFlags.axisSaturatedPos or {}
-    local negTable = satFlags.axisSaturatedNeg or {}
+    local vSat = satFlags.vasSat or satFlags
+    local posTable = vSat.axisSaturatedPos or satFlags.axisSaturatedPos or {}
+    local negTable = vSat.axisSaturatedNeg or satFlags.axisSaturatedNeg or {}
     local satPos = posTable[axis] or posTable[surgeOrSwayOrHeave]
     local satNeg = negTable[axis] or negTable[surgeOrSwayOrHeave]
     if axis == "y" then
-        satPos = satPos or satFlags.thrustClamped
-        satNeg = satNeg or satFlags.thrustClamped
+        satPos = satPos or vSat.thrustClamped or satFlags.thrustClamped
+        satNeg = satNeg or vSat.thrustClamped or satFlags.thrustClamped
     else
-        satPos = satPos or satFlags.tiltClamped
-        satNeg = satNeg or satFlags.tiltClamped
+        satPos = satPos or vSat.tiltClamped or satFlags.tiltClamped
+        satNeg = satNeg or vSat.tiltClamped or satFlags.tiltClamped
     end
     return satPos == true, satNeg == true
 end
@@ -135,16 +136,12 @@ function outer_loop_controller.compute_desired_accel(state, nav, setpoint, dt, s
     local kp, kd, ki, drag, lim, g = get_se3_gains(state and state.cfg)
     local pos = (nav and nav.pos) or { x = 0, y = 64, z = 0 }
     local vel = (nav and (nav.vel or nav.velocity)) or { x = 0, y = 0, z = 0 }
-    local vx = vel.vx or vel.x or 0.0
-    local vy = vel.vy or vel.y or 0.0
-    local vz = vel.vz or vel.z or 0.0
+    local vx, vy, vz = vel.vx or vel.x or 0.0, vel.vy or vel.y or 0.0, vel.vz or vel.z or 0.0
 
     local sp = setpoint or {}
     local tpos = sp.targetPos or pos
     local tvel = sp.targetVel or { x = 0, y = 0, z = 0 }
-    local tvx = tvel.vx or tvel.x or 0.0
-    local tvy = tvel.vy or tvel.y or 0.0
-    local tvz = tvel.vz or tvel.z or 0.0
+    local tvx, tvy, tvz = tvel.vx or tvel.x or 0.0, tvel.vy or tvel.y or 0.0, tvel.vz or tvel.z or 0.0
 
     local ex = (tpos.x or pos.x) - pos.x
     local ey = (tpos.y or pos.y) - pos.y
@@ -160,7 +157,9 @@ function outer_loop_controller.compute_desired_accel(state, nav, setpoint, dt, s
     local ffz = ff.az or ff.z or 0.0
 
     local ints = (state and state.integrators) or { x = 0.0, y = 0.0, z = 0.0 }
-    local freeze = satFlags and (satFlags.navStale == true or (satFlags.actuatorHealth and satFlags.actuatorHealth.tap == false))
+    local vSat = satFlags and satFlags.vasSat
+    local actH = (satFlags and satFlags.actuatorHealth) or (vSat and vSat.actuatorHealth)
+    local freeze = (satFlags and satFlags.navStale) or (vSat and vSat.navStale) or (actH and actH.tap == false)
     if not freeze and state then
         local spX, snX = check_sat_flags(satFlags, "x", "surge")
         local spY, snY = check_sat_flags(satFlags, "y", "heave")
@@ -187,22 +186,28 @@ local function project_multirotor(state, a_des, nav, sp, fsmCtx, dt, heading, ya
     local g = tonumber(se3.gravityMps2) or 11.0
 
     local surge_a, sway_a = project_to_body(a_des.ax, a_des.az, heading)
-    local ay = math.max(0.5 * g, a_des.ay)
+    local ay = math.max(0.0, a_des.ay)
+    local ay_tilt = math.max(0.5 * g, ay)
 
-    local p_deg = clamp(math.deg(-math.atan2(surge_a, ay)), -maxTilt, maxTilt)
-    local r_deg = clamp(math.deg(math.atan2(sway_a, ay)), -maxTilt, maxTilt)
+    local p_deg = clamp(math.deg(-math.atan2(surge_a, ay_tilt)), -maxTilt, maxTilt)
+    local r_deg = clamp(math.deg(math.atan2(sway_a, ay_tilt)), -maxTilt, maxTilt)
 
     local quat = euler_deg_to_quat(p_deg, r_deg, heading)
     local rates = { pitchRate = 0.0, rollRate = 0.0, yawRate = yawRateFF }
 
-    local f_norm = math.sqrt(surge_a * surge_a + sway_a * sway_a + a_des.ay * a_des.ay)
+    local f_norm = math.sqrt(surge_a * surge_a + sway_a * sway_a + ay * ay)
     local colThrust = clamp(hoverThr * (f_norm / g), 0.0, 1.0)
 
     return quat, rates, colThrust, 0.0, nil
 end
 
-local function resolve_vtol_pitch(profile, swayLoss, surge, nav, dt, state, se3)
+local function resolve_vtol_pitch(profile, swayLoss, surge, nav, sp, dt, state, se3)
     if swayLoss then return 0.0 end
+    local mode = sp and sp.flightMode
+    if mode == "LOITER" or mode == "POI_HOLD" then
+        state.current_pitch = 0.0
+        return 0.0
+    end
     local target_p = 0.0
     if profile == "TILT_ASSISTED" then
         local vel = (nav and (nav.vel or nav.velocity)) or {}
@@ -261,7 +266,7 @@ local function project_vtol(state, a_des, nav, sp, fsmCtx, dt, heading, yawRateF
     local bias = project_vtol_bias(state, a_des, sp, fsmCtx, dt, heading, is_advanced, swayLoss)
 
     local profile = sp.constraintProfile or "STRICT_LEVEL"
-    local pitch = resolve_vtol_pitch(profile, swayLoss, bias.surge, nav, dt, state, se3)
+    local pitch = resolve_vtol_pitch(profile, swayLoss, bias.surge, nav, sp, dt, state, se3)
     local roll = 0.0
     if swayLoss then
         local _, w_a = project_to_body(a_des.ax, a_des.az, heading)
@@ -270,7 +275,7 @@ local function project_vtol(state, a_des, nav, sp, fsmCtx, dt, heading, yawRateF
 
     local quat = euler_deg_to_quat(pitch, roll, heading)
     local rates = { pitchRate = 0.0, rollRate = 0.0, yawRate = yawRateFF }
-    local colThrust = clamp(hoverThr * (a_des.ay / g), 0.0, 1.0)
+    local colThrust = clamp(hoverThr * (math.max(0.0, a_des.ay) / g), 0.0, 1.0)
 
     return quat, rates, colThrust, nil, bias
 end
@@ -293,6 +298,14 @@ local function project_fixed_wing(state, a_des, nav, sp, fsmCtx, dt, heading, ya
     local vz = vel.vz or vel.z or 0.0
     local gs = math.max(math.sqrt(vx * vx + vz * vz), 1.0)
     local pitch_cmd = clamp(math.deg(math.atan2(a_des.ay - g, gs)), -20.0, 20.0)
+
+    local rotSpeed = tonumber(se3.fixedWingRotationSpeedMps) or 12.0
+    local stallSpeed = tonumber(se3.fixedWingStallSpeedMps) or 10.0
+    if sp.flightMode == "TAKEOFF" and gs < rotSpeed then
+        pitch_cmd = 0.0
+    elseif gs < stallSpeed then
+        pitch_cmd = clamp(pitch_cmd, -10.0, 5.0)
+    end
 
     local yawRateBTT = (g / gs) * math.tan(math.rad(roll)) * (180.0 / math.pi)
     local totalYawRate = clamp(yawRateFF + yawRateBTT, -30.0, 30.0)
@@ -369,7 +382,7 @@ local function prepare_fsm_setpoint(state, nav, setpoint, fsmCtx)
         local safe = (state.cfg and state.cfg.safety) or {}
         local descentRate = tonumber(safe.emergencyDescentRateMps) or -2.0
         return {
-            targetPos = { x = pos.x, y = pos.y - 100.0, z = pos.z },
+            targetPos = { x = pos.x, y = pos.y, z = pos.z },
             targetVel = { x = 0.0, y = descentRate, z = 0.0, vx = 0.0, vy = descentRate, vz = 0.0 },
             feedforwardAccel = { x = 0.0, y = 0.0, z = 0.0, ax = 0.0, ay = 0.0, az = 0.0 },
             targetHeading = head,
