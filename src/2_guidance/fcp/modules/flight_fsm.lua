@@ -1,193 +1,276 @@
--- src/modules/flight_fsm.lua
+-- src/2_guidance/fcp/modules/flight_fsm.lua
+-- FCP v2.0.0 6-State Outer-Loop Flight Finite State Machine
+-- CC:Tweaked Lua 5.2 / Cobalt VM compliant
+
 local flight_fsm = {}
+
+flight_fsm.STATES = {
+    BOOT = true,
+    IDLE_ARMED = true,
+    ACTIVE_TRACKING = true,
+    PASSIVE_TRACKING = true,
+    AMM_TIMEOUT_HOLD = true,
+    EMERGENCY_LAND = true,
+}
+
+local ALLOWED_TRANSITIONS = {
+    BOOT = {
+        IDLE_ARMED = true,
+    },
+    IDLE_ARMED = {
+        ACTIVE_TRACKING = true,
+    },
+    ACTIVE_TRACKING = {
+        IDLE_ARMED = true,
+        PASSIVE_TRACKING = true,
+        AMM_TIMEOUT_HOLD = true,
+        EMERGENCY_LAND = true,
+    },
+    PASSIVE_TRACKING = {
+        ACTIVE_TRACKING = true,
+        IDLE_ARMED = true,
+    },
+    AMM_TIMEOUT_HOLD = {
+        ACTIVE_TRACKING = true,
+        EMERGENCY_LAND = true,
+        IDLE_ARMED = true,
+    },
+    EMERGENCY_LAND = {
+        IDLE_ARMED = true,
+    },
+}
+
+function flight_fsm.is_transition_allowed(curr, nextState)
+    if not curr or not nextState then return false end
+    if curr == nextState then return false end
+    local valid_next = ALLOWED_TRANSITIONS[curr]
+    if not valid_next then return false end
+    return valid_next[nextState] == true
+end
+
+local function do_transition(state, nextState)
+    local curr = state.currentState
+    if curr == nextState then
+        return false
+    end
+    if flight_fsm.is_transition_allowed(curr, nextState) then
+        state.currentState = nextState
+        state.current_state = nextState
+        return true
+    end
+    return false
+end
+
+function flight_fsm.init(config, safetyConfig)
+    local cfg = config or {}
+    local sys = cfg.system or cfg
+    local safe = safetyConfig or cfg.safety or {}
+    return {
+        currentState = "BOOT",
+        current_state = "BOOT",
+        airframeType = sys.airframeType or "VECTORED_VTOL",
+        safety = {
+            ammSetpointTimeoutMs = safe.ammSetpointTimeoutMs or 500,
+            ammTimeoutHoldToEmgMs = safe.ammTimeoutHoldToEmgMs or 10000,
+            bumplessRampSec = safe.bumplessRampSec or 2.0,
+        },
+        flightActive = false,
+        arm = false,
+        bumplessTriggered = false,
+        rampStartMs = -10000,
+        timeoutHoldStartMs = nil,
+        prevFlightMode = nil,
+    }
+end
+
+local function is_emergency_condition(ctx, telem)
+    if ctx.emergencyAlert == true then return true end
+    if telem.activeSource == "EMERGENCY_DIRECT" then return true end
+    if telem.controlState == "E_STOP" then return true end
+    return false
+end
+
+local function handle_emergency_stop(state, events)
+    do_transition(state, "IDLE_ARMED")
+    state.flightActive = false
+    state.arm = false
+    events.resetIntegrators = true
+    events.triggerBumpless = false
+end
+
+local function step_boot(state, ctx, events)
+    if ctx.channelsReady ~= false then
+        if do_transition(state, "IDLE_ARMED") then
+            state.flightActive = false
+            events.resetIntegrators = true
+        end
+    end
+end
+
+local function step_idle_armed(state, sp, now_ms, events)
+    if sp.arm == true and sp.flightActive == true then
+        if do_transition(state, "ACTIVE_TRACKING") then
+            state.flightActive = true
+            state.arm = true
+            state.prevFlightMode = sp.flightMode
+            events.resetIntegrators = true
+        end
+    else
+        state.flightActive = false
+        if sp.arm ~= nil then state.arm = sp.arm end
+    end
+end
+
+local function trigger_bumpless(state, now_ms, events, newMode)
+    events.triggerBumpless = true
+    events.resetIntegrators = true
+    state.bumplessTriggered = true
+    state.rampStartMs = now_ms
+    if newMode then state.prevFlightMode = newMode end
+end
+
+local function step_active_tracking(state, ctx, sp, telem, now_ms, events)
+    if sp.arm == false or sp.flightActive == false then
+        do_transition(state, "IDLE_ARMED")
+        state.flightActive = false
+        events.resetIntegrators = true
+        return
+    end
+    if sp.flightMode == "EMERGENCY_LAND" then
+        if do_transition(state, "EMERGENCY_LAND") then
+            events.resetIntegrators = true
+        end
+        return
+    end
+    if telem.activeSource == "MFD_ACRO" then
+        if do_transition(state, "PASSIVE_TRACKING") then
+            events.freezeIntegrators = true
+        end
+        return
+    end
+    local lastRx = sp.lastRxMs or ctx.lastSetpointMs or ctx.lastRxMs
+    local timeoutMs = state.safety.ammSetpointTimeoutMs or 500
+    if lastRx and (now_ms - lastRx >= timeoutMs) then
+        if do_transition(state, "AMM_TIMEOUT_HOLD") then
+            state.timeoutHoldStartMs = now_ms
+            events.resetIntegrators = true
+        end
+        return
+    end
+    if sp.flightMode and state.prevFlightMode and sp.flightMode ~= state.prevFlightMode then
+        trigger_bumpless(state, now_ms, events, sp.flightMode)
+    elseif sp.flightMode then
+        state.prevFlightMode = sp.flightMode
+    end
+end
+
+local function step_passive_tracking(state, sp, telem, now_ms, events)
+    if sp.arm == false or sp.flightActive == false then
+        do_transition(state, "IDLE_ARMED")
+        state.flightActive = false
+        events.resetIntegrators = true
+        return
+    end
+    if telem.activeSource == "FCP" or (telem.activeSource ~= "MFD_ACRO" and telem.activeSource ~= "EMERGENCY_DIRECT") then
+        if do_transition(state, "ACTIVE_TRACKING") then
+            trigger_bumpless(state, now_ms, events, sp.flightMode)
+        end
+    else
+        events.freezeIntegrators = true
+    end
+end
+
+local function step_amm_timeout_hold(state, ctx, sp, now_ms, events)
+    if sp.arm == false or sp.flightActive == false then
+        do_transition(state, "IDLE_ARMED")
+        state.flightActive = false
+        events.resetIntegrators = true
+        return
+    end
+    local lastRx = sp.lastRxMs or ctx.lastSetpointMs or ctx.lastRxMs
+    local timeoutMs = state.safety.ammSetpointTimeoutMs or 500
+    if lastRx and (now_ms - lastRx < timeoutMs) then
+        if do_transition(state, "ACTIVE_TRACKING") then
+            state.timeoutHoldStartMs = nil
+            trigger_bumpless(state, now_ms, events, sp.flightMode)
+        end
+        return
+    end
+    local holdStart = state.timeoutHoldStartMs or now_ms
+    local holdLimit = state.safety.ammTimeoutHoldToEmgMs or 10000
+    if (now_ms - holdStart >= holdLimit) then
+        if do_transition(state, "EMERGENCY_LAND") then
+            state.timeoutHoldStartMs = nil
+            events.resetIntegrators = true
+        end
+    end
+end
+
+local function step_emergency_land(state, ctx, sp, events)
+    if ctx.touchdownComplete == true or ctx.touchdown == true or sp.arm == false or sp.flightActive == false then
+        if do_transition(state, "IDLE_ARMED") then
+            state.flightActive = false
+            state.arm = false
+            events.resetIntegrators = true
+        end
+    end
+end
+
+function flight_fsm.step(state, ctx, now_ms)
+    local s = state or flight_fsm.init()
+    local c = ctx or {}
+    local now = tonumber(now_ms) or 0
+    local telem = c.telemState or c.telemetry or {}
+    local sp = c.setpoint or {}
+
+    local events = {
+        triggerBumpless = false,
+        resetIntegrators = false,
+        freezeIntegrators = false,
+    }
+
+    if is_emergency_condition(c, telem) then
+        handle_emergency_stop(s, events)
+        return s, events
+    end
+
+    local curr = s.currentState or "BOOT"
+    if curr == "BOOT" then
+        step_boot(s, c, events)
+    elseif curr == "IDLE_ARMED" then
+        step_idle_armed(s, sp, now, events)
+    elseif curr == "ACTIVE_TRACKING" then
+        step_active_tracking(s, c, sp, telem, now, events)
+    elseif curr == "PASSIVE_TRACKING" then
+        step_passive_tracking(s, sp, telem, now, events)
+    elseif curr == "AMM_TIMEOUT_HOLD" then
+        step_amm_timeout_hold(s, c, sp, now, events)
+    elseif curr == "EMERGENCY_LAND" then
+        step_emergency_land(s, c, sp, events)
+    end
+
+    return s, events
+end
+
+function flight_fsm.is_flight_active(state)
+    if not state then return false end
+    local s = state.currentState or state.current_state
+    return s == "ACTIVE_TRACKING" or s == "PASSIVE_TRACKING" or s == "AMM_TIMEOUT_HOLD" or s == "EMERGENCY_LAND"
+end
+
+function flight_fsm.is_armed(state)
+    if not state then return false end
+    local s = state.currentState or state.current_state
+    return s ~= "BOOT"
+end
 
 function flight_fsm.is_vtol(airframe_type)
     local af = airframe_type or "VECTORED_VTOL"
     return (af == "VECTORED_VTOL" or af == "ADVANCED_VTOL" or af == "QUADROTOR" or af == "HEXAROTOR" or af == "WINGED_VTOL")
 end
 
-function flight_fsm.init(config)
-    local cfg = config or {}
-    local sys = cfg.system or {}
-    local safe = cfg.safety or {}
-    return {
-        current_state = "BOOT_INIT",
-        airframeType = sys.airframeType or "VECTORED_VTOL",
-        lowFuelRthThreshold = safe.lowFuelRthThreshold or 0.20,
-        emergencyLandFuelThreshold = safe.emergencyLandFuelThreshold or 0.10,
-        lockReason = nil,
-        lastWarning = nil,
-        inFlight = false,
-    }
-end
-
-function flight_fsm.transition_to(state, next_state, reason)
-    if not state then return end
-    state.current_state = next_state
-    if reason then state.lockReason = reason end
-    local inflight_set = {
-        TAKEOFF = true, CRUISE = true, LOITER = true, POI_HOLD = true,
-        APPROACH_LAND = true, FAILSAFE_HOLD = true,
-        FAILSAFE_RTH = true, EMERGENCY_LAND = true,
-    }
-    state.inFlight = inflight_set[next_state] == true
-end
-
-function flight_fsm.check_failsafes(state, ctx, now_ms)
-    if not state or not state.inFlight then return nil end
-    local c = ctx or {}
-    if c.hasSwayLoss then
-        flight_fsm.transition_to(state, "EMERGENCY_LAND", "SWAY_LOSS")
-        return "EMERGENCY_LAND"
-    end
-    if c.fuel and c.fuel < state.emergencyLandFuelThreshold then
-        flight_fsm.transition_to(state, "EMERGENCY_LAND", "CRITICAL_LOW_FUEL")
-        return "EMERGENCY_LAND"
-    end
-    if c.coreAlive == false then
-        flight_fsm.transition_to(state, "EMERGENCY_LAND", "CORE_TIMEOUT")
-        return "EMERGENCY_LAND"
-    end
-    if c.fuel and c.fuel < state.lowFuelRthThreshold and state.current_state ~= "FAILSAFE_RTH" then
-        flight_fsm.transition_to(state, "FAILSAFE_RTH", "LOW_FUEL_RTH")
-        return "FAILSAFE_RTH"
-    end
-    if c.gpsTimedOut and state.current_state ~= "FAILSAFE_HOLD" and state.current_state ~= "EMERGENCY_LAND" then
-        flight_fsm.transition_to(state, "FAILSAFE_HOLD", "GPS_TIMEOUT")
-        return "FAILSAFE_HOLD"
-    end
-    return nil
-end
-
-local function handle_ground_transitions(state, ctx)
-    local s = state.current_state
-    if ctx.airframeSupported == false then
-        flight_fsm.transition_to(state, "ARMING_LOCKED", "UNSUPPORTED_AIRFRAME_DEFERRED")
-        return
-    end
-    if ctx.channelLocked then
-        flight_fsm.transition_to(state, "ARMING_LOCKED", "RF_CHANNEL_CONFLICT")
-        return
-    end
-    if s == "BOOT_INIT" or s == "BOOTSTRAP" or s == "PROBE_CHANNEL" then
-        if ctx.channelAcquired then
-            flight_fsm.transition_to(state, "DISARMED")
-        end
-    elseif s == "DISARMED" and ctx.cmd == "ARM" then
-        flight_fsm.transition_to(state, "ARMING")
-    elseif s == "ARMING" and ctx.coreArmed then
-        flight_fsm.transition_to(state, "IDLE_ARMED")
-    elseif s == "IDLE_ARMED" and ctx.cmd == "TAKEOFF" then
-        local gate = ctx.takeoffGate or { allowed = true }
-        if gate.allowed then
-            if gate.warn_code then state.lastWarning = gate.warn_code end
-            flight_fsm.transition_to(state, "TAKEOFF")
-        end
-    end
-end
-
 function flight_fsm.evaluate(state, ctx, now_ms)
-    if not state then return "BOOT_INIT" end
-    local c = ctx or {}
-
-    if c.activeSource and c.activeSource ~= "FCP" then
-        if state.current_state ~= "PASSIVE_TRACKING" then
-            state.prePassiveState = state.current_state
-            flight_fsm.transition_to(state, "PASSIVE_TRACKING", "ACRO_DIRECT_TAKEOVER")
-        end
-        return state.current_state
-    elseif state.current_state == "PASSIVE_TRACKING" then
-        if c.activeSource == "FCP" or c.activeSource == nil then
-            state.recoveringBumpless = true
-            local prev = state.prePassiveState or "CRUISE"
-            state.prePassiveState = nil
-            flight_fsm.transition_to(state, prev, "RESUME_FCP_CONTROL")
-        else
-            return "PASSIVE_TRACKING"
-        end
-    end
-
-    if not state.inFlight then
-        handle_ground_transitions(state, c)
-        return state.current_state
-    end
-    local fs_act = flight_fsm.check_failsafes(state, c, now_ms)
-    if fs_act then return state.current_state end
-
-    local s = state.current_state
-    if s == "TAKEOFF" and (c.climbAltitudeReached or c.cmd == "CRUISE") then
-        flight_fsm.transition_to(state, "CRUISE")
-    elseif (s == "CRUISE" or s == "POI_HOLD") and c.cmd == "LOITER" then
-        flight_fsm.transition_to(state, "LOITER")
-    elseif (s == "CRUISE" or s == "LOITER") and c.cmd == "POI_HOLD" then
-        flight_fsm.transition_to(state, "POI_HOLD")
-    elseif (s == "LOITER" or s == "POI_HOLD") and c.cmd == "CRUISE" then
-        flight_fsm.transition_to(state, "CRUISE")
-    elseif (s == "CRUISE" or s == "LOITER" or s == "POI_HOLD") and (c.atcStatus == "CLEARED" or c.cmd == "LANDING") then
-        flight_fsm.transition_to(state, "APPROACH_LAND")
-    elseif s == "APPROACH_LAND" and (c.approachAction == "GO_AROUND") then
-        flight_fsm.transition_to(state, "LOITER")
-    elseif s == "APPROACH_LAND" and (c.approachAction == "ABORT_DIVERT") then
-        flight_fsm.transition_to(state, "FAILSAFE_RTH")
-    elseif s == "FAILSAFE_HOLD" and c.gpsRecovered then
-        flight_fsm.transition_to(state, "CRUISE")
-    elseif (s == "APPROACH_LAND" or s == "EMERGENCY_LAND") and c.touchdownComplete then
-        flight_fsm.transition_to(state, "DISARMED")
-    end
-    return state.current_state
-end
-
-function flight_fsm.evaluate_rth(state, fac_state, craft_pos, now_ms)
-    if not state then return { action = "NONE" } end
-    local facility_client_mod = require("facility_client")
-    local best_fac, dist = nil, 999999
-    if fac_state and facility_client_mod and facility_client_mod.find_nearest_free_landing_facility then
-        best_fac, dist = facility_client_mod.find_nearest_free_landing_facility(fac_state, craft_pos)
-    end
-
-    if best_fac and dist then
-        if dist <= 5.0 then
-            flight_fsm.transition_to(state, "APPROACH_LAND", "RTH_FACILITY_REACHED")
-            return {
-                action = "APPROACH_LAND",
-                targetFacilityId = best_fac.facilityId,
-                position = best_fac.position,
-                distance = dist,
-            }
-        else
-            return {
-                action = "NAV_TO_FACILITY",
-                targetFacilityId = best_fac.facilityId,
-                position = best_fac.position,
-                distance = dist,
-            }
-        end
-    else
-        flight_fsm.transition_to(state, "LOITER", "NO_FREE_FACILITY")
-        return {
-            action = "LOITER_WAIT",
-            holdingClimb = 30.0,
-        }
-    end
-end
-
-function flight_fsm.is_flight_active(state)
-    local active_set = {
-        TAKEOFF = true, CRUISE = true, LOITER = true, POI_HOLD = true,
-        APPROACH_LAND = true, FAILSAFE_HOLD = true,
-        FAILSAFE_RTH = true, EMERGENCY_LAND = true,
-    }
-    return state ~= nil and active_set[state.current_state] == true
-end
-
-function flight_fsm.is_armed(state)
-    local armed_set = {
-        ARMING = true, IDLE_ARMED = true, TAKEOFF = true,
-        CRUISE = true, LOITER = true, POI_HOLD = true, APPROACH_LAND = true,
-        FAILSAFE_HOLD = true, FAILSAFE_RTH = true, EMERGENCY_LAND = true,
-        PASSIVE_TRACKING = true,
-    }
-    return state ~= nil and armed_set[state.current_state] == true
+    return flight_fsm.step(state, ctx, now_ms)
 end
 
 return flight_fsm
