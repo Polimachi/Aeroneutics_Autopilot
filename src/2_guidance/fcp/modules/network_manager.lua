@@ -1,20 +1,7 @@
--- src/modules/network_manager.lua
+-- src/2_guidance/fcp/modules/network_manager.lua
+-- FCP 3-Channel Single-Modem Network Manager (Master ICD v1.28.0, Zone 1 Base+4/+2/+1)
 local network_manager = {}
 network_manager.PROTO_VERSION = "1.9.5"
-
-network_manager.ZONE_OFFSETS = {
-    c2 = 0,
-    guidance = 1,
-    telemetry = 2,
-    mfd = 3,
-    navSensor = 4,
-    clientReply = 5,
-    actuation = 10,
-    aero = 11,
-    payloadBus = 20,
-    weaponBus = 21,
-    formationLink = 30,
-}
 
 local function safe_unserialize(raw)
     if type(raw) == "table" then return raw end
@@ -24,88 +11,97 @@ local function safe_unserialize(raw)
     return nil
 end
 
-local function check_modem_side(side, expectWireless)
-    if side and peripheral and peripheral.getType and peripheral.getType(side) == "modem" then
-        local m = peripheral.wrap(side)
-        if m and (expectWireless == nil or m.isWireless == nil or m.isWireless() == expectWireless) then
-            return m
-        end
+local function resolve_modem(side, modem_lookup_fn)
+    if type(modem_lookup_fn) == "function" then
+        local m = modem_lookup_fn(side)
+        if m then return m end
+    elseif type(modem_lookup_fn) == "table" and modem_lookup_fn.transmit then
+        return modem_lookup_fn
     end
-    return nil
-end
-
-local function scan_modem(expectWireless)
-    if peripheral and peripheral.getNames then
-        for _, name in ipairs(peripheral.getNames()) do
-            if peripheral.getType(name) == "modem" then
-                local m = peripheral.wrap(name)
-                if m and (expectWireless == nil or m.isWireless == nil or m.isWireless() == expectWireless) then
-                    return m
-                end
-            end
-        end
+    if side and peripheral and peripheral.getType and peripheral.getType(side) == "modem" then
+        return peripheral.wrap(side)
     end
     if peripheral and peripheral.find then
         return peripheral.find("modem", function(_, dev)
-            return dev and (expectWireless == nil or dev.isWireless == nil or dev.isWireless() == expectWireless)
+            return dev and (dev.isWireless == nil or dev.isWireless())
         end)
     end
     return nil
 end
 
-local function resolve_modem(ctx, side_hint, expectWireless)
-    if ctx and ctx.modem_lookup then
-        local m = ctx.modem_lookup(side_hint)
-        if m then return m end
+local function persist_config(ctx)
+    local path = ctx.configPath or "config/fcp_config.json"
+    if not fs or not fs.open then return false end
+    local cfg = ctx.config or {}
+    if fs.exists and fs.exists(path) then
+        local rf = fs.open(path, "r")
+        if rf then
+            local raw = rf.readAll()
+            rf.close()
+            local parsed = textutils and textutils.unserializeJSON and textutils.unserializeJSON(raw)
+            if type(parsed) == "table" then cfg = parsed end
+        end
     end
-    local exp = (expectWireless ~= false)
-    return check_modem_side(side_hint, exp)
-        or scan_modem(exp)
-        or check_modem_side(side_hint, nil)
-        or scan_modem(nil)
-        or (side_hint and peripheral and peripheral.wrap and peripheral.wrap(side_hint))
-        or (peripheral and peripheral.find and peripheral.find("modem"))
+    if not cfg.channels then cfg.channels = {} end
+    cfg.channels.baseChannel = ctx.baseChannel
+    cfg.channels.trajectoryCmd = ctx.channels.trajectory
+    cfg.channels.telemetry = ctx.channels.telemetry
+    cfg.channels.attitudeCmd = ctx.channels.guidance
+    local ser = textutils and (textutils.serializeJSON or textutils.serialiseJSON)
+    if not ser then return false end
+    local ok, content = pcall(ser, cfg)
+    if not ok or not content then return false end
+    local f = fs.open(path, "w")
+    if not f then return false end
+    f.write(content)
+    f.close()
+    return true
 end
 
 function network_manager.init(config, modem_lookup_fn)
     local cfg = config or {}
     local sys = cfg.system or {}
     local chs = cfg.channels or {}
-    local base_ch = chs.baseChannel or 10000
+    local base_ch = chs.baseChannel or cfg.baseChannel or 10000
+    local primarySide = sys.primaryModemSide or cfg.primaryModemSide or "top"
+    local m = resolve_modem(primarySide, modem_lookup_fn)
+
+    local channels = {
+        trajectory = base_ch + 4,
+        telemetry = base_ch + 2,
+        guidance = base_ch + 1,
+    }
+
+    if m and m.open then
+        m.open(channels.trajectory)
+        m.open(channels.telemetry)
+        m.open(channels.guidance)
+    end
+
     return {
         domainId = (type(sys.domainId) == "string" and sys.domainId ~= "" and sys.domainId) or "AIRCRAFT_01",
         hardwareUuid = sys.hardwareUuid or "FCP-04",
         baseChannel = base_ch,
-        bandwidth = chs.bandwidth or 40,
-        bootstrapChannel = chs.bootstrapChannel or 50000,
-        atcCommChannel = chs.atcCommChannel or 50001,
-        gpsPingChannel = chs.gpsPingChannel or 60001,
-        gpsServiceChannel = chs.gpsServiceChannel or 60002,
-        facilityBeaconChannel = chs.facilityBeaconChannel or 50003,
-        mfdInstrumentChannel = chs.mfdInstrumentChannel or (base_ch + 3),
-        primarySide = sys.primaryModemSide or "top",
-        infraSide = sys.infraModemSide or "back",
-        modem_lookup = modem_lookup_fn,
+        channels = channels,
+        modem = m,
+        primarySide = primarySide,
+        configPath = cfg.configPath or "config/fcp_config.json",
+        config = cfg,
         seq = 0,
-        peer_seqs = {},
-        active_guide_ch = nil,
-        queues = {
-            telemetry = nil, gps = nil, c2 = nil, facility = nil,
-            calibration = nil, actuator = nil, probe = nil, rebindAck = nil,
-        },
+        rebindTx = nil,
+        inbound = { trajectory = nil, telemetry = nil, emergencyAlert = nil, rebindAck = nil },
     }
 end
 
 function network_manager.encode_envelope(ctx, packetType, payload)
     ctx.seq = (ctx.seq or 0) + 1
-    local now_epoch = os.epoch and os.epoch("utc") or 0
     return {
         ver = network_manager.PROTO_VERSION,
         domainId = ctx.domainId,
         senderId = ctx.hardwareUuid,
         type = packetType,
         seq = ctx.seq,
-        time = now_epoch,
+        time = (os.epoch and os.epoch("utc")) or 0,
         payload = payload or {},
     }
 end
@@ -115,170 +111,240 @@ function network_manager.decode_envelope(rawPacket)
 end
 
 function network_manager.verify_packet(ctx, packet)
-    if type(ctx) ~= "table" or type(ctx.domainId) ~= "string" or ctx.domainId == "" then
-        return false
-    end
-    local pkt = safe_unserialize(packet)
-    if not pkt or type(pkt) ~= "table" then return false end
-    if pkt.ver ~= network_manager.PROTO_VERSION then return false end
-    local d = pkt.domainId
-    local allowed_infra = {
-        FACILITY_INFRA = true,
-        GLOBAL = true,
-        GCS = true,
-        INFRA = true,
-        GPS_BASE_NET = true,
-    }
-    if d ~= ctx.domainId and not allowed_infra[d] then
-        return false
-    end
-    if pkt.type == "MSG_GPS_RESPONSE" then
-        if type(pkt.payload) ~= "table" or pkt.payload.targetClient ~= ctx.domainId then
-            return false
-        end
-    end
+    if type(ctx) ~= "table" or type(packet) ~= "table" then return false end
+    if packet.ver ~= network_manager.PROTO_VERSION then return false end
+    if packet.domainId ~= ctx.domainId then return false end
     return true
 end
 
-function network_manager.bind_bootstrap_channels(ctx)
-    local m = resolve_modem(ctx, ctx.infraSide) or resolve_modem(ctx, ctx.primarySide)
-    if m and m.open then
-        m.open(ctx.bootstrapChannel)
-        m.open(ctx.atcCommChannel)
-        m.open(ctx.gpsPingChannel or 60001)
-        m.open(ctx.gpsServiceChannel or 60002)
-        m.open(ctx.facilityBeaconChannel or 50003)
-    end
-end
-
-function network_manager.bind_aircraft_channels(ctx, base_ch)
-    local b = base_ch or ctx.baseChannel
-    ctx.baseChannel = b
-    ctx.mfdInstrumentChannel = b + 3
-    local m = resolve_modem(ctx, ctx.primarySide)
-    if m and m.open then
-        for offset = 0, 5 do
-            m.open(b + offset)
-        end
-    end
-end
-
-function network_manager.rebind_aircraft_channels(ctx, new_base)
-    local old_b = ctx.baseChannel
-    local m = resolve_modem(ctx, ctx.primarySide)
-    if m and m.close then
-        for offset = 0, 5 do
-            m.close(old_b + offset)
-        end
-    end
-    ctx.baseChannel = new_base
-    ctx.mfdInstrumentChannel = new_base + 3
-    if m and m.open then
-        for offset = 0, 5 do
-            m.open(new_base + offset)
-        end
-    end
-end
-
-function network_manager.bind_dynamic_guide_channel(ctx, pad_ch)
-    if not pad_ch then return end
-    local m = resolve_modem(ctx, ctx.infraSide) or resolve_modem(ctx, ctx.primarySide)
-    if m and m.open then
-        if ctx.active_guide_ch and ctx.active_guide_ch ~= pad_ch then
-            m.close(ctx.active_guide_ch)
-        end
-        m.open(pad_ch)
-        ctx.active_guide_ch = pad_ch
-    end
-end
-
-local function categorize_packet(ctx, pkt)
-    local t = pkt.type
-    if t == "MSG_FLIGHT_TELEMETRY" then ctx.queues.telemetry = pkt
-    elseif t == "MSG_GPS_RESPONSE" then ctx.queues.gps = pkt
-    elseif t == "MSG_OPERATOR_CMD" or t == "MSG_EMERGENCY_CMD" then ctx.queues.c2 = pkt
-    elseif t == "MSG_FACILITY_BEACON" or t == "MSG_ATC_CLEARANCE" then ctx.queues.facility = pkt
-    elseif t == "MSG_PROFILE_SYNC" then ctx.queues.calibration = pkt
-    elseif t == "MSG_ACTUATOR_STATUS" then ctx.queues.actuator = pkt
-    elseif t == "MSG_CHANNEL_PROBE" or t == "MSG_CHANNEL_PROBE_ACK" then ctx.queues.probe = pkt
-    elseif t == "MSG_CHANNEL_REBIND_ACK" then ctx.queues.rebindAck = pkt
-    end
-end
-
-function network_manager.ingest_modem_event(ctx, side, ch, reply_ch, msg, dist, now_ms)
-    local pkt = safe_unserialize(msg)
-    if pkt and network_manager.verify_packet(ctx, pkt) then
-        categorize_packet(ctx, pkt)
-        return true
-    end
-    return false
-end
-
-function network_manager.poll_all(ctx)
-    local res = {
-        telemetry = ctx.queues.telemetry,
-        gps = ctx.queues.gps,
-        c2 = ctx.queues.c2,
-        facility = ctx.queues.facility,
-        calibration = ctx.queues.calibration,
-        actuator = ctx.queues.actuator,
-        probe = ctx.queues.probe,
-        rebindAck = ctx.queues.rebindAck,
-    }
-    ctx.queues.telemetry = nil
-    ctx.queues.gps = nil
-    ctx.queues.c2 = nil
-    ctx.queues.facility = nil
-    ctx.queues.calibration = nil
-    ctx.queues.actuator = nil
-    ctx.queues.probe = nil
-    ctx.queues.rebindAck = nil
-    return res
-end
-
-local function transmit_packet(ctx, side, ch, reply_ch, msg_type, payload)
-    local m = resolve_modem(ctx, side)
+local function transmit_packet(ctx, ch, reply_ch, msg_type, payload)
+    local m = ctx.modem
     if not m or not m.transmit then return false end
     local env = network_manager.encode_envelope(ctx, msg_type, payload)
     m.transmit(ch, reply_ch, env)
     return true
 end
 
-function network_manager.send_guidance_cmd(ctx, cmd_payload)
-    return transmit_packet(ctx, ctx.primarySide, ctx.baseChannel + 1, ctx.baseChannel + 1, "MSG_ATTITUDE_CMD", cmd_payload)
+local function handle_rebind_prepare(ctx, payload, now_ms)
+    local newBase = tonumber(payload.newBaseChannel)
+    if not newBase then return false end
+    local m = ctx.modem
+    if m and m.open then
+        m.open(newBase + 4)
+        m.open(newBase + 2)
+        m.open(newBase + 1)
+    end
+    local txId = payload.transactionId or ("REBIND-" .. tostring(newBase))
+    ctx.rebindTx = {
+        txId = txId,
+        oldBase = tonumber(payload.oldBaseChannel) or ctx.baseChannel,
+        newBase = newBase,
+        bandwidth = tonumber(payload.bandwidth) or 40,
+        startMs = now_ms or (os.epoch and os.epoch("utc") or 0),
+        status = "PREPARE",
+    }
+    local fwd = {
+        transactionId = txId,
+        action = "PREPARE",
+        oldBaseChannel = ctx.rebindTx.oldBase,
+        newBaseChannel = newBase,
+        bandwidth = ctx.rebindTx.bandwidth,
+    }
+    transmit_packet(ctx, ctx.rebindTx.oldBase + 1, ctx.rebindTx.oldBase + 1, "MSG_CHANNEL_REBIND", fwd)
+    return true
 end
 
-function network_manager.send_emergency_override(ctx, em_payload)
-    return transmit_packet(ctx, ctx.primarySide, ctx.baseChannel + 1, ctx.baseChannel + 1, "MSG_EMERGENCY_OVERRIDE", em_payload)
+local function handle_rebind_commit(ctx, payload, now_ms)
+    local tx = ctx.rebindTx
+    local oldBase = (tx and tx.oldBase) or tonumber(payload.oldBaseChannel) or ctx.baseChannel
+    local newBase = (tx and tx.newBase) or tonumber(payload.newBaseChannel) or ctx.baseChannel
+    local txId = (tx and tx.txId) or payload.transactionId
+
+    local fwd = {
+        transactionId = txId,
+        action = "COMMIT",
+        oldBaseChannel = oldBase,
+        newBaseChannel = newBase,
+        bandwidth = 40,
+    }
+    transmit_packet(ctx, oldBase + 1, oldBase + 1, "MSG_CHANNEL_REBIND", fwd)
+
+    local m = ctx.modem
+    if m and m.close then
+        m.close(oldBase + 4)
+        m.close(oldBase + 2)
+        m.close(oldBase + 1)
+    end
+    if m and m.open then
+        m.open(newBase + 4)
+        m.open(newBase + 2)
+        m.open(newBase + 1)
+    end
+
+    ctx.baseChannel = newBase
+    ctx.channels = { trajectory = newBase + 4, telemetry = newBase + 2, guidance = newBase + 1 }
+    persist_config(ctx)
+    ctx.rebindTx = nil
+    return true
 end
 
-function network_manager.send_channel_rebind(ctx, rebind_payload)
-    return transmit_packet(ctx, ctx.primarySide, ctx.baseChannel + 1, ctx.baseChannel + 1, "MSG_CHANNEL_REBIND", rebind_payload)
+local function handle_rebind_rollback(ctx, payload)
+    local tx = ctx.rebindTx
+    local oldBase = (tx and tx.oldBase) or tonumber(payload and payload.oldBaseChannel) or ctx.baseChannel
+    local newBase = (tx and tx.newBase) or tonumber(payload and payload.newBaseChannel)
+    local txId = (tx and tx.txId) or (payload and payload.transactionId)
+
+    local fwd = {
+        transactionId = txId,
+        action = "ROLLBACK",
+        oldBaseChannel = oldBase,
+        newBaseChannel = newBase,
+        bandwidth = 40,
+    }
+    transmit_packet(ctx, oldBase + 1, oldBase + 1, "MSG_CHANNEL_REBIND", fwd)
+
+    if newBase and ctx.modem and ctx.modem.close then
+        ctx.modem.close(newBase + 4)
+        ctx.modem.close(newBase + 2)
+        ctx.modem.close(newBase + 1)
+    end
+    ctx.rebindTx = nil
+    return true
 end
 
-function network_manager.send_mfd_state(ctx, mfd_payload)
-    return transmit_packet(ctx, ctx.primarySide, ctx.baseChannel + 3, ctx.baseChannel + 3, "MSG_MFD_STATE", mfd_payload)
+local function dispatch_trajectory(ctx, pkt, now_ms)
+    local t = pkt.type
+    local p = pkt.payload or {}
+    if t == "MSG_TRAJECTORY_SETPOINT" then
+        ctx.inbound.trajectory = pkt
+        return true
+    elseif t == "MSG_CHANNEL_REBIND" then
+        if p.action == "PREPARE" then
+            return handle_rebind_prepare(ctx, p, now_ms)
+        elseif p.action == "COMMIT" then
+            return handle_rebind_commit(ctx, p, now_ms)
+        elseif p.action == "ROLLBACK" then
+            return handle_rebind_rollback(ctx, p)
+        end
+    end
+    return false
 end
 
-function network_manager.send_gps_request(ctx, req_payload)
-    return transmit_packet(ctx, ctx.infraSide, ctx.gpsPingChannel or 60001, ctx.baseChannel + 5, "MSG_GPS_REQUEST", req_payload)
+local function dispatch_guidance(ctx, pkt)
+    local t = pkt.type
+    local p = pkt.payload or {}
+    if t == "MSG_CHANNEL_REBIND_ACK" then
+        if ctx.rebindTx and p.transactionId == ctx.rebindTx.txId then
+            ctx.rebindTx.status = "ACKED"
+            local ackFwd = {
+                transactionId = p.transactionId,
+                status = "READY",
+                subNodesOk = true,
+            }
+            transmit_packet(ctx, ctx.rebindTx.oldBase + 4, ctx.rebindTx.oldBase + 4, "MSG_CHANNEL_REBIND_ACK", ackFwd)
+        end
+        return true
+    elseif t == "MSG_EMERGENCY_ALERT" then
+        ctx.inbound.emergencyAlert = pkt
+        return true
+    end
+    return false
 end
 
-function network_manager.send_atc_req(ctx, atc_payload)
-    return transmit_packet(ctx, ctx.infraSide, ctx.atcCommChannel, ctx.atcCommChannel, "MSG_ATC_APPROACH_REQ", atc_payload)
+function network_manager.ingest_modem_event(ctx, side, ch, reply_ch, msg, dist, now_ms)
+    local pkt = safe_unserialize(msg)
+    if not pkt or not network_manager.verify_packet(ctx, pkt) then return false end
+
+    local isTraj = (ch == ctx.channels.trajectory) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 4)
+    local isTelem = (ch == ctx.channels.telemetry) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 2)
+    local isGuid = (ch == ctx.channels.guidance) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 1)
+
+    if isTraj then
+        return dispatch_trajectory(ctx, pkt, now_ms)
+    elseif isTelem then
+        if pkt.type == "MSG_FLIGHT_TELEMETRY" then
+            ctx.inbound.telemetry = pkt
+            return true
+        end
+    elseif isGuid then
+        return dispatch_guidance(ctx, pkt)
+    end
+    return false
 end
 
-function network_manager.send_touchdown_msg(ctx, td_payload)
-    return transmit_packet(ctx, ctx.infraSide, ctx.atcCommChannel, ctx.atcCommChannel, "MSG_TOUCHDOWN_COMPLETE", td_payload)
+function network_manager.poll_inbound(ctx)
+    local res = {
+        trajectory = ctx.inbound.trajectory,
+        telemetry = ctx.inbound.telemetry,
+        emergencyAlert = ctx.inbound.emergencyAlert,
+        rebindAck = ctx.inbound.rebindAck,
+    }
+    ctx.inbound.trajectory = nil
+    ctx.inbound.telemetry = nil
+    ctx.inbound.emergencyAlert = nil
+    ctx.inbound.rebindAck = nil
+    return res
 end
 
-function network_manager.send_mfd_alert(ctx, alert_payload)
-    return transmit_packet(ctx, ctx.primarySide, ctx.baseChannel + 3, ctx.baseChannel + 3, "MSG_MFD_ALERT", alert_payload)
+function network_manager.poll_all(ctx)
+    return network_manager.poll_inbound(ctx)
 end
 
-function network_manager.send_bootstrap_msg(ctx, boot_payload)
-    local m_side = ctx.infraSide or ctx.primarySide
-    return transmit_packet(ctx, m_side, ctx.bootstrapChannel, ctx.bootstrapChannel, "MSG_BLOCK_REQUEST", boot_payload)
+function network_manager.step_rebind_watchdog(ctx, now_ms)
+    if not ctx or not ctx.rebindTx then return nil end
+    local tx = ctx.rebindTx
+    if tx.status == "PREPARE" then
+        local now = now_ms or (os.epoch and os.epoch("utc") or 0)
+        if (now - tx.startMs) > 500 then
+            handle_rebind_rollback(ctx, {
+                transactionId = tx.txId,
+                oldBaseChannel = tx.oldBase,
+                newBaseChannel = tx.newBase,
+            })
+            return "ROLLED_BACK"
+        end
+    end
+    return tx.status
+end
+
+function network_manager.send_attitude_cmd(ctx, payload)
+    return transmit_packet(ctx, ctx.channels.guidance, ctx.channels.guidance, "MSG_ATTITUDE_CMD", payload)
+end
+
+function network_manager.send_guidance_cmd(ctx, payload)
+    return network_manager.send_attitude_cmd(ctx, payload)
+end
+
+function network_manager.send_outer_loop_status(ctx, payload)
+    return transmit_packet(ctx, ctx.channels.trajectory, ctx.channels.trajectory, "MSG_OUTER_LOOP_STATUS", payload)
+end
+
+function network_manager.send_channel_rebind(ctx, payload)
+    local ch = (ctx.channels and ctx.channels.guidance) or (ctx.baseChannel + 1)
+    return transmit_packet(ctx, ch, ch, "MSG_CHANNEL_REBIND", payload)
+end
+
+function network_manager.bind_aircraft_channels(ctx, base_ch)
+    local b = base_ch or ctx.baseChannel
+    ctx.baseChannel = b
+    ctx.channels = { trajectory = b + 4, telemetry = b + 2, guidance = b + 1 }
+    local m = ctx.modem
+    if m and m.open then
+        m.open(ctx.channels.trajectory)
+        m.open(ctx.channels.telemetry)
+        m.open(ctx.channels.guidance)
+    end
+end
+
+function network_manager.rebind_aircraft_channels(ctx, new_base)
+    local old_b = ctx.baseChannel
+    local m = ctx.modem
+    if m and m.close then
+        m.close(old_b + 4)
+        m.close(old_b + 2)
+        m.close(old_b + 1)
+    end
+    network_manager.bind_aircraft_channels(ctx, new_base)
 end
 
 return network_manager
