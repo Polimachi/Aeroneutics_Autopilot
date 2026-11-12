@@ -40,13 +40,13 @@ MUTATIONS: List[Dict[str, Any]] = [
     },
     {
         "id": "MUT-03",
-        "name": "FCP Channel Sentinel Candidate Base Validation",
+        "name": "AMM Channel Sentinel Candidate Base Validation",
         "domain": "Channel",
-        "file": "src/2_guidance/fcp/modules/channel_sentinel.lua",
+        "file": "src/3_planning/amm/modules/channel_sentinel.lua",
         "target": "if candidate and channel_sentinel.is_valid_base(candidate) then",
         "replacement": "if false and candidate and channel_sentinel.is_valid_base(candidate) then",
         "runner": "unit",
-        "target_arg": "2_guidance/fcp",
+        "target_arg": "3_planning/amm",
     },
     {
         "id": "MUT-04",
