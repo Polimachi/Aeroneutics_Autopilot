@@ -6,23 +6,24 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.0.1` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v1.0.2` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_infra/gcs/` |
 | **주관 도메인 (Domain)** | 지상 인프라 및 전역 무선 채널 관리 (GCS / Node 08) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.10.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v1.13.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 v1.0.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.13.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말 v1.3.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v2.0.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.0.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: `CH 50000` 부트스트랩(`MSG_BLOCK_REQUEST`)·`Base+0` C2(`MSG_OPERATOR_CMD`/`MSG_MISSION_CMD`)·평시 `Base+3` 5Hz 텔레메트리 송신 주체를 `AMM (Node 03)`으로 정렬(`MFD_ACRO` 시 `VAS` 직접 인계), `Base+1` `E_STOP`은 `AMM`·`FCP`를 모두 바이패스해 `VAS (Node 01)`에 직결 송출 명시, 연관 규격서 버전 동기화 (`src/0_infra/gcs/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·C2 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.0.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.0.0` | 2026-11-08 | GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 규격 제정 및 구현 완료 (`Draft` $\to$ `Implemented`) | TASK-107 GCS 구현 완료 및 25개 단위/E2E 테스트 통과 |
 
@@ -34,16 +35,16 @@
 
 ### 1.1 핵심 기능 요약
 1. **RF 채널 부트스트랩 게이트웨이 (`CH 50000`)**:
-   - 신규 기체 FCP가 부팅 시 송출하는 `MSG_BLOCK_REQUEST`를 수신.
+   - 신규 기체 `AMM (Node 03)`이 부팅 시 송출하는 `MSG_BLOCK_REQUEST`를 수신.
    - `channel_registry.json`에 기반하여 기체 고유 식별자(`domainId`, `hardwareUuid`)에 고유 번호($N$)를 스티키(Sticky) 매핑.
    - 산출 공식 $Base = 10000 + (N - 1) \times 40$에 따른 40개 채널 블록을 `MSG_BLOCK_ASSIGN`으로 회신.
 2. **원격 비행 지휘 및 오버라이드 (Remote C2 Override)**:
-   - 선택된 기체의 `Base + 0`(`CH_OPERATOR_C2`) 포트로 `GCS_OVERRIDE` 권한의 `MSG_OPERATOR_CMD`(`ARM`, `TAKEOFF`, `HOLD`, `RTH`, `LAND`, `WAYPOINT`)를 인가.
-   - 조종석 MFD(`PILOT_PRIMARY`) 대비 상위 관제 우선권을 보장.
+   - 선택된 기체의 `Base + 0`(`CH_OPERATOR_C2`) 포트로 `GCS_OVERRIDE` 권한의 `MSG_OPERATOR_CMD`(`ARM`, `TAKEOFF`, `HOLD`, `RTH`, `LAND`, `WAYPOINT`) 및 `MSG_MISSION_CMD`를 기체 `AMM (Node 03)`에 인가.
+   - 조종석 MFD(`PILOT_PRIMARY`)보다 상위 관제 우선권으로 중재.
 3. **직결 하드 비상차단 (`E_STOP`)**:
-   - 외루프 FCP를 경유하지 않고 온보드 비행 제어 코어 VAS의 `Base + 1`(`CH_FLIGHT_GUIDANCE`)로 `MSG_EMERGENCY_OVERRIDE`(`E_STOP`)를 직결 송출하여 추진기를 즉각 셧다운.
+   - `AMM (Node 03)` 및 외루프 `FCP (Node 04)`를 경유하지 않고 온보드 비행 제어 코어 `VAS (Node 01)`의 `Base + 1`(`CH_FLIGHT_GUIDANCE`)로 `MSG_EMERGENCY_OVERRIDE`(`E_STOP`)를 직결 송출하여 추진기를 즉각 셧다운.
 4. **다중 기체 텔레메트리 모니터링**:
-   - 활성 기체의 `Base + 3`(`CH_MFD_INSTRUMENT`) 텔레메트리를 5Hz로 수신하여 자세 각도, Y고도, 대지속도, 승강률, 연료, FSM 상태 표출.
+   - 활성 기체의 `Base + 3`(`CH_MFD_STATE`, 구 `CH_MFD_INSTRUMENT` `[DEPRECATED]`) 텔레메트리를 수신(평시 `AMM (Node 03)` 5Hz 송출, `MFD_ACRO` 진입 시 `VAS (Node 01)` 20Hz 직결 인계)하여 자세 각도, Y고도, 대지속도, 승강률, 연료, FSM 상태 표출.
    - `[TAB]` 핫키를 통해 등록된 편대 기체 간 관제 타겟을 실시간 전환.
 5. **51x19 분할 TUI 콘솔**:
    - CC:Tweaked Advanced Computer 표준 해상도(51x19)에 맞추어 좌측 25열 계기 HUD, 우측 26열 기체 목록 및 채널 현황, 하단 3행 명령 바 렌더링.
@@ -92,7 +93,7 @@
 
 ### 3.1 원격 C2 오버라이드 (`MSG_OPERATOR_CMD`, Base + 0)
 - **발신 채널**: 관제 대상 기체의 `Base + 0`
-- **수신자**: 기체 온보드 `FCP` (Node 04)
+- **수신자**: 기체 온보드 `AMM` (Node 03, `c2_arbiter` 중재 후 `Base + 4`로 `FCP` 하달)
 - **페이로드 구조**:
   - `targetCraft`: 대상 기체 `domainId`
   - `authority`: `"GCS_OVERRIDE"` 고정
@@ -101,7 +102,7 @@
 
 ### 3.2 하드 비상차단 직결 지령 (`MSG_EMERGENCY_OVERRIDE`, Base + 1)
 - **발신 채널**: 관제 대상 기체의 `Base + 1`
-- **수신자**: 기체 온보드 `VAS` (Node 01) 직결
+- **수신자**: 기체 온보드 `VAS` (Node 01) 직결 (`AMM` 및 `FCP` 바이패스)
 - **페이로드 구조**:
   - `source`: `"GCS"`
   - `action`: `"E_STOP"`

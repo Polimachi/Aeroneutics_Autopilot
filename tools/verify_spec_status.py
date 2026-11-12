@@ -1,8 +1,8 @@
 """
 Specification status validation tool.
 Asserts that all 15 active specifications have expected in-document status:
-- 9 Implemented specs
-- 6 Approved specs
+- 7 Implemented specs
+- 8 Approved specs
 """
 from __future__ import annotations
 
@@ -15,9 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 TARGET_IMPLEMENTED = [
     'docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md',
-    'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md',
-    'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
@@ -31,6 +29,8 @@ TARGET_APPROVED = [
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
+    'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
+    'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
     'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
 ]
 

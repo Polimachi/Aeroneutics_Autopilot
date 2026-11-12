@@ -1,13 +1,13 @@
 # 활주로 시스템 및 통신 인터페이스 제어 규격서 (ICD)
 > **Runway System Specification & Interface Control Document (ICD)**  
-> **프로젝트**: Universal Autonomous Flight Stack (FCP · VAS · Ground Infrastructure)  
+> **프로젝트**: Universal Autonomous Flight Stack (AMM · FCP · VAS · Ground Infrastructure)  
 > **대상 환경**: Minecraft CC:Tweaked (Ender Modem, Wired Modem), Create: Aeronautics, Create: Avionics  
 
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.10.6` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v1.10.7` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_infra/runway/` |
 | **주관 도메인 (Domain)** | 지상 인프라 활주로 유도 비콘 및 진입 제어 (Runway) |
 
@@ -15,20 +15,22 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.10.7` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 외부 공중 RF 교신 상대(`CH 50001`, `50003`, `Base_sec+0`, `Base_sec+10+Idx`, `Base+5`)를 `기체 AMM (Node 03)`으로 일원화하고 `AMM`이 상대 ILS 글라이드슬로프/함선 속도 보상 궤적을 연산해 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 전달하는 계층 분담 명시, 연관 규격서 버전 동기화 | AMM 외부 게이트웨이·항법·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.10.6` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.10.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
 | `v1.10.4` | 2026-11-07 | 40채널 확장 및 표준 메타데이터 표 적용 | Phase 0 ICD 동기화 |
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.10.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.2.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.13.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.1)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.13.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.3)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.2)
 
 ---
 
@@ -43,7 +45,7 @@
    - 활주로 컴퓨터는 외장 유선 모뎀(Wired Modem) 케이블로 연결된 레드스톤 인티그레이터(Redstone Integrator) 및 Create 닉시 튜브(Nixie Tube)를 통해 활주로 진입등(ALS/PAPI), 점유등(적/녹), 유도로 정지선(Hold Short) 램프를 정밀 제어합니다.
 3. **정적 육상 활주로 vs 동적 항공모함(Carrier Deck) 분리**:
    - **고정형 활주로 (Static Runway)**: 지상 고정 비행장. 활주로 시단(Threshold), 종단(End), 표고, 중심선 방위각, 글라이드슬로프($3.0^\circ$)를 정적으로 송출하며 1Hz 상태 하트비트만 유지합니다.
-   - **동적 활주로 (Dynamic Runway)**: 항진 중인 항공모함(Carrier) 또는 대형 이동 모선의 비행갑판. 비행갑판 시단/종단 좌표뿐만 아니라 모선의 실시간 이동 속도($\vec{v}$), 가속도($\vec{a}$), 방위각/요동(Pitch/Roll)을 20Hz로 스트리밍하며, 기체 FCP가 이동 좌표계 상에서 접근 경로를 동적으로 연산하여 추종합니다. (선택적으로 항모 어레스팅 와이어 클러치 연동 지원)
+   - **동적 활주로 (Dynamic Runway)**: 항진 중인 항공모함(Carrier) 또는 대형 이동 모선의 비행갑판. 비행갑판 시단/종단 좌표뿐만 아니라 모선의 실시간 이동 속도($\vec{v}$), 가속도($\vec{a}$), 방위각/요동(Pitch/Roll)을 20Hz로 스트리밍하며, 기체 AMM (Node 03)이 이동 좌표계 상에서 상대 ILS 글라이드슬로프·함선 속도 보상 접근 궤적을 동적으로 연산하여 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 하달해 외루프 추종을 수행합니다. (선택적으로 항모 어레스팅 와이어 클러치 연동 지원)
 4. **독자적 지상 이동 관제 프로토콜 및 GAC 연계**: 착륙 활주 후 유도로 진출선 통과 시 기체가 즉시 활주로 이탈(`MSG_RUNWAY_VACATED`)을 보고하여 활주로 점유를 해제하고, 유도로 지상 활주 및 에이프런 진입은 지상 구역 관제사(GAC, $Base_{\text{sec}}+0$)와 섹터 로컬 백본망($Base_{\text{sec}}+1$)에 의해 계층화되어 관제됩니다. 유도로 정지선(Hold Short) 및 이륙 대기열(Line Up and Wait) FSM은 GAC와 유기적으로 연동됩니다.
 5. **페일세이프 및 파도/횡풍 복행(Wave-Off)**:
    - 동적 활주로 20Hz 스트리밍 중 300ms 패킷 두절 시 기체 즉시 복행(Wave-Off).
@@ -51,10 +53,10 @@
 
 ### 1.2 GPS 광역 항법 $\rightarrow$ 활주로 ILS 전술 접근 연계 인터페이스 (GPS to ILS Transition)
 1. **광역 정렬 단계 (GPS Waypoint to IAF)**:
-   - 기체 FCP는 `CH_FACILITY_BEACON` (50003)에서 취득한 활주로 시단 좌표(`thresholdPos`) 및 중심선 방위각을 바탕으로, 활주로 전방 1,000~1,500m 지점의 진입 정렬점(Initial Approach Fix, IAF)까지 중앙 GPS 체계(`CH_GPS_PING` 60001 / `Base+5`)를 이용하여 항법 비행을 수행합니다.
+   - 기체 AMM (Node 03)은 `CH_FACILITY_BEACON` (50003)에서 취득한 활주로 시단 좌표(`thresholdPos`) 및 중심선 방위각을 바탕으로, 활주로 전방 1,000~1,500m 지점의 진입 정렬점(Initial Approach Fix, IAF)까지 중앙 GPS 체계(`CH_GPS_PING` 60001 / `Base+5`)를 이용하여 항법 비행 궤적을 산출하고 `Base+4`로 `FCP (Node 04)`에 하달합니다.
 2. **관제 인가 및 ILS 전술 채널 인계 (Terminal Handoff)**:
-   - IAF 도달 시 `CH_ATC_COMM` (50001)로 `MSG_ATC_APPROACH_REQ`를 송신하여 착륙 허가를 요청합니다.
-   - ATC로부터 접근 인가(`MSG_ATC_APPROACH_CLEARANCE`) 및 전술 채널(`CH_TACTICAL_GUIDANCE` = $Base_{\text{sec}} + 10 + \text{Idx}$)을 수신하면, 기체는 $3.0^\circ$ 글라이드슬로프 및 로컬라이저 정밀 계기 유도(`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`) 추종 모드로 전환합니다.
+   - IAF 도달 시 AMM이 `CH_ATC_COMM` (50001)로 `MSG_ATC_APPROACH_REQ`를 송신하여 착륙 허가를 요청합니다.
+   - ATC로부터 접근 인가(`MSG_ATC_APPROACH_CLEARANCE`) 및 전술 채널(`CH_TACTICAL_GUIDANCE` = $Base_{\text{sec}} + 10 + \text{Idx}$)을 수신하면, 기체 AMM은 $3.0^\circ$ 글라이드슬로프 및 로컬라이저 정밀 계기 유도(`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`) 기반 접근 궤적을 연산해 `Base+4`로 `FCP`에 전달하는 추종 모드로 전환합니다.
 3. **GPS 상호 대조 및 다단계 조명 인터록**:
    - 하강 중 GPS 수평 좌표와 전술 ILS 유도 좌표를 상호 대조(Cross-Check)하여 단일 센서 이상을 능동 감시합니다.
    - 접지 순간 `MSG_RUNWAY_TOUCHDOWN` 송신 시 유선 모뎀 조명 제어기(`redstone_integrator_0`)가 점유 적색등을 켜고, 유도로 진출 완료(`MSG_RUNWAY_VACATED`) 시 녹색 진입등으로 자동 복귀합니다.
@@ -74,30 +76,30 @@
 flowchart TD
     ATC["지상/함상 관제탑 (ATC Node)<br/>[CH 50001 / 50002]"]
     RWY["활주로 컴퓨터 (Runway Node)<br/>[무선 CH 50003 / Base_sec+1 / Base_sec+10+Idx]"]
-    FCP["기체 자율항법 FCP (Node 04)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
+    AMM["기체 AMM (Node 03)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
     
     subgraph WIRED_NET["유선 모뎀 네트워크 (Wired Modem Cable Bus)"]
         RI_LIGHTS["조명 제어 인티그레이터<br/>(redstone_integrator_0)<br/>* PAPI / ALS 접근등<br/>* 활주로 점유등 (적/녹)<br/>* 유도로 정지선 램프"]
         CARRIER_CLUTCH["(선택 사양) 항모 어레스팅 제어기<br/>(carrier_arresting_clutch)<br/>* Create 와이어 텐션 클러치"]
     end
 
-    RWY -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| FCP
+    RWY -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| AMM
     RWY <==>|"무선 CH 50002 (광역 백본)<br/>점유 상태 및 착륙 인가 통보"| ATC
-    FCP <==>|"무선 CH 50001 (ATC 관제)<br/>착륙/이륙/지상이동 교신"| ATC
-    FCP <==>|"무선 CH Base_sec+10+Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| RWY
+    AMM <==>|"무선 CH 50001 (ATC 관제)<br/>착륙/이륙/지상이동 교신"| ATC
+    AMM <==>|"무선 CH Base_sec+10+Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| RWY
     RWY ===|"유선 모뎀 케이블 버스<br/>(Wired Peripheral Bus)"| WIRED_NET
 ```
 
 ### 2.1 무선 채널 할당 표
 | 채널 번호 | 채널 식별자 | 송신자 | 수신자 | 전송 주기 | 통신 목적 및 내용 |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`50001`** | `CH_ATC_COMM` | FCP / ATC | ATC / FCP | 이벤트 기반 | 최종 접근 인가(`APPROACH_REQ`), 이륙 허가, 유도로 지상 유도 지시 |
+| **`50001`** | `CH_ATC_COMM` | AMM / ATC | ATC / AMM | 이벤트 기반 | 최종 접근 인가(`APPROACH_REQ`), 이륙 허가, 유도로 지상 유도 지시 |
 | **`50002`** | `CH_ATC_FACILITY` | Runway / ATC | ATC / Runway | 1Hz / 이벤트 | 활주로 폐쇄/개방 상태 동기화, 긴급 복행(Wave-off) 지시 전달 |
-| **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (FCP, MFD) | 1Hz | Sector 0 대표 비콘: 활주로 기본 제원 (활주로 번호, 길이, 폭, 표면 상태, 이동성 플래그) |
-| **$Base_{\text{sec}} + 0$** | `CH_GAC_COMM` | FCP / GAC | GAC / FCP | 이벤트 | 유도로 지상 활주 인가(`MSG_TAXI_CMD`), 주기장/에이프런 배정 및 출항 제어 ($Base_{\text{sec}} = 50001 + S \times 200$) |
+| **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (AMM, GCS) | 1Hz | Sector 0 대표 비콘: 활주로 기본 제원 (활주로 번호, 길이, 폭, 표면 상태, 이동성 플래그) |
+| **$Base_{\text{sec}} + 0$** | `CH_GAC_COMM` | AMM / GAC | GAC / AMM | 이벤트 | 유도로 지상 활주 인가(`MSG_TAXI_CMD`), 주기장/에이프런 배정 및 출항 제어 ($Base_{\text{sec}} = 50001 + S \times 200$) |
 | **$Base_{\text{sec}} + 1$** | `CH_SECTOR_FACILITY` | Runway / GAC | GAC / Runway | 이벤트 | 활주로 노드와 관할 GAC 간 활주로 이탈/유도로 진입 상태 동기화 |
-| **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Runway Node | FCP (Node 04) | 1Hz (정적)<br/>20Hz (동적) | 시단/종단 좌표, 방위각, 동적 속도/가속도 벡터 스트리밍 |
-| **`Base + 5`** | `CH_EXTERNAL_COMM` | FCP | Runway / ATC | 이벤트 | 터치다운 완료, 활주로 이탈(`MSG_RUNWAY_VACATED`) 통보 |
+| **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Runway Node | AMM (Node 03) | 1Hz (정적)<br/>20Hz (동적) | 시단/종단 좌표, 방위각, 동적 속도/가속도 벡터 스트리밍 |
+| **`Base + 5`** | `CH_EXTERNAL_COMM` | AMM (Node 03) | Runway / ATC | 이벤트 | 터치다운 완료, 활주로 이탈(`MSG_RUNWAY_VACATED`) 통보 |
 
 ### 2.2 유선 모뎀 하드웨어 매핑 및 조명 제어 진리표 (Hardware Mapping & Lighting Truth Table)
 
@@ -272,7 +274,7 @@ flowchart TD
 }
 ```
 
-#### 3. 유도로 지상 이동 관제 (`MSG_TAXI_CMD`, CH 50001 / Base_sec + 0, ATC/GAC $\rightarrow$ FCP)
+#### 3. 유도로 지상 이동 관제 (`MSG_TAXI_CMD`, CH 50001 / Base_sec + 0, ATC/GAC $\rightarrow$ AMM)
 ```lua
 {
     ver = "1.9.5",
@@ -289,7 +291,7 @@ flowchart TD
 }
 ```
 
-#### 4. 이륙 허가 패킷 (`MSG_ATC_DEPARTURE_CLEARANCE`, CH 50001, ATC $\rightarrow$ FCP)
+#### 4. 이륙 허가 패킷 (`MSG_ATC_DEPARTURE_CLEARANCE`, CH 50001, ATC $\rightarrow$ AMM)
 > [!NOTE]
 > 본 패킷은 마스터 ICD(v1.16.0) 및 전역 시설물 표준 규격에 따라 `MSG_ATC_DEPARTURE_CLEARANCE`로 단일화되었습니다.
 > 구버전 패킷 식별자 `MSG_RUNWAY_TAKEOFF_CLEARANCE`는 `[DEPRECATED]` 상태이며, 코드베이스는 사전 이중 호환(Fallback) 코드를 작성하지 않고 최신 명칭만을 단일 채택합니다. 미갱신 송신 노드로 인한 런타임 통신 오류 발생 시 해당 송신 노드의 코드를 즉시 패치합니다.
@@ -346,7 +348,7 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     autonumber
-    participant A as 기체 FCP (Node 04)
+    participant A as 기체 AMM (Node 03)
     participant C as 지상/함상 관제탑 (ATC)
     participant G as 지상 구역 관제사 (GAC)
     participant R as 활주로 노드 (Runway Node)
@@ -366,7 +368,7 @@ sequenceDiagram
 
     Note over A,R: 전술 채널 (CH 50220) 핸드오버
     alt 동적 비행갑판 (DYNAMIC)
-        loop 20Hz 주기 (VAS 동기화)
+        loop 20Hz 주기 (AMM 궤적 연산 -> Base+4 FCP 추종)
             R->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50220)<br/>[threshold(t), end(t), vel, accel, deckAttitude]
         end
     else 고정 활주로 (STATIC)
@@ -398,7 +400,7 @@ sequenceDiagram
 ## 5. 수치해석 및 가상 ILS 유도 알고리즘 (ILS Guidance & Algorithms)
 
 ### 5.1 이동 좌표계 가상 로컬라이저 및 글라이드슬로프 편차 연산
-동적 활주로(함선 비행갑판) 모드에서 기체 FCP는 활주로 시단 $\vec{p}_{th}(t)$와 단위 방위각 벡터 $\vec{u}_{rwy}(t)$를 기준으로 상대 위치 벡터 $\vec{r}(t) = \vec{p}_{craft}(t) - \vec{p}_{th}(t)$를 기하 투영합니다.
+동적 활주로(함선 비행갑판) 모드에서 기체 AMM (Node 03)은 활주로 시단 $\vec{p}_{th}(t)$와 단위 방위각 벡터 $\vec{u}_{rwy}(t)$를 기준으로 상대 위치 벡터 $\vec{r}(t) = \vec{p}_{craft}(t) - \vec{p}_{th}(t)$를 기하 투영해 상대 ILS 글라이드슬로프 궤적을 합성하고 `Base+4`(`CH_TRAJECTORY_CMD`)를 통해 `FCP (Node 04)`로 전달합니다.
 
 - **종방향 활주로 진입 잔여 거리 ($d_{along}$)**:
   $$d_{along} = \vec{r} \cdot \vec{u}_{rwy}$$
@@ -407,5 +409,5 @@ sequenceDiagram
 - **수직 글라이드슬로프 편차 ($\Delta z_{gs}$)**:
   $$\Delta z_{gs} = (z_{craft} - z_{th}) - (-d_{along} \cdot \tan 3.0^\circ)$$
 
-기체 FCP는 항모의 이동 속도 벡터 $\vec{v}_{ship}$을 피드포워드 상쇄하여 진입 속도를 합성 제어합니다:
+기체 AMM (Node 03)은 항모의 이동 속도 벡터 $\vec{v}_{ship}$을 피드포워드 상쇄하여 진입 속도 세트포인트를 합성한 뒤 `Base+4`로 `FCP` 외루프 추종 제어기에 하달합니다:
 $$\vec{v}_{approach\_cmd} = \vec{v}_{ship} + \vec{v}_{airspeed\_glideslope}$$

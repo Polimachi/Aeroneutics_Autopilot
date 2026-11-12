@@ -1,13 +1,13 @@
 # 도킹암 시스템 및 통신 인터페이스 제어 규격서 (ICD)
 > **Docking Arm System Specification & Interface Control Document (ICD)**  
-> **프로젝트**: Universal Autonomous Flight Stack (FCP · VAS · Ground Infrastructure)  
+> **프로젝트**: Universal Autonomous Flight Stack (AMM · FCP · VAS · Ground Infrastructure)  
 > **대상 환경**: Minecraft CC:Tweaked (Ender Modem, Wired Modem), Create: Aeronautics, Create: Avionics  
 
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.11.1` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v1.11.2` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_infra/docking_arm/` |
 | **주관 도메인 (Domain)** | 지상 인프라 도킹암 메커니즘 제어 (Ground Docking Arm) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.11.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 외부 공중 RF 교신 상대(`CH 50001`, `50003`, `Base_sec+0`, `Base_sec+10+Idx`, `Base+5`, `MSG_DOCK_CAPTURE_STAGE` `HARD_LOCKED` / `MSG_DOCKING_ARM_CMD` 알리아스)를 `기체 AMM (Node 03)`으로 일원화하고 `AMM`이 4단계 도킹 궤적 및 `-0.8` Abort 트리거를 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 하달·`HARD_LOCKED` 시 즉각 무장 해제하는 계층 분담 명시, `AMM v1.3.0` 의존성 및 연관 규격서 버전 동기화 | AMM 외부 게이트웨이·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.11.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.11.0` | 2026-11-08 | 특정 VTOL/DRONE 전속 전용 도킹암 운영 및 GAC 슬롯 배정 연동 원칙 신설 | GAC v1.4.0 전용 시설물 아키텍처 상호 동기화 |
 | `v1.10.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
@@ -22,14 +23,15 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.10.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.2.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.13.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.1)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.5)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.13.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.3)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.7)
 
 ---
 
@@ -58,18 +60,18 @@
    - 접근 중 충돌 위험 감지, 모선 긴급 회피 기동, 또는 기체 이탈 명령 시 100ms 이내에 락 핀을 즉시 후퇴시키고 스프링 분리 펄스를 인가하는 하드웨어 안전 인터록을 탑재합니다.
 8. **GAC 연동 전용 도킹암(Dedicated Docking Arm) 운용 모델**:
    - 도킹암이 특정 기체 ID 또는 기종(VTOL/DRONE) 전용으로 GAC 인벤토리에 등록된 경우, 상위 GAC로부터 해당 지정 기체 또는 비상 징발 인가된 기체의 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`)만을 수신하여 원거리 대기 전개(`EXTENDED_WAIT`)를 개시합니다.
-   - 비인가 기체의 도킹 진입 시도는 GAC 수준에서 원천 차단되며, 도킹암은 지정 기체의 상시 독점 정박 및 보급 자원으로 격리·운용됩니다.
+   - 비인가 기체의 도킹 진입 시도는 GAC 수준에서 사전 배제되며, 도킹암은 지정 기체의 상시 독점 정박 및 보급 자원으로 격리·운용됩니다.
 
 ### 1.2 GPS 광역 항법 $\rightarrow$ 전술 도킹 랑데부 연계 인터페이스 (GPS to Tactical Transition)
 1. **광역 접근 단계 (GPS En-Route Phase)**:
-   - 비행체 FCP는 `CH_FACILITY_BEACON` (50003, 구버전 `30000` [DEPRECATED])에서 브로드캐스트되는 도킹암 시설물의 글로벌 기준 좌표와 진입 정렬 회랑(`corridorLength = 15.0m`, `standoffDistanceM = 18.0m`) 제원을 수신합니다.
-   - 중앙 GPS 체계(`CH_GPS_PING` 60001, 구버전 `30004` [DEPRECATED] / 회신 채널 `Base+5`)의 정밀 2D 위치 추정을 기반으로 도킹암 외곽 100~200m 지점의 대기 공역(Staging Point)까지 장거리 L1 자율 비행을 수행합니다.
+   - 비행체 AMM (Node 03)은 `CH_FACILITY_BEACON` (50003, 구버전 `30000` [DEPRECATED])에서 브로드캐스트되는 도킹암 시설물의 글로벌 기준 좌표와 진입 정렬 회랑(`corridorLength = 15.0m`, `standoffDistanceM = 18.0m`) 제원을 수신합니다.
+   - 중앙 GPS 체계(`CH_GPS_PING` 60001, 구버전 `30004` [DEPRECATED] / 회신 채널 `Base+5`)의 정밀 2D 위치 추정을 기반으로 도킹암 외곽 100~200m 지점의 대기 공역(Staging Point)까지 장거리 L1 자율 비행 궤적을 생성해 `Base+4`로 `FCP (Node 04)`에 하달합니다.
 2. **관제 인가 및 전술 유도 전이 (Terminal Handoff)**:
-   - Staging Point 진입 시 FCP는 `CH_ATC_COMM` (50001, 구버전 `30001` [DEPRECATED])로 `MSG_ATC_APPROACH_REQ`를 송신하여 섹터 관제 채널($Base_{\text{sec}} + 0$, 구버전 `30100 + S` [DEPRECATED])로 핸드오프를 인가받습니다.
-   - 관할 지상 구역 관제사(GAC)가 시설물 가용성을 확인하고 도킹암 슬롯 배정(`MSG_ATC_SLOT_ASSIGN` via $Base_{\text{sec}} + 1$, 구버전 `30200 + S` [DEPRECATED])을 완료한 후, FCP에 `MSG_GAC_APPROACH_CLEARANCE`를 통해 전술 채널(`CH_TACTICAL_GUIDANCE = Base_sec + 10 + Idx`, 구버전 `31000 + ID` [DEPRECATED])을 하달합니다.
-   - FCP는 광역 GPS 연산 의존도를 낮추고 도킹암 노드가 20Hz(동적 모선) 또는 1Hz(정적 타워)로 송출하는 정밀 상대 벡터(`MSG_FACILITY_DYNAMIC_GUIDE`) 추종 모드로 전이합니다.
+   - Staging Point 진입 시 AMM은 `CH_ATC_COMM` (50001, 구버전 `30001` [DEPRECATED])로 `MSG_ATC_APPROACH_REQ`를 송신하여 섹터 관제 채널($Base_{\text{sec}} + 0$, 구버전 `30100 + S` [DEPRECATED])로 핸드오프를 인가받습니다.
+   - 관할 지상 구역 관제사(GAC)가 시설물 가용성을 확인하고 도킹암 슬롯 배정(`MSG_ATC_SLOT_ASSIGN` via $Base_{\text{sec}} + 1$, 구버전 `30200 + S` [DEPRECATED])을 완료한 후, AMM에 `MSG_GAC_APPROACH_CLEARANCE`를 통해 전술 채널(`CH_TACTICAL_GUIDANCE = Base_sec + 10 + Idx`, 구버전 `31000 + ID` [DEPRECATED])을 하달합니다.
+   - AMM은 광역 GPS 연산 의존도를 낮추고 도킹암 노드가 20Hz(동적 모선) 또는 1Hz(정적 타워)로 송출하는 정밀 상대 벡터(`MSG_FACILITY_DYNAMIC_GUIDE`)를 수신해 4단계 도킹 접근 궤적을 산출하고 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 전달하는 추종 모드로 전이합니다.
 3. **이동 모선 동역학 융합**:
-   - 항진 중인 모선의 도킹암은 모선 자체의 관성 항법 및 GPS 노드를 통해 산출된 선체 속도 벡터($\vec{v}$) 및 가속도($\vec{a}$)를 전술 유도 패킷에 동봉하여, 기체 FCP가 이동 좌표계 상에서 무경사(Zero-Tilt) 상대 정지 및 6-DoF 랑데부를 완료하도록 지원합니다.
+   - 항진 중인 모선의 도킹암은 모선 자체의 관성 항법 및 GPS 노드를 통해 산출된 선체 속도 벡터($\vec{v}$) 및 가속도($\vec{a}$)를 전술 유도 패킷에 동봉하여, 기체 AMM이 이동 좌표계 상에서 무경사(Zero-Tilt) 상대 정지 궤적을 산출하고 `FCP` 외루프 제어를 통해 6-DoF 랑데부를 완료하도록 지원합니다.
 
 ### 1.3 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서 내에 `[DEPRECATED]` 배지를 부여하고 대체 신규 필드명과 변경 이력을 명시하여 문서상에 보존합니다.
@@ -86,7 +88,7 @@
 flowchart TD
     ATC["기지/모선 관제탑 (ATC Node)<br/>[무선 CH 50001 / 50002]"]
     ARM["도킹암 제어 컴퓨터 (Docking Arm Node)<br/>[무선 CH 50003 / Base_sec+1 / Base_sec+10+Idx]"]
-    FCP["기체 자율항법 FCP (Node 04)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
+    AMM["기체 AMM (Node 03)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
 
     subgraph WIRED_MECH["도킹암 유선 모뎀 구동망 (Wired Peripheral Network)"]
         BEARING["1축 선회 제어기 (dock_bearing_controller)<br/>* Create Mechanical Bearing / Clutch"]
@@ -96,11 +98,11 @@ flowchart TD
         UMBILICAL["엄빌리컬 커플러 유닛 (dock_umbilical_unit)<br/>* Create Hose Pulley & Fluid Pump<br/>* CC Wired Modem Cable Coupler"]
     end
 
-    ARM -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| FCP
+    ARM -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| AMM
     ARM <==>|"무선 Base_sec + 1 (로컬 백본)<br/>도킹암 전개/상태 보고"| ATC
-    FCP <==>|"무선 CH 50001 (ATC 관제)<br/>도킹 허가 및 언도킹 인가"| ATC
-    FCP <==>|"무선 Base_sec + 10 + Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| ARM
-    FCP <==>|"CH Base + 5 (결합 핸드셰이크)<br/>포획/엄빌리컬 상태 교환"| ARM
+    AMM <==>|"무선 CH 50001 (ATC 관제)<br/>도킹 허가 및 언도킹 인가"| ATC
+    AMM <==>|"무선 Base_sec + 10 + Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| ARM
+    AMM <==>|"CH Base + 5 (결합 핸드셰이크)<br/>포획/엄빌리컬 상태 교환"| ARM
 
     ARM ===|"유선 모뎀 케이블 버스 (Wired Bus)"| WIRED_MECH
 ```
@@ -108,13 +110,13 @@ flowchart TD
 ### 2.1 무선 채널 할당 표
 | 채널 번호 | 채널 식별자 | 송신자 | 수신자 | 전송 주기 | 통신 목적 및 내용 |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`50003`** | `CH_FACILITY_BEACON` | Arm Node | All (FCP, MFD) | 1Hz | 도킹 포트 규격 (포트 직경, 어댑터 타입, 가용 상태, 이동성 플래그) (구버전 `30000` [DEPRECATED]) |
-| **`50001`** | `CH_ATC_COMM` | FCP / ATC | ATC / FCP | 이벤트 기반 | 도킹 진입 인가(`DOCK_APPROACH_REQ`), 언도킹 분리 허가 교신 (구버전 `30001` [DEPRECATED]) |
+| **`50003`** | `CH_FACILITY_BEACON` | Arm Node | All (AMM, GCS) | 1Hz | 도킹 포트 규격 (포트 직경, 어댑터 타입, 가용 상태, 이동성 플래그) (구버전 `30000` [DEPRECATED]) |
+| **`50001`** | `CH_ATC_COMM` | AMM / ATC | ATC / AMM | 이벤트 기반 | 도킹 진입 인가(`DOCK_APPROACH_REQ`), 언도킹 분리 허가 교신 (구버전 `30001` [DEPRECATED]) |
 | **`50002`** | `CH_ATC_FACILITY` | Tower ATC / GAC | GAC / Tower ATC | 1Hz / 이벤트 | 광역 관제탑과 GAC 간 섹터 관제 이양 및 상태 동기화 (구버전 `30002` [DEPRECATED]) |
-| **`Base_sec + 0`** | `CH_GAC_COMM` | FCP / GAC | GAC / FCP | 이벤트 | 도킹 섹터 체크인(`MSG_GAC_CHECKIN_REQ`), 도킹암 인가(`MSG_GAC_APPROACH_CLEARANCE`), 언도킹 허가 (구버전 `30100 + S` [DEPRECATED]) |
+| **`Base_sec + 0`** | `CH_GAC_COMM` | AMM / GAC | GAC / AMM | 이벤트 | 도킹 섹터 체크인(`MSG_GAC_CHECKIN_REQ`), 도킹암 인가(`MSG_GAC_APPROACH_CLEARANCE`), 언도킹 허가 (구버전 `30100 + S` [DEPRECATED]) |
 | **`Base_sec + 1`** | `CH_SECTOR_FACILITY` | Arm Node / GAC | GAC / Arm Node | 1Hz / 이벤트 | 도킹암 노드와 직속 GAC 간 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`), 전개/인입 상태 보고 (구버전 `30200 + S` [DEPRECATED]) |
-| **`Base_sec + 10 + Idx`** | `CH_TACTICAL_GUIDANCE` | Arm Node | FCP (Node 04) | 1Hz (정적)<br/>20Hz (동적) | 포트 중심 좌표, 조준선 벡터($\vec{n}_{bore}$), 동적 속도/가속도 스트리밍 (예: 50230, 구버전 `31000 + ID` [DEPRECATED]) |
-| **`Base + 5`** | `CH_EXTERNAL_COMM` | Arm / FCP | FCP / Arm | 이벤트 | 래치 포획(`MSG_DOCK_CAPTURE_STAGE`), 엄빌리컬 서비스 상태 교환 |
+| **`Base_sec + 10 + Idx`** | `CH_TACTICAL_GUIDANCE` | Arm Node | AMM (Node 03) | 1Hz (정적)<br/>20Hz (동적) | 포트 중심 좌표, 조준선 벡터($\vec{n}_{bore}$), 동적 속도/가속도 스트리밍 (예: 50230, 구버전 `31000 + ID` [DEPRECATED]) |
+| **`Base + 5`** | `CH_EXTERNAL_COMM` | Arm / AMM | AMM / Arm | 이벤트 | 래치 포획(`MSG_DOCK_CAPTURE_STAGE`), 엄빌리컬 서비스 상태 교환 |
 
 ### 2.2 유선 모뎀 주변기기 매핑 표 (Wired Modem Peripherals)
 | 주변기기 식별자 (Peripheral ID) | 물리 블록 타입 | 제어 방식 및 신호 | 기능 설명 |
@@ -247,8 +249,8 @@ flowchart TD
 #### 1. 도킹 체결 단계 갱신 패킷 (`MSG_DOCK_CAPTURE_STAGE`, Base_sec + 10 + Idx $\leftrightarrow$ Base+5)
 > [!IMPORTANT]
 > **도킹 결합 FSM 정합성 확정 (감사 결함 #1 해소)**:
-> 도킹 체결 확인 시 발신하는 공식 와이어 패킷 식별자는 `MSG_DOCK_CAPTURE_STAGE`이며, `stage = "HARD_LOCKED"`를 전달하여 FCP FSM의 즉각적인 추진기 셧다운 및 `DISARMED` 전이를 완수합니다.
-> 비행 소프트웨어의 상호 호환성을 위해 FCP 및 도킹암 노드는 `MSG_DOCKING_ARM_CMD` (`ACTION = "CAPTURE_CLOSE"`) 식별자를 동등한 체결 완료 이벤트로 상호 수용(Aliasing)하여 FSM 교착 위험을 원천 배제합니다.
+> 도킹 체결 확인 시 발신하는 공식 와이어 패킷 식별자는 `MSG_DOCK_CAPTURE_STAGE`이며, `stage = "HARD_LOCKED"`를 기체 `AMM (Node 03)`으로 전달하면 `AMM`이 즉시 `Base+4`(`CH_TRAJECTORY_CMD`)를 통해 `FCP (Node 04)` 및 `VAS (Node 01)`의 추진기 셧다운 및 `DISARMED` 전이를 완수합니다.
+> 비행 소프트웨어의 상호 호환성을 위해 `AMM (Node 03)` 및 도킹암 노드는 `MSG_DOCKING_ARM_CMD` (`ACTION = "CAPTURE_CLOSE"`) 식별자를 동등한 체결 완료 이벤트로 상호 수용(Aliasing)하여 FSM 교착 위험을 배제합니다.
 
 ```lua
 {
@@ -300,7 +302,7 @@ flowchart TD
 }
 ```
 
-#### 3. 언도킹 및 격납 위치 분리 인가 패킷 (`MSG_UNDOCK_CLEARANCE`, CH 50001, ATC $\rightarrow$ FCP)
+#### 3. 언도킹 및 격납 위치 분리 인가 패킷 (`MSG_UNDOCK_CLEARANCE`, CH 50001, ATC $\rightarrow$ AMM)
 ```lua
 {
     ver = "1.9.5",
@@ -360,7 +362,7 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     autonumber
-    participant A as 기체 FCP (Node 04)
+    participant A as 기체 AMM (Node 03)
     participant C as 모선/기지 관제탑 (ATC)
     participant D as 도킹암 노드 (Docking Arm)
     participant W as 유선 모뎀 구동망 (Bearing/Gantry/Latch)
@@ -429,12 +431,12 @@ sequenceDiagram
 - **자세각 정렬 오차 및 접근 속도 한계**:
   $$|\Delta \psi| \le 2.0^\circ, \quad v_{axial} \le 0.4\text{ m/s}$$
 
-기체 FCP([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md))는 축 방향 진입 속도를 $v_{axial} = -0.30 \cdot \tanh(d_{axial} / 2.0)\text{ m/s}$로 제어하여, 도킹 포트 접촉 시 충격을 $0.2\text{ m/s}$ 이하로 제한합니다.
+기체 AMM (Node 03, [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md))은 4단계 도킹 접근 궤적과 축 방향 진입 속도 $v_{axial} = -0.30 \cdot \tanh(d_{axial} / 2.0)\text{ m/s}$ 세트포인트를 산출하여 `Base+4`(`CH_TRAJECTORY_CMD`)로 FCP([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md))에 하달함으로써 도킹 포트 접촉 시 충격을 $0.2\text{ m/s}$ 이하로 제한합니다.
 
 ### 5.2 안전 인터록 및 페일세이프 매트릭스
 | 이상 상황 | 감지 조건 | 대상 시스템 | 조치 사항 및 페일세이프 |
 | :--- | :--- | :---: | :--- |
-| **비상 복행 / 충돌 위험 (DOCK_ABORT)** | 접근 중 300ms 패킷 두절 또는 5m 이내 공차 초과($\|e_{lat}\|, \|e_{vert}\| > 0.30\text{m}$, $\|\Delta \psi\| > 5.0^\circ$) 300ms 지속 | 기체 / 도킹암 | **후방 급속 역추진 이탈**: 기체는 자세 수평 및 정면을 유지한 채 $surge = -0.8$ 역추진을 최대 인가하여 $15.0\text{m}$ 안전 거리로 급속 후퇴(`DOCK_STANDBY`). 도킹암은 100ms 내 래치 개방 및 `abortAlert = true` 송출 |
+| **비상 복행 / 충돌 위험 (DOCK_ABORT)** | 접근 중 300ms 패킷 두절 또는 5m 이내 공차 초과($\|e_{lat}\|, \|e_{vert}\| > 0.30\text{m}$, $\|\Delta \psi\| > 5.0^\circ$) 300ms 지속 | 기체 AMM·FCP / 도킹암 | **후방 급속 역추진 이탈**: AMM이 자세 수평·정면을 유지하는 $surge = -0.8$ 역추진 이탈 궤적을 `Base+4`로 즉시 발령하여 FCP·VAS가 $15.0\text{m}$ 안전 거리로 급속 후퇴(`DOCK_STANDBY`). 도킹암은 100ms 내 래치 개방 및 `abortAlert = true` 송출 |
 | **원거리 전개 장애물 걸림** | 갠트리 전진 중 이동 속도 0 감지 | 도킹암 갠트리 | 갠트리 클러치 즉시 해제, ATC에 `ARM_FAULT` 전송 및 도킹 인가 취소 |
 | **소프트 래치 후 락 미체결** | 접촉 감지 후 1.0초 내 락 핀 미관통 | 래치 액추에이터 | 접촉 해제(푸시오프) 후 기체 복행 지시, 포트 재정렬 |
 | **인입 중 기동 간섭/과부하** | 갠트리 역회전 중 과도 슬립 감지 | 갠트리 구동계 | 인입 중단, 현재 위치 정지 고정 후 ATC 경보 표출 |

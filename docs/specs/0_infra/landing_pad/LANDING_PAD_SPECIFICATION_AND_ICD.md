@@ -1,13 +1,13 @@
 # 착륙패드 시스템 및 통신 인터페이스 제어 규격서 (ICD)
 > **Landing Pad System Specification & Interface Control Document (ICD)**  
-> **프로젝트**: Universal Autonomous Flight Stack (FCP · VAS · Ground Infrastructure)  
+> **프로젝트**: Universal Autonomous Flight Stack (AMM · FCP · VAS · Ground Infrastructure)  
 > **대상 환경**: Minecraft CC:Tweaked (Ender Modem), Create: Aeronautics, Create: Avionics  
 
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.2` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v2.4.3` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_infra/landing_pad/` |
 | **주관 도메인 (Domain)** | 지상 인프라 수직이착륙 착륙패드 비콘 (Landing Pad) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v2.4.3` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0)에 따른 기체 외부 교신·2차 테일러 외삽·300ms 복행 및 `landingPermitted`/`DANGEROUS` 호버 게이팅 주체 용어 정렬(`FCP (Node 04)` $\to$ `AMM (Node 03)`, `Base+4`로 `FCP`에 세트포인트 전달) 및 연관 규격서 버전 동기화 (`src/0_infra/landing_pad/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v2.4.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.4.1` | 2026-11-08 | GAC v1.4.0 전용 시설물 아키텍처 연동 및 전용 패드 슬롯 배정 원칙 명시 | 상위 GAC 전용 시설물 규격 동기화 |
 | `v2.4.0` | 2026-11-08 | GPS 모뎀 기반 수평 좌표 자동 획득, 컴퓨터 바디 기준(전후/좌우/상하) 상대 오프셋 보정, 동적 센서 미감지 강제 중단, 평시 1Hz GPS 측위·GAC 위치 보고 및 5단계 TUI 마법사 규격(Section 6) 증설 | 현장 설치 편의성 및 이동형 플랫폼 공간 인지 무결성 확립 |
@@ -24,14 +25,15 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.10.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.13.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.16.0)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.5)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.13.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.7)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.2)
 
 ---
 
@@ -49,16 +51,16 @@
    - 패드는 1회 1기체 독점 점유(**FIFO 점유 모델**)로 운영되며, 착륙한 기체가 이륙할 때까지 무기한 `OCCUPIED`를 유지합니다. 후속 진입 기체는 GAC에 의해 공중 선회 대기(Loiter) 또는 관할 내 가용 타 패드로 자동 분산됩니다.
 3. **유도 역할 분담 경계 (Guidance Responsibility Boundary)**:
    - **착륙패드 노드**: 터치다운 중심 좌표(`touchdownPoint`), 기본 물리 제원(`dimensions`, `maxWeight`), 접근 권장 헤딩(`approachHeading`), 최대 허용 하강률(`safeDescentRate`), 안전 반경(`clearanceZoneRadius`) 및 지상풍(`surfaceWind`) 등 환경 구속조건만을 브로드캐스트합니다.
-   - **기체 FCP (Node 04)**: 패드가 제공한 구속조건을 바탕으로 다단계 수직 강하(상공 진입 정렬 $\to$ 정속 수직 강하 $\to$ 지면효과 감속 플레어 $\to$ 접지) 및 스로틀/추력 자세 제어를 전담합니다.
+   - **기체 AMM (Node 03) 및 FCP (Node 04)**: 패드가 제공한 구속조건을 바탕으로 `AMM`이 다단계 수직 강하 궤적(상공 진입 정렬 $\to$ 정속 수직 강하 $\to$ 지면효과 감속 플레어 $\to$ 접지) 및 동적 패드 20Hz 외삽 세트포인트를 연산해 `Base+4`(`CH_TRAJECTORY_CMD`)로 하달하고, `FCP`가 외루프 위치/속도/자세 추종 제어를 전담합니다.
 4. **정적(Static) / 동적(Dynamic) 시설물 분리 모델링**:
    - **고정형 착륙패드 (Static Pad)**: 육상 기지 고정 패드. 좌표 불변이므로 속도/가속도 벡터 필드를 전송하지 않고 1Hz 하트비트만 유지하여 무선 트래픽을 최적화합니다.
    - **이동형 착륙패드 (Dynamic Pad)**: 해상 바지선, 기동 모선, 열차 상부 패드. 실시간 3D 위치, 속도 벡터($\vec{v}$), 가속도 벡터($\vec{a}$), 요동(Pitch/Roll)과 함께 **갑판 안정성 판정 플래그(`deckStatus`, `landingPermitted`)**를 20Hz로 스트리밍하여 기체의 랑데부 항법을 지원합니다.
 5. **소프트웨어 중심 접지 판정 및 지상 서비스 분리**:
-   - 기체의 온보드 센서(고도계 하강 정지 $v_y \approx 0$ 또는 바퀴 센서)가 접지를 확인하고 무선 패킷(`MSG_TOUCHDOWN_COMPLETE`)을 송출하면 즉시 패드 점유(`OCCUPIED`)로 전환하고 직속 GAC에 상태를 보고합니다.
+   - 기체의 온보드 센서(고도계 하강 정지 $v_y \approx 0$ 또는 바퀴 센서)가 접지를 확인하고 `AMM (Node 03)`이 무선 패킷(`MSG_TOUCHDOWN_COMPLETE`)을 송출하면 즉시 패드 점유(`OCCUPIED`)로 전환하고 직속 GAC에 상태를 보고합니다.
    - 연료 급유 및 배터리 충전 등 지상 서비스(Ground Servicing)는 패드 노드의 기계 구동 인터록에서 분리되어, 착륙 후 독립된 외부 지상 요원/장비에 의해 선택적으로 수행됩니다.
 6. **페일세이프 및 GAC 경유 국지 복행(Go-Around) 안전 인터록**:
-   - 동적 패드 20Hz 구간에서 패킷 두절 발생 시 기체 FCP가 즉시 300ms 타임아웃을 감지하여 복행합니다. 패드는 요동 위험(`deckStatus == "DANGEROUS"`) 3초 지속, 명시적 `MSG_ABORT_APPROACH` 수신 또는 슬롯 타임아웃(120초) 시 `GO_AROUND` 상태로 전이합니다.
-   - 패드는 복행 기체가 안전 복행 고도로 이탈하여 GAC가 패드 개방 명령(`MSG_ATC_FACILITY_UPDATE`, status: `FREE`)을 하달할 때까지 `GO_AROUND` 격리 상태를 유지하여 공역 경쟁 상태(Race Condition)를 영구 차단합니다.
+   - 동적 패드 20Hz 구간에서 패킷 두절 발생 시 기체 `AMM (Node 03)`이 즉시 300ms 타임아웃을 감지하여 복행 궤적을 발령합니다. 패드는 요동 위험(`deckStatus == "DANGEROUS"`) 3초 지속, 명시적 `MSG_ABORT_APPROACH` 수신 또는 슬롯 타임아웃(120초) 시 `GO_AROUND` 상태로 전이합니다.
+   - 패드는 복행 기체가 안전 복행 고도로 이탈하여 GAC가 패드 개방 명령(`MSG_ATC_FACILITY_UPDATE`, status: `FREE`)을 하달할 때까지 `GO_AROUND` 격리 상태를 유지하여 공역 경쟁 상태(Race Condition)를 차단합니다.
 7. **GAC 연동 전용 착륙패드(Dedicated Pad) 운용 모델**:
    - 패드가 특정 기체 ID 또는 기종 전용으로 GAC 인벤토리에 등록된 경우, 패드는 상위 GAC로부터 해당 지정 기체 또는 비상 징발 인가된 기체의 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`)만을 수신하여 1:1 전술 유도를 개시합니다.
    - 비인가 기체의 임의 전술 채널 접속 시도는 무인가 상태로 간주되며, 패드의 접근 슬롯은 GAC 백본 제어를 통해서만 배타적으로 활성화됩니다.
@@ -67,12 +69,12 @@
 
 ### 1.2 GPS 광역 항법 $\rightarrow$ 계층 관제 $\rightarrow$ 수직 착륙 전술 유도 연계 인터페이스 (Hierarchical Transition)
 1. **광역 항법 단계 (GPS Waypoint Navigation)**:
-   - 기체 FCP는 `CH_FACILITY_BEACON` (50003)에서 GAC가 집약 송출하는 섹터 대표 비콘을 수신하고, 중앙 GPS 체계(`CH_GPS_PING` 60001 / `Base+5`)를 이용하여 목적지 섹터 상공 50~100m 지점(Initial Approach Fix)까지 장거리 자율 비행을 수행합니다.
+   - 기체 `AMM (Node 03)`은 `CH_FACILITY_BEACON` (50003)에서 GAC가 집약 송출하는 섹터 대표 비콘을 수신하고, 중앙 GPS 체계(`CH_GPS_PING` 60001 / `Base+5`)를 이용하여 목적지 섹터 상공 50~100m 지점(Initial Approach Fix)까지 장거리 자율 비행 궤적을 생성해 `Base+4`로 `FCP (Node 04)`에 하달합니다.
 2. **2단계 관제 인가 및 핸드오프 (Two-Stage Handoff)**:
-   - 기체 FCP는 Tower ATC(`CH 50001`)로 진입을 요청하여 관할 GAC 섹터 채널($Base_{\text{sec}} + 0$)을 하달받습니다.
-   - FCP는 섹터 채널로 주파수를 변경하여 GAC에 체크인(`MSG_GAC_CHECKIN_REQ`)하고, GAC는 다속성 분배를 통해 가용 착륙패드에 슬롯을 배정(`MSG_ATC_SLOT_ASSIGN` via $Base_{\text{sec}} + 1$)한 후 FCP에 패드 전술 채널(`CH_TACTICAL_GUIDANCE` = $Base_{\text{sec}} + 10 + \text{Idx}$)을 최종 하달합니다.
+   - 기체 `AMM (Node 03)`은 Tower ATC(`CH 50001`)로 진입을 요청하여 관할 GAC 섹터 채널($Base_{\text{sec}} + 0$)을 하달받습니다.
+   - `AMM`은 섹터 채널로 주파수를 변경하여 GAC에 체크인(`MSG_GAC_CHECKIN_REQ`)하고, GAC는 다속성 분배를 통해 가용 착륙패드에 슬롯을 배정(`MSG_ATC_SLOT_ASSIGN` via $Base_{\text{sec}} + 1$)한 후 `AMM`에 패드 전술 채널(`CH_TACTICAL_GUIDANCE` = $Base_{\text{sec}} + 10 + \text{Idx}$)을 최종 하달합니다.
 3. **전술 정밀 착륙 및 GPS 안전 백업**:
-   - FCP는 전술 채널로 핸드오버하여 1Hz(정적 패드) 또는 20Hz(동적 패드)의 전술 가이드(`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`)를 수신하며 수직 하강을 완수합니다.
+   - `AMM`은 전술 채널로 핸드오버하여 1Hz(정적 패드) 또는 20Hz(동적 패드)의 전술 가이드(`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`)를 수신하고, 실시간 궤적 세트포인트를 `Base+4`로 `FCP`에 하달하여 수직 하강을 완수합니다.
    - **GPS 페일소프트 백업**: 정적 고정 패드의 경우 전술 무선 통신이 일시 두절되더라도 기체는 사전에 수신된 패드 정적 좌표와 중앙 GPS 수평 좌표($X, Z$), 온보드 고도계($Y$)를 결합하여 비상 복행 없이 안전 착륙을 완수합니다 (타임아웃 복행 면제 규격 준수).
 
 ---
@@ -147,30 +149,30 @@ flowchart TD
     ATC["Tier 1: 통합 관제탑 (Tower ATC)<br/>[CH 50001 대공 / CH 50002 광역 백본]"]
     GAC["Tier 2: 지상 구역 관제사 (GAC Node)<br/>[CH 50003 비콘 / Base_sec+0 관제 / Base_sec+1 백본]"]
     PAD["Tier 3: 착륙패드 노드 (Pad Node)<br/>[Base_sec+1 로컬 백본 / Base_sec+10+Idx 전술]<br/>* 순수 소프트웨어 비콘 노드 (무기계식)"]
-    FCP["비행기체 자율항법 FCP (Node 04)<br/>[CH Base+5 / 50001 / Base_sec+0 / Base_sec+10+Idx]"]
+    AMM["비행기체 게이트웨이 AMM (Node 03)<br/>[CH Base+5 / 50001 / Base_sec+0 / Base_sec+10+Idx]"]
 
     ATC <==>|"CH 50002 (광역 백본)<br/>MSG_ATC_SECTOR_HANDOFF_REQ / ACK"| GAC
-    FCP <==>|"CH 50001 (대공 관제)<br/>광역 진입 요청 / GAC 채널 하달"| ATC
-    GAC -.->|"CH 50003 (1Hz 대표 비콘)<br/>MSG_FACILITY_BEACON"| FCP
-    FCP <==>|"CH Base_sec+0 (섹터 관제)<br/>체크인 / 패드 배정 인가"| GAC
+    AMM <==>|"CH 50001 (대공 관제)<br/>광역 진입 요청 / GAC 채널 하달"| ATC
+    GAC -.->|"CH 50003 (1Hz 대표 비콘)<br/>MSG_FACILITY_BEACON"| AMM
+    AMM <==>|"CH Base_sec+0 (섹터 관제)<br/>체크인 / 패드 배정 인가"| GAC
     GAC <==>|"CH Base_sec+1 (섹터 로컬 백본)<br/>MSG_ATC_SLOT_ASSIGN / ACK<br/>MSG_ATC_FACILITY_UPDATE"| PAD
-    PAD <==>|"CH Base_sec+10+Idx (1:1 전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| FCP
-    FCP -.->|"CH Base_sec+10+Idx / Base+5<br/>MSG_TOUCHDOWN_COMPLETE (접지 통보)"| PAD
-    PAD -.->|"CH Base_sec+10+Idx 및 CH Base_sec+1<br/>MSG_ABORT_APPROACH (긴급 복행)"| FCP
+    PAD <==>|"CH Base_sec+10+Idx (1:1 전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| AMM
+    AMM -.->|"CH Base_sec+10+Idx / Base+5<br/>MSG_TOUCHDOWN_COMPLETE (접지 통보)"| PAD
+    PAD -.->|"CH Base_sec+10+Idx 및 CH Base_sec+1<br/>MSG_ABORT_APPROACH (긴급 복행)"| AMM
 ```
 
 ### 2.1 채널 할당 표
 | 채널 번호 | 채널 식별자 | 송신자 | 수신자 | 전송 주기 | 통신 목적 및 내용 |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`50001`** | `CH_ATC_COMM` | FCP / Tower ATC | Tower ATC / FCP | 이벤트 | 대공 광역 관제 및 관할 GAC 섹터 채널 이양 교신 |
+| **`50001`** | `CH_ATC_COMM` | AMM / Tower ATC | Tower ATC / AMM | 이벤트 | 대공 광역 관제 및 관할 GAC 섹터 채널 이양 교신 |
 | **`50002`** | `CH_ATC_FACILITY` | Tower ATC / GAC | GAC / Tower ATC | 1Hz / 이벤트 | 광역 관제탑과 GAC 간 섹터 핸드오프 교신 |
-| **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (FCP, MFD) | 1Hz | **Sector 0 대표 집약 비콘**: 관할 구역 요약 정보 및 가용 현황 송출 (개별 패드는 직접 송출 중단) |
+| **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (AMM, GCS) | 1Hz | **Sector 0 대표 집약 비콘**: 관할 구역 요약 정보 및 가용 현황 송출 (개별 패드는 직접 송출 중단) |
 | **`60001`** | `CH_GPS_PING` | Pad Node | GPS 위성/서버 | 1회(정적) / 1Hz(비착륙) / 5Hz(착륙) | 자체 GPS 서버로 비콘 컴퓨터 물리 위치 질의 (`MSG_GPS_REQUEST`, clientType: "FACILITY") |
-| **$Base_{\text{sec}} + 0$** | `CH_GAC_COMM` | FCP / GAC | GAC / FCP | 이벤트 | 기체 체크인(`MSG_GAC_CHECKIN_REQ`), 패드 배정 인가(`MSG_GAC_APPROACH_CLEARANCE`), 로컬 복행 ($Base_{\text{sec}} = 50001 + S \times 200$) |
+| **$Base_{\text{sec}} + 0$** | `CH_GAC_COMM` | AMM / GAC | GAC / AMM | 이벤트 | 기체 체크인(`MSG_GAC_CHECKIN_REQ`), 패드 배정 인가(`MSG_GAC_APPROACH_CLEARANCE`), 로컬 복행 ($Base_{\text{sec}} = 50001 + S \times 200$) |
 | **$Base_{\text{sec}} + 1$** | `CH_SECTOR_FACILITY` | Pad Node / GAC | GAC / Pad Node | 1Hz / 이벤트 | **직속 섹터 로컬 백본**: GAC와 패드 간 슬롯 예약(`MSG_ATC_SLOT_ASSIGN/ACK`), 상태/위치 동기화(`MSG_ATC_FACILITY_UPDATE`), 복행 제어 |
 | **$Base_{\text{sec}} + 5$** | `CH_SECTOR_GPS_REPLY` | GPS 위성/서버 | Pad Node | 1회 / 1Hz / 5Hz | **섹터 관할 시설물 전용 GPS 응답 수신**: `targetClient == facilityId` 필터링 기반 측위 수신 (`MSG_GPS_RESPONSE`) |
-| **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Pad Node / FCP | FCP / Pad Node | 1Hz (정적)<br/>20Hz (동적) | **1:1 정밀 전술 유도 스트리밍** (`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`), 접지 통보 (`MSG_TOUCHDOWN_COMPLETE`), 복행 지시 (`MSG_ABORT_APPROACH`) |
-| **`Base + 5`** | `CH_EXTERNAL_COMM` | Pad Node | FCP (Node 04) | 이벤트 | 기체 전용 응답 채널 (점유 확인 통보) |
+| **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Pad Node / AMM | AMM / Pad Node | 1Hz (정적)<br/>20Hz (동적) | **1:1 정밀 전술 유도 스트리밍** (`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`), 접지 통보 (`MSG_TOUCHDOWN_COMPLETE`), 복행 지시 (`MSG_ABORT_APPROACH`) |
+| **`Base + 5`** | `CH_EXTERNAL_COMM` | Pad Node | AMM (Node 03) | 이벤트 | 기체 전용 응답 채널 (점유 확인 통보) |
 
 ### 2.2 노드 하드웨어 구성 및 페리페럴 바인딩 (Node Hardware & Peripherals)
 
@@ -442,7 +444,7 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     autonumber
-    participant A as 기체 FCP (Node 04)
+    participant A as 기체 AMM (Node 03)
     participant ATC as 광역 관제탑 (Tower ATC)
     participant GAC as 지상 구역 관제사 (GAC Node)
     participant P as 착륙패드 노드 (Pad Node)
@@ -470,13 +472,13 @@ sequenceDiagram
             P->>A: MSG_FACILITY_STATIC_GUIDE (CH 50211)<br/>[touchdownPoint, approachHeading: 180°, wind]
         end
     else 동적 패드 (DYNAMIC)
-        loop 20Hz 주기 (VAS 동기화)
+        loop 20Hz 주기 (AMM 2차 테일러 외삽 -> Base+4 FCP 추종)
             P->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50211)<br/>[touchdownPoint(t), vel, accel, attitude, deckStatus, landingPermitted]
         end
     end
 
     alt 정상 착륙 시나리오
-        Note over A: landingPermitted == true 확인 후 최종 하강/접지
+        Note over A: landingPermitted == true 확인 후 최종 하강 궤적 하달/접지
         A->>P: MSG_TOUCHDOWN_COMPLETE (CH 50211)<br/>[facilityId: PAD_BRAVO_01, craftState: GROUND_IDLE]
         P->>GAC: MSG_ATC_FACILITY_UPDATE (CH 50202)<br/>[facilityId: PAD_BRAVO_01, status: OCCUPIED, currentCraft: AIRCRAFT_01]
         Note over P: 패드 점유(OCCUPIED) 확정 (외부 급유/정비 대기)
@@ -485,7 +487,7 @@ sequenceDiagram
         P->>A: MSG_ABORT_APPROACH (CH 50211) [reason: DECK_UNSTABLE]
         P->>GAC: MSG_ABORT_APPROACH (CH 50202) [reason: DECK_UNSTABLE]
         Note over P: FSM GO_AROUND 상태 전이 (패드 임의 배정 차단)
-        Note over A: 급상승 복행 기동 (+30m 안전고도 도달)
+        Note over A: 급상승 복행 궤적 하달 (+30m 안전고도 도달)
         A->>GAC: MSG_GAC_ABORT_CLEAR (CH 50201) [craft: AIRCRAFT_01, alt: 100m]
         Note over GAC: 관할 내 다른 가용 패드(PAD_02) 즉시 탐색 및 재배정
         GAC->>P: MSG_ATC_FACILITY_UPDATE (CH 50202) [facilityId: PAD_BRAVO_01, status: FREE]
@@ -507,13 +509,13 @@ sequenceDiagram
 ## 5. 수치해석 및 페일세이프 알고리즘 (Algorithms & Failsafe)
 
 ### 5.1 동적 패드 2차 추측항법 보간 (Dead Reckoning Extrapolation)
-동적 패드 모드에서 기체 FCP는 지연 시간 $\Delta t = (t_{current} - t_{packet})$ 동안 테일러 2차 확장을 적용하여 실시간 유도 오차를 산출합니다.
+동적 패드 모드에서 기체 `AMM (Node 03)`의 `trajectory_generator`는 20Hz 루프에서 지연 시간 $\Delta t = (t_{current} - t_{packet})$ 동안 테일러 2차 확장을 적용하여 실시간 패드 예측 위치·속도 및 접근 궤적 세트포인트(`MSG_TRAJECTORY_SETPOINT`)를 산출한 뒤 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 전달합니다.
 
 $$\vec{p}_{pad}(t) = \vec{p}_0 + \vec{v}_0 \Delta t + \frac{1}{2} \vec{a}_0 \Delta t^2$$
 
 $$\vec{v}_{pad}(t) = \vec{v}_0 + \vec{a}_0 \Delta t$$
 
-기체 요구 가속도 피드포워드 벡터:
+FCP 외루프 요구 가속도 피드포워드 벡터(`AMM` 목표 궤적 추종):
 $$\vec{a}_{cmd} = \vec{a}_{pad}(t) + K_p (\vec{p}_{pad}(t) - \vec{p}_{craft}) + K_d (\vec{v}_{pad}(t) - \vec{v}_{craft})$$
 
 ---
@@ -531,14 +533,14 @@ $$\vec{a}_{cmd} = \vec{a}_{pad}(t) + K_p (\vec{p}_{pad}(t) - \vec{p}_{craft}) + 
 3. **최종 접지 인가 플래그 (Landing Permitted Flag)**:
    $$\text{landingPermitted} = (\text{deckStatus} == \text{"STABLE"})$$
 
-- 기체 FCP는 `landingPermitted == true`일 때만 최종 지면 접지 터치다운을 수행하며, `deckStatus == "DANGEROUS"` 상태에서는 상공 3~5m 지점에서 호버 홀드(Hover Hold)를 유지합니다. 만약 위험 상태가 3.0초 이상 지속되면 패드 노드가 `MSG_ABORT_APPROACH`를 송출하여 강제 복행을 발동합니다.
+- 기체 `AMM (Node 03)`은 `landingPermitted == true`일 때만 최종 지면 접지 터치다운 강하 궤적을 하달하며, `deckStatus == "DANGEROUS"` 상태에서는 상공 3~5m 지점에서 호버 홀드(Hover Hold) 세트포인트를 유지해 `Base+4`로 `FCP`에 전달합니다. 만약 위험 상태가 3.0초 이상 지속되면 패드 노드가 `MSG_ABORT_APPROACH`를 송출하여 강제 복행을 발동합니다.
 
 ---
 
 ### 5.3 페일세이프 임계값 및 대응 매트릭스
 | 이상 상황 | 감지 조건 | 적용 대상 | 페일세이프 조치 |
 | :--- | :--- | :---: | :--- |
-| **무선 하트비트 두절** | 최종 접근 중 $300\text{ms}$ 무수신 (기체 FCP 단독 감지) | 동적 패드 | 즉시 수직 상승 가속, 복행 명령 발동, GAC 섹터 관제선 복귀 |
+| **무선 하트비트 두절** | 최종 접근 중 $300\text{ms}$ 무수신 (기체 `AMM` 단독 감지) | 동적 패드 | 즉시 수직 상승 복행 궤적(`Base+4`) 하달, GAC 섹터 관제선 복귀 |
 | **무선 하트비트 두절** | 무신호 지속 | 고정 패드 | **복행 면제**: 정적 좌표 기반 GPS/고도계로 착륙 강행 |
 | **갑판 동역학 위험 요동** | $\theta_{tilt} > 10.0^\circ$ 또는 $\|v_{y,pad}\| > 2.5\text{ m/s}$ 3.0초 지속 | 동적 패드 | 패드가 `MSG_ABORT_APPROACH` 발신, 기체 급상승 복행 |
 | **지상 장애물 감지** | 초음파/적외선/관제 센서 차폐 | 공통 | 패드 노드가 `MSG_ABORT_APPROACH` 즉시 송출, 기체 급상승 복행 |
@@ -598,7 +600,7 @@ stateDiagram-v2
    - `CH 60001`로 `MSG_GPS_REQUEST`를 1회 송출하고, $Base_{\text{sec}} + 5$에서 `MSG_GPS_RESPONSE`를 수신하여 컴퓨터 물리 좌표 $(X_{\text{comp}}, Z_{\text{comp}})$를 자동 획득합니다.
 2. **동적 패드 (`DYNAMIC`)**:
    - 필수 3종 센서(`avionics:gimbal_sensor`, `avionics:altitude_sensor`, `avionics:velocity_sensor`)를 전수 검사합니다.
-   - **결손 시 즉시 중단 (`HALT_WITH_WARNING`)**: 1개라도 미감지 시 적색 경고 화면을 표출하고 마법사 진행 및 저장을 원천 차단합니다 (`[R]` 재스캔 / `[Q]` 종료만 지원).
+   - **결손 시 즉시 중단 (`HALT_WITH_WARNING`)**: 1개라도 미감지 시 적색 경고 화면을 표출하고 마법사 진행 및 저장을 금지합니다 (`[R]` 재스캔 / `[Q]` 종료만 지원).
    - 정상 감지 시: 선체 대비 컴퓨터 장착 방위 오프셋 $\Delta\psi_{\text{mount}} \in \{0^\circ \text{ 선수}, +90^\circ \text{ 우현}, 180^\circ \text{ 선미}, -90^\circ \text{ 좌현}\}$을 작업자에게 선택받습니다.
    - `CH 60001` 및 $Base_{\text{sec}} + 5$를 통해 실시간 GPS 수평 좌표 획득 테스트를 수행하고 센서 라이브 계측치를 표출합니다.
 

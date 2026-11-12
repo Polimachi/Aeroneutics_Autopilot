@@ -6,29 +6,31 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.6.0` |
-| **최종 수정일 (Date)** | `2026-11-08` |
+| **문서 버전 (Version)** | `v1.7.0` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/1_control/asa/` |
 | **주관 도메인 (Domain)** | 공력 조종면 및 날개 구동기 분산 클러스터 (ASA / Node 06-xx) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.23.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.10.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.12.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.14.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.8.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.4.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.3)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.13.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.11.1)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.1)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.7.0` | 2026-11-12 | FCP-AMM 역할 분리(ICD v1.28.0) 및 채널/스키마 정합화: FCP 순수 `SE(3)` 외루프 `QUATERNION_RATE` + 선택적 `flapTarget`(`Base+1` $\to$ `VAS`) 및 `AMM` 궤적/C2 역할 반영, `Base+2` `FCP`/`AMM` 수신 명시, `top` 모뎀 `VAS (Node 01)` 및 `Alignment` 전용 포트 정정, `config.json` `surfaceActuation`(`10011`) 및 `MSG_CHANNEL_REBIND`(`bandwidth = 40`, `oldBase + 11`, `newBaseChannel + 11`) 결함 수정, `MSG_AERO_CMD` 스키마(`controlState`, `dynamicPressureFactor`) ICD 정합화, 구 `Base+7` `[DEPRECATED]` 이력 정정 및 과장 표현 제거 | AMM-FCP-VAS 계층 분리 동기화 및 `Base+11` 채널·패킷 결함 해소 |
 | `v1.6.0` | 2026-11-08 | 포드 ID(podId) ASA_L/R/T 완전 단일화, 구 명칭(구버전 명칭) 잔재 전면 척결 | 포드 명칭 표준화 및 잔재 제거 |
 | `v1.5.0` | 2026-11-08 | 비동기 진단 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 이벤트 루프 + 진단 뷰 분리) 및 `debug: false` 헤드리스 직결 모드 명세 반영, baseChannel 수식 정합화 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
 | `v1.4.0` | 2026-11-08 | ASA 관할 기체 범위 축소: VECTORED_VTOL 및 드론(QUADROTOR, HEXAROTOR) 기체 배제 규격 명시, FIXED_WING 및 WINGED_VTOL 전용 구동계로 한정 | 비공력 순수 추력형 기체에서 공력 타면 및 불필요한 제어 연산·통신 배제 |
-| `v1.3.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 조종면 버스 Zone 2 이관(`Base+11`: `CH_SURFACE_ACTUATION`, 구 `Base+11` [DEPRECATED]) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
+| `v1.3.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 조종면 버스 Zone 2 이관(`Base+11`: `CH_SURFACE_ACTUATION`, 구 `Base+7` [DEPRECATED]) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
 
@@ -38,16 +40,20 @@
 **ASA (Aerodynamic Surface Adapter / Program)**은 고정익(`FIXED_WING`) 및 날개형 VTOL(`WINGED_VTOL`) 비행체의 공력 조종면(에일러론, 승강타, 방향타, 에일러본)과 고양력 장치(플랩)를 직접 물리 구동하는 **제3계층(Layer 3) 독립 분산형 공력 구동계 제어기(Distributed Aerodynamic Surface Controller)**입니다.
 
 UAFS 단일 3계층 비행 제어 아키텍처 개편에 따라, ASA는 **VAS (Node 01)** 산하 분산 액추에이터 계층으로 완전 편입되었습니다.
-상위 자율 항법 컴퓨터인 **FCP (Node 04)**는 순수 기구학적 자세/방위/승강률 지령과 플랩 요구율(`flapTarget`)만을 `Base + 1`을 통해 VAS에 하달하며, 조종면에 직접 관여하지 않습니다.
+상위 외루프 제어기인 **FCP (Node 04)**는 **AMM (Node 03)**이 `Base + 4`로 하달한 궤적 세트포인트로부터 산출한 순수 `SE(3)` `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`) 지령과 선택적 플랩 요구율(`flapTarget`)만을 `Base + 1`을 통해 VAS에 하달하며, 조종면에 직접 관여하지 않습니다.
 비행 제어 코어인 **VAS (Node 01)**는 2계층 내루프 통합 믹싱기에서 동압 스케일링($\frac{1}{2}\rho V^2$), 타면 포화 방지(`satCombined`), 단일 실속 가드($V \le 10\text{ m/s}$) 및 플랩 전개 속도 제한($V > 15\text{ m/s}$)을 거쳐 공력 타각을 최종 확정하고, 전용 무선 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 통해 ASA 클러스터(`Node 06-L, 06-R, 06-T`)로 20Hz `MSG_AERO_CMD`를 송출하여 지휘합니다.
 
 ```mermaid
 flowchart TD
-    subgraph FCP_NODE["자율 항법 컴퓨터 FCP (Node 04) - 제1계층 (외루프)"]
-        L1_TECS["L1 횡유도 / TECS 종방향 유도<br/>플랩 스케줄링 (flapTarget)"]
+    subgraph AMM_NODE["임무·항법·궤적 생성 AMM (Node 03) - 제1계층"]
+        TRAJ["항법 융합 / 20Hz 궤적 생성기<br/>(선택적 flapHint 포함)"]
     end
 
-    subgraph CORE_NODE["비행 제어 코어 VAS (Node 01) - 제2계층 (내루프 믹서)"]
+    subgraph FCP_NODE["외루프 제어기 FCP (Node 04) - 제2계층 (SE(3) 외루프)"]
+        SE3_OUT["SE(3) 자세·집합추력 투영<br/>QUATERNION_RATE + 선택적 flapTarget"]
+    end
+
+    subgraph CORE_NODE["비행 제어 코어 VAS (Node 01) - 제3계층 (내루프 믹서)"]
         CORE_MIX["통합 6-DoF 자세 제어 & 동압 스케일링 (1/2*ρ*V²)<br/>실속 방어 (Stall Guard) & 타면 포화 클램프"]
         ADAPT_TAP["추력 어댑터 관리자<br/>(actuator_adapter_tca)"]
         ADAPT_ASA["공력 어댑터 관리자<br/>(actuator_adapter_asa)"]
@@ -55,19 +61,21 @@ flowchart TD
         CORE_MIX --> ADAPT_ASA
     end
 
-    subgraph ASA_CLUSTER["[ASA 공력 어댑터 클러스터 (Node 06-xx) - 제3계층]"]
+    subgraph ASA_CLUSTER["[ASA 공력 어댑터 클러스터 (Node 06-xx) - 제4계층]"]
         ASA_L["ASA 좌익 노드 (Node 06-L)<br/>- 좌측 에일러론 (AIL_L)<br/>- 좌측 플랩 (FLAP_L)"]
         ASA_R["ASA 우익 노드 (Node 06-R)<br/>- 우측 에일러론 (AIL_R)<br/>- 우측 플랩 (FLAP_R)"]
         ASA_T["ASA 미익 노드 (Node 06-T)<br/>- 승강타 (ELEV)<br/>- 방향타 (RUDD)<br/>*(전익기는 06-L/R 에일러본)"]
     end
 
-    subgraph TAP_CLUSTER["[추력 어댑터 TCA 클러스터 (Node 02-xx) - 제3계층]"]
+    subgraph TAP_CLUSTER["[추력 어댑터 TCA 클러스터 (Node 02-xx) - 제4계층]"]
         TAP_PODS["추진기 노드군 (Node 02-xx)"]
     end
 
     %% 제어 링크
-    FCP_NODE ==>|"Base+1 [CH_FLIGHT_GUIDANCE]<br/>(20Hz MSG_ATTITUDE_CMD: angles, throttle, flapTarget)"| CORE_MIX
-    CORE_MIX -.->|"Base+2 [CH_TELEMETRY]<br/>(20Hz telemetry: attitude, dynamics, actuatorHealth)"| FCP_NODE
+    AMM_NODE ==>|"Base+4 [CH_TRAJECTORY_CMD]<br/>(20Hz MSG_TRAJECTORY_SETPOINT)"| FCP_NODE
+    FCP_NODE ==>|"Base+1 [CH_FLIGHT_GUIDANCE]<br/>(20Hz MSG_ATTITUDE_CMD: QUATERNION_RATE + 선택적 flapTarget)"| CORE_MIX
+    CORE_MIX -.->|"Base+2 [CH_TELEMETRY]<br/>(20Hz MSG_FLIGHT_TELEMETRY -> FCP & AMM)"| FCP_NODE
+    CORE_MIX -.->|"Base+2 [CH_TELEMETRY]<br/>(20Hz MSG_FLIGHT_TELEMETRY -> AMM)"| AMM_NODE
 
     ADAPT_ASA ==>|"Base+11 [CH_SURFACE_ACTUATION, 구 Base+7 DEPRECATED]<br/>(20Hz MSG_AERO_CMD)"| ASA_L
     ADAPT_ASA ==>|"Base+11 [CH_SURFACE_ACTUATION, 구 Base+7 DEPRECATED]<br/>(20Hz MSG_AERO_CMD)"| ASA_R
@@ -78,18 +86,18 @@ flowchart TD
     ASA_T -.->|"Base+11 MSG_AERO_STATUS (이벤트)"| ADAPT_ASA
 
     ADAPT_TAP ==>|"Base+10 [CH_THRUST_ACTUATION, 구 Base+6 DEPRECATED]<br/>(20Hz MSG_THRUST_CMD)"| TAP_PODS
-    TAP_PODS -.->|"Base+10 MSG_THRUST_STATUS (이벤트)"| ADAPT_TAP
+    TAP_PODS -.->|"Base+10 MSG_ACTUATOR_STATUS (이벤트)"| ADAPT_TAP
 ```
 
 ### 1.2 핵심 설계 특징 6대 원칙
 1. **3구역 분할 노드 토폴로지 (Zone-based 3-Pod Cluster)**:
-   - 기체 기하 구조에 맞추어 좌익(`Node 06-L`), 우익(`Node 06-R`), 미익(`Node 06-T`)에 CC:Tweaked 컴퓨터를 1:1 독립 배치하여 복잡한 물리 배선을 원천 배제하고 피탄/충돌 피해를 국소 격리합니다.
+   - 기체 기하 구조에 맞추어 좌익(`Node 06-L`), 우익(`Node 06-R`), 미익(`Node 06-T`)에 CC:Tweaked 컴퓨터를 1:1 독립 배치하여 복잡한 물리 배선을 배제하고 피탄/충돌 피해를 국소 격리합니다.
 2. **`peripheral.find` 기반 동적 하드웨어 바인딩**:
    - 고정 포트 강제를 배제하고, `config.json`의 선호 면(`preferredSide`)을 1차 검사하되 `peripheral.find()`를 통해 전 방향 및 유선 버스를 동적 스캔하여 장치 타입에 부합하는 페리페럴을 자동 바인딩합니다.
 3. **듀얼 구동 모드 및 자동 폴백 (`API` vs `REDSTONE`)**:
    - Create: Avionics 조종면/플랩 페리페럴 발견 시 정밀 API 모드(`setDeflection(deg)`)로 구동하며, 페리페럴이 없는 기계식 링크 환경에서는 선호 면의 $0 \sim 15$ 아날로그 레드스톤(RS) 모드로 자동 폴백합니다.
 4. **전용 무선 채널 분리 (`Base + 11` (구 `Base + 7` [DEPRECATED]))**:
-   - 추진기 버스(`Base + 6`) 및 상위 유도 명령 버스(`Base + 1`)와의 무선 간섭을 원천 차단하기 위해 기체별 전용 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 단독 점유하여 VAS와 통신합니다.
+   - 추진기 버스(`Base + 10`, 구 `Base + 6` [DEPRECATED]) 및 상위 유도 명령 버스(`Base + 1`)와의 무선 간섭을 방지하기 위해 기체별 전용 채널 `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`)을 단독 점유하여 VAS와 통신합니다.
 5. **동적 타이머 기반 300ms 안전 활공 트림 (Safe Glide Trim Sentinel)**:
    - VAS 지령(`MSG_AERO_CMD`)이 300ms(6틱) 이상 두절될 경우, 스핀/스파이럴 다이브를 방지하기 위해 에일러론 0.0, 방향타 0.0, 승강타 +0.1(약 $+3.0^\circ$ 미세 기수 유지 완만 활공), 플랩 0.0으로 즉시 강제 클램프합니다.
 6. **비동기 진단 뷰 및 헤드리스 백그라운드 데몬 (Asynchronous Diagnostic View & Headless Daemon)**:
@@ -110,7 +118,7 @@ flowchart TD
   - `QUADROTOR` / `HEXAROTOR`: 4-T / 6-T 멀티로터 드론 (공력 타면 없음, 차동 로터 추력으로 제어)
 - **관할 배제 원칙 및 연계 제어기 비활성화**:
   - `VECTORED_VTOL` 및 드론 기체는 물리적 공력 타면과 플랩이 일체 존재하지 않으므로 온보드 ASA 소프트웨어 클러스터(`Node 06-xx`)를 배치하지 않습니다.
-  - 상위 외루프 제어기인 **FCP**는 해당 기체 운용 시 플랩 요구율을 항상 수납 상태(`flapTarget = 0.0`)로 고정하며 공력 타면 지령 생성을 배제합니다.
+  - 상위 외루프 제어기인 **FCP**는 해당 기체 운용 시 `SE(3)` `QUATERNION_RATE` 지령만 생성하고 `flapTarget` 등 공력 타면 지령 생성을 배제하며(미전송 또는 `0.0`), **AMM** 역시 `flapHint` 송출을 생략합니다.
   - 내루프 제어 코어인 **VAS**는 해당 기체 운용 시 `actuator_adapter_asa`의 타면 믹싱/할당을 생략하고 전용 채널 `Base + 11` (`CH_SURFACE_ACTUATION`)으로의 `MSG_AERO_CMD` 송출을 비활성화하며, 텔레메트리 헬스 진단에서 ASA 검사를 배제(Bypass)합니다.
 
 ---
@@ -122,7 +130,7 @@ ASA 컴퓨터는 담당 조종면 기구 인접부에 설치되며, 표준 6개 
 
 | 포트 위치 | 물리 장치 | 작동 모드 | 신호 규약 및 상세 설명 |
 | :---: | :---: | :---: | :--- |
-| **`top`** | 무선 모뎀 (`modem`) | 공통 통신 | FCP 무선 통신 전용 포트. `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`) 개방 |
+| **`top`** | 무선 모뎀 (`modem`) | 공통 통신 | VAS (Node 01) 및 Alignment 지상 교정 무선 통신 전용 포트. `Base + 11` (구 `Base + 7` [DEPRECATED]) (`CH_SURFACE_ACTUATION`) 개방 (교정 시 $Base_{\text{hangar}}+0, +3$ 동적 개방) |
 | **`bottom`** | Create 아날로그 변속기 / 베어링 | `REDSTONE` | 중립 7 또는 8을 기준으로 $0 \sim 15$ 아날로그 RS 출력 직결 인가 |
 | **`left`** | 주 조종면 (에일러론 / 승강타) | `API` / `RS` | `avionics:control_surface` 페리페럴 API 또는 선호 RS 포트 |
 | **`right`** | 보조면 (플랩 / 방향타) | `API` / `RS` | `avionics:flap` 페리페럴 API 또는 보조 기구 제어 포트 |
@@ -178,7 +186,7 @@ end
   "baseChannel": 10000,
   "debug": true,
   "channels": {
-    "surfaceActuation": 10007
+    "surfaceActuation": 10011
   },
   "legacyChannels": {
     "calibration": 1001
@@ -250,7 +258,7 @@ end
     time = 1729860000050,
     payload = {
         watchdogSeq = 2410,
-        flightMode = "CRUISE", -- TAKEOFF, CLIMB, CRUISE, APPROACH, FLARE, EMERGENCY_LAND 등
+        controlState = "NORMAL", -- "DISARMED", "ARMING", "IDLE_ARMED", "NORMAL", "FAILSAFE_HOLD", "EMERGENCY_LAND", "E_STOP"
         surfaces = {
             ["AIL_L"]  = -0.28,  -- 좌측 에일러론 (-1.0 ~ +1.0, 음수: 좌측 다운/우롤)
             ["AIL_R"]  = 0.28,   -- 우측 에일러론 (-1.0 ~ +1.0, 양수: 우측 업/우롤)
@@ -258,7 +266,8 @@ end
             ["RUDD"]   = -0.04,  -- 방향타 (-1.0 ~ +1.0, 양수: Nose-Right)
             ["FLAP_L"] = 0.00,   -- 좌측 플랩 (0.0: 완전 수납 ~ 1.0: 최대 전개)
             ["FLAP_R"] = 0.00    -- 우측 플랩 (0.0: 완전 수납 ~ 1.0: 최대 전개)
-        }
+        },
+        dynamicPressureFactor = 0.75
     }
 }
 ```
@@ -266,7 +275,7 @@ end
 ### 4.2 이벤트 기반 예외 상태 피드백 (`MSG_AERO_STATUS`, ASA $\rightarrow$ VAS)
 - **통신 채널**: `CH_SURFACE_ACTUATION` (`Base + 11` (구 `Base + 7` [DEPRECATED]))
 - **전송 조건**: 물리 타각 포화(`isSaturated == true/false`), 기구 고착/단선(`isJammed`), 런타임 핫플러그 바인딩 변경 시 즉시 단발 발신.
-- **수신 반응**: [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md)는 `isSaturated == true` 수신 시 내루프 자세 PID 적분기 안티와인드업(`satCombined.pitch/roll/yaw`)을 즉각 발동하며, `isJammed == true` 또는 `healthStatus == "TOTAL_LOSS"` 감지 시 `actuatorHealth.asa = false`로 갱신하여 상위 fcp로 텔레메트리를 통해 통보합니다.
+- **수신 반응**: [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md)는 `isSaturated == true` 수신 시 내루프 자세 PID 적분기 안티와인드업(`satCombined.pitch/roll/yaw`)을 즉각 발동하며, `isJammed == true` 또는 `healthStatus == "TOTAL_LOSS"` 감지 시 `actuatorHealth.asa = false`로 갱신하여 `Base + 2` 텔레메트리를 통해 상위 FCP 및 AMM으로 통보합니다.
 - **사양서 Deprecated 이력**: 구버전 `MSG_SURFACE_STATUS`는 **`[DEPRECATED]`** 되었으며, `MSG_AERO_STATUS`로 통합 대체되었습니다.
 
 ```lua
@@ -341,9 +350,9 @@ end
 
 ### 4.5 계층적 동적 채널 재바인딩 핸들러 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ ASA, oldBase + 11, 구 oldBase + 7 [DEPRECATED])
 - **통신 채널**: `CH_SURFACE_ACTUATION` (`oldBase + 11`, 구 `oldBase + 7` [DEPRECATED])
-- **전송 조건**: GCS가 fcp에 기체 Base 채널 재할당을 발령하고, VAS가 이를 수신하여 하위 액추에이터 버스로 중계 전파할 때 수신.
+- **전송 조건**: GCS가 AMM에 기체 Base 채널 재할당을 발령하고, AMM이 FCP $\to$ VAS를 거쳐 하위 액추에이터 버스로 중계 전파할 때 수신.
 - **2단계 트랜잭션 수신 시퀀스**:
-  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 `newBase + 11` 채널 (구 newBase + 7 [DEPRECATED])을 백그라운드 수신 상태로 대기 개방하고 `oldBase + 7`로 ACK 회신.
+  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 `newBase + 11` 채널 (구 newBase + 7 [DEPRECATED])을 백그라운드 수신 상태로 대기 개방하고 `oldBase + 11`로 ACK 회신 (구 `oldBase + 7` [DEPRECATED]).
   2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 11` 채널을 닫고 `newBase + 11`을 주 통신 소켓으로 공식 확정.
   3. **타임아웃 및 ROLLBACK**: 500ms 이내에 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 11`을 즉시 파기하고 `oldBase + 11`을 유지 (구 oldBase+7 [DEPRECATED]).
 
@@ -356,11 +365,11 @@ end
     type = "MSG_CHANNEL_REBIND",
     time = 1729845010010,
     payload = {
-        transactionId = "REBIND-TX-10060-10080",
+        transactionId = "REBIND-TX-10080-10120",
         action = "PREPARE", -- PREPARE, COMMIT, ROLLBACK
-        oldBaseChannel = 10060,
-        newBaseChannel = 10080,
-        bandwidth = 20
+        oldBaseChannel = 10080,
+        newBaseChannel = 10120,
+        bandwidth = 40
     }
 }
 ```
@@ -482,12 +491,12 @@ function asa_main()
                         elseif pkt.type == "MSG_CHANNEL_REBIND" then
                             -- 2단계 Base 채널 재바인딩 트랜잭션
                             if pkt.payload.action == "PREPARE" then
-                                local tempCh = pkt.payload.newBaseChannel + 7
+                                local tempCh = pkt.payload.newBaseChannel + 11
                                 modem.open(tempCh)
                                 packet_protocol.send_rebind_ack(modem, replyChannel, config, "PREPARED")
                             elseif pkt.payload.action == "COMMIT" then
                                 modem.close(config.channels.surfaceActuation)
-                                config.channels.surfaceActuation = pkt.payload.newBaseChannel + 7
+                                config.channels.surfaceActuation = pkt.payload.newBaseChannel + 11
                                 config_manager.save(config)
                             end
                         end
@@ -531,11 +540,12 @@ end
 
 ## 7. 교차 참조 및 버전 메타데이터
 
-- 본 규격서 시맨틱 버전: **v1.4.0**
-- 연계 상위 마스터 ICD: **v1.23.0**
-- 연계 FCP 비행 제어 규격서: **v1.12.0**
-- 연계 VAS 규격서: **v1.14.0**
-- 연계 전체 구조도: **v2.10.0**
-- 연계 TCA 규격서: **v1.8.0**
-- 연계 Alignment 규격서: **v2.4.0**
-- 연계 GPS 체계 규격서: **v2.0.3**
+- 본 규격서 시맨틱 버전: **v1.7.0**
+- 연계 상위 마스터 ICD: **v1.28.0**
+- 연계 AMM 규격서: **v1.3.0**
+- 연계 FCP 비행 제어 규격서: **v2.0.0**
+- 연계 VAS 규격서: **v1.19.0**
+- 연계 전체 구조도: **v2.13.0**
+- 연계 TCA 규격서: **v1.11.1**
+- 연계 Alignment 규격서: **v2.6.1**
+- 연계 GPS 체계 규격서: **v2.3.1**

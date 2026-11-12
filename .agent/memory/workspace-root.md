@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-12 — FCP 외루프 경량화 및 AMM 상위 계층 이관을 위한 15대 사양서 전면 개편 (TASK-206)
+
+- **결정 배경**: 기존 `FCP (Node 04)`가 외부 RF 게이트웨이(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), Tower ATC/GAC/시설물 핸드셰이크, GPS+DR 항법 융합, C2(`Base+0`) 중재와 온보드 외루프 제어를 겸임하여 계층 책임이 혼재되어 있었고, `FCP -> VAS` 인터페이스가 `ATTITUDE_ANGLE`/`targetClimbRate`/`targetThrottle` 등 다중 폴백 경로와 문서 결함을 포함하고 있었음. Spec-First 원칙에 따라 `src/` Lua 코드 수정 없이 14종 활성 사양서(`INSTALLER` v1.1.0 유지)를 일괄 개편함 (`docs/superpowers/plans/2026-11-11-fcp-amm-role-refactor-specs.md`).
+- **반영 내역**:
+  1. **마스터 ICD (`v1.28.0 Approved`) & 전체 구조도 (`v2.13.0 Approved`)**: `[I-5..I-9]` 외부 교신/C2/재바인딩을 `AMM (Node 03)`으로 이관, `Base+4` `[I-12]` `CH_TRAJECTORY_CMD`(`MSG_TRAJECTORY_SETPOINT` / `MSG_OUTER_LOOP_STATUS`, 구 `CH_NAV_SENSOR [DEPRECATED]`) 신설, `[I-2]` `Base+1`을 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias {surge, sway}`) 단일 계약으로 정규화(`ATTITUDE_ANGLE` 등 `[DEPRECATED]`), `[I-10]` `Base+11`을 `MSG_AERO_CMD`/`MSG_AERO_STATUS`로 단일화하고 `MAX_CRAFT_LIMIT = 1000`, `BW=40`, `* 40`, `VAS-NODE-01-4402` 정정.
+  2. **코어 3대 사양서 (`AMM v1.3.0 Approved`, `FCP v2.0.0 Approved`, `VAS v1.19.0 Approved`)**: `AMM`을 듀얼 무선 모뎀(`top`+`back`, 단일 모뎀 폴백)·`20Hz`/`5Hz` 듀얼 코루틴·`nav_engine`/`facility_client`/`channel_sentinel`/`trajectory_generator`·1계층 페일세이프·평시 5Hz `Base+3`(`MFD_ACRO` 시 양보) 전담으로 승격(`v1.2.0` 미션/에디터 규격 보존). `FCP`는 `Implemented -> Approved` 전이와 함께 단일 `top` 모뎀 3채널(`Base+4/+2/+1`) 온보드 `SE(3)` 외루프($g=11.0\text{ m/s}^2$, 6상태 FSM `PASSIVE_TRACKING`/`AMM_TIMEOUT_HOLD`)로 축소. `VAS`는 `Implemented -> Approved` 전이 및 정상 비행 승강 PI 제거(`FAILSAFE_HOLD` 한정), `E_STOP > MFD_ACRO > FCP`, `system.json`(`trajectory: 4`, `actuation: 10`, `asaActuation: 11`, `fcpCommandTimeoutMs: 1500`)·식별자(`SatAsa`/`satTca`/`fcpCmd`) 정비 완료.
+  3. **제어·교정 및 지상 인프라 9종**: `ASA` (`v1.7.0 Approved`, `10011`/`bandwidth=40`/`oldBase+11`), `TCA` (`v1.11.1 Implemented`, `AMM->FCP->VAS` 재바인딩), `ALIGNMENT` (`v2.6.1 Implemented`, `VAS-NODE-01-4402`), `RUNWAY` (`v1.10.7 Approved`), `DOCKING_ARM` (`v1.11.2 Approved`), `GAC` (`v1.4.2 Implemented`), `LANDING_PAD` (`v2.4.3 Implemented`), `GCS` (`v1.0.2 Implemented`), `GPS` (`v2.3.1 Implemented`, `TASK-122` 규칙 보존 및 `10045`→`10005`) 정합화.
+  4. **CI·로드맵·컨텍스트 동기화**: `tools/verify_spec_status.py`를 `7 Implemented, 8 Approved`로 갱신하고, `TASK.md`에 후속 구현 태스크(`TASK-207` AMM v1.3.0, `TASK-208` FCP v2.0.0, `TASK-209` VAS v1.19.0, `TASK-210` ASA/TCA/Alignment) 등록 및 `TASK-122`/`TASK-201` 아카이브 R5 인용·`GEMINI.md` 4개 섹션을 동기화함.
+- **검증**: `verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`(15종), `verify_spec_status.py` `7 Implemented, 8 Approved PASS`, `verify_context_docs.py` `0 findings`, `verify_manifest_sync.py` `0 Errors, 0 Warnings`, 하네스 `82/82 PASS`, `validate_lua_syntax.py` `129/129 PASS`.
+
+---
+
 ## 2026-11-12 — TASK-122 GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 보완 완료
 
 - **결정 배경**: 중앙 GPS 클러스터(`server.lua`, `session_scheduler.lua`, `node.lua`, `monitor_ui.lua`, `wizard_cli.lua`), GPS Client HAL(`client_core.lua`, `gps_client.lua`), 착륙패드(`src/0_infra/landing_pad/`) 및 FCP(`src/2_guidance/fcp/`) 간 패킷 스키마(`"FACILITY"`, `"FIX_OK"`/`"FIX_DEGRADED"`, `time` 헤더), 응답 채널(`replyChannel`/`50206`), 재시도·만료·TTL 처리가 서로 어긋나 있던 결함을 사양서 기준으로 단일화하고 실노드 폐루프 E2E로 검증함.

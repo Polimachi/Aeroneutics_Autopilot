@@ -6,25 +6,26 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.6.0` |
-| **최종 수정일 (Date)** | `2026-11-09` |
+| **문서 버전 (Version)** | `v2.6.1` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.9.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.8.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.4.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.3)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.13.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.11.1)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.7.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.6.1` | 2026-11-12 | 문서·교차참조·패킷 예시 정합성 수정(Alignment Lua 런타임 변경 없음): `MSG_CALIBRATION_INIT_ACK` 내 `hardwareUuid`를 `"VAS-NODE-01-4402"`로 정정(VAS `Base_hangar+1` 직접 응답 기준), `MSG_SURFACE_DISCOVER_REQ/ACK` 정합 확인 및 연관 문서 버전(`ICD v1.28.0`, `Diagram v2.13.0`, `VAS v1.19.0`, `FCP v2.0.0`, `TCA v1.11.1`, `ASA v1.7.0`, `GPS v2.3.1`) 동기화, 과장 표현 제거 | ICD `v1.28.0` 및 VAS 직결 교정 아키텍처와의 문서 정합성 확보 |
 | `v2.6.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진기 다단 펄스 교정 및 의사역행렬 산출 규격 추가: Throttle 및 Gimbal X/Y 펄스 시퀀스, 6축 미분 OLS 회귀 기울기, Control Effectiveness Matrix B (6 x 3N) 조립 및 Moore-Penrose 의사역행렬 B† = B^T (B B^T)^-1 가우스-조던 소거법 추출, 프로파일 내보내기 규격화 | 2D 짐벌 벡터 추진기 시스템 식별 및 의사역행렬 생성 프로토콜 확립 |
 | `v2.5.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.5.1` | 2026-11-08 | 네트워크 토폴로지 다이어그램 내 수용 기체 수 범위를 40채널 기준($N = 1 \sim 1000$)으로 정합 동기화 | 사양서 간 수치 정합성 확립 |
@@ -56,7 +57,7 @@ flowchart LR
 1. **격납고 베이별 10채널 블록군(101~200) 및 기체 Base+0 직결 바인딩 체계 (방안 A)**:
    - 격납고 컴퓨터에 상주 설치되어 평상시에는 채널을 점유하지 않고 `STANDBY` 상태로 대기합니다.
    - 각 격납고 베이는 독립 10채널 블록($Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$, $\text{BayID}=1\sim 10$)을 관할하며, 엔지니어가 콘솔에서 기체 번호 $N$을 입력하고 [교정 바인딩]을 실행하면 기체 고유 상시 개방 채널인 **기체 `Base + 0` (`CH_OPERATOR_C2`)**으로 직접 **`MSG_CALIBRATION_INIT`**를 발송하여 1:1 직결 바인딩을 수립합니다.
-   - 기체(VAS)는 `Base + 0` 수신 즉시 지정된 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 동적으로 개방하고, 시험 완료/중단 시 즉시 `modem.close()`로 완전 해제하여 채널 간섭을 원천 차단합니다.
+   - 기체(VAS)는 `Base + 0` 수신 즉시 지정된 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 동적으로 개방하고, 시험 완료/중단 시 즉시 `modem.close()`로 완전 해제하여 채널 간섭을 방지합니다.
    - 구버전의 기체 번호 $N$별 `Base+4`/`Base+2` 동적 튜닝 방식 및 임시 단일 채널(`1001`/`1002`)은 영구 폐지되고 `[DEPRECATED]` 처리되었습니다. 입고된 임의의 기체는 평상시 비행 중에는 격납고 채널을 열지 않으며, 오직 `Base+0` 바인딩 지령 수신 시에만 지정 베이 채널을 동적으로 개방합니다.
 2. **시간 영역 사다리꼴 수치 적분(Trapezoidal Impulse Integration)**:
    - Create: Aeronautics의 물리 갱신 틱(50ms) 지터 환경에서 1회성 피크값($\Delta \omega_{peak}$)의 왜곡을 방지하기 위해, 시간 영역 사다리꼴 적분을 적용하여 순수 각충격량($\mathbf{J}_\omega$) 및 선충격량($\mathbf{J}_v$)을 산출합니다.
@@ -620,7 +621,7 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
     time = 1729845000050,
     payload = {
         aircraftDomainId = "AIRCRAFT_01",
-        hardwareUuid = "FCP-NODE-04-4402",
+        hardwareUuid = "VAS-NODE-01-4402",
         bayId = 1,
         status = "READY",
         airframeType = "WINGED_VTOL"
@@ -854,4 +855,4 @@ VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 격납고 상주형 기체 동역학 식별 및 정밀 프로파일러(Alignment)의 공식 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.8.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.0.3)와 100% 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 격납고 상주형 기체 동역학 식별 및 정밀 프로파일러(Alignment)의 공식 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.28.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.13.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.19.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.11.1), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.0.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.7.0) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.1)와 정합성을 유지합니다.*

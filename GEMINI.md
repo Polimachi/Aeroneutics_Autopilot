@@ -3,11 +3,11 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-122`(GPS `v2.3.0 Implemented`·착륙패드/FCP 프로토콜 정합화 및 실노드 폐루프 E2E), `TASK-201`(FCP `v1.16.0 Implemented`), `TASK-202-1~4`(AMM v1.2.0 3분할 코어·FSM·C2·헤드리스·51x19 TUI 뷰포트·다중 경로/스키마 검증·`file_transfer`/CLI 확장; 2026-11-12, 이력 `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-122`(GPS `v2.3.0 Implemented`), `TASK-201`(FCP), `TASK-202-1~4`(AMM v1.2.0 3분할 코어·TUI/CLI), `TASK-206`(FCP 외루프 경량화 및 AMM 상위 이관 15대 사양서 개편 — ICD `v1.28.0`, 구조도 `v2.13.0`, AMM `v1.3.0`, FCP `v2.0.0`, VAS `v1.19.0`, ASA `v1.7.0`, `7 Implemented, 8 Approved`; 2026-11-12, `.agent/memory/workspace-root.md`).
 - **다음 액션**:
-  1. `TASK-202-5`: 호스트 PC 비주얼 에디터(`tools/amm_mission_editor.html`)·AMM E2E 시뮬레이션 검증·사양서 `Implemented` 환원.
-  2. `TASK-010`: 플레이북 정적 검증기(`tools/verify_playbooks.py`) 및 핵심 5종 매뉴얼 작성.
-  3. `TASK-206` / `TASK-103` / `TASK-117` / `TASK-204`: FCP-AMM 역할 분리 15대 사양서 개편, 활주로, OTA 또는 AMM 행동 재정의.
+  1. `TASK-202-5`: 호스트 PC 비주얼 에디터(`tools/amm_mission_editor.html`)·AMM E2E 검증(`v1.2.0`).
+  2. `TASK-207~210`: `AMM v1.3.0`·`FCP v2.0.0 SE(3)`·`VAS v1.19.0 QUATERNION_RATE`·`ASA v1.7.0` 구현 개편.
+  3. `TASK-010` / `TASK-103` / `TASK-117` / `TASK-204`: 플레이북 5종, 활주로, OTA 또는 AMM 행동 재정의.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -30,7 +30,7 @@
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (129 파일), `python tools/verify_spec_status.py` (9 Implemented, 6 Approved).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (129 파일), `python tools/verify_spec_status.py` (7 Implemented, 8 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants
@@ -39,7 +39,7 @@
 - **통합 인스톨러 배포 삼총사**: 화면 직접 업로드 `/installer.lua`, 플로피 `/disk/installer.lua`, 원격 `wget run <url>`. GitHub raw / Google Drive 이중 다운로드 지원.
 - **CraftOS-PC 런타임 의존성**: `tools/run_unit_tests.py` 및 `tools/run_e2e_tests.py`는 `CraftOS-PC_console.exe` 설치 필요 (`CRAFTOS_PC_EXE` 환경변수 지정 가능).
 - **PowerShell 5.1 체이닝**: 기본 셸은 Windows PowerShell 5.1이며 `&&` 미지원 → `; if ($?) { ... }` 사용.
-- **전역 RF 스펙트럼 및 40채널 규격**: 기체 $Base = 10000 + (N-1) \times 40$ ($N=1\sim 1000$, `10000~49999`): Zone 1(`0~9` 코어 C2/유도/텔레메트리/`Base+5` GPS 응답), Zone 2(`10~19` 구동계: `Base+10` TCA, `Base+11` ASA), Zone 3(`20~29` 탑재체), Zone 4(`30~39` 편대링크). 격납고(`101~200`), GCS/관제(`50000~59999`), GPS(`60001~60020`).
+- **전역 RF 스펙트럼 및 40채널 규격**: 기체 $Base = 10000 + (N-1) \times 40$ ($N=1\sim 1000$, `10000~49999`): Zone 1(`0` C2/Alignment, `1` `QUATERNION_RATE`, `2` 텔레메트리, `3` MFD/ACRO 양보, `4` `AMM->FCP` `CH_TRAJECTORY_CMD`, `5` `GPS` 응답), Zone 2(`10` TCA, `11` ASA `MSG_AERO_*`), Zone 3(`20~29` 탑재체), Zone 4(`30~39` 편대). `AMM`은 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`) 전담, `FCP`는 `Base+4/+2/+1` 3채널만 사용; 격납고(`101~200`), GCS/관제(`50000~59999`), GPS(`60001~60020`).
 - **Zero-Fallback & 영구 단일 경로**: 수신단 듀얼키 폴백 금지(구 필드는 사양서 `[DEPRECATED]` 표기); 사양서는 디렉토리 이동 없이 상단 메타데이터 표로만 상태를 전이한다.
 - **`ion_thruster` 충돌 조정**: `Create Propulsion: Simulated`의 `ion_thruster` 페리페럴은 허용하며, 금지 규칙은 `kontraption:` 네임스페이스만 차단한다.
 - **온보드 제어기 20Hz 헤드리스 원칙**: VAS/TCA/ASA는 터미널 UI 블로킹 방지를 위해 헤드리스가 기본이며, 디버그 TUI는 `config.json`의 `debug: true` 시 비동기(`parallel`)로만 격리 구동한다.

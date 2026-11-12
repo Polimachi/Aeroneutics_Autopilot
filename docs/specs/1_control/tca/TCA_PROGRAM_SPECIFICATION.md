@@ -6,30 +6,32 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.11.0` |
-| **최종 수정일 (Date)** | `2026-11-09` |
+| **문서 버전 (Version)** | `v1.11.1` |
+| **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.20.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.7.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.11.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v1.9.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.4.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.4.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.0.3)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.13.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.7.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.1)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.11.1` | 2026-11-12 | 문서·교차참조·채널 상수 정합성 수정(TCA Lua 런타임 동작 변경 없음): `config.json`(`10010`) 및 `MSG_CHANNEL_REBIND`(`oldBase + 10`, `newBaseChannel + 10`) 채널 오프셋 정정, `AMM -> FCP -> VAS` 재바인딩 캐스케이드 및 `TIMEOUT`/`TOTAL_LOSS` 비상 트리거 귀속 명확화, 구 `Base+6` `[DEPRECATED]` 이력 정정 및 과장 표현 제거, 연관 문서 버전(`ICD v1.28.0` 등) 동기화 | ICD `v1.28.0` 및 FCP-AMM 역할 분리 사양과의 문서 정합성 확보 |
 | `v1.11.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진기(vector_thruster) 구동 지원: setVector(x, y) 짐벌 편향 및 setPower(t) 추력 제어, 워치독/E_STOP 페일세이프 노즐 중립(0, 0) 복귀, discovery_handler 내 isVectorCapable 플래그 및 gimbalLimits 브로드캐스트, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 반영 | 2D 짐벌 벡터 액추에이터 통합 구동 및 안전 규격 수립 |
 | `v1.10.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.10.0` | 2026-11-08 | 비동기 디버그 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 데몬 + TUI 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 디버그 가시성 제공 및 헤드리스 런타임 호환성 확보 |
 | `v1.9.1` | 2026-11-08 | 설정 파라미터 표 내 baseChannel 수식($* 40$) 및 기체 인덱스 범위($N=1\sim 1000$) 잔재 정합 동기화 | 사양서 간 수치 정합성 확립 |
-| `v1.9.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 추진기 버스 Zone 2 이관(`Base+10`: `CH_THRUST_ACTUATION`, 구 `Base+10` [DEPRECATED]), `Base+4` 상시 청취 제거 확정, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
+| `v1.9.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 추진기 버스 Zone 2 이관(`Base+10`: `CH_THRUST_ACTUATION`, 구 `Base+6` [DEPRECATED]), `Base+4` 상시 청취 제거 확정, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 ---
 
@@ -42,13 +44,13 @@
 > **구현 및 배포 현황 요약 (Status: IMPLEMENTED & CLOUD DEPLOYED)**
 > TCA 소프트웨어는 `projects/tap` 환경에서 11대 과제 및 24개 마이크로슬라이스(IS-01.1 ~ IS-11.2) 전수가 구현 완료되어 최신 버전 **v1.2.20** (빌드 해시 `edc8bd267264`)으로 공식 빌드되었습니다.
 > 하네스 Gate 0 ~ Gate 6 전 게이트 검증을 100% PASS(2,473.95 ms)하였으며, 단일 번들(`tap_bundle.lua`)이 생성되어 Google Drive 클라우드 저장소(`dist_gdrive/tap/tap_bundle.lua`)로 공식 동기화되었습니다.
-> 또한 VAS와의 실환경 폐루프 시뮬레이션 및 `discovery_handler.lua` 모듈을 통한 `Base+10` (구 `Base+10` [DEPRECATED]) 실시간 구동 및 지상 교정 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 바인딩(구버전 `1001` 및 `Base+4` 상시 개방 폐지 [DEPRECATED]), 2-Phase 채널 재바인딩 트랜잭션, 20Hz 실시간 구동, 단선 시 $N_{total}/N_{active}$ 비례 손실 보상, 동적 타이머 기반 300ms 워치독 차단 및 핫플러그 감지가 완벽히 검증되었습니다. (상세 내역은 [제7장](#7-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
+> 또한 VAS와의 실환경 폐루프 시뮬레이션 및 `discovery_handler.lua` 모듈을 통한 `Base+10` (구 `Base+6` [DEPRECATED]) 실시간 구동 및 지상 교정 시 $Base_{\text{hangar}}+3$ (`CH_CALIBRATION_TAP`) 동적 바인딩(구버전 `1001` 및 `Base+4` 상시 개방 폐지 [DEPRECATED]), 2-Phase 채널 재바인딩 트랜잭션, 20Hz 실시간 구동, 단선 시 $N_{total}/N_{active}$ 비례 손실 보상, 동적 타이머 기반 300ms 워치독 차단 및 핫플러그 감지가 검증되었습니다. (상세 내역은 [제7장](#7-소프트웨어-구현-현황-배포-및-통합-검증-결과-implementation--verification-status) 참조)
 
 TAP은 상위 비행 컴퓨터인 **VAS (Node 01)**로부터 20Hz(50ms) 주기로 브로드캐스트되는 디지털 추력 지령(`MSG_THRUST_CMD`)을 수신하여, 개별 추진기 상호작용 모드(`API` 또는 `REDSTONE`)에 부합하는 하드웨어 제어 신호로 변환·인가하며 다음과 같은 핵심 역할을 완결합니다:
 
 1. **1그룹 1컴퓨터 완전 분산 클러스터 (Distributed Cluster)**:
-   - 기체 내 추진기 그룹(`THR_MAIN_L`, `THR_MAIN_R`, `THR_VTOL_F` 등)마다 독립된 CC:Tweaked Advanced Computer를 1:1로 분산 배치하여 물리적 배선 복잡성을 원천 해소하고 모듈성을 극대화합니다.
-2. **추진기 상호작용 모드(Thruster Interaction Mode) 완벽 분리 (`REDSTONE` vs `API`)**:
+   - 기체 내 추진기 그룹(`THR_MAIN_L`, `THR_MAIN_R`, `THR_VTOL_F` 등)마다 독립된 CC:Tweaked Advanced Computer를 1:1로 분산 배치하여 물리적 배선 복잡성을 해소하고 모듈성을 극대화합니다.
+2. **추진기 상호작용 모드(Thruster Interaction Mode) 엄격 분리 (`REDSTONE` vs `API`)**:
    - **`REDSTONE` 모드**: 컴퓨터 하단 포트(`ports.redstoneSide`, 기본값 `bottom`)를 통해 Create 아날로그 변속기 및 레드스톤 기구에 $0 \sim 15$ 정수 신호를 직결 인가 (추력 손실 보상 바이패스, 단일 기구 제어).
    - **`API` 모드**: 외곽 지정 포트(`ports.apiSides`: `left`, `right`, `front`, `back`)에 연결된 추진기 모듈을 자동 탐색하고, 활성 추진기 파손/단선 시 자율 비례 증폭 공식($ratio = \frac{N_{total}}{N_{active}}$)을 적용하여 $0.0 \sim 1.0$ 정규화 비율로 인가.
 3. **비동기 디버그 대시보드 및 헤드리스 런타임 (Asynchronous Debug TUI & Headless Runtime)**:
@@ -116,7 +118,7 @@ flowchart TD
   "mode": "REDSTONE",
   "nominalActuatorCount": 4,
   "channels": {
-    "thrustActuation": 10006,
+    "thrustActuation": 10010,
     "bayCalibrationTap": 104
   },
   "ports": {
@@ -272,7 +274,7 @@ function actuator_adapter.cut_thrust(state)
     -- 추력 즉시 차단 (Power = 0)
     for _, item in ipairs(state.peripherals or {}) do
         pcall(item.wrapped.setPower, 0)
-        -- 2D 짐벌 벡터 노즐 중립 (0, 0) 복귀: 워치독 타임아웃 및 E_STOP 시 기체 뒤집힘 원천 방지
+        -- 2D 짐벌 벡터 노즐 중립 (0, 0) 복귀: 워치독 타임아웃 및 E_STOP 시 기체 뒤집힘 방지
         if item.isVectorCapable then
             pcall(item.wrapped.setVector, 0.0, 0.0)
         end
@@ -449,9 +451,9 @@ function config_manager.save(path, cfg) -> boolean, err
 
 #### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
 - **통신 채널**: `CH_THRUST_ACTUATION` (`oldBase + 10`, 구 `oldBase + 6` [DEPRECATED])
-- **전송 조건**: GCS 발령에 따라 FCP $\to$ VAS를 거쳐 하달되는 채널 재바인딩 트랜잭션.
+- **전송 조건**: GCS 발령에 따라 AMM $\to$ FCP $\to$ VAS를 거쳐 하달되는 채널 재바인딩 트랜잭션.
 - **2단계 트랜잭션 수신 시퀀스**:
-  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 6`으로 ACK 회신.
+  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 10`으로 ACK 회신 (구 `oldBase + 6` [DEPRECATED]).
   2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 10` 채널을 닫고 `newBase + 10`을 (구 oldBase/newBase + 6 [DEPRECATED]) 주 통신 채널로 영속 확정.
   3. **타임아웃 및 ROLLBACK**: 500ms 이내 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 10`을 파기하고 `oldBase + 10` 유지 (구 oldBase+6 [DEPRECATED]).
 
@@ -544,11 +546,11 @@ local function run_daemon()
                         modem.open(bayBase + 3)
                     elseif pkt.type == "MSG_CHANNEL_REBIND" then
                         if pkt.payload.action == "PREPARE" then
-                            modem.open(pkt.payload.newBaseChannel + 6)
+                            modem.open(pkt.payload.newBaseChannel + 10)
                             packet_protocol.send_rebind_ack(modem, replyChannel, cfg, "PREPARED")
                         elseif pkt.payload.action == "COMMIT" then
                             modem.close(cfg.channels.thrustActuation)
-                            cfg.channels.thrustActuation = pkt.payload.newBaseChannel + 6
+                            cfg.channels.thrustActuation = pkt.payload.newBaseChannel + 10
                             config_manager.save(cfg)
                         end
                     end
@@ -585,11 +587,11 @@ end
 
 | 감지 결함 상황 | 감지 주체 및 판정식 | TCA 노드 자체 동작 | VAS 및 상위 시스템 반응 |
 | :--- | :--- | :--- | :--- |
-| **통신 두절 (Watchdog)** | `watchdog_sentinel.is_expired()` ($\Delta t > 300\text{ ms}$) | `cut_thrust()` 즉각 집행 (RS=0, API=0.0 차단) 및 `REDSTONE_TIMEOUT` / `API_TIMEOUT` 보고 | VAS 측 텔레메트리 누락 감지, 기체 균형 상실 방지를 위해 FCP 호버 홀드 전환 |
-| **단선/파손 발생 (API 모드)** | `detect_api_peripherals()` 결과 $0 < N_{active} < N_{total}$ | 잔여 추진기 $N_{total}/N_{active}$ 비례 증폭 및 `API_DEGRADED` 즉시 보고 | VAS가 참 `dynamicLoad` 재산출, MFD에 추진 경고 표출 |
+| **통신 두절 (Watchdog)** | `watchdog_sentinel.is_expired()` ($\Delta t > 300\text{ ms}$) | `cut_thrust()` 즉각 집행 (RS=0, API=0.0 차단) 및 `REDSTONE_TIMEOUT` / `API_TIMEOUT` 보고 | VAS 측 액추에이터 타임아웃 감지 및 `Base+2`(`actuatorHealth.tap = false`) 전파 시, `AMM` 궤적 기반 `HOVER_HOLD` 발동 및 `FCP` 외루프(`Base+4`/`Base+1`) 안전 홀드 전환 |
+| **단선/파손 발생 (API 모드)** | `detect_api_peripherals()` 결과 $0 < N_{active} < N_{total}$ | 잔여 추진기 $N_{total}/N_{active}$ 비례 증폭 및 `API_DEGRADED` 즉시 보고 | VAS가 참 `dynamicLoad` 재산출, `Base+2` $\to$ `AMM`(`Base+3` 5Hz MFD)에 추진 경고 표출 |
 | **핫플러그 분리/결속** | `os.pullEvent("peripheral*")` | `scan_api_peripherals()` 즉시 재스캔 및 온-체인지 피드백 발신 | VAS가 변경된 액추에이터 상태 수신 즉시 닫힌 루프 게인 재산출 |
 | **추력 포화 (Saturation)** | $S_{req} \cdot \frac{N_{total}}{N_{active}} > 15.0$ | 출력 15 클램핑 및 `isSaturated=true` 즉각 송출 | 해당 축 내루프 PID I-Gain(적분항) 즉시 동결 (안티 와인드업) |
-| **전체 상실 (`API_TOTAL_LOSS`)** | $N_{active} == 0$ (API 모드) | 출력 0 차단, `healthStatus="API_TOTAL_LOSS"` 즉각 송출 | 1차: 6-DoF 믹서 재할당 시도<br/>2차: 주 추진/양력 축 상실 시 FCP 비상 착륙 강제 발동 |
+| **전체 상실 (`API_TOTAL_LOSS`)** | $N_{active} == 0$ (API 모드) | 출력 0 차단, `healthStatus="API_TOTAL_LOSS"` 즉각 송출 | 1차: VAS 6-DoF 믹서 재할당 시도<br/>2차: 주 추진/양력 축 상실 시 `Base+2`(`actuatorHealth.tap = false`) 전파를 통해 `AMM`(`EMERGENCY_LAND` 궤적 하달) 및 `FCP`(`Base+4`/`Base+1` 비상 착륙 외루프 추종)로 비상 착륙 발동 |
 | **E-STOP 지령 수신** | `controlState == "E_STOP"` | **2단계 안전 분기 집행**:<br/>1. 공중 완충 지령(`outputs[groupId] > 0`): 쿠션 추력 인가 유지(`CUSHION_HOLD`)로 자유낙하 방지<br/>2. 지상 접지 후 0 지령(`outputs == 0`) 또는 `HARD_CUT`: 즉각 전 출력 0 차단(`cut_thrust()`) | 공중 완충 강하 유도 후 지상 안착 시 전 기체 셧다운 시퀀스 돌입 |
 
 ---
@@ -609,7 +611,7 @@ end
 | **IS-06.1** | TS-06 | JSON 설정 로더 (`config.json`) 및 $Base = 10000 + N \cdot 20$ 검증 | `config_manager.lua` / `test_config_manager.lua` | **PASS** |
 | **IS-06.2** | TS-06 | Raw Modem 기반 최신 ICD v1.9.5 엔벨로프 인코더/검증기 | `packet_protocol.lua` / `test_packet_protocol.lua` | **PASS** |
 | **IS-06.3** | TS-06 | 300ms 고정밀 워치독 및 지상 교정 펄스 타이머 컷오프 | `watchdog_sentinel.lua` / `test_watchdog_sentinel.lua` | **PASS** |
-| **IS-06.4** | TS-06 | 온-체인지 `MSG_ACTUATOR_STATUS` 필터 및 `Base+10` (구 `Base+10` [DEPRECATED]) 발신 엔진 | `status_reporter.lua` / `test_status_reporter.lua` | **PASS** |
+| **IS-06.4** | TS-06 | 온-체인지 `MSG_ACTUATOR_STATUS` 필터 및 `Base+10` (구 `Base+6` [DEPRECATED]) 발신 엔진 | `status_reporter.lua` / `test_status_reporter.lua` | **PASS** |
 | **IS-07.1** | TS-07 | 비차단(Non-blocking) 헤드리스 이벤트 데몬 코어 | `main.lua` / `test_tap_daemon.lua` | **PASS** |
 | **IS-07.2** | TS-07 | 대화형 독립 CLI 포트/모드 셋업 및 스캐너 도구 | `tools/tap_setup.lua` | **PASS** |
 | **IS-08.1** | TS-08 | 클러스터 통합 시뮬레이션 및 SourceMap 번들링 배포 | `node_core_sim.lua`, `dist_gdrive/tap/` | **PASS** |
@@ -667,4 +669,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.20.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.14.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.2.1), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.4.0) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.6.0)와 100% 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.28.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v1.3.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.19.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.0.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.7.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.6.1), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.1) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.13.0)와 정합성을 유지합니다.*

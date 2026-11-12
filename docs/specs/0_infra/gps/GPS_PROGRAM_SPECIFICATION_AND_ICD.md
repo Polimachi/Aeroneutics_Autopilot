@@ -1,12 +1,12 @@
 # 중앙 연산형 고정밀 GPS 체계 아키텍처 및 통신 규격서 (ICD)
 > **Centralized High-Precision GPS System Architecture & Interface Control Document (ICD)**  
-> **프로젝트**: Universal Autonomous Flight Stack (FCP · VAS · Central GPS Server · GPS Swarm Nodes · GCS)  
+> **프로젝트**: Universal Autonomous Flight Stack (AMM · FCP · VAS · Central GPS Server · GPS Swarm Nodes · GCS)  
 > **대상 환경**: Minecraft CC:Tweaked (Ender Modem, Advanced Monitor), Create: Aeronautics, Create: Avionics
 
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.3.0` |
+| **문서 버전 (Version)** | `v2.3.1` |
 | **최종 수정일 (Date)** | `2026-11-12` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |
 | **주관 도메인 (Domain)** | 중앙 고정밀 GPS 서버 및 분산 노드 군 (GPS Infrastructure) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.3.1` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 비행체 GPS 클라이언트 주체를 `AMM (Node 03)`(`nav_engine` + `gps/client.lua` 관리 모드)으로 일원화하고 `5,000ms` DR 로이터·`HDOP > 5.0` 정밀 착륙 잠금 주체를 `AMM`으로 정렬, 구 `10045` `[DEPRECATED]` 잔재 예시 정리 및 연관 규격서 버전 동기화 (`src/0_infra/gps/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·항법 융합 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v2.3.0` | 2026-11-11 | `FAIL_GEOMETRY` 세션 만료 응답 및 150ms 단기 툼스톤(HWM 비갱신으로 250ms 재시도 허용), `CH 60002` 상태 조회 API(`requestStatus`/`pollStatus`/`queryStatus`), `isManaged` 50% 타임아웃 재시도 동등성, 멀티 코드베이스 독립 완결 클라이언트 와이어 호환 규칙 및 `/gps_data/node.json` 설정 경로 명시 (`Implemented` $\to$ `Approved`) | TASK-122 GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 누락 보완 |
 | `v2.2.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.2.1` | 2026-11-08 | 지상 시설물 전용 응답 채널($Base_{\text{sec}}+5$) 및 클라이언트 타입(`"FACILITY"`) 규격 명시 | 지상 인프라 착륙패드(v2.4.0) 및 GAC(v1.2.0) 연동 동기화 |
@@ -23,22 +24,23 @@
 | `v2.1.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 반영, 01호기 회신 채널 `Base+5` (`10005`, 구 10045 [DEPRECATED]) 동기화, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
   
 > **연계 규격**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.27.0 동기화)  
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.4.1 동기화)  
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 비행 제어 클라이언트 연계 (v1.16.0 동기화)  
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.18.0 동기화)  
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.12.1 동기화)  
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.11.0 동기화)  
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.6.0 동기화)  
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.11.1 동기화)  
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.2 동기화)  
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.10.6 동기화)  
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.28.0 동기화)  
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.4.2 동기화)  
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) AMM 비행체 측위/항법 클라이언트 연계 (v1.3.0 동기화)  
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 외루프 제어기 규격서 연계 (v2.0.0 동기화)  
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.19.0 동기화)  
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.13.0 동기화)  
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.11.1 동기화)  
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.6.1 동기화)  
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.11.2 동기화)  
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.3 동기화)  
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.10.7 동기화)  
 
 ---
 
 ## 1. 개요 및 시스템 목적 (Overview & System Objectives)
 
-본 문서는 자율 비행체(FCP), 이동체(터틀, 로버), 관제 컴퓨터(GCS, 모니터 대시보드) 및 지상/공중 분산 GPS 노드 군(Node Swarm) 간의 **측위 핑, 거리 보고, 중앙 연산, 상호 교정, 노드 동적 커미셔닝(등록/검증), 클라이언트 프로그래밍 API 및 통합 배포를 정의하는 공식 표준 인터페이스 제어 문서(ICD)**입니다.
+본 문서는 자율 비행체(AMM), 이동체(터틀, 로버), 관제 컴퓨터(GCS, 모니터 대시보드) 및 지상/공중 분산 GPS 노드 군(Node Swarm) 간의 **측위 핑, 거리 보고, 중앙 연산, 상호 교정, 노드 동적 커미셔닝(등록/검증), 클라이언트 프로그래밍 API 및 통합 배포를 정의하는 공식 표준 인터페이스 제어 문서(ICD)**입니다.
 
 ### 1.1 핵심 설계 목표
 1. **역할별 모듈 분리 및 공유 라이브러리 구조 (Modular Architecture)**:
@@ -69,7 +71,7 @@
    - 60초 주기 또는 수동 진단 시 실측 거리와 이론 거리 간의 잔차를 GCS 로그 및 모니터에 정밀 기록하되, 서버가 노드를 강제 격리하지 않고 연산 엔진의 런타임 LOO가 이상치를 능동 배제합니다.
 9. **하이브리드 클라이언트 프로그래밍 API 및 패킷 직접 주입 (`gps/client.lua`)**:
    - 동기식 `gpsClient.locate(alt, timeout)` 편의 함수(기본 500ms 타임아웃, 250ms 경과 시 1회 자동 재전송, 20Hz 비행 제어 루프 내 호출 엄격 금지)와 20Hz 제어루프용 비동기 `request(alt)` / `poll(seq)` 함수를 동시 제공합니다.
-   - FCP 등 멀티 채널을 운용하는 상위 항법 스택과의 연동 시 이벤트 큐 오염을 방지하기 위해 외부 수신 패킷 직접 주입 인터페이스(`gpsClient.handleMessage(...)`) 및 관리 모드(`isManaged`)를 제공합니다.
+   - `AMM (Node 03)` 등 멀티 채널을 운용하는 상위 항법 스택과의 연동 시 이벤트 큐 오염을 방지하기 위해 외부 수신 패킷 직접 주입 인터페이스(`gpsClient.handleMessage(...)`) 및 관리 모드(`isManaged`)를 제공합니다.
 10. **전역 통합 코드베이스 인스톨러 및 기존 데이터 보존 업데이트 (`installer.lua`, 구 `gps/installer.lua` [DEPRECATED])**:
     - 플로피 디스크(`/disk/installer.lua`), 웹 다운로드(`wget run`), 또는 루트 직접 업로드(`/installer.lua`) 환경에서 Unified Installer를 통해 3대 GPS 타겟(`gps_server`, `gps_node`, `gps_client`)을 일괄 설치 및 `startup/00_gps.lua` 분리 등록을 완료하며, 재설치/업데이트 시 기존 `/gps_data/` 설정 파일(`nodes.json`, `node.json`, 구 `node_cfg.json` `[DEPRECATED]`)을 안전하게 보존합니다.
 
@@ -87,7 +89,7 @@ CC:Tweaked 환경의 엔더 모뎀(Ender Modem) 전송 특성을 고려하여, �
 ```mermaid
 flowchart TD
     subgraph CLIENT_ZONE["클라이언트 / 비행체 군"]
-        FCP["자율 항법 컴퓨터 (FCP / Client)<br/>gps/client.lua 탑재"]
+        AMM["비행체 항법 게이트웨이 (AMM Node 03 / Client)<br/>nav_engine + gps/client.lua 탑재"]
     end
 
     subgraph SWARM_ZONE["GPS 노드 군 (10+ 분산 노드)"]
@@ -105,10 +107,10 @@ flowchart TD
     end
 
     %% Client Request Path
-    FCP -->|"1. MSG_GPS_REQUEST (CH 60001)"| N1
-    FCP -->|"1. MSG_GPS_REQUEST (CH 60001)"| N2
-    FCP -->|"1. MSG_GPS_REQUEST (CH 60001)"| N3
-    FCP -->|"1. MSG_GPS_REQUEST (CH 60001)"| NK
+    AMM -->|"1. MSG_GPS_REQUEST (CH 60001)"| N1
+    AMM -->|"1. MSG_GPS_REQUEST (CH 60001)"| N2
+    AMM -->|"1. MSG_GPS_REQUEST (CH 60001)"| N3
+    AMM -->|"1. MSG_GPS_REQUEST (CH 60001)"| NK
 
     %% Node Report Path
     N1 -->|"2. MSG_GPS_NODE_REPORT (CH 60003)"| SRV
@@ -120,7 +122,7 @@ flowchart TD
     SWARM_ZONE -.->|"주기적 하트비트 (CH 60003, 10s)"| SRV
 
     %% Server Solve & Response
-    SRV -->|"3. MSG_GPS_RESPONSE (CH: replyChannel 또는 Base+5)"| FCP
+    SRV -->|"3. MSG_GPS_RESPONSE (CH: replyChannel 또는 Base+5)"| AMM
     SRV -->|"실시간 터치 4탭 UI / 자동 피팅 2D 레이더"| MON
     SRV -->|"원자적 영구 동기화"| STOR
 
@@ -136,11 +138,11 @@ flowchart TD
 ### 2.1 공식 채널 할당 표
 | 채널 번호 | 심볼명 | 발신자 | 수신자 | 전송 주기 | 용도 및 설명 |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| **`60001`** | `CH_GPS_PING` | 클라이언트 / FCP | 노드 군 전체 | 5~10Hz (측위 시) | **노드 거리 측정용 핑 브로드캐스트 전용** (모든 노드 상시 청취, CC 모뎀 이벤트 3D 거리 획득) |
-| **`60002`** | `CH_GPS_SERVICE` | 클라이언트 / GCS / FCP | 중앙 연산 서버 | 이벤트 기반 | **GPS 중앙 서버 상태 조회 및 서비스 관리 전용 포트** (`MSG_GPS_STATUS_REQ` / `RESP`) |
+| **`60001`** | `CH_GPS_PING` | 클라이언트 / AMM | 노드 군 전체 | 5~10Hz (측위 시) | **노드 거리 측정용 핑 브로드캐스트 전용** (모든 노드 상시 청취, CC 모뎀 이벤트 3D 거리 획득) |
+| **`60002`** | `CH_GPS_SERVICE` | 클라이언트 / GCS / AMM | 중앙 연산 서버 | 이벤트 기반 | **GPS 중앙 서버 상태 조회 및 서비스 관리 전용 포트** (`MSG_GPS_STATUS_REQ` / `RESP`) |
 | **`60003`** | `CH_GPS_NODE_IN` | 노드 군 / 신규 노드 | 중앙 연산 서버 | 틱당 다수 / 10s 주기 / 등록 시 | 노드 거리 보고(`NODE_REPORT`), 노드 생존 하트비트, **노드 커미셔닝 요청/검증/커밋** |
 | **`60004`** | `CH_GPS_MGMT` | 중앙 연산 서버 | 노드 군 전체 / 신규 노드 | 60s / 등록 시 | 노드 상호 교정 지시(`DIAG_TRIGGER`), **노드 ID 발급 제안 및 검증 회신(`NODE_OFFER`, `NODE_VERIFY_RESP`, `NODE_REG_ACK`)** |
-| **`replyChannel`**<br>*(Base+5, $Base_{\text{sec}}+5$ 등)* | `CH_CLIENT_REPLY` | 중앙 연산 서버 | 클라이언트 / FCP / 시설물 | 요청 직후 ($\le 50\text{ms}$) | 계산된 최종 (X, Z) 좌표 응답 (`MSG_GPS_RESPONSE`, 기체: `Base+5`, 지상 시설물: $Base_{\text{sec}}+5$) |
+| **`replyChannel`**<br>*(Base+5, $Base_{\text{sec}}+5$ 등)* | `CH_CLIENT_REPLY` | 중앙 연산 서버 | 클라이언트 / AMM / 시설물 | 요청 직후 ($\le 50\text{ms}$) | 계산된 최종 (X, Z) 좌표 응답 (`MSG_GPS_RESPONSE`, 기체: `Base+5`, 지상 시설물: $Base_{\text{sec}}+5$) |
 
 ---
 
@@ -177,7 +179,7 @@ flowchart TD
   | `payload.clientSeq` | uint32 | 필수 | 클라이언트가 부여한 요청 고유 일련번호 (응답 매칭용) |
 
 ```lua
--- 비행체 FCP -> GPS 노드 군 요청 패킷 예시
+-- 비행체 AMM (Node 03) -> GPS 노드 군 요청 패킷 예시
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -232,7 +234,7 @@ flowchart TD
 ---
 
 ### 3.4 [Server $\rightarrow$ Client] 최종 정밀 측위 응답 (`MSG_GPS_RESPONSE`)
-- **채널**: 클라이언트가 지정한 `replyChannel` (예: `10005`, 구 `10045` `[DEPRECATED]`)
+- **채널**: 클라이언트가 지정한 `replyChannel` (예: `10005` [N=1 `Base+5`], 구 `10045` `[DEPRECATED]`)
 - **전송 시점**: Early-Solve 만족 즉시 또는 50ms 윈도우 마감 직후
 - **필드 명세**:
   | 필드 경로 | 타입 | 필수 | 설명 |
@@ -248,7 +250,7 @@ flowchart TD
   | `payload.selectedNodes` | table | 필수 | 연산에 채택된 노드 ID 목록 (이상치 배제 노드 제외) |
 
 ```lua
--- 중앙 연산 서버 -> 비행체 FCP 최종 응답 패킷 예시
+-- 중앙 연산 서버 -> 비행체 AMM (Node 03) 최종 응답 패킷 예시
 {
     ver = "1.9.5",
     domainId = "GPS_BASE_NET",
@@ -925,7 +927,7 @@ client_last_solved[targetClient] = maxSolvedClientSeq
 
 ## 8. 클라이언트 라이브러리 하이브리드 프로그래밍 인터페이스 (`gps/client.lua`)
 
-비행체 항법 컴퓨터(FCP), 채굴 터틀, 탐사 로버가 GPS 시스템을 손쉽게 연동할 수 있도록 동기식 편의 함수와 20Hz 비행 제어용 비동기 함수를 동시 제공합니다.
+비행체 항법 컴퓨터(`AMM`, Node 03), 채굴 터틀, 탐사 로버가 GPS 시스템을 손쉽게 연동할 수 있도록 동기식 편의 함수와 20Hz 비행 제어용 비동기 함수를 동시 제공합니다.
 
 ### 8.1 API 시그니처 요약
 ```lua
@@ -941,7 +943,7 @@ local x, y, z, meta = gpsClient.locate(altitudeY, [timeoutSec])
 local clientSeq = gpsClient.request(altitudeY)
 local fixData = gpsClient.poll(clientSeq) -- 도착 시 fixData 테이블, 미도착 시 nil 반환
 
--- 4. 외부 수신 패킷 직접 주입 (FCP NET_MGR 등 다중 채널 수신 스택과의 큐 충돌 방지)
+-- 4. 외부 수신 패킷 직접 주입 (AMM network_manager / nav_engine 등 다중 채널 수신 스택과의 큐 충돌 방지)
 local handled = gpsClient.handleMessage(side, channel, replyChannel, message, distance)
 
 -- 5. 클라이언트 상태 및 연결 진단
@@ -960,14 +962,14 @@ local statusData = gpsClient.queryStatus([timeoutSec], [queryType]) -- 동기 �
   - 성공 시: `x, y, z, { status = "FIX_OK" / "FIX_DEGRADED", accuracy = 0.12, hdop = 1.08, nodeCount = 4, selectedNodes = {...} }`
   - 실패 시: `nil, nil, nil, { status = "TIMEOUT" / "FAIL_INSUFFICIENT" / "FAIL_GEOMETRY" }`
 
-- **🚨 [CRITICAL INTERLOCK] FCP 20Hz 자율 비행 제어 루프 내 `locate()` 호출 절대 금지**:
+- **🚨 [CRITICAL INTERLOCK] AMM 20Hz 항법·궤적 생성 루프 내 `locate()` 호출 절대 금지**:
   1. **ComputerCraft 단일 이벤트 큐 오염 및 패킷 가로채기 (Event Swallowing)**:
      - CC는 컴퓨터당 단일 전역 이벤트 큐를 가집니다. `locate()` 내부에서 `os.pullEvent("modem_message")`를 호출하면 큐 최상단의 메시지를 무조건 꺼냅니다.
-     - 만약 FCP 비행체에 ATC 관제 통신, 시설물 자동 착륙 비콘, 편대 간 충돌 방지 패킷(ACAS) 등이 수신된 순간 `locate()`가 이를 꺼내면, 비-GPS 패킷으로 판정하고 버리므로 **타 시스템의 핵심 통신 패킷이 영구 유실(Swallowed & Dropped)**됩니다.
-  2. **500ms 블로킹으로 인한 20Hz 비행 제어 붕괴 및 추락**:
+     - 만약 `AMM (Node 03)`에 ATC/GAC 관제 통신, 시설물 자동 착륙 비콘, C2 명령(`Base+0`) 또는 `VAS` 텔레메트리(`Base+2`) 등이 수신된 순간 `locate()`가 이를 꺼내면, 비-GPS 패킷으로 판정하고 버리므로 **타 시스템의 핵심 통신 패킷이 영구 유실(Swallowed & Dropped)**됩니다.
+  2. **500ms 블로킹으로 인한 20Hz 항법·궤적 루프 지연**:
      - `locate()`는 재전송 포함 최대 500ms(10틱) 동안 호출 스레드를 완전히 블로킹합니다.
-     - 50ms(20Hz) 제어 루프를 도는 FCP에서 500ms 블로킹이 발생하면 10틱 동안 자세 제어 및 추력 편향 명령이 일체 중단되어 기체가 급격한 실속 및 자세 붕괴로 추락합니다.
-  - **강제 조항**: `gpsClient.locate()`는 정지 상태의 초기화 스크립트나 저속 지상 이동체에서만 호출해야 하며, **20Hz 비행 제어 루프 내에서는 반드시 비동기 `poll()` 또는 `handleMessage()` 직접 주입만을 사용**해야 합니다.
+     - 50ms(20Hz) 항법 및 궤적 생성 루프를 도는 `AMM`에서 500ms 블로킹이 발생하면 10틱 동안 `nav_engine` 위치 융합 및 `Base+4`(`CH_TRAJECTORY_CMD`) 궤적 갱신이 중단되어 `FCP (Node 04)` `AMM_TIMEOUT` 발동 또는 동적 착륙/도킹 타임아웃이 발생합니다.
+  - **강제 조항**: `gpsClient.locate()`는 정지 상태의 초기화 스크립트나 저속 지상 이동체에서만 호출해야 하며, **20Hz 비행 항법 루프 내에서는 반드시 비동기 `poll()` 또는 `handleMessage()` 직접 주입만을 사용**해야 합니다.
 
 ### 8.3 비동기 인터페이스 및 관리 모드 (`managedMode` & `handleMessage`)
 - **`request(altitudeY) -> clientSeq`**:
@@ -980,7 +982,7 @@ local statusData = gpsClient.queryStatus([timeoutSec], [queryType]) -- 동기 �
 - **`queryStatus([timeoutSec], [queryType]) -> statusData or nil`**:
   - `requestStatus` 후 지정 타임아웃(기본 1.0초) 동안 `pollStatus`를 수행하는 동기 편의 함수입니다.
 - **`setManaged(isManaged)` 및 관리 모드 인터록**:
-  - FCP 환경에서 실수로 `locate()`를 호출하여 `os.pullEvent`가 작동하는 것을 차단하기 위해 관리 모드 플래그(`isManaged`)를 지원합니다.
+  - `AMM (Node 03)` 환경에서 실수로 `locate()`를 호출하여 `os.pullEvent`가 작동하는 것을 차단하기 위해 관리 모드 플래그(`isManaged`)를 지원합니다.
   - `isManaged == true`일 때 `locate()`는 `os.pullEvent` 대신 비동기 poll 루프로 자동 전환되며, `standaloneLocate`와 동등하게 50% 타임아웃(`totalTimeout * 0.5`) 시점에 동일 `clientSeq`로 1회 재전송을 수행하여 이벤트 가로채기 방지와 패킷 드롭 보정을 동시 지원합니다:
 
   ```lua
@@ -1025,13 +1027,13 @@ local statusData = gpsClient.queryStatus([timeoutSec], [queryType]) -- 동기 �
   ```
 
 - **`handleMessage(side, channel, replyChannel, message, distance) -> boolean`**:
-  - FCP의 전담 `NET_MGR` 또는 상위 네트워크 데몬이 모든 모뎀 이벤트를 일원화 수신하고, GPS 관련 패킷만 `gpsClient.handleMessage()`로 주입합니다.
+  - `AMM (Node 03)`의 전담 `network_manager` 또는 상위 네트워크 데몬이 모든 모뎀 이벤트를 일원화 수신하고, GPS 관련 패킷만 `gpsClient.handleMessage()`로 주입합니다.
   - 수신된 메시지가 자신의 `replyChannel` 및 `type == "MSG_GPS_RESPONSE"`인 경우 측위 큐에 적재하고 `true`를 반환합니다.
   - 수신된 메시지가 자신의 `replyChannel` 또는 `CH_GPS_SERVICE`(`60002`)이고 `type == "MSG_GPS_STATUS_RESP"`인 경우 상태 응답 큐에 적재하고 `true`를 반환합니다.
   - 이를 통해 `client.lua`가 독자적으로 `os.pullEvent`를 호출하지 않으므로 CC 이벤트 큐 오염을 방지합니다.
 
 - **멀티 코드베이스 독립 완결 클라이언트 와이어 호환 규칙 (Multi-Codebase Isolation & Wire Contract)**:
-  - FCP(`src/2_guidance/fcp/modules/network_manager.lua` + `nav_engine.lua`) 및 착륙패드(`src/0_infra/landing_pad/modules/gps_client.lua`) 등 타 도메인 노드는 저장소 전역 아키텍처 원칙에 따라 `/apis/gps_client.lua`를 교차 참조(`require`)하지 않고 독립 완결 구조를 유지합니다.
+  - `AMM`(`src/3_planning/amm/modules/network_manager.lua` + `nav_engine.lua`) 및 착륙패드(`src/0_infra/landing_pad/modules/gps_client.lua`) 등 타 도메인 노드는 저장소 전역 아키텍처 원칙에 따라 `/apis/gps_client.lua`를 교차 참조(`require`)하지 않고 독립 완결 구조를 유지합니다.
   - 이들 독립 클라이언트는 중앙 GPS 서버 및 노드 스웜과 통신할 때 본 ICD에 정의된 표준 `v1.9.5` 와이어 프로토콜 계약(`MSG_GPS_REQUEST` 필수 필드 `altitudeY`, `clientSeq`, `clientType`, `replyChannel`, 그리고 `MSG_GPS_RESPONSE` 수신 필드 `targetClient`, `clientSeq`, `status`, `position`, `time` 등)을 각자 내부 구현체에서 직접 준수하여 전역 호환성을 유지합니다.
 
 ---
@@ -1138,13 +1140,13 @@ Installing [gps_node] ...
 | **3개 노드 수집 만료** | **50ms 도달** | GPS 서버 | WLS + 가우스-뉴턴 연산 후 이중 판정 ($\text{HDOP} \le 5.0 \text{ AND } \text{RMS}_{\text{res}} \le 1.5\text{m} \implies \text{FIX\_OK}$, 그 외 $\text{FIX\_DEGRADED}$) 회신 |
 | **유효 노드 부족 ($<3$개)** | **50ms 도달** | GPS 서버 | `status = "FAIL_INSUFFICIENT"`, 좌표 nil 반환 |
 | **특이 기하 일직선 / 이탈** | **연산 즉시** | GPS 서버 | Area $\le 1.0$ 또는 $\|\sin\theta\| < 0.05$ 또는 $|\det| < 10^{-4}$ 또는 BBox 500m 초과 시 `status = "FAIL_GEOMETRY"`, 좌표 nil 반환 |
-| **비선형 최적화 미수렴 ($\ge 8$회)** | **연산 즉시** | GPS 서버 | **선형 WLS 안전 폴백**: WLS 해석해를 위치로 채택하여 Fail-Soft 보장 (이중 게이트 기준 status 결정) |
+| **비선형 최적화 미수렴 ($\ge 8$회)** | **연산 즉시** | GPS 서버 | **선형 WLS 안전 폴백**: WLS 해석해를 위치로 채택하여 Fail-Soft 동작 유지 (이중 게이트 기준 status 결정) |
 | **수평 거리 영점 도달 ($r \to 0$)** | **연산 즉시** | 연산 엔진 | **바이어스 없는 정밀 투영**: $r_i = \sqrt{\max(0, d_i^2 - \Delta y_i^2)}$, $w_i = 1/\max(r_i, 1.0)$, 야코비안 분모 직접 클램핑 $\max(\rho, 10^{-6})$ 적용 |
 | **노드 하트비트 두절** | **35초** | GPS 서버 | 해당 노드 상태 `OFFLINE` 전환, 연산 후보군에서 즉시 제명 |
 | **상호 진단 오차 감지 ($> 1.0\text{m}$)**| **진단 시** | GPS 서버 | **순수 진단 로깅**: 모니터/로그에 기록, 노드 강제 배제 없이 런타임 LOO에 위임 |
 | **클라이언트 동기 핑 타임아웃** | **500ms** | gpsClient | 250ms 경과 시 1회 자동 재전송, 500ms 초과 시 nil 및 TIMEOUT 반환 (20Hz 비행 루프 내 locate 호출 금지) |
-| **비행체 GPS 응답 두절** | **5,000ms** | FCP | **추측항법(Dead Reckoning) 전환**: 센서 어댑터 속도/방위로 반경 30m 자율 체공(LOITER) |
-| **HDOP 저하 또는 잔차 초과** | **연산 즉시** | FCP | **경고 상태 표출**: $\text{HDOP} > 5.0$ 또는 $\text{RMS}_{\text{res}} > 1.5\text{m}$ 시 `GPS_DEGRADED` 경보, 정밀 착륙 절차 진입 금지 |
+| **비행체 GPS 응답 두절** | **5,000ms** | AMM (Node 03) | **추측항법(Dead Reckoning) 전환**: `nav_engine`이 `Base+2` 속도/방위 기반 DR로 전환하고 반경 30m 자율 체공(LOITER) 궤적을 `Base+4`로 하달 |
+| **HDOP 저하 또는 잔차 초과** | **연산 즉시** | AMM (Node 03) | **경고 상태 표출 및 정밀 착륙 잠금**: $\text{HDOP} > 5.0$ 또는 $\text{RMS}_{\text{res}} > 1.5\text{m}$ 시 `GPS_DEGRADED` 경보, 정밀 착륙 절차 진입 금지 |
 
 ---
 
