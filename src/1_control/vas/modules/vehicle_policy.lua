@@ -13,9 +13,9 @@ function vehicle_policy.init(policyConfig)
         vehicleType = cfg.vehicleType or "WINGED_VTOL",
         maxTiltDeg = env.maxTiltDeg or 35.0,
         stallSpeed = stall.stallSpeed or 10.0,
-        minStallThrottle = stall.minThrottle or 1.0,
+        minStallThrottle = stall.minThrottle or 0.60,
         stallNoseDownPitchDeg = stall.stallNoseDownPitchDeg or -5.0,
-        vFe = cfg.vFe or 22.0,
+        vFe = (stall.flapVfeLimit) or cfg.vFe or 15.0,
         antiTorqueCoeff = trim.antiTorqueCoeff or 0.0,
         pitchTrim = trim.pitchTrim or 0.0,
         transitionAlpha = 0.0
@@ -28,22 +28,8 @@ function vehicle_policy.is_aerodynamic(policyOrType)
 end
 
 function vehicle_policy.resolve_guidance_targets(cmd)
-    local targetQ = cmd.targetOrientation
-    if type(targetQ) == "table" then
-        if targetQ.w ~= nil then
-            return quat.normalize(targetQ)
-        elseif targetQ.pitch ~= nil or targetQ.roll ~= nil or targetQ.heading ~= nil or targetQ.yaw ~= nil then
-            local p = tonumber(targetQ.pitch) or 0.0
-            local r = tonumber(targetQ.roll) or 0.0
-            local y = tonumber(targetQ.heading or targetQ.yaw) or 0.0
-            return quat.from_euler(p, r, y)
-        end
-    end
-    if cmd.angleTargets then
-        local p = tonumber(cmd.angleTargets.targetPitch) or 0.0
-        local r = tonumber(cmd.angleTargets.targetRoll) or 0.0
-        local y = tonumber(cmd.angleTargets.targetHeading) or 0.0
-        return quat.from_euler(p, r, y)
+    if type(cmd) == "table" and type(cmd.targetQuaternion) == "table" and cmd.targetQuaternion.w ~= nil then
+        return quat.normalize(cmd.targetQuaternion)
     end
     return quat.identity()
 end
@@ -66,7 +52,7 @@ function vehicle_policy.resolve_flap_target(policy, rawCmd, airspeed, health)
     local flap = tonumber(rawCmd and rawCmd.flapTarget) or 0.0
     local v = tonumber(airspeed) or 0.0
     local isVValid = (health and health.velocity ~= false) and (health and health.isVelocityValid ~= false)
-    if isVValid and v > (policy.vFe or 22.0) then
+    if isVValid and v > (policy.vFe or 15.0) then
         return 0.0
     end
     return math.max(0.0, math.min(1.0, flap))
@@ -78,11 +64,12 @@ function vehicle_policy.apply_stall_guard(policy, telem, conditionedCmd)
     local isVValid = (health.velocity ~= false) and (health.isVelocityValid ~= false) and (health.isAirspeedValid ~= false)
     local isAero = vehicle_policy.is_aerodynamic(policy)
     if isVValid and isAero and airspeed < policy.stallSpeed then
-        conditionedCmd.targetThrottle = math.max(conditionedCmd.targetThrottle or 0.0, policy.minStallThrottle)
-        local eul = quat.to_euler(conditionedCmd.targetOrientation)
+        local minThrust = math.max(0.0, math.min(1.0, tonumber(policy.minStallThrottle) or 0.60))
+        conditionedCmd.collectiveThrust = math.max(conditionedCmd.collectiveThrust or 0.0, minThrust)
+        local eul = quat.to_euler(conditionedCmd.targetQuaternion)
         local noseDown = policy.stallNoseDownPitchDeg or -5.0
         if eul.pitch > noseDown then
-            conditionedCmd.targetOrientation = quat.from_euler(noseDown, eul.roll, eul.yaw)
+            conditionedCmd.targetQuaternion = quat.from_euler(noseDown, eul.roll, eul.yaw)
         end
     end
 end
@@ -134,34 +121,48 @@ end
 function vehicle_policy.pre_process_guidance(policy, telem, rawCmd, fsmState)
     local health = telem.sensorHealth or {}
     local airspeed = telem.airspeed or (telem.dynamics and telem.dynamics.velocity and math.sqrt(telem.dynamics.velocity.vx^2 + telem.dynamics.velocity.vz^2)) or 0.0
+    local raw = rawCmd or {}
+    local rates = raw.targetAngularRates or {}
+    local bias = raw.translationBias or {}
+
     local conditioned = {
-        targetOrientation = vehicle_policy.resolve_guidance_targets(rawCmd),
-        targetClimbRate = tonumber(rawCmd.targetClimbRate) or 0.0,
-        targetThrottle = tonumber(rawCmd.targetThrottle) or 0.0,
-        flapTarget = vehicle_policy.resolve_flap_target(policy, rawCmd, airspeed, health),
+        commandType = raw.commandType or "QUATERNION_RATE",
+        targetQuaternion = vehicle_policy.resolve_guidance_targets(raw),
+        targetAngularRates = {
+            pitchRate = tonumber(rates.pitchRate) or 0.0,
+            rollRate = tonumber(rates.rollRate) or 0.0,
+            yawRate = tonumber(rates.yawRate) or 0.0
+        },
+        collectiveThrust = math.max(0.0, math.min(1.0, tonumber(raw.collectiveThrust) or 0.0)),
+        flapTarget = vehicle_policy.resolve_flap_target(policy, raw, airspeed, health),
         transitionAlpha = vehicle_policy.compute_transition_weights(policy, airspeed),
-        translationBias = rawCmd.translationBias or { surge = 0, sway = 0, heave = 0 }
+        translationBias = {
+            surge = tonumber(bias.surge) or 0.0,
+            sway = tonumber(bias.sway) or 0.0
+        }
     }
 
-    if fsmState == "FAILSAFE_HOLD" or fsmState == "EMERGENCY_LAND" then
-        conditioned.targetOrientation = quat.identity()
-        conditioned.translationBias = { surge = 0, sway = 0, heave = 0 }
-        conditioned.targetClimbRate = (fsmState == "EMERGENCY_LAND") and -1.5 or 0.0
+    if fsmState == "FAILSAFE_HOLD" or fsmState == "EMERGENCY_LAND" or fsmState == "AIRBORNE_EMERGENCY" then
+        conditioned.targetQuaternion = raw.targetQuaternion or quat.identity()
+        conditioned.translationBias = { surge = 0.0, sway = 0.0 }
+        conditioned.targetAngularRates = raw.targetAngularRates or { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 }
+        conditioned.collectiveThrust = math.max(0.0, math.min(1.0, tonumber(raw.collectiveThrust) or 0.0))
+        conditioned.flapTarget = tonumber(raw.flapTarget) or 0.0
         return conditioned
     end
 
-    local isDerated = (rawCmd and rawCmd.isStaticFallback == true)
+    local isDerated = (raw.isStaticFallback == true)
         or (telem and telem.isCalibrated == false)
         or (policy and policy.isDerated == true)
 
     if health.isAttitudeValid == false then
-        conditioned.targetOrientation = quat.identity()
+        conditioned.targetQuaternion = quat.identity()
     else
-        conditioned.targetOrientation = vehicle_policy.clamp_tilt_limits(policy, conditioned.targetOrientation, isDerated)
+        conditioned.targetQuaternion = vehicle_policy.clamp_tilt_limits(policy, conditioned.targetQuaternion, isDerated)
     end
 
     if health.isVelocityValid == false then
-        conditioned.translationBias = { surge = 0, sway = 0, heave = 0 }
+        conditioned.translationBias = { surge = 0.0, sway = 0.0 }
     end
 
     vehicle_policy.apply_stall_guard(policy, telem, conditioned)

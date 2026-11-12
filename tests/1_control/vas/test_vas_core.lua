@@ -864,7 +864,7 @@ describe("vas mutation hardening invariants", function()
         local ok = network_manager.dispatch(net, fsm, nil, nil, 10000, 10000, {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 99,
             type = "MSG_EMERGENCY_OVERRIDE",
-            payload = { action = "E_STOP", reason = "TEST_ESTOP" }
+            payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", reason = "TEST_ESTOP" }
         })
         assert_true(ok)
         assert_eq(fsm.currentState, "E_STOP")

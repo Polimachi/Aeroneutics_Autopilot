@@ -44,10 +44,10 @@ describe("vas advanced_vtol allocation & policy", function()
         assert_eq(alpha, 0.0, "transitionAlpha must be 0.0 for ADVANCED_VTOL")
 
         -- Stall guard bypassed
-        local cmd = { targetThrottle = 0.2, targetOrientation = { w = 1, x = 0, y = 0, z = 0 } }
+        local cmd = { collectiveThrust = 0.2, targetQuaternion = { w = 1, x = 0, y = 0, z = 0 } }
         local telem = { airspeed = 2.0, sensorHealth = { isAirspeedValid = true, isVelocityValid = true, velocity = true } }
         vehicle_policy.apply_stall_guard(pol, telem, cmd)
-        assert_eq(cmd.targetThrottle, 0.2, "Stall guard must not override throttle for ADVANCED_VTOL")
+        assert_eq(cmd.collectiveThrust, 0.2, "Stall guard must not override collectiveThrust for ADVANCED_VTOL")
     end)
 
     it("loads pseudoInverseMatrix in thrust_mixer and allocates 6-DoF vector thrust", function()

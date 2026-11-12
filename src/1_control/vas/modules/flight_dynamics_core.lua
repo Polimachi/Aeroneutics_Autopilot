@@ -10,6 +10,7 @@ function flight_dynamics_core.init(config)
 
     return {
         config = cfg,
+        thrustScale = cfg.thrustScale or 15.0,
         gains = {
             pitch = {
                 kp = attCfg.pitch and attCfg.pitch.kp or 3.2,
@@ -61,32 +62,49 @@ local function update_axis_integrator(currentVal, err, dt, limit, isSatPos, isSa
     return math.max(-lim, math.min(lim, nextVal))
 end
 
-function flight_dynamics_core.compute_attitude_wrench(state, targetQ, measQ, angularRate, dt, satStatus)
-    local satPos = (satStatus and satStatus.axisSaturatedPos) or {}
-    local satNeg = (satStatus and satStatus.axisSaturatedNeg) or {}
-    local errQ = quat.error_quaternion(targetQ, measQ)
-
-    local eRoll = 2.0 * errQ.x
-    local ePitch = 2.0 * errQ.y
-    local eYaw = 2.0 * errQ.z
-
-    local g = state.gains
-    local inP = update_axis_integrator(state.integrators.pitch, ePitch, dt, g.pitch.integralLimit, satPos.pitch, satNeg.pitch)
-    local inR = update_axis_integrator(state.integrators.roll, eRoll, dt, g.roll.integralLimit, satPos.roll, satNeg.roll)
-    local inY = update_axis_integrator(state.integrators.yaw, eYaw, dt, g.yaw.integralLimit, satPos.yaw, satNeg.yaw)
-
-    state.integrators.pitch = inP
-    state.integrators.roll = inR
-    state.integrators.yaw = inY
+function flight_dynamics_core.compute_attitude_wrench(state, targetQ, measQ, angularRate, dt, satStatus, targetRates, commandType)
+    local isRateCmd = (commandType == "RATE_COMMAND")
+    local pTarget = (targetRates and (targetRates.pitchRate or targetRates.pitch or targetRates.x)) or 0.0
+    local rTarget = (targetRates and (targetRates.rollRate or targetRates.roll or targetRates.y)) or 0.0
+    local yTarget = (targetRates and (targetRates.yawRate or targetRates.yaw or targetRates.z)) or 0.0
 
     local pRate = (angularRate and angularRate.x) or (angularRate and angularRate.pitchRate) or 0.0
     local rRate = (angularRate and angularRate.y) or (angularRate and angularRate.rollRate) or 0.0
     local yRate = (angularRate and angularRate.z) or (angularRate and angularRate.yawRate) or 0.0
 
+    local eRateRoll = rTarget - rRate
+    local eRatePitch = pTarget - pRate
+    local eRateYaw = yTarget - yRate
+
+    local eRoll, ePitch, eYaw = 0.0, 0.0, 0.0
+    if not isRateCmd then
+        local errQ = quat.error_quaternion(targetQ, measQ)
+        eRoll = 2.0 * errQ.x
+        ePitch = 2.0 * errQ.y
+        eYaw = 2.0 * errQ.z
+    end
+
+    local g = state.gains
+    local inP, inR, inY
+    if isRateCmd then
+        inP = 0.0
+        inR = 0.0
+        inY = 0.0
+    else
+        local satPos = (satStatus and satStatus.axisSaturatedPos) or {}
+        local satNeg = (satStatus and satStatus.axisSaturatedNeg) or {}
+        inP = update_axis_integrator(state.integrators.pitch, ePitch, dt, g.pitch.integralLimit, satPos.pitch, satNeg.pitch)
+        inR = update_axis_integrator(state.integrators.roll, eRoll, dt, g.roll.integralLimit, satPos.roll, satNeg.roll)
+        inY = update_axis_integrator(state.integrators.yaw, eYaw, dt, g.yaw.integralLimit, satPos.yaw, satNeg.yaw)
+        state.integrators.pitch = inP
+        state.integrators.roll = inR
+        state.integrators.yaw = inY
+    end
+
     return {
-        rollTorque  = g.roll.kp * eRoll + g.roll.ki * inR - g.roll.kd * rRate,
-        pitchTorque = g.pitch.kp * ePitch + g.pitch.ki * inP - g.pitch.kd * pRate,
-        yawTorque   = g.yaw.kp * eYaw + g.yaw.ki * inY - g.yaw.kd * yRate
+        rollTorque  = (isRateCmd and 0.0 or (g.roll.kp * eRoll + g.roll.ki * inR)) + g.roll.kd * eRateRoll,
+        pitchTorque = (isRateCmd and 0.0 or (g.pitch.kp * ePitch + g.pitch.ki * inP)) + g.pitch.kd * eRatePitch,
+        yawTorque   = (isRateCmd and 0.0 or (g.yaw.kp * eYaw + g.yaw.ki * inY)) + g.yaw.kd * eRateYaw
     }
 end
 
@@ -107,20 +125,31 @@ end
 function flight_dynamics_core.compute(state, telem, guidance, dt, satStatus)
     local deltaT = math.max(0.005, math.min(0.2, dt or 0.05))
     local measQ = telem.orientation or quat.identity()
-    local targetQ = guidance.targetOrientation or quat.identity()
-    local rates = telem.angularRate or { x = 0, y = 0, z = 0 }
+    local targetQ = guidance.targetQuaternion or guidance.targetOrientation or quat.identity()
+    local rates = telem.angularRate or telem.rates or { x = 0, y = 0, z = 0 }
+    local targetRates = guidance.targetAngularRates
+    local cmdType = guidance.commandType or "QUATERNION_RATE"
 
-    local attWrench = flight_dynamics_core.compute_attitude_wrench(state, targetQ, measQ, rates, deltaT, satStatus)
-
-    local targetVy = guidance.targetClimbRate or 0.0
-    local measVy = telem.verticalSpeed or 0.0
-    local baseT = guidance.targetThrottle or 0.0
-    local heaveDemand = flight_dynamics_core.compute_climb_wrench(state, targetVy, measVy, baseT, deltaT, satStatus)
+    local attWrench = flight_dynamics_core.compute_attitude_wrench(
+        state, targetQ, measQ, rates, deltaT, satStatus, targetRates, cmdType
+    )
 
     local bias = guidance.translationBias or {}
+    local thrustScale = state.thrustScale or (state.config and state.config.thrustScale) or 15.0
+    local cThrust = math.max(0.0, math.min(1.0, tonumber(guidance.collectiveThrust) or 0.0))
+    local thrustEffort = math.max(0.0, math.min(15.0, cThrust * thrustScale))
+
+    local alpha = math.max(0.0, math.min(1.0, tonumber(guidance.transitionAlpha) or 0.0))
+    local bSurge = tonumber(bias.surge) or 0.0
+    local bSway = tonumber(bias.sway) or 0.0
+
+    local surgeDemand = bSurge * (1.0 - alpha) + thrustEffort * alpha
+    local heaveDemand = thrustEffort * (1.0 - alpha)
+    local swayDemand = bSway
+
     return {
-        surge = tonumber(bias.surge) or 0.0,
-        sway = tonumber(bias.sway) or 0.0,
+        surge = surgeDemand,
+        sway = swayDemand,
         heave = heaveDemand,
         rollTorque = attWrench.rollTorque,
         pitchTorque = attWrench.pitchTorque,

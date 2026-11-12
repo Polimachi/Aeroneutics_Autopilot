@@ -1,4 +1,6 @@
 -- VAS 9-State FSM, 2-Stage Arming & C2 Preemption Module (v1.10.0)
+local quat = require("quat")
+
 local state_machine = {}
 
 function state_machine.init(systemConfig, isCalibrated)
@@ -13,7 +15,10 @@ function state_machine.init(systemConfig, isCalibrated)
         lastFcpCmdMs = now,
         lastFcpCmd = nil,
         calibStartMs = 0,
-        hoverBaseThrottle = 7.5,
+        hoverBaseThrottle = cfg.hoverBaseThrottle or 9.525,
+        emergencyVyIntegrator = 0.0,
+        emergencyKp = cfg.emergencyKp or (2.0 / 15.0),
+        emergencyKi = cfg.emergencyKi or (0.1 / 15.0),
         isAirborne = false,
         activeSource = "FCP",
         sensorLossTicks = 0,
@@ -46,15 +51,32 @@ function state_machine.transition_to(state, nextState, reason)
     return true
 end
 
+function state_machine.compute_emergency_collective(state, targetVy, measVy)
+    local tVy = tonumber(targetVy) or 0.0
+    local mVy = tonumber(measVy) or 0.0
+    local eVy = tVy - mVy
+    local baseNorm = (state.hoverBaseThrottle or 9.525) / 15.0
+    local kp = state.emergencyKp or (2.0 / 15.0)
+    local ki = state.emergencyKi or (0.1 / 15.0)
+    local dt = 0.05
+    local inVy = (state.emergencyVyIntegrator or 0.0) + eVy * dt * ki
+    state.emergencyVyIntegrator = math.max(-0.2, math.min(0.2, inVy))
+    local collective = baseNorm + kp * eVy + state.emergencyVyIntegrator
+    return math.max(0.0, math.min(1.0, collective))
+end
+
 function state_machine.arbitrate_c2(state, cmd)
     if not cmd then return nil end
     local action = cmd.emergencyAction or (cmd.eStop and "E_STOP") or (cmd.action == "E_STOP" and "E_STOP")
     if action == "E_STOP" then
-        state.activeSource = "EMERGENCY_DIRECT"
-        state_machine.transition_to(state, "E_STOP", "EMERGENCY_OVERRIDE_E_STOP")
-        return cmd
+        if cmd.authKey == "ESTOP_CONFIRM_KEY" then
+            state.activeSource = "EMERGENCY_DIRECT"
+            state_machine.transition_to(state, "E_STOP", "EMERGENCY_OVERRIDE_E_STOP")
+            return cmd
+        end
+        return nil, "ERR_ESTOP_UNAUTHORIZED"
     end
-    if cmd.acroActive == true or cmd.source == "PILOT_MFD" or cmd.source == "MFD_ACRO" then
+    if cmd.acroActive == true or ((cmd.source == "PILOT_MFD" or cmd.source == "MFD_ACRO" or cmd.source == "MFD_DIRECT" or cmd.commandType == "RATE_COMMAND") and cmd.acroActive ~= false) then
         state.activeSource = "MFD_ACRO"
         return cmd
     end
@@ -116,32 +138,45 @@ end
 
 function state_machine.get_effective_command(state, comState)
     local vy = (comState and comState.dynamics and comState.dynamics.verticalSpeed) or 0.0
-    local yaw = (comState and comState.attitude and comState.attitude.yaw) or 0.0
-    local baseT = state.hoverBaseThrottle or 7.5
+    local yaw = (comState and comState.attitude and (comState.attitude.yaw or comState.attitude.heading)) or 0.0
     local curr = state.currentState
 
     if curr == "NORMAL" and state.lastFcpCmd then
         return state.lastFcpCmd
     elseif curr == "FAILSAFE_HOLD" then
-        local trim = baseT + 2.0 * (0.0 - vy)
+        local coll = state_machine.compute_emergency_collective(state, 0.0, vy)
         return {
-            flightMode = "LOITER", commandType = "ATTITUDE_ANGLE",
-            angleTargets = { targetPitch = 0.0, targetRoll = 0.0, targetHeading = yaw, turnRateFF = 0.0 },
-            targetThrottle = math.max(0.0, math.min(15.0, trim)), targetClimbRate = 0.0, flapTarget = 0.0,
-            translationBias = { surge = 0.0, sway = 0.0, heave = 0.0 }
+            flightMode = "LOITER",
+            commandType = "QUATERNION_RATE",
+            targetQuaternion = quat.from_euler(0.0, 0.0, yaw),
+            targetAngularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            collectiveThrust = coll,
+            flapTarget = 0.0,
+            translationBias = { surge = 0.0, sway = 0.0 }
         }
     elseif curr == "EMERGENCY_LAND" or curr == "AIRBORNE_EMERGENCY" then
         local descentRate = (curr == "EMERGENCY_LAND") and -1.5 or -1.0
-        local descentT = baseT + 2.0 * (descentRate - vy)
+        local coll = state_machine.compute_emergency_collective(state, descentRate, vy)
         local mode = (curr == "AIRBORNE_EMERGENCY") and "EMERGENCY" or "LANDING"
         return {
-            flightMode = mode, commandType = "ATTITUDE_ANGLE",
-            angleTargets = { targetPitch = 0.0, targetRoll = 0.0, targetHeading = yaw, turnRateFF = 0.0 },
-            targetThrottle = math.max(0.0, math.min(15.0, descentT)), targetClimbRate = descentRate, flapTarget = 1.0,
-            translationBias = { surge = 0.0, sway = 0.0, heave = 0.0 }
+            flightMode = mode,
+            commandType = "QUATERNION_RATE",
+            targetQuaternion = quat.from_euler(0.0, 0.0, yaw),
+            targetAngularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            collectiveThrust = coll,
+            flapTarget = 1.0,
+            translationBias = { surge = 0.0, sway = 0.0 }
         }
     end
-    return { flightMode = "IDLE", commandType = "ATTITUDE_ANGLE", targetThrottle = 0.0, targetClimbRate = 0.0, flapTarget = 0.0, translationBias = {} }
+    return {
+        flightMode = "IDLE",
+        commandType = "QUATERNION_RATE",
+        targetQuaternion = quat.identity(),
+        targetAngularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+        collectiveThrust = 0.0,
+        flapTarget = 0.0,
+        translationBias = { surge = 0.0, sway = 0.0 }
+    }
 end
 
 function state_machine.apply_output_safety_rule(state, rawOutputs, isAsa)
@@ -149,7 +184,7 @@ function state_machine.apply_output_safety_rule(state, rawOutputs, isAsa)
     local curr = state.currentState
     if curr == "E_STOP" then
         if state.isAirborne and not isAsa then
-            local cushionT = math.floor((state.hoverBaseThrottle or 7.5) * 0.6 + 0.5)
+            local cushionT = math.floor((state.hoverBaseThrottle or 9.525) * 0.6 + 0.5)
             for k, v in pairs(rawOutputs or {}) do
                 if type(v) == "table" then
                     safe[k] = { thrust = cushionT, gimbalX = 0.0, gimbalY = 0.0 }
