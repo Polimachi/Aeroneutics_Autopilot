@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-12  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202-1~4, TASK-206 / 진행 중: TASK-202 [202-5 대기] / 활성 대기: TASK-010, 011, 013, 117, 120, 204, 207, 208, 209, 210, 401)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-122, TASK-201, TASK-202-1~4, TASK-206 / 진행 중: TASK-202 [202-5 대기] / 활성 대기: TASK-010, 011, 013, 117, 120, 204, 207, 208, 209, 210, 401, 402)
 
 ---
 
@@ -29,8 +29,8 @@
   - [ ] **TASK-010-2**: 표준 템플릿 명세 및 인덱스(`playbook/README.md`) 작성
   - [ ] **TASK-010-3**: 인프라 도메인 매뉴얼(`playbook/0_infra/gps.md`) 작성
   - [ ] **TASK-010-4**: 온보드 제어 도메인 매뉴얼(`playbook/1_control/vas.md`, `playbook/1_control/tca.md`) 작성
-  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성 (`TASK-201` `LOITER`/`POI_HOLD` 및 `TASK-202` AMM v1.2.0 3분할 미션 시퀀서·CLI/TUI·외부 에디터/파일 즉시 구동 규격 반영)
-  - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증 (`test_tools_integrity.py` 도구 등록·`verify_context_docs.py` 통과 및 `TASK-009`·`113`·`114`·`115`·`116` 현행 반영 확인)
+  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성 (`TASK-201` `LOITER`/`POI_HOLD` 및 `TASK-202` AMM v1.2.0 3분할 미션 시퀀서·CLI/TUI·외부 에디터/파일 즉시 구동 규격 반영; `TASK-207~209` 개편 전 작성 시 현행 기준 작성 후 후속 동기화 필요, 개편 후 작성 권장)
+  - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증 (`test_tools_integrity.py` 도구 등록·`verify_context_docs.py` 통과 및 `TASK-009`·`113`·`114`·`115`·`116`·`122` 현행 반영 확인)
 
 - [ ] **TASK-011: [인프라 매뉴얼] 지상 관제 및 정비 도메인 플레이북 2차 확장 (Alignment, GCS, GAC, Landing Pad)** (`playbook/0_development/alignment.md`, `playbook/0_infra/{gcs,gac,landing_pad}.md`)
   - **선행 의존성**: `TASK-010` 완료 필요 (표준 7대 섹션 템플릿 `playbook/README.md` 및 `tools/verify_playbooks.py` 검증 체계 활용)
@@ -45,11 +45,11 @@
   - **목적 및 범위**: 사양서를 포함하는 모든 `.md` 파일 전수 검사 및 문서 관리 수행 예정 (참고: `.agent/rules/skill-workflows.md` 기준 활성 사양서 전수 감사·동기화는 `specification-lifecycle-manager` 및 `tools/verify_all_specs.py`, 3계층 컨텍스트 문서(`AGENTS.md`, `GEMINI.md`, `.agent/memory/*.md`)는 `md-management` 관할)
 
 - [ ] **TASK-117: [4순위] 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 구축 (구 TASK-117 + 119 통합)** (`src/0_development/ota/`, `src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{vas,tca}/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)
-  - **권장 착수 순위**: **4순위** (선행 기능·문서·진단 과제인 `TASK-202`·`TASK-204`·`TASK-010`·`TASK-011`·`TASK-120` 완료 후 리소스 집중 착수)
+  - **권장 착수 순위**: **4순위** (선행 기능·문서·진단 과제인 `TASK-202`·`TASK-204`·`TASK-207~209`·`TASK-010`·`TASK-011`·`TASK-120` 완료 후 리소스 집중 착수)
   - **사양서 상태**: 통합 OTA 사양서 미작성(Draft → Approved 및 대상 경로 확정 필요) / 연관 개정 대상: `docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md` (현재 v1.1.0 Implemented), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.28.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.13.0 Approved), `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.19.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.11.1 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.0.0 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved)
   - **배경 및 통합 사유**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM)의 수동 `installer.lua` 업데이트 비용을 해소하되, `Zero-Fallback` 원칙상 체크섬 검증·`/ota_staging/` 원자적 교체 응답·안전 게이트 거부(`NACK`) 사유 코드가 서버 프로토콜에 처음부터 일체화되어야 재설계를 방지할 수 있음. 또한 비행 중 OTA 재부팅 추락 및 패킷 유실로 인한 벽돌(Brick) 장애를 막기 위해 서버와 슬레이브 부트스트랩 가드를 단일 E2E 게이트로 통합 검증함
   - **주요 작업**:
-    - [ ] **TASK-117-1**: 통합 OTA 사양 및 아키텍처 동시 개정 — 격납고 예약 대역(`101 ~ 200`, `Base_hangar+4~+9`) 무선 OTA 채널(`0 ~ 100` 유선/내부 IPC 대역 배제), `/.version.json` 기반 다중 노드 주소 지정(`VAS`·`TCA`·`FCP`·`AMM`), 체크섬·원자적 교체 ACK/NACK(`NOT_DISARMED` 등) 패킷 스키마를 통합 사양서(Draft → Approved), 마스터 ICD, 전체 구조도, 인스톨러·VAS·TCA 사양서에 동시 반영
+    - [ ] **TASK-117-1**: 통합 OTA 사양 및 아키텍처 동시 개정 — 격납고 예약 대역(`101 ~ 200`, `Base_hangar+4~+9`) 무선 OTA 채널(`0 ~ 100` 유선/내부 IPC 대역 배제), `/.version.json` 기반 다중 노드 주소 지정(`VAS`·`TCA`·`FCP`·`AMM`), 체크섬·원자적 교체 ACK/NACK(`NOT_DISARMED` 등) 패킷 스키마를 통합 사양서(Draft → Approved), 마스터 ICD, 전체 구조도, 인스톨러·VAS·TCA·FCP·AMM 사양서에 동시 반영
     - [ ] **TASK-117-2**: 슬레이브 OTA 에이전트 및 2단계 부트 커밋 워치독 구현 — 수신 파일을 `/ota_staging/`에 기록 후 CRC/해시 일치 시에만 본 경로로 교체하고, `pending_ota` 마커와 초기 정상 틱 커밋·예외/미커밋 재부팅 시 `/ota_backup/` 자동 복구 래퍼를 `startup.lua` 생성기에 내장 (`src/0_development/installer/modules/startup_generator.lua`)
     - [ ] **TASK-117-3**: 온보드 안전 상태 게이트 및 노드 타게팅 연동 — 기체가 `DISARMED`·지상 `IDLE_ARMED`·지상 `E_STOP`(`not isAirborne`) 등 비비행 안전 상태일 때만 OTA 수신·적용을 허용하고 비행 중에는 `NACK` 거부하는 상태 게이트 구현 (`src/1_control/{vas,tca}/`·`FCP`·`AMM` 우선 적용, `src/1_control/asa/`는 `TASK-105` 연기 해제 시 연동)
     - [ ] **TASK-117-4**: 격납고 무선 OTA 배포 서버 구축 및 매니페스트 동기화 — 격납고 마스터 컴퓨터 단일 명령으로 기체 내 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 일괄 배포 및 원격 `os.reboot()` 트리거 구현 (`src/0_development/ota/` 신설 시 `manifest.lua`, `config/gdrive_mapping.json`, `verify_manifest_sync.py` 정합성 동기화 필수)
@@ -63,7 +63,7 @@
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
 - [-] **TASK-202: UAFS 통합 미션 시퀀서 엔진 및 AMM 조종석 단말 구현 (구 TASK-201[AMP 초안] + 203 통합)**
-  - **선행 의존성**: `TASK-202-1~4` 및 `TASK-201` 완료로 `TASK-202-5`(호스트 PC 외부 비주얼 에디터 `tools/amm_mission_editor.html`, 멀티노드 E2E 시뮬레이션·사양서 승격) 즉시 진행 가능
+  - **선행 의존성**: `TASK-202-1~4` 및 `TASK-201` 완료로 `TASK-202-5`(호스트 PC 외부 비주얼 에디터 `tools/amm_mission_editor.html` 사양서 생성) 즉시 진행 가능 (HTML 파일 직접 구현은 `TASK-402`로 분리)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-2-amm-mission-core-hooks-zone3.md`, `docs/superpowers/plans/2026-11-11-task-202-3-amm-mission-fsm-c2-headless.md`, `docs/superpowers/plans/2026-11-11-task-202-4-amm-tui-resolver-drop-cli.md`, `docs/superpowers/plans/2026-11-11-amm-webui-editor-spec-draft.md` (초안: `docs/superpowers/plans/2026-11-08-amp-mission-planner.md`)
   - **사양서 상태**: `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.28.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.13.0 Approved)
   - **배경 및 목적**: Layer 3(AMM)과 Layer 4(AMP)로 분열되었던 미션 시퀀서 및 체크포인트 평가 로직을 3분할 미션 코어(`src/3_planning/amm/modules/{mission_engine,condition_evaluator,hook_runner}.lua`)로 일원화. 온보드 AMM 51x19 MFD TUI와 결합 구동하고 동일 코어를 무인기 헤드리스(`config.headless`) 및 원격 트리거(`Base+0` `MSG_MISSION_CMD`)로 겸용 구동하며, 호스트 PC 외부 비주얼 에디터(`tools/amm_mission_editor.html`) 저작 및 외부 파일 즉시 구동 파이프라인을 통합 지원하도록 모듈화
@@ -71,41 +71,44 @@
   - [x] **TASK-202-2**: 13종 체크포인트 스키마(활성 9종 + 예약 4종), 12종 `completeWhen`/`abortWhen` 조건 평가기(`condition_evaluator.lua`) 및 0-tick 비차단 훅/디바이스 실행기(`hook_runner.lua`), `network_manager.lua` Zone 3(`Base+20~29`) 동적 채널 연동 구현 완료 (2026-11-11, `3_planning/amm` 48/48 PASS)
   - [x] **TASK-202-3**: `missions/*.json` 다형성 시퀀스 파일 로더 및 스텝 자동 전이 FSM(`mission_engine.lua`), `c2_arbiter.lua` `Base+0` `MSG_MISSION_CMD`/`ACK` 중재 및 `config.headless` 분기 구현 완료 (2026-11-11, 단위 12타겟 361/361 PASS, `3_planning/amm` 60/60 PASS)
   - [x] **TASK-202-4**: AMM 51x19 TUI 6행 스크롤 뷰포트 + 5행 조건 진행률 시각화(`ui_renderer.lua`), 다중 경로 리졸버(`resolve_path`)·프리플라이트 스키마 검증기(`validate_mission_table`), `c2_arbiter.lua` `SCHEMA_INVALID` ACK 매핑, `file_transfer` 드롭/부팅 인자 즉시 실행(`main.lua`) 및 CLI 명령어(`run/load/files/stop/next/mission`, `input_handler.lua`) 확장 구현 완료 (2026-11-12, 커밋 `fa91084`, `064a706`, `dfb3029`, `d3b3b8b`, 단위 12타겟 372/372 PASS·`3_planning/amm` 71/71 PASS, E2E 8/8 PASS, 돌연변이 25/25 KILLED)
-  - [ ] **TASK-202-5**: 호스트 PC 브라우저 기반 단일 파일 비주얼 미션 에디터(`tools/amm_mission_editor.html`) 구현, AMM 단위 테스트·E2E 시뮬레이션 검증, `manifest.lua`·`verify_manifest_sync.py`·`verify_spec_status.py` 동기화 및 사양서 `Implemented` 환원 (선행 단계: WebUI 에디터 `Draft` 사양서 작성 — `docs/superpowers/plans/2026-11-11-amm-webui-editor-spec-draft.md`; `TASK-206` 이전 완료 시 `AMM v1.2.0 Implemented` 승격, 이후 완료 시 `v1.3.0`은 `TASK-207` 범위로 `Approved` 유지)
+  - [ ] **TASK-202-5**: 호스트 PC 브라우저 기반 단일 파일 비주얼 미션 에디터(`tools/amm_mission_editor.html`)의 사양서 생성 (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` 작성 — `docs/superpowers/plans/2026-11-11-amm-webui-editor-spec-draft.md`를 현행 `AMM v1.3.0`·`ICD v1.28.0`·`Diagram v2.13.0` 배지 기준으로 적용; `tools/amm_mission_editor.html` 직접 생성·E2E 검증은 별도 과제 `TASK-402`로 분리)
 
 - [ ] **TASK-204: AMM의 미션 관리 시스템용 표준 행동 리스트 재정의: 진입조건 및 계층별 분류** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `src/3_planning/amm/modules/`)
   - **배경 및 목적**: 현행 AMM의 3도메인(항법/인프라/특수) 13종 평면적 체크포인트 분류 및 사후 조건(`completeWhen`/`abortWhen`) 중심 스키마를 재검토하여, 각 표준 행동(Action)의 **진입조건(Entry Preconditions / State Guards)**과 **계층별 분류(Hierarchical Taxonomy)**를 체계적으로 재정의하고 사양서 및 미션 엔진 검증/실행 모델에 반영
 
 - [ ] **TASK-207: AMM v1.3.0 외부 게이트웨이·항법 융합·20Hz 궤적 생성기 구현** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `src/3_planning/amm/`, `tests/3_planning/amm/`)
-  - **선행 의존성**: `TASK-206` 사양 개편 완료(본 마일스톤) / `TASK-202-5`(WebUI 에디터 및 `v1.2.0` 코어 검증)와 병렬 또는 순차 진행 (`v1.3.0` 완료 전까지 `AMM` 사양서는 `Approved` 유지; `TASK-122`의 기체 GPS 클라이언트 및 동적 착륙패드 추종 로직을 `AMM`으로 이관 통합)
-  - **배경 및 목적**: `AMM (Node 03)`이 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), `nav_engine` GPS+DR 상보필터($\alpha = 0.35$)·`5,000ms` DR 선회, `facility_client`(Tower ATC/GAC/Runway/Docking Arm/Landing Pad 2차 테일러 외삽·`300ms` 워치독 복행·`-0.8` 도킹 이탈), `channel_sentinel`(Base 충돌 탐지·4계층 재바인딩 발령), `trajectory_generator`(11종 비행 상태 궤적·`LOITER`/`POI_HOLD`·피드포워드 가속도 산출), `[I-12]` `Base+4` 송수신, `Base+0` 단일 C2 중재 및 `Base+3` 5Hz 송출(`MFD_ACRO` 시 양보)을 수행하고 `20Hz`/`5Hz` 듀얼 코루틴 분리(`parallel.waitForAny`) 및 듀얼 모뎀(`top`+`back`, 단일 모뎀 폴백)을 구현함
+  - **선행 의존성**: `TASK-206` 사양 개편 완료 / `TASK-202-5`(WebUI 에디터 사양서)·`TASK-402`(WebUI 에디터 HTML 구현 및 `v1.2.0` 코어 검증)와 병렬 또는 순차 진행 (`TASK-208`·`TASK-209`와 3노드 폐루프 E2E 연동 검증 필요; `TASK-402`와 `TASK-207` 모두 완료 시 `AMM` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신)
+  - **배경 및 목적**: `AMM (Node 03)`이 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), `nav_engine`(GPS+DR 상보필터 $\alpha = 0.35$·`5,000ms` DR 선회, `TASK-122` 기체 GPS 클라이언트 이관 통합), `facility_client`(Tower ATC/GAC/Runway/Docking Arm/Landing Pad 2차 테일러 외삽·`300ms` 워치독 복행·`-0.8` 도킹 이탈), `channel_sentinel`(Base 충돌 탐지·4계층 재바인딩 발령), `trajectory_generator`(11종 비행 상태 궤적·`LOITER`/`POI_HOLD`·피드포워드 가속도 산출), `[I-12]` `Base+4` 송수신, `Base+0` 단일 C2 중재 및 `Base+3` 5Hz 송출(`MFD_ACRO` 시 양보)을 수행하고 `20Hz`/`5Hz` 듀얼 코루틴 분리(`parallel.waitForAny`) 및 듀얼 모뎀(`top`+`back`, 단일 모뎀 폴백)을 구현함 (신규 모듈 추가 시 `manifest.lua`·`config/gdrive_mapping.json`·`verify_manifest_sync.py` 동기화 필수)
 
 - [ ] **TASK-208: FCP v2.0.0 SE(3) 외루프 제어기 경량화 전면 개편** (`docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.0.0 Approved), `src/2_guidance/fcp/`, `tests/2_guidance/fcp/`)
-  - **선행 의존성**: `TASK-206` 완료 및 `TASK-207`(AMM `Base+4` `[I-12]` 송출) 연동 / `TASK-201` 전략 기동 로직을 AMM `trajectory_generator`로 이관한 뒤 순수 외루프로 정리
-  - **배경 및 목적**: `FCP (Node 04)`를 단일 `top` 모뎀 3채널(`Base+4`, `Base+2`, `Base+1`)만 사용하는 온보드 `SE(3)` 외루프 제어기($g = 11.0\text{ m/s}^2$, $\mathbf{a}_{\text{des}}$ 적분·항력/안티와인드업, 6대 기체 `QUATERNION_RATE` 투영, `STRICT_LEVEL`/`TILT_ASSISTED` + 스웨이 결손 틸트 폴백)로 축소하고, `state_propagator.lua` 속도 전파·`outer_loop_controller.lua`·`flight_fsm.lua` 6상태 FSM(`PASSIVE_TRACKING` 2.0초 범프리스 램핑, `AMM_TIMEOUT_HOLD` `500ms` $\to$ 10초 $\to$ `EMERGENCY_LAND`)을 구현하며 레거시 외부 RF·GPS·C2·`/etc/vac/` 로딩 경로를 제거함
+  - **선행 의존성**: `TASK-206` 완료 및 `TASK-207`(AMM `Base+4` `[I-12]` 송출)·`TASK-209`(VAS `Base+1` `QUATERNION_RATE`)와 3노드 폐루프 E2E 연동 검증 (`TASK-201` 전략 기동 로직을 AMM `trajectory_generator`로 이관한 뒤 순수 외루프로 정리; 완료 시 `FCP` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신)
+  - **배경 및 목적**: `FCP (Node 04)`를 단일 `top` 모뎀 3채널(`Base+4`, `Base+2`, `Base+1`)만 사용하는 온보드 `SE(3)` 외루프 제어기($g = 11.0\text{ m/s}^2$, $\mathbf{a}_{\text{des}}$ 적분·항력/안티와인드업, 6대 기체 `QUATERNION_RATE` 투영, `STRICT_LEVEL`/`TILT_ASSISTED` + 스웨이 결손 틸트 폴백)로 축소하고, `state_propagator.lua` 속도 전파·`outer_loop_controller.lua`·`flight_fsm.lua` 6상태 FSM(`PASSIVE_TRACKING` 2.0초 범프리스 램핑, `AMM_TIMEOUT_HOLD` `500ms` $\to$ 10초 $\to$ `EMERGENCY_LAND`)을 구현하며 레거시 외부 RF·GPS·C2·`/etc/vac/`·`MSG_SURFACE_CMD`·`ATTITUDE_ANGLE` 경로를 제거함 (모듈 삭제/개편 시 `manifest.lua`·`config/gdrive_mapping.json`·`verify_manifest_sync.py` 동기화 필수)
 
 - [ ] **TASK-209: VAS v1.19.0 `QUATERNION_RATE` 내루프 정규화 및 ACRO/페일세이프 정합화** (`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.19.0 Approved), `src/1_control/vas/`, `tests/1_control/vas/`)
-  - **선행 의존성**: `TASK-206` 완료 및 `TASK-208`(FCP `QUATERNION_RATE` 송출)과 함께 E2E 폐루프 검증(`verify_spec_status.py` 갱신 포함)
-  - **배경 및 목적**: `Base+1` `[I-2]` 수신 스키마를 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias {surge, sway}`) 단일 경로(Zero-Fallback)로 정규화하고, 정상 비행 중 `compute_climb_wrench` 승강 PI 루프를 제거해 `FAILSAFE_HOLD`(`FCP_TIMEOUT` `1,500ms` $\to$ 10초 $\to$ `EMERGENCY_LAND`) 한정 유지로 격리함. 아울러 `E_STOP (AMM/MFD/GCS) > MFD_ACRO > FCP` 중재, `Base+2` `AMM` 수신 및 `activeSource = "MFD_ACRO"` 전파, `MFD_ACRO` 중 `Base+3` 20Hz HUD 인계, `[I-10]` `MSG_AERO_CMD`/`STATUS`·`MSG_SURFACE_DISCOVER_*`, `config/system.json`(`trajectory: 4`, `actuation: 10`, `asaActuation: 11`, `fcpCommandTimeoutMs: 1500`) 및 `SatAsa`/`satTca`/`fcpCmd` 식별자 정합화를 반영함
+  - **선행 의존성**: `TASK-206` 완료 및 `TASK-207`/`TASK-208`과 3노드 E2E 폐루프 검증 (완료 시 `VAS` 사양서 `Implemented` 승격 및 `verify_spec_status.py` 갱신; `TASK-207~209` 3자 폐루프 완료 시 `docs/system/` 마스터 ICD·전체 구조도 상태 전이 검토 포함)
+  - **배경 및 목적**: `Base+1` `[I-2]` 수신 스키마를 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias {surge, sway}`) 단일 경로(Zero-Fallback, `ATTITUDE_ANGLE` 제거)로 정규화하고, 정상 비행 중 `compute_climb_wrench` 승강 PI 루프를 제거해 `FAILSAFE_HOLD`(`FCP_TIMEOUT` `1,500ms` $\to$ 10초 $\to$ `EMERGENCY_LAND`) 한정 유지로 격리함. 아울러 `E_STOP (AMM/MFD/GCS) > MFD_ACRO > FCP` 중재, `Base+2` `AMM` 수신 및 `activeSource = "MFD_ACRO"` 전파, `MFD_ACRO` 중 `Base+3` 20Hz HUD 인계, `[I-10]` `MSG_AERO_CMD`/`STATUS`·`MSG_SURFACE_DISCOVER_*`, `config/system.json`(`trajectory: 4`, `actuation: 10`, `asaActuation: 11`, `fcpCommandTimeoutMs: 1500`) 및 `SatAsa`/`satTca`/`fcpCmd` 식별자 정합화를 반영함
 
 - [ ] **TASK-210: ASA v1.7.0 / TCA / Alignment 구현 정합화 (`MSG_AERO_*` · 채널 · 핸드셰이크 반영)** (`docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md` (현재 v1.7.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.11.1 Implemented), `docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md` (현재 v2.6.1 Implemented), `src/1_control/asa/`)
-  - **선행 의존성**: `TASK-206` 완료 및 `TASK-105`(`ASA` 본 구현 재개) / `TASK-209`(`VAS v1.19.0`) 연동
-  - **배경 및 목적**: `TASK-105`로 연기 중인 `ASA` 본 구현 시 `Base+11` (`10011`), `bandwidth = 40`, `[I-10]` `MSG_AERO_CMD`/`MSG_AERO_STATUS` 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 단일 스키마(Zero-Fallback), `AMM -> FCP -> VAS -> ASA` 4계층 재바인딩 ACK(`oldBase + 11` / `newBaseChannel + 11`)를 준수하도록 구현·검증하고, `TCA`/`Alignment` 간 채널/UUID(`VAS-NODE-01-4402`) E2E 호환을 최종 확인함
+  - **선행 의존성**: `TASK-206` 완료 및 `TASK-209`(`VAS v1.19.0`) 연동; `ASA` 본 구현은 `[연기] TASK-105` 재개 시 연동
+  - **배경 및 목적**: ① `TASK-209` 완료 시 `TCA`/`Alignment` 간 채널·`AMM -> FCP -> VAS -> TCA` 4계층 재바인딩 및 UUID(`VAS-NODE-01-4402`) E2E 호환을 우선 검증하고, ② `TASK-105`로 연기 중인 `ASA` 본 구현 재개 시 `Base+11` (`10011`), `bandwidth = 40`, `[I-10]` `MSG_AERO_CMD`/`MSG_AERO_STATUS` 및 `MSG_SURFACE_DISCOVER_REQ/ACK` 단일 스키마(Zero-Fallback), `AMM -> FCP -> VAS -> ASA` 4계층 재바인딩 ACK(`oldBase + 11` / `newBaseChannel + 11`)를 준수하도록 구현·검증한 뒤 `ASA` 사양서를 `Implemented`로 승격함
 
 - [ ] **TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.28.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.13.0 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v1.3.0 Approved), `docs/specs/4_mission/`)
   - **사양서 상태**: PAYLOAD 계층 전용 사양서 미작성 (Draft → Approved 수립 및 마스터 ICD Interface I-11·전체 구조도·AMM 사양서 동기화 필요)
   - **배경 및 목적**: 현행 마스터 ICD Interface I-11(`Base+20~29`, Zone 3 탑재체 버스)에는 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK` 기본 예시 패킷만 정의되어 있으며, 전체 구조도의 세부 채널 구분(`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` 예비) 및 다양한 탑재체 노드(화물 투하, 마그넷 래치, 엄빌리컬 급유/충전, `CC:Radars`/터렛 무장 제어 등) 간 표준 통신 계약이 미비함. 탐색/기능 등록(Discovery & Capability), 상태/헬스 텔레메트리, 명령·응답(`ACK`/`NACK`)·오류 코드, 안전 인터록 및 채널 오프셋 배분 규칙을 포함한 PAYLOAD 계층 표준 통신 스키마를 정의함
 
+- [ ] **TASK-402: 호스트 PC 브라우저 기반 단일 파일 비주얼 미션 에디터(`tools/amm_mission_editor.html`) HTML 구현 및 검증** (`tools/amm_mission_editor.html`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md`, `tests/3_planning/amm/`)
+  - **선행 의존성**: `TASK-202-5` 완료 (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` 사양서 작성 필요)
+  - **배경 및 목적**: `TASK-202-5`에서 수립한 `AMM_MISSION_EDITOR_SPECIFICATION.md`를 기반으로 오프라인 `file://` 호환 단일 파일 HTML5/CSS/Vanilla JS 비주얼 미션 에디터(`tools/amm_mission_editor.html`)를 직접 생성하고, AMM 단위 테스트·E2E 시뮬레이션 검증, `manifest.lua`·`verify_manifest_sync.py`·`verify_spec_status.py` 동기화 및 WebUI 에디터 사양서 `Implemented` 승격을 수행함 (`TASK-206` 완료에 따라 `AMM v1.3.0`은 `TASK-207` 완료 시까지 `Approved` 유지)
+
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
 
-- [ ] **TASK-103: Runway 활주로 제어기 구현** (`src/0_infra/runway/`)
-  - **사양서 상태**: `docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md` (v1.10.7 Approved)
-  - 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜 (`TASK-116` 완료로 `0_infra` 폴더 스크롤 수용 가능, 구현 시 `manifest.lua` 등록 및 `verify_spec_status.py` 갱신 필요)
-
 ### ⏸️ 연기·보류 과제 (Deferred / On-Hold)
 
+- [ ] **[연기] TASK-103: Runway 활주로 제어기 사양서 상세화 및 활주로 제어기 코드베이스 작성** (`docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md`, `src/0_infra/runway/`)
+  - **사양서 상태**: `docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md` (v1.10.7 Approved)
+  - 활주로 제어기 사양서 상세화 및 코드베이스 구현: 활주로 유도등, 가상 ILS 및 유도로 `GAC` 연동 관제, 3축 ILS 글라이드슬로프/로컬라이저 비콘 송출 및 착륙 접근 프로토콜 (`TASK-116` 완료로 `0_infra` 폴더 스크롤 수용 가능; 일정 연기 — 사양서 `Approved` 유지, 구현 시 `manifest.lua` 등록 및 `verify_spec_status.py` 갱신 필요)
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
   - **사양서 상태**: `docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md` (v1.11.2 Approved)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (`AMM (Node 03)` 주도 4단계 랑데부 연동; 일정 연기 — 사양서 `Approved` 유지, 구현 시 `manifest.lua` 등록 및 `verify_spec_status.py` 갱신 필요)

@@ -3,7 +3,7 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-122`(GPS `v2.3.0 Implemented`), `TASK-201`(FCP), `TASK-202-1~4`(AMM v1.2.0 3분할 코어·TUI/CLI), `TASK-206`(FCP 외루프 경량화 및 AMM 상위 이관 15대 사양서 개편 — ICD `v1.28.0`, 구조도 `v2.13.0`, AMM `v1.3.0`, FCP `v2.0.0`, VAS `v1.19.0`, ASA `v1.7.0`, `7 Implemented, 8 Approved`; 2026-11-12, `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-122`(GPS `v2.3.0→v2.3.1 Implemented`), `TASK-201`(FCP), `TASK-202-1~4`(AMM v1.2.0 3분할 코어·TUI/CLI), `TASK-206`(FCP 외루프 경량화 및 AMM 상위 이관 15대 사양서 개편 — ICD `v1.28.0`, 구조도 `v2.13.0`, AMM `v1.3.0`, FCP `v2.0.0`, VAS `v1.19.0`, ASA `v1.7.0`, `7 Implemented, 8 Approved`; 2026-11-12, `.agent/memory/workspace-root.md`).
 - **다음 액션**:
   1. `TASK-202-5`: 호스트 PC 비주얼 에디터(`tools/amm_mission_editor.html`)·AMM E2E 검증(`v1.2.0`).
   2. `TASK-207~210`: `AMM v1.3.0`·`FCP v2.0.0 SE(3)`·`VAS v1.19.0 QUATERNION_RATE`·`ASA v1.7.0` 구현 개편.
