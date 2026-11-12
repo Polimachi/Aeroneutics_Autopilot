@@ -411,6 +411,7 @@ describe("test_flight_fsm_v2: FCP v2.0.0 config/fcp_config.json schema validatio
         -- Deprecated sections must be absent
         assert_nil(cfg.navigation, "navigation section is deprecated (migrated to AMM)")
         assert_nil(cfg.docking, "docking section is deprecated (migrated to AMM)")
+        assert_nil(cfg.guidance, "guidance section is deprecated (migrated to AMM/SE(3))")
 
         -- Safety section
         assert_not_nil(cfg.safety, "safety section required")

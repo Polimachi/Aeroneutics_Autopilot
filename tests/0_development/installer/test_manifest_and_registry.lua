@@ -131,14 +131,14 @@ describe("manifest dual-source module definitions", function()
         assert_true(#list >= 2)
 
         local fcp = manifest.getModule("fcp")
-        local foundAdvDriver = false
+        local foundOuterLoop = false
         for _, f in ipairs(fcp.files) do
-            if f.dest == "/modules/advanced_vtol_driver.lua" then
-                foundAdvDriver = true
+            if f.dest == "/modules/outer_loop_controller.lua" then
+                foundOuterLoop = true
                 break
             end
         end
-        assert_true(foundAdvDriver, "fcp missing advanced_vtol_driver.lua")
+        assert_true(foundOuterLoop, "fcp missing outer_loop_controller.lua")
     end)
 end)
 

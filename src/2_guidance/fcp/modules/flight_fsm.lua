@@ -55,7 +55,6 @@ local function do_transition(state, nextState)
     end
     if flight_fsm.is_transition_allowed(curr, nextState) then
         state.currentState = nextState
-        state.current_state = nextState
         return true
     end
     return false
@@ -67,7 +66,6 @@ function flight_fsm.init(config, safetyConfig)
     local safe = safetyConfig or cfg.safety or {}
     return {
         currentState = "BOOT",
-        current_state = "BOOT",
         airframeType = sys.airframeType or "VECTORED_VTOL",
         safety = {
             ammSetpointTimeoutMs = safe.ammSetpointTimeoutMs or 500,
@@ -148,7 +146,7 @@ local function step_active_tracking(state, ctx, sp, telem, now_ms, events)
         end
         return
     end
-    local lastRx = sp.lastRxMs or ctx.lastSetpointMs or ctx.lastRxMs
+    local lastRx = sp.lastRxMs or ctx.lastRxMs
     local timeoutMs = state.safety.ammSetpointTimeoutMs or 500
     if lastRx and (now_ms - lastRx >= timeoutMs) then
         if do_transition(state, "AMM_TIMEOUT_HOLD") then
@@ -187,7 +185,7 @@ local function step_amm_timeout_hold(state, ctx, sp, now_ms, events)
         events.resetIntegrators = true
         return
     end
-    local lastRx = sp.lastRxMs or ctx.lastSetpointMs or ctx.lastRxMs
+    local lastRx = sp.lastRxMs or ctx.lastRxMs
     local timeoutMs = state.safety.ammSetpointTimeoutMs or 500
     if lastRx and (now_ms - lastRx < timeoutMs) then
         if do_transition(state, "ACTIVE_TRACKING") then
@@ -220,7 +218,7 @@ function flight_fsm.step(state, ctx, now_ms)
     local s = state or flight_fsm.init()
     local c = ctx or {}
     local now = tonumber(now_ms) or 0
-    local telem = c.telemState or c.telemetry or {}
+    local telem = c.telemState or {}
     local sp = c.setpoint or {}
 
     local events = {
@@ -254,23 +252,19 @@ end
 
 function flight_fsm.is_flight_active(state)
     if not state then return false end
-    local s = state.currentState or state.current_state
+    local s = state.currentState
     return s == "ACTIVE_TRACKING" or s == "PASSIVE_TRACKING" or s == "AMM_TIMEOUT_HOLD" or s == "EMERGENCY_LAND"
 end
 
 function flight_fsm.is_armed(state)
     if not state then return false end
-    local s = state.currentState or state.current_state
+    local s = state.currentState
     return s ~= "BOOT"
 end
 
 function flight_fsm.is_vtol(airframe_type)
     local af = airframe_type or "VECTORED_VTOL"
     return (af == "VECTORED_VTOL" or af == "ADVANCED_VTOL" or af == "QUADROTOR" or af == "HEXAROTOR" or af == "WINGED_VTOL")
-end
-
-function flight_fsm.evaluate(state, ctx, now_ms)
-    return flight_fsm.step(state, ctx, now_ms)
 end
 
 return flight_fsm
