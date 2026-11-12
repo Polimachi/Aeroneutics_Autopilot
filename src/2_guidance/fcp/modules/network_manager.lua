@@ -73,7 +73,7 @@ function network_manager.init(config, modem_lookup_fn)
     local chs = cfg.channels or {}
     local base_ch = chs.baseChannel or 10000
     return {
-        domainId = sys.domainId or "AIRCRAFT_01",
+        domainId = (type(sys.domainId) == "string" and sys.domainId ~= "" and sys.domainId) or "AIRCRAFT_01",
         hardwareUuid = sys.hardwareUuid or "FCP-04",
         baseChannel = base_ch,
         bandwidth = chs.bandwidth or 40,
@@ -115,6 +115,9 @@ function network_manager.decode_envelope(rawPacket)
 end
 
 function network_manager.verify_packet(ctx, packet)
+    if type(ctx) ~= "table" or type(ctx.domainId) ~= "string" or ctx.domainId == "" then
+        return false
+    end
     local pkt = safe_unserialize(packet)
     if not pkt or type(pkt) ~= "table" then return false end
     if pkt.ver ~= network_manager.PROTO_VERSION then return false end
@@ -130,7 +133,7 @@ function network_manager.verify_packet(ctx, packet)
         return false
     end
     if pkt.type == "MSG_GPS_RESPONSE" then
-        if type(pkt.payload) ~= "table" or not ctx.domainId or pkt.payload.targetClient ~= ctx.domainId then
+        if type(pkt.payload) ~= "table" or pkt.payload.targetClient ~= ctx.domainId then
             return false
         end
     end

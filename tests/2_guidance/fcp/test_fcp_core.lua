@@ -264,6 +264,21 @@ describe("network_manager and fcp_runtime 40-channel binding and Base+5 GPS link
         assert_false(network_manager.verify_packet({ domainId = nil }, respNilTarget))
         assert_false(network_manager.verify_packet({ domainId = nil }, respAir01Target))
         assert_false(network_manager.verify_packet({ domainId = "" }, respAir01Target))
+
+        -- Empty system.domainId in init must normalize to "AIRCRAFT_01" and reject empty targetClient
+        local netEmptyInit = network_manager.init({ system = { domainId = "" } })
+        assert_eq(netEmptyInit.domainId, "AIRCRAFT_01")
+        local respEmptyTarget = {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 6, type = "MSG_GPS_RESPONSE", time = 1150,
+            payload = { targetClient = "", status = "FIX_OK", position = { x = 1, z = 1 } }
+        }
+        assert_false(network_manager.verify_packet(netEmptyInit, respEmptyTarget))
+        assert_false(network_manager.ingest_modem_event(netEmptyInit, "back", 10005, 60002, respEmptyTarget, 10, 1150))
+
+        -- Directly mutated net.domainId = "" must also fail closed on targetClient = ""
+        netEmptyInit.domainId = ""
+        assert_false(network_manager.verify_packet(netEmptyInit, respEmptyTarget))
+        assert_false(network_manager.verify_packet(netEmptyInit, respAir01Target))
     end)
 
     it("enforces monotonic bounded clientSeq, elapsed kinematic delta_t, and altitude sync in nav_engine", function()
@@ -457,6 +472,45 @@ describe("network_manager and fcp_runtime 40-channel binding and Base+5 GPS link
             status = "FIX_OK", position = { x = 502.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
         }, 0.05, nil))
         assert_eq(st.lastGpsFixMs, 2000, "3-streak snap with nil now_ms must preserve lastGpsFixMs")
+    end)
+
+    it("rejects replayed spike packets with duplicate clientSeq while allowing advancing-seq 3-spike snap", function()
+        local nav_engine = require("nav_engine")
+        local st = nav_engine.init({
+            navigation = { drComplementaryAlpha = 0.5, kinematicGateLimitM = 8.0, gpsTimeoutMs = 5000 }
+        })
+        local _, req1 = nav_engine.should_query_gps(st, 1000)
+        assert_eq(req1, 1)
+
+        -- Replay same clientSeq = 1 three times with spike coordinates
+        for i = 1, 3 do
+            assert_false(nav_engine.filter_gps(st, {
+                clientSeq = 1, status = "FIX_OK", position = { x = 500.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+            }, 0.05, 1000 + i * 20))
+        end
+        assert_eq(st.spikeStreak, 1, "replayed clientSeq = 1 must not advance spikeStreak beyond 1")
+        assert_eq(st.lastGpsFixSeq, 0)
+        assert_eq(st.lastGpsSeqSeen, 1)
+        assert_near(st.pos.x, 0.0, 1e-6, "replayed spike packets must not snap pos")
+
+        -- Advancing clientSeq = 2 and 3 must advance spikeStreak and snap on the 3rd distinct spike
+        local _, req2 = nav_engine.should_query_gps(st, 1200)
+        assert_eq(req2, 2)
+        assert_false(nav_engine.filter_gps(st, {
+            clientSeq = 2, status = "FIX_OK", position = { x = 501.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1200))
+        assert_eq(st.spikeStreak, 2)
+        assert_eq(st.lastGpsSeqSeen, 2)
+
+        local _, req3 = nav_engine.should_query_gps(st, 1300)
+        assert_eq(req3, 3)
+        assert_true(nav_engine.filter_gps(st, {
+            clientSeq = 3, status = "FIX_OK", position = { x = 502.0, z = 0.0 }, accuracy = 0.5, hdop = 1.0
+        }, 0.05, 1300))
+        assert_eq(st.spikeStreak, 0)
+        assert_eq(st.lastGpsFixSeq, 3)
+        assert_eq(st.lastGpsSeqSeen, 3)
+        assert_near(st.pos.x, 502.0, 1e-4)
     end)
 end)
 

@@ -19,6 +19,10 @@ local function non_empty_str(v)
     return nil
 end
 
+local function is_finite_number(v)
+    return type(v) == "number" and v == v and v > -math.huge and v < math.huge
+end
+
 local function resolve_mobility(config)
     local raw = non_empty_str(config.mobility) or non_empty_str(config.mode) or "STATIC"
     local upper = string.upper(raw)
@@ -96,7 +100,7 @@ function gps_client.create(config, offsetTransform)
             time = timeMs,
             payload = {
                 replyChannel = state.replyChannel,
-                altitudeY = altitudeY or state.compPos.y,
+                altitudeY = is_finite_number(altitudeY) and altitudeY or state.compPos.y,
                 clientType = "FACILITY",
                 clientSeq = state.seq
             }
@@ -118,7 +122,7 @@ function gps_client.create(config, offsetTransform)
         if payload.status ~= "FIX_OK" and payload.status ~= "FIX_DEGRADED" then
             return false
         end
-        if type(payload.position) ~= "table" or type(payload.position.x) ~= "number" or type(payload.position.z) ~= "number" then
+        if type(payload.position) ~= "table" or not is_finite_number(payload.position.x) or not is_finite_number(payload.position.z) then
             return false
         end
 
@@ -127,7 +131,7 @@ function gps_client.create(config, offsetTransform)
         state.lastAccuracy = tonumber(payload.accuracy)
         state.lastHdop = tonumber(payload.hdop)
         state.hasValidFix = true
-        state.lastGpsTime = nowSec or (os.clock and os.clock() or 0)
+        state.lastGpsTime = is_finite_number(nowSec) and nowSec or (os.clock and os.clock() or 0)
         state.isDegraded = false
         recalculate_pad_pos()
         return true

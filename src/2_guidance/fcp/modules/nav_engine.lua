@@ -28,6 +28,7 @@ function nav_engine.init(config)
         lastGpsReqMs = 0,
         gpsReqSeq = 0,
         lastGpsFixSeq = 0,
+        lastGpsSeqSeen = 0,
         spikeStreak = 0,
         validStreak = 0,
     }
@@ -112,7 +113,8 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
     local cSeq = nil
     if fix_payload.clientSeq ~= nil then
         cSeq = tonumber(fix_payload.clientSeq)
-        if not is_finite_number(cSeq) or cSeq <= (state.lastGpsFixSeq or 0) or ((state.gpsReqSeq or 0) > 0 and cSeq > state.gpsReqSeq) then
+        local minSeq = math.max(state.lastGpsFixSeq or 0, state.lastGpsSeqSeen or 0)
+        if not is_finite_number(cSeq) or cSeq <= minSeq or ((state.gpsReqSeq or 0) > 0 and cSeq > state.gpsReqSeq) then
             return false
         end
     end
@@ -121,6 +123,7 @@ function nav_engine.filter_gps(state, fix_payload, dt, now_ms)
     local gx = (pos and pos.x) or fix_payload.x
     local gz = (pos and pos.z) or fix_payload.z
     if not is_finite_number(gx) or not is_finite_number(gz) then return false end
+    if cSeq then state.lastGpsSeqSeen = cSeq end
 
     local acc = fix_payload.accuracy or 1.0
     local fallback_dt = dt or 0.05

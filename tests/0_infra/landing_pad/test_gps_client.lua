@@ -245,4 +245,62 @@ describe("Landing pad GPS client and 20Hz dead reckoning", function()
         }, offset_transform)
         assert_false(okBad)
     end)
+
+    it("rejects non-finite (NaN, +Inf, -Inf) coordinates in MSG_GPS_RESPONSE without poisoning fix state", function()
+        local client = gps_client.create(dummyCfg, offset_transform)
+        local badCoords = {
+            { x = 0 / 0, z = 200.0 },
+            { x = 100.0, z = 0 / 0 },
+            { x = math.huge, z = 200.0 },
+            { x = 100.0, z = -math.huge },
+        }
+        for i, pos in ipairs(badCoords) do
+            local req = client:build_request_packet(64.0, 1000 + i * 100)
+            assert_false(client:handle_response_packet({
+                ver = "1.9.5", type = "MSG_GPS_RESPONSE", seq = i, time = 1010 + i * 100,
+                payload = {
+                    targetClient = "PAD_ALPHA",
+                    clientSeq = req.payload.clientSeq,
+                    status = "FIX_OK",
+                    position = pos,
+                    accuracy = 0.2,
+                    hdop = 1.0,
+                }
+            }, 10.0 + i))
+            assert_false(client:has_valid_fix())
+            assert_near(client:get_current_comp_pos().x, 100.0, 1e-4)
+            assert_near(client:get_current_comp_pos().z, 200.0, 1e-4)
+        end
+
+        -- Establish a valid fix first, then confirm non-finite response does not overwrite it
+        local goodReq = client:build_request_packet(64.0, 2000)
+        assert_true(client:handle_response_packet({
+            ver = "1.9.5", type = "MSG_GPS_RESPONSE", seq = 10, time = 2010,
+            payload = {
+                targetClient = "PAD_ALPHA",
+                clientSeq = goodReq.payload.clientSeq,
+                status = "FIX_OK",
+                position = { x = 300.0, z = 400.0 },
+                accuracy = 0.2,
+                hdop = 1.0,
+            }
+        }, 20.0))
+        assert_true(client:has_valid_fix())
+
+        local poisonReq = client:build_request_packet(64.0, 2100)
+        assert_false(client:handle_response_packet({
+            ver = "1.9.5", type = "MSG_GPS_RESPONSE", seq = 11, time = 2110,
+            payload = {
+                targetClient = "PAD_ALPHA",
+                clientSeq = poisonReq.payload.clientSeq,
+                status = "FIX_OK",
+                position = { x = 0 / 0, z = math.huge },
+                accuracy = 0.2,
+                hdop = 1.0,
+            }
+        }, 21.0))
+        assert_true(client:has_valid_fix())
+        assert_near(client:get_current_comp_pos().x, 300.0, 1e-4)
+        assert_near(client:get_current_comp_pos().z, 400.0, 1e-4)
+    end)
 end)
