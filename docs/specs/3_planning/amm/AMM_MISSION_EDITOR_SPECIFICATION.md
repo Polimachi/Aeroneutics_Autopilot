@@ -23,7 +23,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
-| `v0.1.0` | `2026-11-12` | `AMM WebUI Mission Editor`(`tools/amm_mission_editor.html`) 상세 규격 초안(`Draft`) 최초 작성: `AMM v1.3.0` / `ICD v1.28.0` / `Diagram v2.13.0` 기준 외부 파일 파이프라인, Industrial Avionics UI 레이아웃, 미션 상태 모델(`version: "1.3.0"` 및 `v1.0.0`~`v1.2.0` 임포트), 13종 액션·12종 조건·4종 훅 빌더, Lua 동등성 프리플라이트 검증기, 2D `(X, Z)` 전술 캔버스, JSON 입출력 및 `TASK-402` 인수 기준 명세 | `TASK-202-5` 사양 수립 (`tools/amm_mission_editor.html` 구현은 `TASK-402`로 분리) |
+| `v0.1.0` | `2026-11-12` | `AMM WebUI Mission Editor`(`tools/amm_mission_editor.html`) 상세 규격 초안(`Draft`) 수립: `AMM v1.3.0` / `ICD v1.28.0` / `Diagram v2.13.0` 외부 파일 파이프라인, Flexbox Column UI 셸(`.app-shell`)·네이티브 대화상자 금지(`#exportConfirmModal`/`#toastContainer`), 상태 모델(`version: "1.3.0"` 및 `v1.0.0`~`v1.2.0` 임포트), 13종 액션·12종 조건·4종 훅 빌더, Lua 동등성 + `defaults`/`ARM_*` 프리플라이트 검증기, 2D `(X, Z)` 전술 캔버스(`hitTestCanvas` 4종 드래그·라벨 스태킹·`Alt` 미세 조정), JSON 입출력 및 `TASK-402` 인수 기준 명세 | `TASK-202-5` 사양 수립 (`tools/amm_mission_editor.html` 구현은 `TASK-402`로 분리) |
 
 ---
 
@@ -40,6 +40,7 @@
 - **무설치(Zero-Install) 단일 파일 구조**: `tools/amm_mission_editor.html`은 별도 빌드 도구, 로컬 HTTP 서버, npm 패키지 없이 단일 `.html` 파일(인라인 `<style>` + `<script>`)로 완결되어야 하며 `file://` 프로토콜에서 즉시 열려야 합니다.
 - **외부 네트워크·CDN 차단**: `<script src="http...">`, `<link href="https...">`, Google Fonts, `fetch()`, `XMLHttpRequest`, `WebSocket` 등 어떠한 외부 네트워크 요청도 허용하지 않습니다.
 - **DOM XSS 안전성**: 사용자가 불러오거나 붙여넣은 미션 JSON 내부 문자열(`missionId`, `description`, `checkpointId`, `facilityId`, `command`, `message`, 오류 문구 등)을 DOM에 출력할 때는 반드시 `document.createElement` + `textContent` (또는 `value`)만 사용하며, 비신뢰 문자열을 `innerHTML` / `insertAdjacentHTML`에 직접 결합하지 않습니다.
+- **네이티브 대화상자 금지 (In-Page Modal & Toast Only)**: 브라우저 기본 차단 대화상자(`window.alert`, `window.confirm`, `window.prompt`) 호출을 금지하며, 오류 포함 내보내기 확인은 인페이지 모달(`#exportConfirmModal`)로, 입출력/복사 알림은 비차단 토스트 컨테이너(`#toastContainer`)로 처리합니다.
 - **생태계 용어 및 금지 모드 준수**: `.agent/rules/domain-aeronautics.md`의 금지 모드·네임스페이스 및 `tests/harness/test_terminology_guard.py`의 금지 구버전 용어를 UI·주석·식별자 어디에도 포함하지 않습니다.
 
 ### 1.3 비목표 (Non-Goals)
@@ -133,27 +134,36 @@ flowchart LR
 - **주 UI 라벨·버튼·배지**: 조종석 계기판 및 `AMM` Lua/JSON 키와의 일관성을 위해 **영문**(`Mission ID`, `Execution Mode`, `Fallback Policy`, `Add Checkpoint`, `Preflight Valid`, `Export .json`, `Fit All`)으로 표기합니다.
 - **보조 설명 및 툴팁(`title` / 인라인 힌트)**: 한국어 사용자가 즉시 이해할 수 있도록 파라미터 설명, 경고 사유, `DEFERRED` 안내, 단축키 가이드는 **한/영 혼합**으로 제공합니다(예: `Acceptance Radius (m) — 도달 허용 반경; FLY_TO default 5.0m`).
 
-### 3.3 5영역 워크스페이스 레이아웃
-전체 뷰포트(`100vh`, `overflow: hidden`)는 CSS Grid 5개 영역으로 구성합니다:
+### 3.3 5영역 워크스페이스 및 `.app-shell` Flexbox Column 규격
+루트 컨테이너 `.app-shell`(`100vh`, `overflow: hidden`)은 Chrome `file://` 직접 실행 시 조건부 숨김 요소(`display: none`인 복구 배너·반응형 탭) 때문에 CSS Grid 행 배치가 당겨져 하단 검증 바가 `1fr`로 비정상 확장되는 현상을 방지하기 위해 **수직 Flexbox Column 레이아웃**(`display: flex; flex-direction: column`)으로 고정합니다.
 
-1. **Top Action & Mission Header Bar (`52px`)**:
+| 영역 | DOM 셀렉터 | 레이아웃 / Flex 규격 | 주요 역할 |
+| :--- | :--- | :--- | :--- |
+| **복구 배너** | `#recoveryBanner` | `flex-shrink: 0` (평시 `display: none`) | `localStorage` 자동 저장본 복구/무시 선택 |
+| **1. 상단 헤더 바** | `header.top-header` | `height: 52px; min-height: 52px; flex-shrink: 0` | `missionId`, `SINGLE`/`REPEAT`, `fallbackPolicy`, `Aircraft #N`(`Base`), `Undo`/`Redo`, `Presets`, 입출력 |
+| **반응형 뷰 탭** | `nav.responsive-tabs` | `flex-shrink: 0` (`>1150px`에서 `display: none`) | 소형 뷰포트(`<= 1150px`)에서 `Checkpoints` / `2D Canvas` / `Inspector` 뷰 전환 |
+| **2~4. 메인 워크스페이스** | `main.workspace-main` | `flex: 1 1 0%; min-height: 0; overflow: hidden` | 좌측 레일(`300px`) + 중앙 2D 캔버스(`minmax(420px, 1fr)`) + 우측 인스펙터(`420px`) 3열 CSS Grid |
+| **5. 하단 검증 바** | `footer.bottom-validation-bar` | `flex-shrink: 0` (요약 행 `32px` + 접이식 드로어 최대 `165px`) | 실시간 스키마 `VALID`/`WARNING`/`INVALID` 상태 및 `CP#k` 클릭 포커스 칩 |
+| **인페이지 모달 / 토스트** | `#exportConfirmModal` / `#toastContainer` | 고정 오버레이 (`display: none` ↔ 활성) | 오류 포함 내보내기 확인 모달 및 비차단 상태 토스트 |
+
+1. **Top Action & Mission Header Bar (`header.top-header`, `52px`)**:
    - 좌측: 앱 타이틀(`AMM MISSION EDITOR`), `Mission ID` 입력, `Execution Mode` 토글(`SINGLE` / `REPEAT`), `Fallback Policy` 선택(`RTH` / `HOVER_HOLD` / `LOITER` / `SKIP_NEXT`), `Aircraft #N (Base)` 프리뷰 입력.
    - 우측: `Undo` / `Redo`, `Presets` 드롭다운, `Import .json`, `Raw JSON` 드로어 토글, `Copy JSON`, `Export .json`.
 2. **Left Checkpoint Sequence Rail (`300px`)**:
    - 상단 헤더: `CHECKPOINTS (N)` 카운터, `+ Add` 버튼(그룹별 액션 선택 또는 즉시 추가).
    - 스크롤 가능한 수직 카드 목록: 순번(`#1..#N`), `checkpointId`, 액션 배지(`NAV` / `INFRA` / `SPECIAL` / `DEFERRED`), 상태 테두리(`[ERR]` 빨강 / `[DEF]` 주황 / `[OK]` 초록), 상하 이동(`▲`/`▼`)·복제·삭제 버튼, 드래그 재정렬 핸들.
-3. **Center Interactive 2D `(X, Z)` Tactical Canvas (`1fr`, 최소 `420px`)**:
+3. **Center Interactive 2D `(X, Z)` Tactical Canvas (`minmax(420px, 1fr)`)**:
    - 상단 플로팅 툴바: 도구 선택(`SELECT`, `ADD_FLY_OVER`, `PICK_TARGET`, `PICK_POI`, `ADD_PATROL_WP`), `Grid Snap`(`Off | 1m | 10m | 50m`), `Fit All`, `Zoom +/-`.
    - 좌상단 텔레메트리 HUD 오버레이: `Cursor (X, Z)`, `Zoom`, `Legs`, `2D Path (m)`, `Est. Time (s)`.
 4. **Right Inspector & JSON Drawer (`420px`)**:
    - 상단 탭 또는 아코디언: **`Checkpoint Inspector`** (`Params` / `Complete` / `Abort` / `Hooks [onEnter|onExit|onAbort]`) 및 **`Mission Defaults`** (`version`, `description`, `defaults.*`).
    - 하단/사이드 접이식 **`Raw JSON Drawer`**: 실시간 2-space JSON 미리보기, 수동 편집 후 `Apply JSON` 적용 버튼, 동기화 상태 표시.
-5. **Bottom Preflight Validation Bar (`32px` 축소 / `180px` 확장 드로어)**:
+5. **Bottom Preflight Validation Bar (`footer.bottom-validation-bar`, `32px` 축소 / 최대 `165px` 확장 드로어)**:
    - 요약 바: `[PASS] 0 Errors, N Warnings` 또는 `[FAIL] E Errors, W Warnings` + 드로어 확장 토글.
    - 확장 목록: 클릭 시 해당 `CP#idx` 체크포인트를 선택하고 캔버스를 해당 좌표로 이동시키는 이슈 칩(`SEVERITY | CODE | CP#idx | Message`).
 
 ### 3.4 반응형 및 접근성 규격
-- **반응형 분기 (`@media (max-width: 1150px)`)**: 뷰포트 너비가 `1150px` 미만이면 3열 레이아웃을 전환해 상단 바 + 레일(`260px`) + 중앙 영역(상단 탭으로 `2D Canvas` / `Inspector` 전환)으로 배치하여 입력 폼이 찌그러지지 않도록 합니다.
+- **반응형 분기 (`@media (max-width: 1150px)`)**: 뷰포트 너비가 `1150px` 이하이면 `nav.responsive-tabs`를 활성화하여 **`Checkpoints` / `2D Canvas` / `Inspector` 3탭 전환** 구조로 전환함으로써 좌측 레일·2D 캔버스·인스펙터 입력 폼이 찌그러지지 않도록 합니다.
 - **키보드 접근성**: 모든 버튼·입력·도구 토글에 명확한 `aria-label`과 `:focus-visible` `2px solid var(--accent-cyan)` 포커스 링을 부여합니다.
 
 ---
@@ -354,7 +364,7 @@ type ValidationIssue = {
 // return { valid: errors.length === 0, errors, warnings }
 ```
 
-- **구조 검증 vs 런타임 `DEFERRED` 분리**: 온보드 `mission_engine.validate_mission_table`과 동일하게 예약 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`)은 `ERROR`가 아닌 `WARNING` (`DEFERRED_ACTION_UNSUPPORTED`)으로 분류하여 파일 저장 및 내보내기를 허용하되, 온보드 시퀀서 진입 시 안전 중단됨을 명시합니다.
+- **구조 검증 vs 런타임 `DEFERRED` 분리**: 온보드 `mission_engine.validate_mission_table`과 동일하게 예약 액션 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 및 `completeWhen`/`abortWhen` 내 예약 조건 2종(`ARM_DOCKED`, `ARM_RELEASED`)은 `ERROR`가 아닌 `WARNING` (`DEFERRED_ACTION_UNSUPPORTED`)으로 분류하여 파일 저장 및 내보내기를 허용하되, 온보드 시퀀서 진입 또는 도킹암 조건 평가 시 제한됨을 사전에 안내합니다.
 
 ### 7.2 오류 및 경고 카탈로그 (Lua 동등성 매핑)
 
@@ -365,8 +375,8 @@ type ValidationIssue = {
 | `ERROR` | `INVALID_FALLBACK_POLICY` | `INVALID_FALLBACK_POLICY` | `fallbackPolicy` ∉ `{"RTH","HOVER_HOLD","LOITER","SKIP_NEXT"}` |
 | `ERROR` | `UNKNOWN_ACTION` | `UNKNOWN_ACTION` | `action` ∉ 13종 표준 액션 |
 | `ERROR` | `INVALID_TARGET_POS` | `INVALID_TARGET_POS` | `FLY_OVER`/`FLY_TO`/`ORBIT`/`POI_HOLD`의 `targetPos.{x,z}` 누락 또는 비유한수 (`TAKEOFF`/`LAND` 지정 시 오타 포함) |
-| `ERROR` | `INVALID_ACCEPTANCE_RADIUS` | `INVALID_ACCEPTANCE_RADIUS` | `acceptanceRadius <= 0` 또는 비유한수 |
-| `ERROR` | `INVALID_TARGET_ALT` | `INVALID_TARGET_ALT` | `targetAlt` 지정 시 비유한수 |
+| `ERROR` | `INVALID_ACCEPTANCE_RADIUS` | `INVALID_ACCEPTANCE_RADIUS` | `mission.defaults.acceptanceRadius` 또는 체크포인트 `params.acceptanceRadius` 지정 시 `<= 0` 또는 비유한수 |
+| `ERROR` | `INVALID_TARGET_ALT` | `INVALID_TARGET_ALT` | `mission.defaults.targetAlt` 또는 체크포인트 `params.targetAlt` 지정 시 비유한수 |
 | `ERROR` | `INVALID_FACILITY_ID` | `INVALID_FACILITY_ID` | `facilityId` 지정 시 빈 문자열 또는 비문자열 |
 | `ERROR` | `INVALID_ORBIT_RADIUS` | `INVALID_ORBIT_RADIUS` | `ORBIT.radius <= 0` 또는 비유한수 |
 | `ERROR` | `INVALID_ORBIT_DIRECTION` | `INVALID_ORBIT_DIRECTION` | `ORBIT.direction` ∉ `{"CW","CCW"}` |
@@ -388,13 +398,13 @@ type ValidationIssue = {
 | `ERROR` | `INVALID_CONDITION_PARAM` | *(런타임 평가 실패 방지)* | `DURATION_SEC.durationSec < 0`, `TIMEOUT_SEC.timeout < 0`, `FUEL_LEVEL_BELOW.threshold` ∉ `[0,1]`, `CROSS_TRACK_ERROR.maxDevM < 0`, `REDSTONE_INPUT_HIGH` `side` 누락 등 |
 | `ERROR` | `UNKNOWN_HOOK_TYPE` | `INVALID_HOOK_TYPE` / `INVALID_HOOK_BLOCK` | `hook.type` ∉ 4종 표준 훅 |
 | `ERROR` | `INVALID_HOOK_PARAM` | *(런타임 훅 실패 방지)* | `REDSTONE_*` `side` 누락/`durationMs < 0`, `ZONE3_PAYLOAD_CMD` 채널·`command` 누락, `NOTIFY_OPERATOR` `level` 위반 |
-| `WARNING` | `DEFERRED_ACTION_UNSUPPORTED` | `DEFERRED_ACTION_UNSUPPORTED` | 예약 4종 액션(`TASK-103/104` 미구현으로 런타임 거부 예정) |
+| `WARNING` | `DEFERRED_ACTION_UNSUPPORTED` | `DEFERRED_ACTION_UNSUPPORTED` | 예약 4종 액션(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 또는 예약 2종 조건(`ARM_DOCKED`, `ARM_RELEASED`) 사용 (`TASK-103/104` 미구현) |
 | `WARNING` | `ORBIT_RADIUS_BELOW_FCP_MIN` | *(FCP `LOITER` $R \ge 5.0\text{m}$ 클램프)* | `ORBIT.radius < 5.0` |
 | `WARNING` | `MISSING_DURATION_HOLD_MANUAL` | `HOLD/MANUAL` | `ORBIT`/`POI_HOLD`에 `durationSec` 및 커스텀 `completeWhen` 모두 부재(수동 `next`/`stop` 필요) |
 | `WARNING` | `PATROL_SINGLE_WP_DEGENERACY` | *(단일 점 순찰)* | `PATROL.waypoints.length === 1` |
 
 ### 7.3 진단 인터랙션 규칙
-- `errors.length > 0` 상태에서도 `Export .json` 버튼은 클릭 가능하게 두되, 내보내기 전 비차단 확인 대화창(`"Preflight detected N error(s). Export anyway?"`)으로 사용자 실수를 방지합니다.
+- `errors.length > 0` 상태에서도 `Export .json` 버튼은 클릭 가능하게 두되, `window.confirm()` 대신 인페이지 확인 모달 `#exportConfirmModal`(`"Preflight detected N error(s). Export anyway?"`)로 사용자 실수를 방지하며, 내보내기·복사 결과는 `#toastContainer` 비차단 토스트로 알립니다.
 - 하단 검증 바의 `CP#k` 이슈 칩을 클릭하면 즉시 `selectedIndex = k - 1`로 이동하고, 해당 체크포인트가 좌표를 가지면 캔버스 카메라(`camX, camZ`)를 해당 위치로 센터링합니다.
 
 ---
@@ -414,20 +424,33 @@ type ValidationIssue = {
 1. **배경 및 적응형 격자**: 줌 레벨에 따라 `10m` / `50m` / `100m` / `500m` 간격 중 화면상 `40..120px` 간격이 되는 축척 자동 선택, 원점 `(0, 0)` 십자선, 우상단 `N(-Z) / E(+X) / S(+Z) / W(-X)` 나침반 표시.
 2. **주 비행 경로선 (Primary Trajectory Legs)**: 공간 좌표를 가진 체크포인트(`FLY_OVER`, `FLY_TO`, `ORBIT`, `POI_HOLD`, `PATROL` 진입/이탈, `targetPos`가 있는 `TAKEOFF_LAUNCHPAD`/`LAND_LAUNCHPAD`)를 순차 연결하고 구간 중앙에 방향 화살표를 렌더링합니다. `executionMode === "REPEAT"`일 때는 마지막 공간 체크포인트에서 첫 번째 비행 체크포인트(첫 항목이 `TAKEOFF_LAUNCHPAD`이고 길이가 `2` 이상이면 인덱스 `1`, 아니면 인덱스 `0` — `mission_engine.lua` 순환 규칙 일치)로 이어지는 점선 귀환 레그를 그립니다.
 3. **도달 허용 반경 및 `ORBIT` 선회원**: `FLY_OVER` / `FLY_TO`의 해석된 `acceptanceRadius` 점선 원, `ORBIT`의 `params.radius` 점선 원 및 원주 위 `CW`/`CCW` 접선 방향 화살표.
-4. **`PATROL` 서브웨이포인트 다각형**: `P1`, `P2`, ... 번호가 붙은 폴리라인, `LOOP` 모드 시 `P_n -> P_1` 폐합선, `PING_PONG` 모드 시 양방향 셰브런 화살표.
+4. **`PATROL` 서브웨이포인트 다각형 및 무게중심 핸들**: `P1`, `P2`, ... 번호가 붙은 폴리라인, `LOOP` 모드 시 `P_n -> P_1` 폐합선, `PING_PONG` 모드 시 양방향 셰브런 화살표, 경유지 2개 이상(`waypoints.length >= 2`)일 때 무게중심 `(cx, cz)`에 보라색 사각 핸들(`⬡ Move Patrol`)을 렌더링합니다.
 5. **`POI_HOLD` 조준선**: `targetPos`에서 `poiPos`까지 이어지는 호박색(`--accent-amber`) 점선 시선 및 `+POI` 표적 십자 마커.
-6. **체크포인트 노드 글리프 및 비공간 배지**:
+6. **체크포인트 노드 글리프, 비공간 배지 및 중첩 라벨 스태킹**:
    - `TAKEOFF_LAUNCHPAD`: 상향 삼각형(`▲`), `LAND_LAUNCHPAD`: 하향 착륙 패드 사각형(`▼`), `ORBIT`: 이중 링, `POI_HOLD`: 다이아몬드(`◆`), `PATROL`: 다각형 허브, `FLY_OVER`/`FLY_TO`: 원형 마커 및 순번 `1..N`.
    - `PAYLOAD_ACTION` / `REDSTONE_ACTION` 등 좌표 없는 비공간 스텝은 직전 공간 체크포인트 옆에 위성 배지(`P#idx`, `R#idx`)로 부착해 시퀀스 내 위치를 시각화합니다.
+   - **중첩 좌표 라벨 스태킹 (`Coord Stack Offset`)**: 동일 `(X, Z)` 좌표를 공유하는 노드(예: 동일 패드의 이륙/착륙 패드)는 우측 라벨 Y 좌표를 `15px`씩 계단식으로 분리 렌더링하여 텍스트 겹침을 방지합니다.
    - 선택 체크포인트는 시안(`--accent-cyan`) 외곽선, 오류 체크포인트는 적색(`--accent-red`), `DEFERRED` 체크포인트는 호박색 점선 외곽선을 부여합니다.
 7. **`FIXED` 기수 방위 벡터**: 유효 `headingMode == "FIXED"`이고 유한 `fixedHeading`이 지정된 노드에 짧은 노즈 방향 화살표를 렌더링합니다.
 8. **좌상단 캔버스 HUD 오버레이**: `Cursor (X, Z)`, `Zoom`, `Legs`, `Total 2D Path (m)`, `Est. Transit Time (s)` (`defaults.cruiseSpeed` 및 구간별 속도 기준 합산).
 
-### 8.3 포인터 상태 머신 및 `Fit All`
+### 8.3 포인터 상태 머신, 노드 히트 테스트 및 `Fit All`
 - **줌**: 마우스 휠로 커서 위치 월드 좌표를 고정한 채 `0.05 .. 10.0 px/m` 범위 줌 인/아웃.
 - **팬(Pan)**: 마우스 중클릭 드래그, 우클릭 드래그, 또는 `Space + 좌클릭 드래그`(`cursor: grab`).
-- **도구 모드 (`ui.activeTool`)**:
-  - `SELECT`: 노드 클릭 시 선택, 드래그 시 `targetPos` / `poiPos` / `PATROL` 서브웨이포인트 이동(드롭 시 `history` 스냅샷 적재).
+- **`SELECT` 도구 직접 드래그 규격 (`hitTestCanvas` 4종 대상)**:
+
+| 드래그 대상 분류 | 히트 테스트 범위 (`hitTestCanvas`) | `mousemove` 드래그 동작 |
+| :--- | :--- | :--- |
+| **`CP` (일반 공간 노드 및 라벨)** | 노드 중심 반경 `16px` 원 **또는** 우측 라벨 박스(`#k CP_ID [ACTION]`) (`TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`, 유예 4종 액션 포함) | `params.targetPos.{x, z}`를 스냅(또는 `Alt` 미세) 좌표로 실시간 이동 |
+| **`POI` (`POI_HOLD` 조준점)** | `+POI` 십자 마커 중심 반경 `15px` | `targetPos` 고정 상태에서 `params.poiPos.{x, z}`만 이동 (`poiPos.y` 보존) |
+| **`PATROL_WP` (개별 경유지)** | 서브 경유지(`P1..Pn`) 중심 반경 `14px` | `params.waypoints[wIdx].{x, z}` 개별 이동 |
+| **`PATROL_ALL` (폴리곤 전체)** | 무게중심 `⬡ Move Patrol` 핸들(`15px`) 또는 라벨 영역 | 드래그 시작 대비 변위 $(\Delta X, \Delta Z)$만큼 `waypoints[]` 일괄 평행이동 |
+
+  - **선택 노드 최우선 히트 (`Selected-Node Priority`)**: 동일 `(X, Z)` 좌표에 여러 체크포인트가 겹칠 때 `hitTestCanvas()`는 현재 선택된 `state.ui.selectedIndex`를 최우선 판정하여 좌측 레일에서 선택한 노드를 즉시 끌어낼 수 있게 합니다.
+  - **호버링 및 드래그 시각 피드백**: 드래그 가능한 대상 호버 시 외곽 시안색 하이라이트 링(`r = 16px`)과 `cursor: grab`을 표시하고, 드래그 중에는 `cursor: grabbing` 및 노드 상단 부동 좌표 배지(`DRAGGING <checkpointId> -> X: ..., Z: ...`)를 실시간 렌더링합니다.
+  - **`Alt + 드래그` 미세 조정**: 드래그 중 `Alt` 키를 누르면 `gridSnapM` 스냅을 일시 우회하여 `0.1m` 단위로 자유롭게 배치합니다.
+  - **단일 Undo 스냅샷 (`mousedown`)**: 드래그 시작(`mousedown`) 시점에만 `pushHistorySnapshot()`을 1회 기록하여 `mousemove` 중 중복 적재를 방지하고 `Ctrl+Z` 1회 실행으로 드래그 전 좌표로 복원합니다.
+- **기타 도구 모드 (`ui.activeTool`)**:
   - `ADD_FLY_OVER`: 캔버스 클릭 위치(스냅 적용)에 `FLY_OVER` 체크포인트 추가.
   - `PICK_TARGET`: 캔버스 클릭 위치로 현재 선택된 체크포인트의 `targetPos` 지정/갱신.
   - `PICK_POI`: 캔버스 클릭 위치로 현재 선택된 `POI_HOLD`의 `poiPos.{x, z}` 지정/갱신.
@@ -452,7 +475,7 @@ type ValidationIssue = {
   - 2-space 들여쓰기 정식 JSON 생성.
   - `"version"`은 `"1.3.0"` 출력, 빈 `description`·미지정 선택 파라미터·`(Inherit Mission)`·**빈 `completeWhen`/`abortWhen` 및 빈 훅 배열(`onEnter`/`onExit`/`onAbort`) 키는 생략**, `_extra` 보존 키는 재병합.
   - `Export .json`: `${missionId.toLowerCase().replace(/[^a-z0-9_-]+/g, "_") || "mission"}.json` 파일명으로 브라우저 다운로드 트리거.
-  - `Copy JSON`: `navigator.clipboard.writeText()` 실행(오프라인 `file://` 권한 제한 시 숨김 `<textarea>` + `execCommand("copy")` 폴백) 후 토스트 알림 표시.
+  - `Copy JSON`: `navigator.clipboard.writeText()` 실행(오프라인 `file://` 권한 제한 시 숨김 `<textarea>` + `execCommand("copy")` 폴백) 후 `#toastContainer` 비차단 토스트 알림 표시.
 - **Raw JSON Drawer**: 실시간 JSON 동기화 미리보기(구문 강조 시 반드시 `<span>` + `textContent`만 생성해 DOM XSS 차단) 및 수동 편집 후 `Apply JSON` 지원.
 
 ### 9.3 키보드 단축키
@@ -495,6 +518,7 @@ type ValidationIssue = {
    - 예약 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 포함 내보내기 파일이 `validate_mission_table()`은 통과하고 `enter_checkpoint()`에서 `DEFERRED_ACTION_UNSUPPORTED`를 반환함을 확인.
    - `empty completeWhen`/`abortWhen` 생략 규칙으로 인해 `ORBIT`/`PATROL` 등이 `evaluate_group(..., {})` `false` 함정에 빠지지 않음을 확인.
 3. **브라우저 실동작 수동 검증 (`file://`)**:
-   - 로컬 브라우저에서 `file:///.../tools/amm_mission_editor.html` 직접 실행 후 데스크톱(`>= 1280px`) 및 축소 뷰포트(`~1024px`)에서 캔버스 팬/줌/클릭/드래그, `Undo`/`Redo`, 파일 드롭 임포트/내보내기, CC:Tweaked 창 `file_transfer` 드롭 즉시 적재 동작을 확인.
+   - 로컬 Chrome 등 브라우저에서 `file:///.../tools/amm_mission_editor.html` 직접 실행 시 데스크톱(`>= 1280px`)에서 `footer.bottom-validation-bar`가 `1fr`로 비정상 확장되지 않는지, 축소 뷰포트(`<= 1150px` / `~1024px`)에서 `Checkpoints`/`2D Canvas`/`Inspector` 3탭 전환이 정상 동작하는지 확인.
+   - `CP`/`POI`/`PATROL_WP`/`PATROL_ALL` 직접 드래그, 중첩 노드 선택 우선권(`Selected-Node Priority`)·라벨 스태킹, `Alt + 드래그` `0.1m` 미세 조정, `mousedown` 단일 `Undo`/`Redo`, `#exportConfirmModal`·`#toastContainer` 인페이지 대화상자, 파일 드롭 임포트/내보내기 및 CC:Tweaked 창 `file_transfer` 드롭 즉시 적재 동작을 확인.
 4. **사양서 상태 전이 규칙**:
    - 본 규격서 `Draft` $\to$ `Approved` 리뷰 승격 후 `TASK-402` 구현·검증 완료 시 `AMM_MISSION_EDITOR_SPECIFICATION.md` 상태를 `Implemented`로 승격하고 `tools/verify_all_specs.py` 및 `tools/verify_spec_status.py`에 편입합니다. *(단, 상위 `AMM_PROGRAM_SPECIFICATION.md` `v1.3.0 Approved`는 `TASK-402`와 `TASK-207`이 모두 완료될 때까지 `Approved`를 유지합니다.)*
