@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-12 — AMM WebUI 미션 에디터 사양서 초안(v0.1.0 Draft) 수립 (TASK-202-5)
+
+- **결정 배경**: `TASK-202`의 최종 잔여 항목인 `TASK-202-5`(호스트 PC 외부 비주얼 미션 에디터 사양서 생성, HTML 구현은 `TASK-402`로 분리)를 `AMM v1.3.0` / `ICD v1.28.0` / `Diagram v2.13.0` 기준과 현행 Lua 미션 코어(`mission_engine.lua`, `condition_evaluator.lua`, `hook_runner.lua`)에 정합화하여 명세화함 (`docs/superpowers/plans/2026-11-12-task-202-5-amm-webui-editor-spec.md`).
+- **반영 내역**:
+  1. **`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.1.0 Draft` 신설·보강)**: `AMM v1.3.0` 파이프라인(`file_transfer` Coroutine B 5Hz $\to$ `mission_engine` Coroutine A 20Hz $\to$ `trajectory_generator` $\to$ `Base+4 [I-12]` & `Zone 3 Base+20..29`), Chrome `file://` Flexbox Column `.app-shell` 레이아웃(`<= 1150px` 3탭 반응형, `footer.bottom-validation-bar` 최대 `165px`, 네이티브 대화상자 금지 및 `#exportConfirmModal`/`#toastContainer` DOM ID 계약), Industrial Avionics 다크 조종석 토큰(영문 UI 라벨 + 한/영 툴팁), 미션 JSON `"version": "1.3.0"` 출력 및 `v1.0.0` `items[]`/`v1.1.0`/`v1.2.0`/`params.{x,z}` 변환·`_extra` 미지 필드 보존, 13종 액션 폼·12종 조건·4종 훅(16색 번들)·빈 조건 그룹 생략 규칙·Lua 동등성 + `defaults.*`/`ARM_*` `DEFERRED_ACTION_UNSUPPORTED` 프리플라이트 검증기, 2D `(X, Z)` 전술 캔버스 8계층(`Coord Stack Offset`, `Selected-Node Priority`, `CP`/`POI`/`PATROL_WP`/`PATROL_ALL` 4종 `hitTestCanvas` 드래그, `Alt` `0.1m` 미세 조정, `mousedown` 단일 Undo), JSON 입출력 및 `TASK-402` 인수 기준을 명세화함.
+  2. **`TASK.md` 동기화**: `TASK-202-5` 완료 표기 및 `TASK-202` 완료 아카이브 이관(10개 상한 유지, `TASK-008` 정리), `TASK-402`에 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`현재 v0.1.0 Draft`) 연결.
+- **검증 (`feat/task-202-5` 워크트리)**: `verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`(15종), `verify_spec_status.py` `7 Implemented, 8 Approved PASS`, `verify_context_docs.py` `0 findings`, 하네스 `82/82 PASS`, 신설 `Draft` 사양서 구조·링크·Mermaid 감사 통과.
+
+---
+
 ## 2026-11-12 — FCP 외루프 경량화 및 AMM 상위 계층 이관을 위한 15대 사양서 전면 개편 (TASK-206)
 
 - **결정 배경**: 기존 `FCP (Node 04)`가 외부 RF 게이트웨이(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), Tower ATC/GAC/시설물 핸드셰이크, GPS+DR 항법 융합, C2(`Base+0`) 중재와 온보드 외루프 제어를 겸임하여 계층 책임이 혼재되어 있었고, `FCP -> VAS` 인터페이스가 `ATTITUDE_ANGLE`/`targetClimbRate`/`targetThrottle` 등 다중 폴백 경로와 문서 결함을 포함하고 있었음. Spec-First 원칙에 따라 `src/` Lua 코드 수정 없이 14종 활성 사양서(`INSTALLER` v1.1.0 유지)를 일괄 개편함 (`docs/superpowers/plans/2026-11-11-fcp-amm-role-refactor-specs.md`).
