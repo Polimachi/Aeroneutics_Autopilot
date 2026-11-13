@@ -12,6 +12,7 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         local vas = node_sandbox.create_node(bus, "VAS", "src/1_control/vas")
         local tca = node_sandbox.create_node(bus, "TCA", "src/1_control/tca")
         local asa = node_sandbox.create_node(bus, "ASA", "src/1_control/asa")
+        local gcs = node_sandbox.create_node(bus, "GCS", "src/0_infra/gcs")
 
         -- 1. Setup AMM components
         local waypoint_queue = amm:require("waypoint_queue")
@@ -32,17 +33,22 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
 
         -- Open channels
         amm.modem:open(10000) -- Base+0 (C2)
+        amm.modem:open(10002) -- Base+2 (VAS Telem)
         amm.modem:open(10003) -- Base+3 (MFD state)
+        amm.modem:open(10004) -- Base+4 (Trajectory Setpoint / Outer Loop Status)
+        gcs.modem:open(10003) -- Base+3 (MFD state downlink)
 
-        fcp.modem:open(10000) -- Base+0 (C2)
+        fcp.modem:open(10004) -- Base+4 (Trajectory Setpoint)
         fcp.modem:open(10002) -- Base+2 (VAS Telem)
+        fcp.modem:open(10001) -- Base+1 (Attitude Cmd)
 
         vas.modem:open(10001) -- Base+1 (Attitude Cmd)
+        vas.modem:open(10002) -- Base+2 (VAS Telem)
         vas.modem:open(10010) -- Base+10 (TCA feedback)
         vas.modem:open(10011) -- Base+11 (ASA feedback)
 
         tca.modem:open(10010) -- Base+10 (Thrust Cmd)
-        asa.modem:open(10011) -- Base+11 (Surface Cmd)
+        asa.modem:open(10011) -- Base+11 (Aero Cmd)
 
         -- 2. Add waypoints into AMM queue
         q:add(100, 100, 150, 18)
@@ -60,16 +66,24 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         assert_eq(c2_pkts[1].payload.payload.command, "ARM")
         assert_eq(c2_pkts[2].payload.payload.command, "TAKEOFF")
 
-        -- 4. FCP receives C2 command, transitions FSM and emits MSG_ATTITUDE_CMD on Base+1 (10001)
-        local fcp_fsm = fcp:require("flight_fsm")
-        local fsm = fcp_fsm.init({
-            system = { airframeType = "VECTORED_VTOL" },
-            safety = { takeoffClearanceAltitudeM = 15.0 },
-        })
-        fcp_fsm.transition_to(fsm, "IDLE_ARMED")
-        assert_eq(fsm.current_state, "IDLE_ARMED")
-        fcp_fsm.transition_to(fsm, "TAKEOFF")
-        assert_eq(fsm.current_state, "TAKEOFF")
+        -- 4. AMM computes trajectory setpoint and sends to FCP on Base+4 (10004)
+        local traj_gen = amm:require("trajectory_generator")
+        local traj_state = traj_gen.init(amm_cfg)
+        local setpoint = traj_gen.compute(traj_state, { pos = { x = 0, y = 64, z = 0 }, vel = { x = 0, y = 0, z = 0 } }, nil, {
+            flightMode = "TAKEOFF", arm = true, flightActive = true, targetAlt = 150.0
+        }, 0.05, 1000)
+        net:send_trajectory_setpoint(setpoint)
+        bus:step(0.05)
+
+        local sp_pkts = bus:find_packets({ type = "MSG_TRAJECTORY_SETPOINT", channel = 10004 })
+        assert_eq(#sp_pkts, 1)
+
+        -- FCP outer_loop_controller computes MSG_ATTITUDE_CMD
+        local outer_loop_controller = fcp:require("outer_loop_controller")
+        local fcp_ctrl = outer_loop_controller.init({ system = { airframeType = "VECTORED_VTOL" } })
+        local att_cmd = outer_loop_controller.compute(fcp_ctrl, { pos = { x = 0, y = 64, z = 0 }, vel = { x = 0, y = 0, z = 0 } }, sp_pkts[1].payload.payload, {
+            currentState = "ACTIVE_TRACKING", flightActive = true, arm = true
+        }, 0.05)
 
         -- FCP sends attitude command to VAS on Base+1 (10001)
         fcp.modem:transmit(10001, 10001, {
@@ -78,25 +92,15 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             seq = 20,
             type = "MSG_ATTITUDE_CMD",
             time = 1050,
-            payload = {
-                source = "FCP",
-                arm = true,
-                flightActive = true,
-                flightMode = "TAKEOFF",
-                commandType = "RATE",
-                angleTargets = { pitch = 0.0, roll = 0.0, heading = 0.0 },
-                rateTargets = { pitch = 0.0, roll = 0.0, yaw = 0.0 },
-                targetClimbRate = 2.5,
-                targetThrottle = 0.6,
-                flapTarget = 0.0,
-                acroActive = false,
-            },
+            payload = att_cmd,
         })
         bus:step(0.05)
 
         -- Assert attitude command arrived on Base+1 (10001)
         local att_pkts = bus:find_packets({ type = "MSG_ATTITUDE_CMD", channel = 10001 })
         assert_eq(#att_pkts, 1)
+        assert_eq(att_pkts[1].payload.payload.commandType, "QUATERNION_RATE")
+        assert_eq(att_pkts[1].payload.payload.source, "FCP")
 
         -- 5. VAS processes attitude command, mixes 3-axis outputs to TCA (Base+10) & ASA (Base+11)
         local thrust_mixer = vas:require("thrust_mixer")
@@ -125,19 +129,19 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 51,
-            type = "MSG_SURFACE_CMD",
+            type = "MSG_AERO_CMD",
             time = 1060,
             payload = {
                 watchdogSeq = 1,
                 controlState = "NORMAL",
-                surfaces = { AIL_L = 0.0, AIL_R = 0.0, ELEV = 0.0, RUDD = 0.0 },
+                surfaces = { elevator = 0.0, aileronLeft = 0.0, aileronRight = 0.0, rudder = 0.0, flaps = 0.0 },
             },
         })
         bus:step(0.05)
 
         -- Assert actuators received commands on Base+10 and Base+11
         local thr_pkts = bus:find_packets({ type = "MSG_THRUST_CMD", channel = 10010 })
-        local srf_pkts = bus:find_packets({ type = "MSG_SURFACE_CMD", channel = 10011 })
+        local srf_pkts = bus:find_packets({ type = "MSG_AERO_CMD", channel = 10011 })
         assert_eq(#thr_pkts, 1)
         assert_eq(#srf_pkts, 1)
 
@@ -190,54 +194,87 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 61,
-            type = "MSG_SURFACE_STATUS",
+            type = "MSG_AERO_STATUS",
             time = 1070,
             payload = {
-                podId = "POD_01",
-                surfaceId = "ELEV",
-                boundSide = "left",
-                mode = "REDSTONE",
-                appliedDeflection = 0.0,
-                isSaturated = false,
-                isJammed = false,
-                healthStatus = "NOMINAL",
+                surfaceDeflections = { elevator = 0.0, aileronLeft = 0.0, aileronRight = 0.0, rudder = 0.0 },
+                saturatedSurfaces = {},
+                flapsPosition = 0.0,
+                actuatorHealth = { allOk = true },
             },
         })
         bus:step(0.05)
 
         local tca_stat = bus:find_packets({ type = "MSG_ACTUATOR_STATUS", channel = 10010 })
-        local asa_stat = bus:find_packets({ type = "MSG_SURFACE_STATUS", channel = 10011 })
+        local asa_stat = bus:find_packets({ type = "MSG_AERO_STATUS", channel = 10011 })
         assert_true(#tca_stat >= 1)
         assert_true(#asa_stat >= 1)
         local last_tca = tca_stat[#tca_stat].payload.payload
         assert_eq(last_tca.groupId, "THR_L")
         assert_true(last_tca.appliedSignal > 0)
 
-        -- 7. Craft reaches clearance altitude -> FCP transitions to CRUISE -> emits MFD_STATE
-        fcp_fsm.transition_to(fsm, "CRUISE")
-        assert_eq(fsm.current_state, "CRUISE")
-
-        fcp.modem:transmit(10003, 10003, {
+        -- 7. VAS reports clearance altitude telemetry on Base+2 -> FCP reports status on Base+4 -> AMM receives & dispatches WP1
+        amm.modem:drain()
+        vas.modem:transmit(10002, 10002, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 199,
+            type = "MSG_FLIGHT_TELEMETRY",
+            time = 1095,
+            payload = {
+                controlState = "NORMAL",
+                activeSource = "FCP",
+                dynamics = { altitudeY = 80.0, verticalSpeed = 0.0, groundSpeed = 0.0 },
+                fuel = 0.95,
+                sensorOk = true,
+            },
+        })
+        fcp.modem:transmit(10004, 10004, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 200,
-            type = "MSG_MFD_STATE",
+            type = "MSG_OUTER_LOOP_STATUS",
             time = 1100,
+            payload = {
+                fsmState = "ACTIVE_TRACKING",
+                trackingStatus = "TRACKING",
+                posError = 0.5,
+                velError = 0.1,
+                saturated = false,
+            },
+        })
+        bus:step(0.05)
+
+        -- 8. AMM ingests Base+2 & Base+4, transitions queue to WP1, and downlinks MSG_MFD_STATE on Base+3 to GCS
+        local amm_inbox = amm.modem:drain()
+        assert_eq(#amm_inbox, 2)
+        for _, m in ipairs(amm_inbox) do
+            if m.channel == 10002 and m.payload.type == "MSG_FLIGHT_TELEMETRY" then
+                arbiter:handle_flight_telemetry(m.payload, 1095)
+            elseif m.channel == 10004 and m.payload.type == "MSG_OUTER_LOOP_STATUS" then
+                arbiter:handle_outer_loop_status(m.payload, 1100)
+            end
+        end
+        assert_eq(arbiter.fcpTrackingStatus, "TRACKING")
+
+        arbiter:handle_mfd_state({
             payload = {
                 fsmState = "CRUISE",
                 flightMode = "AUTO_NAV",
                 navigation = { currentPos = { x = 0, z = 0 } },
             },
-        })
+        }, 1100)
+        net:send_mfd_state({
+            fsmState = "CRUISE",
+            flightMode = "AUTO_NAV",
+            navigation = { currentPos = { x = 0, z = 0 } },
+        }, "FCP")
         bus:step(0.05)
 
-        -- 8. AMM receives MFD_STATE on Base+3 -> auto-dispatches WP1 target waypoint
-        local amm_inbox = amm.modem:drain()
-        assert_eq(#amm_inbox, 1)
-        assert_eq(amm_inbox[1].payload.type, "MSG_MFD_STATE")
-
-        arbiter:handle_mfd_state(amm_inbox[1].payload)
-        bus:step(0.05)
+        local gcs_mfd_in = gcs.modem:drain()
+        assert_eq(#gcs_mfd_in, 1)
+        assert_eq(gcs_mfd_in[1].payload.type, "MSG_MFD_STATE")
+        assert_eq(gcs_mfd_in[1].payload.payload.fsmState, "CRUISE")
 
         -- Assert AMM transmitted WP1 command to FCP
         local wp1_pkts = bus:find_packets({ type = "MSG_OPERATOR_CMD", channel = 10000 })
@@ -252,35 +289,33 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         vas.modem:drain()
         amm.modem:drain()
 
-        local fcp_runtime = fcp:require("fcp_runtime")
+        local fcp_main = fcp:require("main")
         local fcp_net_mod = fcp:require("network_manager")
-        local fcp_cfg = fcp:require("main").load_config()
-        local fcp_ctx = fcp_runtime.create_context(fcp_cfg, function() return fcp.modem end)
-        fcp_fsm.transition_to(fcp_ctx.fsm, "CRUISE")
+        local fcp_cfg = fcp_main.load_config()
+        local fcp_ctx = fcp_main.create_context(fcp_cfg, function() return fcp.modem end)
+        fcp_ctx.fsm.currentState = "ACTIVE_TRACKING"
+        fcp_ctx.fsm.flightActive = true
+        fcp_ctx.fsm.arm = true
         fcp_ctx.nav.pos = { x = 100.0, y = 150.0, z = 60.0 }
-        fcp_ctx.nav.lastCoreRxMs = 2000
-        fcp_ctx.nav.lastGpsFixMs = 2000
 
-        -- Dispatch LOITER C2 command from AMM on Base+0 (10000)
-        amm.modem:transmit(10000, 10000, {
+        -- Dispatch LOITER trajectory setpoint from AMM on Base+4 (10004)
+        amm.modem:transmit(10004, 10004, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             senderId = "AMM-03",
-            type = "MSG_OPERATOR_CMD",
+            type = "MSG_TRAJECTORY_SETPOINT",
             seq = 301,
-            timestamp = 2000,
+            time = 2000,
             payload = {
-                authority = "PILOT_PRIMARY",
-                command = "LOITER",
                 flightMode = "LOITER",
-                params = {
-                    targetWaypoint = { x = 100.0, z = 100.0 },
-                    targetAlt = 150.0,
-                    targetSpeed = 10.0,
-                    loiterRadius = 40.0,
-                    loiterDirection = "CW",
-                },
-                emergencyAction = "NONE",
+                arm = true,
+                flightActive = true,
+                constraintProfile = "STRICT_LEVEL",
+                targetPos = { x = 100.0, y = 150.0, z = 100.0 },
+                targetVel = { vx = 0.0, vy = 0.0, vz = 10.0 },
+                feedforwardAccel = { ax = 0.0, ay = 0.0, az = 0.0 },
+                targetHeading = 90.0,
+                flapHint = 0.0,
             },
         })
         bus:step(0.05)
@@ -288,10 +323,10 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         for _, m in ipairs(fcp.modem:drain()) do
             fcp_net_mod.ingest_modem_event(fcp_ctx.net, "top", m.channel, m.replyChannel, m.payload, 1, 2000)
         end
-        fcp_runtime.step_tick(fcp_ctx, 0.05, 2050)
+        fcp_main.step_tick(fcp_ctx, 0.05, 2050)
         bus:step(0.05)
 
-        assert_eq(fcp_ctx.fsm.current_state, "LOITER")
+        assert_eq(fcp_ctx.fsm.currentState, "ACTIVE_TRACKING")
         local vas_loiter_in = vas.modem:drain()
         local loiter_att = nil
         for _, m in ipairs(vas_loiter_in) do
@@ -300,27 +335,29 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             end
         end
         assert_not_nil(loiter_att, "FCP must transmit LOITER MSG_ATTITUDE_CMD on Base+1 (10001)")
+        assert_eq(loiter_att.commandType, "QUATERNION_RATE")
         assert_eq(loiter_att.flightMode, "LOITER")
-        assert_eq(loiter_att.flapTarget, 0.0)
+        assert_not_nil(loiter_att.targetQuaternion)
+        assert_nil(loiter_att.flapTarget)
 
-        -- Dispatch POI_HOLD C2 command from AMM on Base+0 (10000)
-        amm.modem:transmit(10000, 10000, {
+        -- Dispatch POI_HOLD trajectory setpoint from AMM on Base+4 (10004)
+        amm.modem:transmit(10004, 10004, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             senderId = "AMM-03",
-            type = "MSG_OPERATOR_CMD",
+            type = "MSG_TRAJECTORY_SETPOINT",
             seq = 302,
-            timestamp = 2100,
+            time = 2100,
             payload = {
-                authority = "PILOT_PRIMARY",
-                command = "POI_HOLD",
                 flightMode = "POI_HOLD",
-                params = {
-                    targetWaypoint = { x = 100.0, z = 100.0 },
-                    targetAlt = 150.0,
-                    poiTarget = { x = 200.0, y = 64.0, z = 100.0 },
-                },
-                emergencyAction = "NONE",
+                arm = true,
+                flightActive = true,
+                constraintProfile = "STRICT_LEVEL",
+                targetPos = { x = 100.0, y = 150.0, z = 100.0 },
+                targetVel = { vx = 0.0, vy = 0.0, vz = 0.0 },
+                feedforwardAccel = { ax = 0.0, ay = 0.0, az = 0.0 },
+                targetHeading = 45.0,
+                flapHint = 0.0,
             },
         })
         bus:step(0.05)
@@ -328,15 +365,10 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         for _, m in ipairs(fcp.modem:drain()) do
             fcp_net_mod.ingest_modem_event(fcp_ctx.net, "top", m.channel, m.replyChannel, m.payload, 1, 2100)
         end
-        -- Advance 3 ticks (fcp_ctx.tick reaches 4 -> triggers 5Hz Base+3 MSG_MFD_STATE broadcast)
-        for i = 1, 3 do
-            fcp_ctx.nav.lastCoreRxMs = 2100 + i * 50
-            fcp_ctx.nav.lastGpsFixMs = 2100 + i * 50
-            fcp_runtime.step_tick(fcp_ctx, 0.05, 2100 + i * 50)
-        end
+        fcp_main.step_tick(fcp_ctx, 0.05, 2150)
         bus:step(0.05)
 
-        assert_eq(fcp_ctx.fsm.current_state, "POI_HOLD")
+        assert_eq(fcp_ctx.fsm.currentState, "ACTIVE_TRACKING")
         local vas_poi_in = vas.modem:drain()
         local poi_att = nil
         for _, m in ipairs(vas_poi_in) do
@@ -345,17 +377,27 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             end
         end
         assert_not_nil(poi_att, "FCP must transmit POI_HOLD MSG_ATTITUDE_CMD on Base+1 (10001)")
+        assert_eq(poi_att.commandType, "QUATERNION_RATE")
         assert_eq(poi_att.flightMode, "POI_HOLD")
-        assert_eq(poi_att.flapTarget, 0.0)
+        assert_not_nil(poi_att.targetQuaternion)
+        assert_nil(poi_att.flapTarget)
 
-        local amm_poi_in = amm.modem:drain()
+        -- AMM downlinks POI_HOLD MFD state on Base+3 (10003) to GCS
+        net:send_mfd_state({
+            fsmState = "POI_HOLD",
+            flightMode = "POI_HOLD",
+            navigation = { currentPos = { x = 100, y = 150, z = 60 }, distanceToWp = 40.0 },
+        }, "FCP")
+        bus:step(0.05)
+
+        local gcs_poi_in = gcs.modem:drain()
         local poi_mfd = nil
-        for _, m in ipairs(amm_poi_in) do
+        for _, m in ipairs(gcs_poi_in) do
             if m.channel == 10003 and type(m.payload) == "table" and m.payload.type == "MSG_MFD_STATE" then
                 poi_mfd = m.payload.payload
             end
         end
-        assert_not_nil(poi_mfd, "FCP must transmit POI_HOLD MSG_MFD_STATE on Base+3 (10003)")
+        assert_not_nil(poi_mfd, "AMM must downlink POI_HOLD MSG_MFD_STATE on Base+3 (10003) to GCS")
         assert_eq(poi_mfd.fsmState, "POI_HOLD")
         assert_eq(poi_mfd.navigation.distanceToWp, 40.0)
     end)

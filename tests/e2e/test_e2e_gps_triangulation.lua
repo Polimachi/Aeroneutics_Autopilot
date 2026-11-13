@@ -19,7 +19,7 @@ describe("Scenario 3: GPS Closed-Loop Swarm Triangulation, Service Status & Mult
             end
         end
 
-        local fcp = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+        local amm = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
         local gps_srv = node_sandbox.create_node(bus, "GPS_SRV", "src/0_infra/gps")
         local gps_cli = node_sandbox.create_node(bus, "GPS_CLI", "src/0_infra/gps")
         local pad_node = node_sandbox.create_node(bus, "PAD_01", "src/0_infra/landing_pad")
@@ -88,36 +88,52 @@ describe("Scenario 3: GPS Closed-Loop Swarm Triangulation, Service Status & Mult
             end)
         end
 
-        -- 1. FCP 4-node EARLY_SOLVED + foreign spoof filter + altitudeY sync
-        local fcp_rt = fcp:require("fcp_runtime")
-        local fcp_net = fcp:require("network_manager")
-        local fcp_ctx = fcp_rt.create_context({
+        -- 1. AMM 4-node EARLY_SOLVED + foreign spoof filter + altitudeY sync
+        local nav_engine = amm:require("nav_engine")
+        local amm_net_mod = amm:require("network_manager")
+        local amm_net = amm_net_mod.new({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            bandwidth = 40,
+        })
+        amm_net.modem = amm.modem
+        local nav_state = nav_engine.init({
             system = { domainId = "AIRCRAFT_01" },
             channels = { baseChannel = 10000, bandwidth = 40 },
-            navigation = { drComplementaryAlpha = 0.5, gpsTimeoutMs = 5000 }
-        }, function() return fcp.modem end)
-        fcp_ctx.nav.pos = { x = 195.0, y = 64.0, z = 295.0 }
-        fcp.modem:open(10005)
-        fcp.modem.on_message = function(ev)
-            safeCall("FCP", function()
-                fcp_net.ingest_modem_event(fcp_ctx.net, ev.side, ev.channel, ev.replyChannel, ev.payload, ev.distance, math.floor(bus.time * 1000 + 0.5))
-            end)
-        end
+            navigation = { drComplementaryAlpha = 0.5, gpsTimeoutMs = 5000 },
+        })
+        nav_state.pos = { x = 195.0, y = 64.0, z = 295.0 }
+        amm.modem:open(10005)
 
-        fcp_net.ingest_modem_event(fcp_ctx.net, "top", 10002, 10002, {
+        -- Base+2 altitudeY injection via MSG_FLIGHT_TELEMETRY
+        local telem_pkt = {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_FLIGHT_TELEMETRY", time = 1000,
             payload = { dynamics = { altitudeY = 100.0, velocity = { vx = 0, vy = 0, vz = 0 } }, controlState = "IDLE_ARMED" }
-        }, 0, 1000)
-        fcp_rt.step_tick(fcp_ctx, 0.05, 1000)
-        assert_eq(fcp_ctx.nav.pos.y, 100.0)
+        }
+        nav_engine.integrate_dr(nav_state, telem_pkt.payload, 0.05, 1000)
+        assert_eq(nav_state.pos.y, 100.0)
+
+        -- AMM sends MSG_GPS_REQUEST to CH 60001
+        local should_gps, gps_seq, gps_req = nav_engine.build_gps_request(nav_state, 1000)
+        assert_true(should_gps)
+        amm_net:send_gps_request(gps_req)
+        bus:step(0.01)
 
         -- Inject foreign AIRCRAFT_02 spoof onto 10005 before delivering real GPS response
         gps_srv.modem:transmit(10005, 60002, {
             ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 999, type = "MSG_GPS_RESPONSE", time = 1005,
             payload = { targetClient = "AIRCRAFT_02", clientSeq = 1, status = "FIX_OK", position = { x = -9999, z = -9999 }, nodeCount = 4, selectedNodes = {} }
         })
-        bus:step(0.01) -- pings -> node reports (and foreign spoof rejected on ingress)
-        assert_nil(fcp_ctx.net.queues.gps)
+        bus:step(0.01) -- pings -> node reports (and foreign spoof delivered to 10005)
+
+        -- Verify foreign spoof is rejected by nav_engine
+        local amm_inbox = amm.modem:drain()
+        for _, m in ipairs(amm_inbox) do
+            if m.channel == 10005 and type(m.payload) == "table" and m.payload.type == "MSG_GPS_RESPONSE" then
+                local filtered = nav_engine.filter_gps(nav_state, m.payload.payload, 0.05, 1005, 1)
+                assert_false(filtered, "Foreign spoof must be rejected by nav_engine")
+            end
+        end
 
         local reqPkts = bus:find_packets({ type = "MSG_GPS_REQUEST", channel = 60001 })
         assert_eq(#reqPkts, 1)
@@ -125,13 +141,25 @@ describe("Scenario 3: GPS Closed-Loop Swarm Triangulation, Service Status & Mult
         assert_nil(reqPkts[1].payload.timestamp)
 
         bus:step(0.01) -- reports -> server EARLY_SOLVED response
-        bus:step(0.03) -- response delivered to FCP
+        bus:step(0.03) -- response delivered to AMM
 
-        fcp_rt.step_tick(fcp_ctx, 0.05, 1050)
-        assert_near(fcp_ctx.nav.pos.x, 197.5, 0.5)
-        assert_near(fcp_ctx.nav.pos.z, 297.5, 0.5)
-        assert_eq(fcp_ctx.nav.pos.y, 100.0)
-        assert_eq(fcp_ctx.nav.lastGpsFixSeq, 1)
+        local amm_gps_inbox = amm.modem:drain()
+        local real_resp = nil
+        for _, m in ipairs(amm_gps_inbox) do
+            if m.channel == 10005 and type(m.payload) == "table" and m.payload.type == "MSG_GPS_RESPONSE" then
+                if m.payload.payload and m.payload.payload.targetClient == "AIRCRAFT_01" then
+                    real_resp = m.payload.payload
+                end
+            end
+        end
+        assert_not_nil(real_resp)
+        local ok_filter = nav_engine.filter_gps(nav_state, real_resp, 0.05, 1050, 1)
+        assert_true(ok_filter)
+        assert_near(nav_state.pos.x, 197.5, 0.5)
+        assert_near(nav_state.pos.z, 297.5, 0.5)
+        assert_eq(nav_state.pos.y, 100.0)
+        assert_eq(nav_state.lastGpsFixSeq, 1)
+        assert_eq(nav_state.posEpoch, 1)
 
         -- 2. Collinear 3-node FAIL_GEOMETRY + 250ms retry after 150ms tombstone
         nodeEnabled[4] = false

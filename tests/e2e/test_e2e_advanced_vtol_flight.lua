@@ -298,51 +298,57 @@ describe("Scenario 7: ADVANCED_VTOL Gimbal Calibration & 6-DoF Closed-Loop Fligh
         fcp_cfg.system.airframeType = "ADVANCED_VTOL"
         fcp_cfg.system.domainId = "AIRCRAFT_01"
 
-        local fcp_fsm_mod = fcp:require("flight_fsm")
-        local guidance_controller = fcp:require("guidance_controller")
-        local fcp_fsm = fcp_fsm_mod.init(fcp_cfg)
-        local fcp_guid = guidance_controller.init(fcp_cfg)
+        local outer_loop_controller = fcp:require("outer_loop_controller")
+        local fcp_guid = outer_loop_controller.init(fcp_cfg)
 
-        fcp_fsm_mod.transition_to(fcp_fsm, "IDLE_ARMED")
-        fcp_fsm_mod.transition_to(fcp_fsm, "TAKEOFF")
-        assert_eq(fcp_fsm.current_state, "TAKEOFF")
-        assert_true(fcp_fsm_mod.is_flight_active(fcp_fsm))
-
-        -- 7a. TAKEOFF below 15m clearance blocks horizontal surge/sway
+        -- 7a. TAKEOFF purely vertical setpoint has zero horizontal surge/sway
         local nav_takeoff = {
             pos = { x = 0.0, y = 70.0, z = 0.0 },
             vel = { x = 0.0, y = 1.0, z = 0.0 },
             attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
             groundSpeed = 0.0,
         }
-        fcp_guid.driver_state.takeoff_origin_y = 64.0
-        local target_wp = { x = 10.0, y = 85.0, z = -25.0 }
-        local tk_cmd = guidance_controller.compute(fcp_guid, nav_takeoff, target_wp, {
-            state = "TAKEOFF", flightActive = true, now_ms = 1100
+        local tk_sp = {
+            flightMode = "TAKEOFF",
+            targetPos = { x = 0.0, y = 85.0, z = 0.0 },
+            targetVel = { x = 0.0, y = 2.5, z = 0.0 },
+            constraintProfile = "STRICT_LEVEL",
+            translationBiasHint = { surge = 0.0, sway = 0.0 },
+            arm = true,
+            flightActive = true,
+        }
+        local tk_cmd = outer_loop_controller.compute(fcp_guid, nav_takeoff, tk_sp, {
+            currentState = "ACTIVE_TRACKING", flightActive = true, arm = true
         }, 0.05)
         assert_not_nil(tk_cmd)
-        assert_eq(tk_cmd.mode, "ADVANCED_VTOL")
-        assert_eq(tk_cmd.flapTarget, 0.0)
+        assert_eq(tk_cmd.commandType, "QUATERNION_RATE")
         assert_eq(tk_cmd.translationBias.surge, 0.0)
         assert_eq(tk_cmd.translationBias.sway, 0.0)
-        assert_eq(tk_cmd.targetClimbRate, 2.5)
+        assert_true(tk_cmd.collectiveThrust > 0.0)
 
-        -- 7b. CRUISE above clearance computes 3-axis translationBias with STRICT_LEVEL attitude
-        fcp_fsm_mod.transition_to(fcp_fsm, "CRUISE")
-        assert_eq(fcp_fsm.current_state, "CRUISE")
+        -- 7b. CRUISE with offset waypoint computes 3-axis translationBias with STRICT_LEVEL attitude
         local nav_cruise = {
             pos = { x = 0.0, y = 80.0, z = 0.0 },
             vel = { x = 0.0, y = 0.0, z = 0.0 },
             attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
             groundSpeed = 0.0,
         }
-        local cr_cmd = guidance_controller.compute(fcp_guid, nav_cruise, target_wp, {
-            state = "CRUISE", flightActive = true, now_ms = 1150
+        local cr_sp = {
+            flightMode = "CRUISE",
+            targetPos = { x = 10.0, y = 85.0, z = -25.0 },
+            targetVel = { x = 0.0, y = 0.0, z = 0.0 },
+            constraintProfile = "STRICT_LEVEL",
+            arm = true,
+            flightActive = true,
+        }
+        local cr_cmd = outer_loop_controller.compute(fcp_guid, nav_cruise, cr_sp, {
+            currentState = "ACTIVE_TRACKING", flightActive = true, arm = true
         }, 0.05)
         assert_not_nil(cr_cmd)
-        assert_eq(cr_cmd.flapTarget, 0.0)
-        assert_eq(cr_cmd.angleTargets.targetPitch, 0.0)
-        assert_eq(cr_cmd.angleTargets.targetRoll, 0.0)
+        assert_eq(cr_cmd.commandType, "QUATERNION_RATE")
+        assert_true(cr_cmd.targetQuaternion.w > 0.99)
+        assert_near(cr_cmd.targetQuaternion.x, 0.0, 1e-4)
+        assert_near(cr_cmd.targetQuaternion.z, 0.0, 1e-4)
         assert_true(cr_cmd.translationBias.surge > 0.0)
         assert_true(cr_cmd.translationBias.sway > 0.0)
 

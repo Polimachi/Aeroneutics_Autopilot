@@ -4,11 +4,11 @@ local virtual_bus = require("virtual_bus")
 local node_sandbox = require("node_sandbox")
 
 describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
-    it("completes full 40-channel bootstrap and fleet telemetry caching across GCS, FCP, and VAS", function()
+    it("completes full 40-channel bootstrap and fleet telemetry caching across GCS, AMM, and VAS", function()
         local bus = virtual_bus.create_bus({ clock = 1000.0 })
 
         local gcs = node_sandbox.create_node(bus, "GCS", "src/0_infra/gcs")
-        local fcp = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+        local amm = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
         local vas = node_sandbox.create_node(bus, "VAS", "src/1_control/vas")
 
         -- 1. Initialize GCS app
@@ -44,20 +44,20 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         assert_false(ok_nontable)
         assert_eq(err_nontable, "message is not a table")
 
-        -- 3. Happy Path: FCP starts on bootstrap channel and requests 40-channel block
-        local channel_sentinel = fcp:require("channel_sentinel")
-        local fcp_state = channel_sentinel.init({
+        -- 3. Happy Path: AMM starts on bootstrap channel and requests 40-channel block
+        local channel_sentinel = amm:require("channel_sentinel")
+        local amm_state = channel_sentinel.init({
             system = { domainId = "AIRCRAFT_01", hardwareUuid = "HW-UUID-4401" },
             channels = { bootstrapChannel = 50000, bandwidth = 40 },
         })
-        fcp.modem:open(50000)
+        amm.modem:open(50000)
 
-        local boot_req = channel_sentinel.start_bootstrap(fcp_state, 1000)
+        local boot_req = channel_sentinel.start_bootstrap(amm_state, 1000)
         assert_eq(boot_req.type, "MSG_BLOCK_REQUEST")
         assert_eq(boot_req.requestedBandwidth, 40)
 
-        -- Transmit request from FCP to GCS on CH 50000
-        fcp.modem:transmit(50000, 50000, {
+        -- Transmit request from AMM to GCS on CH 50000
+        amm.modem:transmit(50000, 50000, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 1,
@@ -86,20 +86,21 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         assert_eq(assign_payload.baseChannel, 10000)
         assert_eq(assign_payload.bandwidth, 40)
 
-        -- 4. FCP receives assignment and commits Base=10000
-        local fcp_inbox = fcp.modem:drain()
-        assert_eq(#fcp_inbox, 1)
-        channel_sentinel.on_block_assign(fcp_state, fcp_inbox[1].payload.payload)
-        assert_eq(fcp_state.candidateBase, 10000)
-        fcp_state.baseChannel = fcp_state.candidateBase
+        -- 4. AMM receives assignment and commits Base=10000
+        local amm_inbox = amm.modem:drain()
+        assert_eq(#amm_inbox, 1)
+        channel_sentinel.on_block_assign(amm_state, amm_inbox[1].payload.payload)
+        assert_eq(amm_state.candidateBase, 10000)
+        amm_state.baseChannel = amm_state.candidateBase
 
-        -- FCP opens Base+0(10000), Base+1(10001), Base+2(10002), Base+3(10003), Base+5(10005)
-        fcp.modem:close(50000)
-        fcp.modem:open(10000)
-        fcp.modem:open(10001)
-        fcp.modem:open(10002)
-        fcp.modem:open(10003)
-        fcp.modem:open(10005)
+        -- AMM opens Base+0(10000), Base+1(10001), Base+2(10002), Base+3(10003), Base+4(10004), Base+5(10005)
+        amm.modem:close(50000)
+        amm.modem:open(10000)
+        amm.modem:open(10001)
+        amm.modem:open(10002)
+        amm.modem:open(10003)
+        amm.modem:open(10004)
+        amm.modem:open(10005)
 
         -- Confirm GCS automatically opened telemetry downlink Base+3 (10003) upon assigning Block 1
         assert_true(gcs.modem:isOpen(10003))
@@ -125,13 +126,13 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         })
         bus:step(0.05)
 
-        -- FCP receives telemetry on 10002
-        local fcp_telem_inbox = fcp.modem:drain()
-        assert_eq(#fcp_telem_inbox, 1)
-        assert_eq(fcp_telem_inbox[1].payload.type, "MSG_FLIGHT_TELEMETRY")
+        -- AMM receives telemetry on 10002
+        local amm_telem_inbox = amm.modem:drain()
+        assert_eq(#amm_telem_inbox, 1)
+        assert_eq(amm_telem_inbox[1].payload.type, "MSG_FLIGHT_TELEMETRY")
 
-        -- 6. FCP aggregates telemetry and downlinks MSG_MFD_STATE on Base+3 (10003)
-        fcp.modem:transmit(10003, 10003, {
+        -- 6. AMM aggregates telemetry and downlinks MSG_MFD_STATE on Base+3 (10003)
+        amm.modem:transmit(10003, 10003, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 101,
@@ -140,10 +141,10 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
             payload = {
                 fsmState = "CRUISE",
                 flightMode = "AUTO_NAV",
-                attitude = fcp_telem_inbox[1].payload.payload.attitude,
-                dynamics = fcp_telem_inbox[1].payload.payload.dynamics,
-                fuel = fcp_telem_inbox[1].payload.payload.fuel,
-                actuatorHealth = fcp_telem_inbox[1].payload.payload.actuatorHealth,
+                attitude = amm_telem_inbox[1].payload.payload.attitude,
+                dynamics = amm_telem_inbox[1].payload.payload.dynamics,
+                fuel = amm_telem_inbox[1].payload.payload.fuel,
+                actuatorHealth = amm_telem_inbox[1].payload.payload.actuatorHealth,
             },
         })
         bus:step(0.05)

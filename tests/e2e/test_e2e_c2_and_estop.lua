@@ -86,21 +86,33 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         assert_eq(pkts_before, pkts_after, "AMM must not echo or retransmit when GCS_OVERRIDE is active")
 
         -- 5. Part 2: Emergency Hard E-STOP Cutoff on Base+1 (10001)
+        -- 5a. AMM pilot E_STOP preemption verification
+        arbiter:handle_pilot_action("ESTOP")
+        bus:step(0.05)
+        local amm_estop_pkts = bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10001 })
+        assert_true(#amm_estop_pkts >= 1)
+        local amm_estop_p = amm_estop_pkts[#amm_estop_pkts].payload.payload
+        assert_eq(amm_estop_p.action, "E_STOP")
+        assert_eq(amm_estop_p.authKey, "ESTOP_CONFIRM_KEY")
+        assert_eq(amm_estop_p.source, "AMM")
+
+        -- 5b. GCS Emergency Hard E-STOP override verification
         local estop_payload = gcs_cmd_mod.create_emergency_estop("AIRCRAFT_01", "CRITICAL_COLLISION_ALERT")
         assert_eq(estop_payload.action, "E_STOP")
         assert_eq(estop_payload.source, "GCS")
+        assert_eq(estop_payload.authKey, "ESTOP_CONFIRM_KEY")
 
         -- GCS transmits directly to Base+1 (10001) bypassing FCP
         gcs_net_mod.send_emergency_override(gcs_ctx, 10000, estop_payload)
         bus:step(0.05)
 
         local estop_pkts = bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10001 })
-        assert_eq(#estop_pkts, 1)
+        assert_true(#estop_pkts >= 2)
 
         -- VAS receives packet on Base+1 and immediately trips failsafe
         local vas_inbox = vas.modem:drain()
-        assert_eq(#vas_inbox, 1)
-        assert_eq(vas_inbox[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
+        assert_true(#vas_inbox >= 1)
+        assert_eq(vas_inbox[#vas_inbox].payload.type, "MSG_EMERGENCY_OVERRIDE")
 
         -- Note: For emergency override, envelope verification uses sender domain
         local ok_estop = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10001, 10001, {
@@ -113,6 +125,7 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         })
         assert_true(ok_estop)
         assert_eq(vas_fsm.currentState, "E_STOP")
+        assert_eq(vas_fsm.activeSource, "EMERGENCY_DIRECT")
 
         -- Negative Check: Hard-latched E_STOP blocks illegal state recovery
         assert_false(vas_fsm:transition_to("NORMAL", "ATTEMPT_RECOVERY"))

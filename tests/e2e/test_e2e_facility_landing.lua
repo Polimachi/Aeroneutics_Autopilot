@@ -10,7 +10,7 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         -- 1. Initialize nodes
         local gac = node_sandbox.create_node(bus, "GAC", "src/0_infra/gac")
         local pad = node_sandbox.create_node(bus, "PAD_01", "src/0_infra/landing_pad")
-        local fcp = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+        local amm = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
 
         -- 2. Setup GAC context
         local config_loader = gac:require("config_loader")
@@ -60,13 +60,13 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         pad.modem:open(50202) -- Sector Facility Backbone
         pad.modem:open(50211) -- Tactical Guidance Channel
 
-        -- 4. Setup FCP context
-        local facility_client = fcp:require("facility_client")
-        local fcp_fc = facility_client.init({ safety = { maxApproachRetries = 3 } })
+        -- 4. Setup AMM context
+        local facility_client = amm:require("facility_client")
+        local amm_fc = facility_client.init({ safety = { maxApproachRetries = 3 } })
 
-        fcp.modem:open(50003) -- Global GAC Beacon
-        fcp.modem:open(50201) -- Sector Base Checkin / Clearance
-        fcp.modem:open(50211) -- Tactical Guidance Channel
+        amm.modem:open(50003) -- Global GAC Beacon
+        amm.modem:open(50201) -- Sector Base Checkin / Clearance
+        amm.modem:open(50211) -- Tactical Guidance Channel
 
         -- 5. Step 1: GAC broadcasts sector beacon on 50003
         local beacon_pkt = bc:build_sector_beacon(inv, gac_cfg.surfaceWind, "OPERATIONAL")
@@ -80,11 +80,11 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         local beacon_pkts = bus:find_packets({ type = "MSG_FACILITY_BEACON", channel = 50003 })
         assert_eq(#beacon_pkts, 1)
 
-        local fcp_beacon_inbox = fcp.modem:drain()
-        assert_eq(#fcp_beacon_inbox, 1)
-        facility_client.update_beacons(fcp_fc, fcp_beacon_inbox[1].payload.payload, 1000)
+        local amm_beacon_inbox = amm.modem:drain()
+        assert_eq(#amm_beacon_inbox, 1)
+        facility_client.update_beacons(amm_fc, amm_beacon_inbox[1].payload.payload, 1000)
 
-        -- 6. Step 2: FCP issues MSG_GAC_CHECKIN_REQ on Base_sec+0 (50201)
+        -- 6. Step 2: AMM issues MSG_GAC_CHECKIN_REQ on Base_sec+0 (50201)
         local checkin_pkt = {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
@@ -100,7 +100,7 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
                 airframeType = "VECTORED_VTOL",
             }
         }
-        fcp.modem:transmit(50201, 50201, checkin_pkt)
+        amm.modem:transmit(50201, 50201, checkin_pkt)
         bus:step(0.05)
 
         local req_pkts = bus:find_packets({ type = "MSG_GAC_CHECKIN_REQ", channel = 50201 })
@@ -180,18 +180,18 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         local clr_pkts = bus:find_packets({ type = "MSG_GAC_APPROACH_CLEARANCE", channel = 50201 })
         assert_eq(#clr_pkts, 1)
 
-        local fcp_clr_inbox = fcp.modem:drain()
-        assert_eq(#fcp_clr_inbox, 1)
-        local clr_payload = fcp_clr_inbox[1].payload.payload
-        facility_client.on_atc_clearance(fcp_fc, {
+        local amm_clr_inbox = amm.modem:drain()
+        assert_eq(#amm_clr_inbox, 1)
+        local clr_payload = amm_clr_inbox[1].payload.payload
+        facility_client.on_atc_clearance(amm_fc, {
             status = clr_payload.status,
-            padId = clr_payload.assignedFacilityId,
-            padChannel = clr_payload.assignedTacticalChannel,
+            assignedFacilityId = clr_payload.assignedFacilityId,
+            assignedTacticalChannel = clr_payload.assignedTacticalChannel,
             padMobility = "DYNAMIC",
         }, { x = 1200, y = 80, z = -800 }, 1100)
-        assert_eq(fcp_fc.atcStatus, "CLEARED")
-        assert_eq(fcp_fc.activePadId, "PAD_01")
-        assert_eq(fcp_fc.padChannel, 50211)
+        assert_eq(amm_fc.atcStatus, "CLEARED")
+        assert_eq(amm_fc.activePadId, "PAD_01")
+        assert_eq(amm_fc.padChannel, 50211)
 
         -- 10. Step 6: Landing Pad streams tactical guidance on 50211
         local guide_pkt = streamer:build_static_guide(
@@ -208,11 +208,11 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         local guide_pkts = bus:find_packets({ type = "MSG_FACILITY_STATIC_GUIDE", channel = 50211 })
         assert_eq(#guide_pkts, 1)
 
-        local fcp_guide_inbox = fcp.modem:drain()
-        assert_eq(#fcp_guide_inbox, 1)
-        assert_eq(fcp_guide_inbox[1].payload.payload.facilityId, "PAD_01")
+        local amm_guide_inbox = amm.modem:drain()
+        assert_eq(#amm_guide_inbox, 1)
+        assert_eq(amm_guide_inbox[1].payload.payload.facilityId, "PAD_01")
 
-        -- 11. Step 7: FCP guides to touchdown and transmits MSG_TOUCHDOWN_COMPLETE on 50211
+        -- 11. Step 7: AMM guides to touchdown and transmits MSG_TOUCHDOWN_COMPLETE on 50211
         local td_pkt = {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
@@ -224,7 +224,7 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
                 craftState = "GROUND_IDLE",
             }
         }
-        fcp.modem:transmit(50211, 50211, td_pkt)
+        amm.modem:transmit(50211, 50211, td_pkt)
         bus:step(0.05)
 
         local td_pkts = bus:find_packets({ type = "MSG_TOUCHDOWN_COMPLETE", channel = 50211 })
@@ -263,7 +263,7 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         local gac = node_sandbox.create_node(bus, "GAC", "src/0_infra/gac")
         local pad_pub = node_sandbox.create_node(bus, "PAD_PUB_01", "src/0_infra/landing_pad")
         local pad_vip = node_sandbox.create_node(bus, "PAD_VIP_02", "src/0_infra/landing_pad")
-        local fcp = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+        local amm = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
 
         local config_loader = gac:require("config_loader")
         local facility_inventory = gac:require("facility_inventory")
@@ -330,11 +330,11 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         pad_vip.modem:open(50202)
         pad_vip.modem:open(50212)
 
-        local facility_client = fcp:require("facility_client")
-        local fcp_fc = facility_client.init({ safety = { maxApproachRetries = 3 } })
-        fcp.modem:open(50003)
-        fcp.modem:open(50201)
-        fcp.modem:open(50212)
+        local facility_client = amm:require("facility_client")
+        local amm_fc = facility_client.init({ safety = { maxApproachRetries = 3 } })
+        amm.modem:open(50003)
+        amm.modem:open(50201)
+        amm.modem:open(50212)
 
         -- 1. Beacon public-only free pad advertisement check (total=2, free=1)
         local beacon_pkt = bc:build_sector_beacon(inv, gac_cfg.surfaceWind, "OPERATIONAL")
@@ -411,7 +411,7 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         assert_eq(handoff_ack.payload.status, "REJECTED")
         assert_eq(handoff_ack.payload.rejectReason, "FACILITY_DEDICATED")
 
-        fcp.modem:transmit(50201, 50201, {
+        amm.modem:transmit(50201, 50201, {
             ver = "1.9.5",
             domainId = "REGULAR_VTOL_02",
             seq = 11,
@@ -441,16 +441,16 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         gac.modem:transmit(50201, 50201, deny_clr)
         bus:step(0.05)
 
-        local fcp_deny_in = fcp.modem:drain()
-        assert_eq(#fcp_deny_in, 1)
-        facility_client.on_atc_clearance(fcp_fc, {
-            status = fcp_deny_in[1].payload.payload.status,
-            reason = fcp_deny_in[1].payload.payload.reason
+        local amm_deny_in = amm.modem:drain()
+        assert_eq(#amm_deny_in, 1)
+        facility_client.on_atc_clearance(amm_fc, {
+            status = amm_deny_in[1].payload.payload.status,
+            reason = amm_deny_in[1].payload.payload.reason
         }, { x = 1200, y = 80, z = -800 }, 2075)
-        assert_eq(fcp_fc.atcStatus, "DENIED")
+        assert_eq(amm_fc.atcStatus, "DENIED")
 
         -- 5. Emergency aircraft MAYDAY_VTOL_99 commandeers dedicated PAD_VIP_02 when all public pads are OCCUPIED
-        fcp.modem:transmit(50201, 50201, {
+        amm.modem:transmit(50201, 50201, {
             ver = "1.9.5",
             domainId = "MAYDAY_VTOL_99",
             seq = 20,
@@ -505,21 +505,21 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         gac.modem:transmit(50201, 50201, emg_clr)
         bus:step(0.05)
 
-        local fcp_emg_clr = fcp.modem:drain()
-        assert_eq(#fcp_emg_clr, 1)
-        local emg_p = fcp_emg_clr[1].payload.payload
-        facility_client.on_atc_clearance(fcp_fc, {
+        local amm_emg_clr = amm.modem:drain()
+        assert_eq(#amm_emg_clr, 1)
+        local emg_p = amm_emg_clr[1].payload.payload
+        facility_client.on_atc_clearance(amm_fc, {
             status = emg_p.status,
-            padId = emg_p.assignedFacilityId,
-            padChannel = emg_p.assignedTacticalChannel,
+            assignedFacilityId = emg_p.assignedFacilityId,
+            assignedTacticalChannel = emg_p.assignedTacticalChannel,
             padMobility = "STATIC",
         }, { x = 1205, y = 78, z = -802 }, 2110)
-        assert_eq(fcp_fc.atcStatus, "CLEARED")
-        assert_eq(fcp_fc.activePadId, "PAD_VIP_02")
-        assert_eq(fcp_fc.padChannel, 50212)
+        assert_eq(amm_fc.atcStatus, "CLEARED")
+        assert_eq(amm_fc.activePadId, "PAD_VIP_02")
+        assert_eq(amm_fc.padChannel, 50212)
 
         -- Touchdown on PAD_VIP_02 transitions pad and GAC inventory to OCCUPIED
-        fcp.modem:transmit(50212, 50212, {
+        amm.modem:transmit(50212, 50212, {
             ver = "1.9.5",
             domainId = "MAYDAY_VTOL_99",
             seq = 21,

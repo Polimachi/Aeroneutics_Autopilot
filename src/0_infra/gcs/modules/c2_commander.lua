@@ -37,10 +37,11 @@ function c2_commander.create_operator_cmd(cmd_type, target_craft, params)
     return payload, nil
 end
 
-function c2_commander.create_emergency_estop(target_craft, reason)
+function c2_commander.create_emergency_estop(target_craft, reason, auth_key)
     return {
         source = "GCS",
         action = "E_STOP",
+        authKey = auth_key or "ESTOP_CONFIRM_KEY",
         targetCraft = target_craft,
         reason = reason or "OPERATOR_HARD_STOP"
     }
