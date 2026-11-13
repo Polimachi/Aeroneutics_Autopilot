@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v1.19.0` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **최종 수정일 (Date)** | `2026-11-13` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
 
@@ -16,7 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
-| `v1.19.0` | 2026-11-12 | FCP-AMM 역할 분리 및 `QUATERNION_RATE` 단일화 개정(`Implemented` $\to$ `Approved`): 마스터 ICD(`v1.28.0`)에 맞춰 상위 제어 계층(`AMM` $\to$ `FCP` $\to$ `VAS`) 및 `top` 무선 모뎀 채널 범위(`Base+0/+1/+2/+3[ACRO]/+10/+11`) 정합화, 일반 비행 `compute_climb_wrench` 수직 속도 PI 루프 제거(고도/승강률 홀드는 `FCP_TIMEOUT` 1,500ms 시 `FAILSAFE_HOLD`/`EMERGENCY_LAND` 내부에서만 가동), 6대 기체 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias{surge,sway}`) 및 `E_STOP > MFD_ACRO > FCP` 선점 중재 규격화, `Base+3` 평시 `AMM` 5Hz 양보 및 `MFD_ACRO` 시 20Hz 직결 인계 명세, `Base+11` `MSG_SURFACE_DISCOVER_REQ/ACK`·`system.json` 채널 오프셋(`4/10/11`) 정정 및 구버전 유도 타임아웃 설정 키를 `fcpCommandTimeoutMs`로 정규화, 잔존 레거시 식별자(구형 어댑터·구동기 축약 접미어 및 소문자 유도기 표기 등) 일괄 정비 | FCP-AMM-VAS 계층 직교성 확립 및 Zero-Fallback 와이어 계약 일원화 |
+| `v1.19.0` | 2026-11-12 | FCP-AMM 역할 분리 및 `QUATERNION_RATE` 단일화 개정(`Implemented`, 구현 과제 `TASK-209` 완료 · 2026-11-13 승격): 마스터 ICD(`v1.28.0`)에 맞춰 상위 제어 계층(`AMM` $\to$ `FCP` $\to$ `VAS`) 및 `top` 무선 모뎀 채널 범위(`Base+0/+1/+2/+3[ACRO]/+10/+11`) 정합화, 일반 비행 `compute_climb_wrench` 수직 속도 PI 루프 제거(고도/승강률 홀드는 `FCP_TIMEOUT` 1,500ms 시 `FAILSAFE_HOLD`/`EMERGENCY_LAND` 내부에서만 가동), 6대 기체 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias{surge,sway}`) 및 `E_STOP > MFD_ACRO > FCP` 선점 중재 규격화, `Base+3` 평시 `AMM` 5Hz 양보 및 `MFD_ACRO` 시 20Hz 직결 인계 명세, `Base+11` `MSG_SURFACE_DISCOVER_REQ/ACK`·`system.json` 채널 오프셋(`4/10/11`) 정정 및 구버전 유도 타임아웃 설정 키를 `fcpCommandTimeoutMs`로 정규화, 잔존 레거시 식별자(구형 어댑터·구동기 축약 접미어 및 소문자 유도기 표기 등) 일괄 정비 | FCP-AMM-VAS 계층 직교성 확립 및 Zero-Fallback 와이어 계약 일원화 |
 | `v1.18.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 지원: 제어 효율성 행렬(Control Effectiveness Matrix B) 및 Moore-Penrose 의사역행렬(B†) 기반 동적 렌치 믹싱, 다형성 MSG_THRUST_CMD 출력(outputs[groupId] = {thrust, gimbalX, gimbalY}), 짐벌 포화 피드백 기반 방향성 안티 와인드업, 비공력 특성(flapTarget=0.0, ASA 바이패스) 규격화 | 6-DoF 짐벌 추력 분배 믹서 알고리즘 및 비공력 자세 제어 확립 |
 | `v1.17.0` | 2026-11-08 | ASA 어댑터를 ASA 어댑터로 정식 일원화, FCP 타임아웃 사유 및 텔레메트리 헬스 키 동기화, 구 명칭 전면 척결 | 용어 무결성 및 ASA/FCP 표준화 |
 | `v1.16.0` | 2026-11-08 | 비동기 디버그 TUI(`system.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 20Hz 제어 코어 + 5Hz HUD 렌더러 분리) 및 `debug: false` 헤드리스 직결 모드 명세 신설, Approved 전이 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
@@ -44,9 +44,9 @@
 기존 센서 어댑터(SAP)의 모든 계측 및 신호 처리 파이프라인이 VAS 내부로 완전 통합되었으며, **차량 독립형 제어 드라이버 규격(VICD-Spec, SPEC-VICD-001 v1.1.0)**에 따라 **3계층 디커플링 샌드위치 드라이버 구조**를 표준으로 채택하여 비행 제어 및 안전 감시에 직결되는 다음 핵심 기능들을 단일 루프 내에서 완결합니다:
 
 > [!NOTE]
-> **구현 및 사양 개정 현황 요약 (Baseline v1.18.0 Implemented $\to$ v1.19.0 Approved)**
+> **구현 및 사양 개정 현황 요약 (Baseline v1.18.0 $\to$ v1.19.0 Implemented)**
 > 기존 `v1.18.0` 사양 기준 VAS 소프트웨어는 `src/1_control/vas` 환경에서 7대 핵심 과제 및 16개 마이크로슬라이스(IS-00.1 ~ IS-05.6)가 구현 완료(빌드 **v1.1.5**, 해시 `948bcbb3f2da4188502f951fcfc225d9ff0785de4abc921980a1c895b5a0a407`, Gate 0 ~ Gate 6 및 51x19 HUD 터미널·클러스터 시뮬레이션 통과, 총 소요시간 4,950.07 ms)되었으며, 단일 배포 번들(`dist_gdrive/vas/vas_bundle.lua`)로 패키징되었습니다. (과거 검증 이력은 [제12장](#12-소프트웨어-구현-현황-및-하네스통합-검증-결과-implementation--verification-status) 참조)  
-> 현재 문서는 FCP-AMM 역할 분리에 맞춰 `QUATERNION_RATE` 내루프 단일화, 일반 비행 수직 속도 PI 제거, `E_STOP > MFD_ACRO > FCP` 선점 중재, `Base+3` ACRO 양보 규칙을 확정한 **`v1.19.0` (`Approved`)** 개정 사양입니다.
+> 현재 문서는 FCP-AMM 역할 분리에 맞춰 `QUATERNION_RATE` 내루프 단일화, 일반 비행 수직 속도 PI 제거, `E_STOP > MFD_ACRO > FCP` 선점 중재, `Base+3` ACRO 양보 규칙을 확정·구현 완료(`TASK-209`)한 **`v1.19.0` (`Implemented`)** 사양입니다.
 
 1. **비행 동역학 센서 계측 및 3D 기하 보정**: 3축 자세(Gimbal), 고도(Altimeter), 3차원 속도(Velocity) 실측, 3D 레버암 회전 유도 속도/고도 보정 및 단위 쿼터니언($\mathbf{q} \in SO(3)$) 변환.
 2. **연료/에너지 잔량 계측 (`fuel`)**: Create 유체 탱크(`FLUID_TANK`) 및 축전지/배터리(`BATTERY`)의 최대 용량 대비 잔여량($0.0 \sim 1.0$) 정규화.
@@ -1616,7 +1616,7 @@ src/1_control/vas/
 ## 12. 소프트웨어 구현 현황 및 하네스/통합 검증 결과 (Implementation & Verification Status)
 
 ### 12.1 7대 작업 과제 및 16대 마이크로슬라이스 구현 완료 내역 (v1.18.0 베이스라인 이력)
-`VAS` 워크스페이스는 점진적 TDD 방법론에 따라 `v1.18.0` 사양 기준 7대 작업 과제(`TS-00`, `TS-01`, `TS-02A`, `TS-03A`, `TS-04A`, `TS-02`, `TS-05`) 및 16대 세부 마이크로슬라이스(`IS-00.1` ~ `IS-05.6`)를 구현·검증 완료(v1.1.5)하였습니다 *(v1.19.0 `QUATERNION_RATE` / `collectiveThrust` 단일화 코드 반영 예정)*:
+`VAS` 워크스페이스는 점진적 TDD 방법론에 따라 `v1.18.0` 사양 기준 7대 작업 과제(`TS-00`, `TS-01`, `TS-02A`, `TS-03A`, `TS-04A`, `TS-02`, `TS-05`) 및 16대 세부 마이크로슬라이스(`IS-00.1` ~ `IS-05.6`)를 구현·검증 완료(v1.1.5)하였습니다 *(v1.19.0 `QUATERNION_RATE` / `collectiveThrust` 단일화 코드 `TASK-209` 반영 완료)*:
 
 | 슬라이스 ID | 과제 식별자 | 구현 및 검증 핵심 내용 | 대상 소스 / 테스트 모듈 | 결과 |
 | :---: | :---: | :--- | :--- | :---: |

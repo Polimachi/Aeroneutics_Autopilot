@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v2.0.0` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **최종 수정일 (Date)** | `2026-11-13` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 순수 온보드 SE(3) 외루프 유도 제어기 (FCP / Node 04) |
 
@@ -31,7 +31,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
-| `v2.0.0` | 2026-11-12 | **FCP-AMM 역할 분리 및 순수 온보드 SE(3) 외루프 제어기 전면 개편 (`Implemented` $\to$ `Approved`, 구현 과제 `TASK-208`)**: 외부 인프라(`CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+5`), 오퍼레이터 C2(`Base+0`), 평시 MFD 다운링크(`Base+3`), GPS/DR 항법 융합(`nav_engine`), 3-Tier ATC/GAC/시설물 핸드오프(`facility_client`), 채널 부트스트랩/프로브(`channel_sentinel`) 및 전략 궤적 합성을 `AMM (Node 03, v1.3.0)`으로 이관(`[DEPRECATED]`); FCP를 단일 `top` 모뎀(`Base+4`, `Base+2`, `Base+1` 3채널 전용) 기반 5대 모듈 파이프라인, 통합 SE(3) 외루프 법칙($g=11.0\text{ m/s}^2$, 6대 기체 `QUATERNION_RATE` 투영), 6-State 외루프 FSM(`PASSIVE_TRACKING` 2.0s 범프리스 복귀, `AMM_TIMEOUT_HOLD` 500ms $\to$ 10s $\to$ `EMERGENCY_LAND`)으로 축소 정립; 구 로컬 추진기 프로파일 직접 참조 및 `ATTITUDE_ANGLE`/`angleTargets`/`targetClimbRate`/`targetThrottle`/`translationBias.heave` 폐기(`[DEPRECATED]`) | AMM-FCP-VAS 계층 직교성 확립 및 순수 외루프 실시간 제어기 경량화 |
+| `v2.0.0` | 2026-11-12 | **FCP-AMM 역할 분리 및 순수 온보드 SE(3) 외루프 제어기 전면 개편 (`Implemented`, 구현 과제 `TASK-208` 완료 · 2026-11-13 승격)**: 외부 인프라(`CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+5`), 오퍼레이터 C2(`Base+0`), 평시 MFD 다운링크(`Base+3`), GPS/DR 항법 융합(`nav_engine`), 3-Tier ATC/GAC/시설물 핸드오프(`facility_client`), 채널 부트스트랩/프로브(`channel_sentinel`) 및 전략 궤적 합성을 `AMM (Node 03, v1.3.0)`으로 이관(`[DEPRECATED]`); FCP를 단일 `top` 모뎀(`Base+4`, `Base+2`, `Base+1` 3채널 전용) 기반 5대 모듈 파이프라인, 통합 SE(3) 외루프 법칙($g=11.0\text{ m/s}^2$, 6대 기체 `QUATERNION_RATE` 투영), 6-State 외루프 FSM(`PASSIVE_TRACKING` 2.0s 범프리스 복귀, `AMM_TIMEOUT_HOLD` 500ms $\to$ 10s $\to$ `EMERGENCY_LAND`)으로 축소 정립; 구 로컬 추진기 프로파일 직접 참조 및 `ATTITUDE_ANGLE`/`angleTargets`/`targetClimbRate`/`targetThrottle`/`translationBias.heave` 폐기(`[DEPRECATED]`) | AMM-FCP-VAS 계층 직교성 확립 및 순수 외루프 실시간 제어기 경량화 |
 | `v1.16.0` | 2026-11-11 | 외루프 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 관심점 지속 조준 호버) 확장, 3종 통합 기수 지향 모드(`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`) 및 `Base+0` `MSG_OPERATOR_CMD` 확장 파라미터(`loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 수신·범프리스 전환 인터록 명세 반영 (`Implemented` $\to$ `Approved`) | TASK-201 FCP 외루프 유도 프리미티브 확장 및 AMM v1.1.0 연동 |
 | `v1.15.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 전용 외루프 유도 제어기(advanced_vtol_driver.lua) 명세 신설: 3축 독립 병진 제어(Surge/Sway/Heave 완전 PID + Anti-windup), STRICT_LEVEL(θ=φ=0°) 무경사 기동 및 TILT_ASSISTED 모드, 짐벌 물리 슬루율 제한, 안전고도 기반 수직 이륙 및 패드 0.5m 정렬 2단계 감속 터치다운 시퀀스, flapTarget=0.0 고정 | 2D 짐벌 벡터 추진 VTOL 외루프 유도 알고리즘 표준화 |
 | `v1.14.0` | 2026-11-08 | 구 명칭(FCP/ASA) 소급 전면 척결, 40채널 대역폭 및 채널 할당 공식 정비 | 용어 무결성 및 40채널 표준 동기화 |
@@ -48,7 +48,7 @@
 
 > [!NOTE]
 > **명칭 개정 및 식별자 동기화 (Zero-Fallback 원칙)**
-> 구 식별자(`"FCP-04"`, `"FCP-NODE-04-4402"` `[DEPRECATED]`)는 본 규격 체계에서 공식 폐기(`"FCP-NODE-04-UUID"`로 표준화)되었으며, `Base+1` 지령의 런타임 `source` / `activeSource` 식별자는 `"FCP"` 단일 키로 동기화됩니다. 또한 `v1.16.0` (빌드 `v1.2.2`, `TASK-201`) 구현은 `v2.0.0` 역할 축소 개편으로 대체되어 **`TASK-208`**에서 재구현됩니다 (`Status: Approved`).
+> 구 식별자(`"FCP-04"`, `"FCP-NODE-04-4402"` `[DEPRECATED]`)는 본 규격 체계에서 공식 폐기(`"FCP-NODE-04-UUID"`로 표준화)되었으며, `Base+1` 지령의 런타임 `source` / `activeSource` 식별자는 `"FCP"` 단일 키로 동기화됩니다. 또한 `v1.16.0` (빌드 `v1.2.2`, `TASK-201`) 구현은 **`TASK-208`**에서 `v2.0.0` 순수 외루프 규격으로 재구현 완료되었습니다 (`Status: Implemented`).
 
 4계층 자율 비행 아키텍처에서 **AMM (Node 03)**이 미션 시퀀싱, 외부 인프라 교신, GPS/DR 항법 융합, C2 중재 및 20Hz 목표 궤적 생성(`targetPos`, `targetVel`, `feedforwardAccel`, `targetHeading`)을 전담하고, **VAS (Node 01)**가 20Hz `SO(3)` 내루프 자세 안정화 및 TCA/ASA 구동계 믹싱을 전담하는 반면, **FCP (Node 04)**는 `Base+4` (`[I-12]`)와 `Base+1` (`[I-2]`) 사이에서 **3차원 위치·속도 오차와 피드포워드 가속도를 기체별 목표 단위 쿼터니언(`targetQuaternion`), 목표 각속도(`targetAngularRates`), 정규화 집합 추력(`collectiveThrust`)으로 투영하는 순수 외루프 제어 계층**을 담당합니다.
 
@@ -1192,7 +1192,7 @@ end
 ### 12.3 구버전(`v1.16.0`) 구현 이력 보존 및 `TASK-208` 대체 안내
 > [!NOTE]
 > **구버전 `v1.16.0` (`v1.2.2`, `TASK-201`) 아카이브 안내 — `TASK-208` 대체 예정**
-> 아래 12.3.1~12.3.3 기록은 역할 분리 개편(`v2.0.0`) 이전의 **`FCP v1.16.0` (소프트웨어 빌드 `v1.2.2`, `TASK-201`) 과거 구현·검증 아카이브**입니다. `v2.0.0` 사양에 따른 코드베이스 재구현 및 신규 단위·E2E 검증은 후속 과제 **`TASK-208`**에서 수행되며, 현 시점 문서 상태는 **`Approved`**입니다.
+> 아래 12.3.1~12.3.3 기록은 역할 분리 개편(`v2.0.0`) 이전의 **`FCP v1.16.0` (소프트웨어 빌드 `v1.2.2`, `TASK-201`) 과거 구현·검증 아카이브**입니다. `v2.0.0` 사양에 따른 코드베이스 재구현 및 신규 단위·E2E 검증은 **`TASK-208`**에서 수행 완료되었으며, 현 시점 문서 상태는 **`Implemented`**입니다.
 
 #### 12.3.1 구버전 `v1.16.0` 13대 과제 및 31대 마이크로슬라이스 구현 이력 (아카이브, `TASK-208` 대체 예정)
 구버전 `v1.2.2` (`TASK-201`) 기준에서는 `TS-01 ~ TS-13` 및 31개 마이크로슬라이스(`IS-01.1` ~ `IS-13.5`)가 검증을 통과하였으며, 이 중 `channel_sentinel.lua`, `nav_engine.lua`, `facility_client.lua`, `operator_handler.lua`는 `v2.0.0`에서 **`AMM v1.3.0`**으로 이관되고, `thruster_profile.lua`는 **`VAS v1.19.0`** 영역으로 정리되었습니다.
