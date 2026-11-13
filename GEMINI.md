@@ -14,10 +14,10 @@
 - `AGENTS.md`: 불변 행동 헌장 (`attention-span` × `caveman` 하이브리드 + `no-overclaim`). **사전 diff 승인 없이 수정 금지**.
 - `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
-- `docs/superpowers/plans/`: 태스크별 실행 계획서 (`YYYY-MM-DD-task-<id>-*.md`).
+- `docs/superpowers/{plans,specs}/`: 태스크별 실행 계획서 및 설계 청사진.
 - `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`tools/run_unit_tests.py`, `tools/run_e2e_tests.py`, `tools/run_mutation_tests.py`, `tools/validate_lua_syntax.py`, `tools/verify_all_specs.py`, `tools/verify_spec_status.py`, `tools/verify_manifest_sync.py`, `tools/verify_context_docs.py`).
+- `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_mutation_tests.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`).
 - `config/gdrive_mapping.json` & `dist_gdrive/` & `tools/sync_gdrive.py`: GDrive 배포 매핑 SSOT, 격리 스테이징, 동기화 CLI (가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
@@ -44,4 +44,4 @@
 - **`ion_thruster` 충돌 조정**: `Create Propulsion: Simulated`의 `ion_thruster` 페리페럴은 허용하며, 금지 규칙은 `kontraption:` 네임스페이스만 차단한다.
 - **온보드 제어기 20Hz 헤드리스 원칙**: VAS/TCA/ASA는 터미널 UI 블로킹 방지를 위해 헤드리스가 기본이며, 디버그 TUI는 `config.json`의 `debug: true` 시 비동기(`parallel`)로만 격리 구동한다.
 - **멀티노드 E2E 시뮬레이션 원칙**: 가상 버스/샌드박스 기반 멀티노드 테스트는 각 노드의 고유 `_ENV` 격리 및 채널 배타성을 준수하며, 테스트 종료 시 `os.shutdown()` 핸드셰이크를 수행한다.
-- **컨텍스트 문서 Stop 훅**: `.agent/hooks.json`이 작업 종료 시 `verify_context_docs` 위반을 검사해 재개시킨다 (새 대화부터 적용, 동일 위반 2회 상한, 오류 시 종료 허용; `git-guardrails`가 `git.exe` 포함 위험 명령 차단).
+- **컨텍스트 문서 Stop 훅**: `.agent/hooks.json`이 작업 종료 시 `verify_context_docs` 위반을 검사해 재개시킨다 (동일 위반 2회 상한, 오류 시 종료 허용; `git-guardrails`가 `git.exe` 포함 위험 명령 차단).

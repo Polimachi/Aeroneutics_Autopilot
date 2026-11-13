@@ -6,10 +6,10 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — FCP `SE(3)` 외루프 경량화 및 AMM 상위 이관 15대 사양서 개편(`TASK-206`), GPS ↔ 클라이언트 프로토콜 정합화(`TASK-122`), FCP 외루프 `LOITER`/`POI_HOLD` 유도 확장(`TASK-201`), AMM 3분할 미션 시퀀서 코어·FSM·헤드리스·51x19 TUI/리졸버/CLI(`TASK-202-1~4`), 컨텍스트 문서 드리프트 가드 및 Stop 훅(`TASK-121`), 통합 인스톨러 도메인 폴더 TUI 개편(`TASK-116`), ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), GAC 전용 시설물(`TASK-114`), 매니페스트 3자 정합성 검증(`TASK-012`), E2E 다중노드 시뮬레이션·돌연변이 25종 확장(`TASK-111`, `TASK-118`), 구버전 용어 정비(`TASK-007`, `TASK-008`), GDrive 배포 체계(`TASK-009`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료. 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조.
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 4계층 `SE(3)` 아키텍처 연동 구현(`TASK-207` `AMM v1.3.0`·`TASK-208` `FCP v2.0.0`·`TASK-209` `VAS v1.19.0`), FCP `SE(3)` 외루프 경량화 및 AMM 상위 이관 15대 사양서 개편(`TASK-206`), GPS ↔ 클라이언트 프로토콜 정합화(`TASK-122`), FCP 외루프 `LOITER`/`POI_HOLD` 유도 확장(`TASK-201`), AMM 3분할 미션 시퀀서 코어·FSM·헤드리스·51x19 TUI/리졸버/CLI 및 WebUI 에디터 사양(`TASK-202`), 컨텍스트 문서 드리프트 가드 및 Stop 훅(`TASK-121`), 통합 인스톨러 도메인 폴더 TUI 개편(`TASK-116`), ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), GAC 전용 시설물(`TASK-114`), 매니페스트 3자 정합성 검증(`TASK-012`), E2E 다중노드 시뮬레이션·돌연변이 25종 확장(`TASK-111`, `TASK-118`), 구버전 용어 정비(`TASK-007`, `TASK-008`), GDrive 배포 체계(`TASK-009`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료. 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조.
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
-  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm` 일정 보류)
+  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm`·`ASA` 본 구현 일정 보류)
   - **Phase 2 (고등 항법 및 편대 임무)**: 3차원 경로 계획(`3_planning/`) 및 다중 기체 편대 미션 오케스트레이터(`4_mission/`) 구축
   - **Phase 3 (물리 하드웨어 및 수동 급기동)**: Create/Avionics 아날로그 스틱 및 물리 컨트롤러 연동, `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 ACRO 수동 조종(`TASK-301`)
 - **실시간 작업 진행 현황 및 상세 백로그 (SSOT)**: [TASK.md](TASK.md)
@@ -45,6 +45,7 @@ Create_Aeroneutics/
 ├── docs/                                  # 시스템 사양서 및 아키텍처 문서
 │   ├── guides/                            # 운영 가이드 (GDRIVE_DEPLOYMENT_GUIDE.md)
 │   ├── superpowers/plans/                 # 태스크별 실행 계획서
+│   ├── superpowers/specs/                 # 태스크별 설계 청사진 (Action Primitive 등)
 │   ├── system/                            # 마스터 ICD 및 시스템 전역 관계도
 │   │   ├── AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md
 │   │   └── SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md
@@ -133,11 +134,11 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 ### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
 Windows PowerShell 5.1 (`&&` 미지원):
 ```powershell
-python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/verify_manifest_sync.py }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/verify_context_docs.py }; if ($?) { python tools/validate_lua_syntax.py }
+python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/verify_manifest_sync.py }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/verify_spec_status.py }; if ($?) { python tools/verify_context_docs.py }; if ($?) { python tools/validate_lua_syntax.py }
 ```
 bash / PowerShell 7+:
 ```bash
-python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_manifest_sync.py && python tools/verify_all_specs.py && python tools/verify_context_docs.py && python tools/validate_lua_syntax.py
+python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_manifest_sync.py && python tools/verify_all_specs.py && python tools/verify_spec_status.py && python tools/verify_context_docs.py && python tools/validate_lua_syntax.py
 ```
 
 ### 1. Lua 멀티 코드베이스 단위 테스트 실행
@@ -152,7 +153,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 7대 핵심 통합 시나리오(8개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 8개 통합 시뮬레이션 스위트(12개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```
