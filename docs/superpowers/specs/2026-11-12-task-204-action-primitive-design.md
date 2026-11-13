@@ -3,7 +3,8 @@
 > **문서 성격**: `TASK-204` 착수 전 설계 청사진 (`Design Spec`) — 마인크래프트 인게임 모드 환경 및 현 UAFS 코드베이스/사양서 정합 개편본  
 > **작성일**: `2026-11-12`  
 > **대상 환경**: `Minecraft CC:Tweaked (Lua 5.2)`, `Create: Aeronautics`, `Create: Avionics`, `Create: Radars`, `Create Propulsion: Simulated`, `Advanced Peripherals`  
-> **기준 사양서**: [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (`v1.28.0`), [AMM_PROGRAM_SPECIFICATION.md](../../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (`v1.3.0`), [FCP_PROGRAM_SPECIFICATION.md](../../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (`v2.0.0`), [VAS_PROGRAM_SPECIFICATION.md](../../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (`v1.19.0`)
+> **기준 사양서**: [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (`v1.28.0`), [AMM_PROGRAM_SPECIFICATION.md](../../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (`v1.3.0`), [FCP_PROGRAM_SPECIFICATION.md](../../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (`v2.0.0`), [VAS_PROGRAM_SPECIFICATION.md](../../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (`v1.19.0`)  
+> **연계 설계서 (`TASK-124`)**: [2026-11-13-task-204-chattering-prevention-design.md](./2026-11-13-task-204-chattering-prevention-design.md) (이산 틱·히스테리시스·단방향 래치·도착 안착 채터링 방지 규격)
 
 ---
 
@@ -156,7 +157,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 | **`ACT_PER_LOCAL_AVOID`** | `[로드맵: Laser/Radar]` | **레이저·레이더 기반 근접 장애물 우회**<br>전방/측방 `laser_sensor` 지형 장애물 또는 `radar`/`plane_radar` 근접 트랙 감지 시 안전 오프셋 우회 경로 생성 | • 비행 중(`NORMAL`)<br>• `laser_sensor` 또는 `radar`/`plane_radar` 정상<br>• 안전 버퍼 내 장애물/접근 트랙 감지 | 장애물/트랙 통과 후 원래 목표 경로 복귀 완료 |
 | **`ACT_PER_REPLAN_GLB`** | `[로드맵]` | **전역 경로 동적 재계획 (Global Re-planning)**<br>`GCS` 신규 NFZ 폴리곤 수신 또는 국소 회피 불가 차단 시 2D/3D A\* 알고리즘으로 경로 큐 재생성 | • `ACT_PER_LOCAL_AVOID` 시간 초과 **또는** `GCS` 신규 NFZ 수신 | 신규 안전 경유점 시퀀스 산출 및 큐 교체 완료 |
 | **`ACT_PER_TRACK_TGT`** | `[로드맵: Radars/PD]` | **레이더·플레이어 실시간 표적 추격 및 거리 유지**<br>`CC:Radars` (`getTracks`/`getSelectedTrack`), `CC:Avionics` (`radar.getContact`), `playerDetector`가 반환한 `{x, y, z, velocity}`를 추종하며 이격 거리 유지 | • 비행 중(`NORMAL`)<br>• 표적 트랙 `id` 잠금(`TRACK_LOCKED == true`) 및 타임스탬프 유효 | 추적 종료 명령 수신(표적 소실 시 `ACT_PAT_EXP_SPIRAL` 등 분기) |
-| **`ACT_PER_SENTRY_HOLD`** | `[로드맵: 착지 초계]` | **착지 상태 레이더·감지 초계 대기 (Sentry Hold)**<br>지정 안전 평지/패드에 착륙해 `DISARM` 상태로 대기하며 `radar`/`playerDetector`·모뎀 감시만 유지하다 조건 충족 시 재이륙 연결 | • 지정 안전 지점 착지(`DISARMED`) 완료<br>• `radar` / `playerDetector` 활성 및 재이륙 잔여 `fuel` 확보 | 감시 트리거 발생 또는 대기 시간 만료 시 `ACT_SYS_ARM` $\to$ `TAKEOFF` 연계 |
+| **`ACT_PER_SENTRY_HOLD`** | `[로드맵: 착지 초계/자가충전]` | **착지 상태 감시 초계·저부하 대기 및 자가 충전 (Sentry Hold & Self-Recharge)**<br>지정 안전 평지/패드에 착륙해 `DISARM` 상태로 20Hz 궤적/제어 루프를 일시 중단(저부하 Standby Sleep)하고 `radar`/`playerDetector`·`modem_message`·`redstone`·타이머 감시를 유지하다 조건 충족 시 재이륙 연결.<br>*(구 `ACT_NRG_HIBERNATE`의 저부하 Standby Sleep 및 이벤트 웨이크업 방식을 본 행동으로 완전 통합)*<br>• **전기 기체 자가 충전(Self-Recharge) 메커니즘**:<br>기체 프로파일(`Profile`)이 전기 구동(`isElectric == true`)이고 태양광 패널 등 자가 충전 수단(`hasSelfCharging == true`)을 갖춘 경우, 에너지가 일정량 이하(`fuel <= lowEnergyThreshold`, 기본 `0.30`)로 저하되거나 초계 중 충전 필요 시 안전 지점에 착륙(`DISARM`)하여 일광 아래 자가 충전을 수행하며 대기. 목표 에너지(`targetFuel`, 기본 `0.85`) 보충 완료 시 `ACT_SYS_ARM` $\to$ 이륙하여 중단되었던 직전 행동(`Action`) 및 미션(`Mission`)을 자동 복귀하여 지속 수행. | • 지정 안전 지점 착지(`DISARMED`) 완료 또는 비행 중 저에너지 발생 시 안전 착륙 시퀀스 선행<br>• `radar`/`playerDetector`/모뎀/타이머/레드스톤 감시 리소스 중 최소 1종 유효<br>• 자가 충전 진입 시: 전기 프로파일(`isElectric == true`), 자가 충전 장비(`hasSelfCharging == true`), 천공 개방(태양광 차폐 없음) | • **초계/웨이크업**: 감시 표적 포착(`TARGET_LOCKED`), `Base+0` 명령 수신, 레드스톤 입력 감지, 대기 시간 만료 시 `ACT_SYS_ARM` $\to$ `TAKEOFF` 연계<br>• **자가 충전 완료**: `telemetry.fuel >= targetFuel` 충전 완료 시 자동 재시동(`ACT_SYS_ARM`) 후 직전 Action 및 미션 시퀀스 복귀 재개 |
 
 ### 3.6 임무 장비(Payload) 및 레드스톤 제어 계층 (`ACT_PAY_*`, 4종 + `TASK-401 TBD`)
 
@@ -186,17 +187,17 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 
 | 행동 ID | 등급 | 행동 명칭 및 상세 설명 | 핵심 진입 조건 (Pre-conditions / Interrupt Triggers) | 완료 조건 및 UAFS 연동 |
 | :--- | :---: | :--- | :--- | :--- |
-| **`ACT_FS_RTL_HOME`** | `[즉시]` | **기지 안전 고도 복귀 (Return to Launch)**<br>진행 중인 미션을 중단하고 안전 귀환 `Y` 고도로 상승해 `Home` 상공까지 `FAILSAFE_RTH` 궤적으로 복귀 | • 비행 중(`NORMAL` 또는 `FAILSAFE_HOLD`) 및 `HOME_VALID == true`<br>• **트리거:** 1차 저연료(`fuel <= 0.30`), `[R]` 핫키, 또는 `fallbackPolicy == "RTH"` 발동 | `Home` 상공 수평 오차 `2.0m` 이내 도달 후 `ACT_TKL_LAND_PREC`/`LAND_NORM` 자동 연결 |
+| **`ACT_FS_RTL_HOME`** | `[즉시]` | **기지 안전 고도 복귀 (Return to Launch)**<br>진행 중인 미션을 중단하고 안전 귀환 `Y` 고도로 상승해 `Home` 상공까지 `FAILSAFE_RTH` 궤적으로 복귀 | • 비행 중(`NORMAL` 또는 `FAILSAFE_HOLD`) 및 `HOME_VALID == true`<br>• **트리거:** 1차 저연료(`fuel <= 0.20`, `60 Ticks` 디바운스 래치), `[R]` 핫키, 또는 `fallbackPolicy == "RTH"` 발동 | `Home` 상공 수평 오차 `2.0m` 이내 도달 후 `ACT_TKL_LAND_PREC`/`LAND_NORM` 자동 연결 |
 | **`ACT_FS_GOTO_RALLY`** | `[즉시]` | **최근접 가용 착륙패드 대피 (`Divert Nearest`)**<br>`Home` 복귀 `fuel`이 부족하거나 경로가 차단됐을 때 `facility_client`(`CH 50003` 비콘)의 최단거리 가용 패드로 이동 | • 비행 중 및 `CH 50003` 가용 시설물 목록 존재<br>• **트리거:** `Home` 귀환 소요 연료 초과 또는 `Home` 접근 불가 | 최단거리 패드 상공 도달 후 `ACT_TKL_LAND_PREC` 연결 |
-| **`ACT_FS_FENCE_BRAKE`** | `[즉시]` | **지오펜스 경계 제동 및 안전 구역 복귀**<br>`nav_engine` `(X, Y, Z)`가 지오펜스 수평 경계 또는 `Y` 고도 상하한에 임박/침범 시 급제동 후 내부 안전 지점으로 후퇴 | • 비행 중<br>• **트리거:** 예측 제동 거리 포함 좌표가 지오펜스 경계선 `5.0m` 이내 접근 | 속도 안정화(`HOVER_HOLD` 또는 고정익 선회) 및 지오펜스 내부 `15.0m` 복귀 |
-| **`ACT_FS_HOVER_HOLD`** | `[즉시]` | **현 위치 안전 정지·선회 대기 (`HOVER_HOLD` / `LOITER`)**<br>GPS `5,000ms` 초과 두절, `[H]` 핫키, 또는 `fallbackPolicy` 발동 시 현 위치에서 정지 체공(고정익은 `R=30m` 선회)하며 관제/복구를 대기 | • 비행 중<br>• **트리거:** `gpsTimedOut == true`, `[H]` 핫키, 또는 중단 정책 `"HOVER_HOLD"`/`"LOITER"` | 운용자 `resume`/`RTH` 명령 수신 또는 GPS 복구 후 재개 |
-| **`ACT_FS_EMERG_LAND`** | `[즉시]` | **현 위치 즉시 비상 강하 착륙 (`EMERGENCY_LAND`)**<br>치명적 연료 고갈(`fuel <= 0.15`), 측위 완전 상실, 또는 `[L]` 핫키/`10s` 타임아웃 만료 시 `-2.0 m/s` 정속 강하로 즉시 착륙 | • 비행 중<br>• **트리거:** 2차 위험 연료(`<= 0.15`), `[L]` 핫키, `AMM`/`FCP`/`VAS` 10초 홀드 만료 | 지면 접촉(`verticalSpeed == 0`) 감지 즉시 `ACT_SYS_DISARM` 강제 호출 |
+| **`ACT_FS_FENCE_BRAKE`** | `[즉시]` | **지오펜스 경계 제동 및 안전 구역 복귀**<br>`nav_engine` `(X, Y, Z)`가 지오펜스 수평 경계 또는 `Y` 고도 상하한에 임박/침범 시 급제동 후 내부 안전 지점으로 후퇴 | • 비행 중<br>• **트리거:** 지오펜스 경계선 `5.0m` 이내(`2 Ticks` 디바운스) | `40 Ticks` 최소 유지 및 지오펜스 내부 `15.0m` 복귀 |
+| **`ACT_FS_HOVER_HOLD`** | `[즉시]` | **현 위치 안전 정지·선회 대기 (`HOVER_HOLD` / `LOITER`)**<br>GPS `5,000ms` 초과 두절, `[H]` 핫키, 또는 `fallbackPolicy` 발동 시 현 위치에서 정지 체공(고정익은 `R=30m` 선회)하며 관제/복구를 대기 | • 비행 중<br>• **트리거:** `gpsTimedOut == true`, `[H]` 핫키, 또는 중단 정책 `"HOVER_HOLD"`/`"LOITER"` | 운용자 `resume`/`RTH` 명령 수신 또는 GPS 복구(`validStreak >= 3`) 후 재개 |
+| **`ACT_FS_EMERG_LAND`** | `[즉시]` | **현 위치 즉시 비상 강하 착륙 (`EMERGENCY_LAND`)**<br>치명적 연료 고갈(`fuel <= 0.10`, `30 Ticks` 디바운스 래치), 측위 완전 상실, 또는 `[L]` 핫키/`10s` 타임아웃 만료 시 `-2.0 m/s` 정속 강하로 즉시 착륙 | • 비행 중<br>• **트리거:** 2차 위험 연료(`<= 0.10`), `[L]` 핫키, `AMM`/`FCP`/`VAS` 10초 홀드 만료 | 지면 접촉(`verticalSpeed == 0`) 감지 즉시 `ACT_SYS_DISARM` 강제 호출 |
 
 ---
 
-## 4. 확장 3대 특수 도메인 표준 행동 리스트 (총 10종)
+## 4. 확장 3대 특수 도메인 표준 행동 리스트 (총 10종 — 9종 활성 + 1종 통합)
 
-초기 명세의 7대 확장 도메인 중 인게임 물리·센서·모드에서 구현이 불가능한 **4개 도메인(구 `4.2 공중 매니퓰레이션 ACT_MAN_*`, 구 `4.4 전자전 ACT_EW_*`, 구 `4.6 극한 기상 ACT_ENV_*`, 구 `4.7 온보드 AI ACT_AI_*`)을 완전 삭제**하고, `Create: High Seas`/`Offroad` 및 UAFS 로드맵과 정합되는 **3개 도메인(10종)**만 남깁니다.
+초기 명세의 7대 확장 도메인 중 인게임 물리·센서·모드에서 구현이 불가능한 **4개 도메인(구 `4.2 공중 매니퓰레이션 ACT_MAN_*`, 구 `4.4 전자전 ACT_EW_*`, 구 `4.6 극한 기상 ACT_ENV_*`, 구 `4.7 온보드 AI ACT_AI_*`)을 완전 삭제**하고, `Create: High Seas`/`Offroad` 및 UAFS 로드맵과 정합되는 **3개 도메인(10종: 9종 활성 + 1종 통합 이관)**만 남깁니다. *(구 `ACT_NRG_HIBERNATE`는 `ACT_PER_SENTRY_HOLD`로 통합)*
 
 ### 4.1 이동 플랫폼 및 해상·차량 연동 계층 (`ACT_MOB_*`, 5종)
 
@@ -210,14 +211,14 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 | **`ACT_MOB_ARM_DOCK`** | `[로드맵: TASK-104]` | **2축 도킹암 4단계 정밀 랑데부 및 포획 (`DOCK_ARM`)**<br>`trajectory_generator` 4단계 접근(최종 크립 $\le 0.4\text{ m/s}$, 공차 $|e_y|,|e_z|\le 0.15\text{ m}$, $|\Delta\psi|\le 2.0^\circ$)으로 도킹암에 결합하고, 이탈 시 `surge = -0.8` 비상 Abort 수행 | • 비행 중(`NORMAL`) 및 `GAC` 도킹 슬롯 인가<br>• `DOCKING_ARM` 20Hz 전술유도(`Base_sec+10+Idx`) 정상 | `Base+5` `MSG_DOCK_CAPTURE_STAGE` (`stage == "HARD_LOCKED"`) 및 `ARM_DOCKED` 확인 |
 | **`ACT_MOB_ARM_UNDOCK`** | `[로드맵: TASK-104]` | **엄빌리컬 해제 및 도킹암 분리 이탈 (`UNDOCK_ARM`)**<br>보급 완료 후 엄빌리컬 연결을 해제하고 `DOCKING_ARM` 격납 위치에서 안전하게 분리·이탈 | • 도킹 결합(`HARD_LOCKED`) 완료 및 `ARMED` 준비 완료<br>• 엄빌리컬 보급 종료 확인 | `Base+5` `MSG_UMBILICAL_STATUS` 분리 및 `ARM_RELEASED` 확인 |
 
-### 4.2 에너지 보급·재충전 및 저부하 대기 계층 (`ACT_NRG_*`, 2종 — 구 4.3)
+### 4.2 에너지 보급·재충전 및 저부하 대기 계층 (`ACT_NRG_*`, 1종 활성 + 1종 통합 — 구 4.3)
 
 *(슈퍼커패시터 핫스왑 `BAT_SWAP`, 열상승기류 `THERM_SOAR`, 태양광 뱅크각 `SOLAR_OPT`, 수소 퍼지 `FUEL_PURGE` 삭제)*
 
 | 행동 ID | 등급 | 행동 명칭 및 상세 설명 | 핵심 진입 조건 (Pre-conditions) | 완료 조건 및 UAFS 연동 |
 | :--- | :---: | :--- | :--- | :--- |
 | **`ACT_NRG_REFUEL_DOCK`** | `[로드맵: TASK-104/시설물]` | **도킹암·패드 유체/FE 자동 보급 및 충전 대기**<br>착륙패드(Portable Fluid/Energy Interface) 또는 `DOCKING_ARM` 엄빌리컬(`Base+5` `MSG_UMBILICAL_STATUS`) 체결 상태에서 연료(`mB`)와 에너지(`FE`) 보충을 완료할 때까지 대기 | • `DISARMED` 착륙 완료 또는 `HARD_LOCKED` 도킹 완료<br>• 보급 인터페이스/`MSG_UMBILICAL_STATUS` 활성 | `telemetry.fuel >= targetFuel` (예: `0.95`) 및 보급 완료 통보 확인 |
-| **`ACT_NRG_HIBERNATE`** | `[로드맵]` | **저부하 이벤트 대기 전환 (Standby Sleep)**<br>착지 `DISARMED` 상태에서 20Hz 궤적/제어 루프를 일시 중단하고 `modem_message`, `redstone`, 타이머 웨이크업 이벤트만 대기 | • `controlState == "DISARMED"` 착지 상태<br>• 웨이크업 트리거(타이머, `Base+0` 명령, 레드스톤 등) 설정 | 웨이크업 이벤트 수신 시 `ACT_SYS_PREFLIGHT` 또는 대기 미션 재개 |
+| **`ACT_NRG_HIBERNATE`** | `[통합: ACT_PER_SENTRY_HOLD]` | **저부하 이벤트 대기 전환 (Standby Sleep) [ACT_PER_SENTRY_HOLD로 통합]**<br>기존 착지 `DISARMED` 상태 저부하 궤적/제어 루프 일시 중단 및 이벤트(`modem_message`, `redstone`, 타이머) 웨이크업 대기 기능은 **`ACT_PER_SENTRY_HOLD`로 완전 통합**됨. (중복 대기 행동 제거 및 전기 기체 자가 충전 로직 일원화, Zero-Fallback 단일 경로 준수) | • `ACT_PER_SENTRY_HOLD` 참조 | `ACT_PER_SENTRY_HOLD`로 통합 이관 |
 
 ### 4.3 유무인 복합(MUM-T) 및 이기종(UGV·USV) 합동 계층 (`ACT_MUMT_*`, 3종 — 구 4.5)
 
@@ -278,7 +279,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 | **03** | `ACT_TKL_TAKEOFF_VERT` | 수직 이륙 | `targetAlt: 140.0`, `facilityId: "PAD_BRAVO_01"` | `|140.0 - altitudeY| <= 2.0m` 진입 | 상승 정체 시 즉시 `ACT_TKL_LAND_NORM` |
 | **04** | `ACT_NAV_GOTO_WP` | 목표 접선 진입점 이동 | `targetPos: {450, 140, -1200}`, `speed: 18.0`, `tangentOffset: 40.0` | 접선 진입점 반경 `5.0m` 이내 도달 | GPS 5초 두절 시 `ACT_FS_HOVER_HOLD` |
 | **05** | `ACT_PAY_SET_ROI` | 기수 `POI`·Zone 3 지향 고정 | `poiPos: {450, 64, -1200}`, `channelOffset: 20` | `ROI_LOCK` 정렬 및 Zone 3 ACK 확인 | Zone 3 미장착 시 기수 `POI` 단독 지향 |
-| **06** | `ACT_PAT_LOITER_TIME`<br>+ `[DEC_SMOOTH_TRAJ]` | 목표 주변 정밀 선회 (`STRICT_LEVEL`) | `radius: 40.0 (CW)`, `durationSec: 180`, `speed: 8.0`, `profile: "STRICT_LEVEL"` | 궤도 진입 후 `180 s` 경과 | 저연료(`<= 0.30`) 시 즉시 `08`로 점프 |
+| **06** | `ACT_PAT_LOITER_TIME`<br>+ `[DEC_SMOOTH_TRAJ]` | 목표 주변 정밀 선회 (`STRICT_LEVEL`) | `radius: 40.0 (CW)`, `durationSec: 180`, `speed: 8.0`, `profile: "STRICT_LEVEL"` | 궤도 진입 후 `180 s` 경과 | 저연료(`<= 0.20`) 시 즉시 `08`로 점프 |
 | **07** | `ACT_PAY_CLEAR_ROI` | 지향 고정 해제 및 중립 복귀 | `headingMode: "AUTO"`, `channelOffset: 20` | 중립 복귀 및 Zone 3 해제 ACK 확인 | 응답 지연 시 타임아웃 후 복귀 강행 |
 | **08** | `ACT_FS_RTL_HOME`<br>+ `[DEC_ENERGY_ECO]` | 기지 최적 연료 복귀 비행 | `home: {0, 140, 0}`, `ecoSpeed: 12.0` | `Home` 상공 수평 오차 `5.0m` 이내 도달 | 귀환 연료 부족 시 `ACT_FS_GOTO_RALLY` |
 | **09** | `ACT_TKL_LAND_PREC`<br>+ `[DEC_RETRY_N(2)]` | `PAD_BRAVO_01` 비콘 정밀 착륙 | `facilityId: "PAD_BRAVO_01"`, `maxAttempts: 2` | `Base+5` 접지 통보 및 `verticalSpeed == 0` | 복행 조건 시 `ACT_TKL_ABORT_LAND` 후 재시도 |
@@ -294,7 +295,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 
 ```
 [Root: ReactiveFallback (AMM 20Hz 미션 안전 감독기)]
- ├── [Condition] 정상 비행 가능 상태인가? (fuel > 0.30 AND sensorOk AND controlState ~= "E_STOP")
+ ├── [Condition] 정상 비행 가능 상태인가? (fuel > 0.20 AND sensorOk AND controlState ~= "E_STOP")
  │    └── (True일 때 실행) [Sequence: 주 미션 시퀀스 (MAC_RECON_ORBIT 기반)]
  │         ├── [Action] ACT_SYS_PREFLIGHT (Base+2 헬스 & Base+0 프로브 점검)
  │         ├── [Action] ACT_SYS_ARM (Base+4 IDLE_ARMED 전이)
@@ -314,10 +315,10 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
  └── (False일 때 즉시 전환) [Sequence: 비상 대응 시퀀스]
       ├── [Action] ACT_PAY_CLEAR_ROI (탑재체·지향 즉시 해제)
       ├── [Fallback: UAFS 4단 비상 회복]
-      │    ├── [Action] ACT_FS_RTL_HOME (1차 저연료 fuel <= 0.30 시 Home 복귀)
+      │    ├── [Action] ACT_FS_RTL_HOME (1차 저연료 fuel <= 0.20 시 Home 복귀)
       │    ├── [Action] ACT_FS_GOTO_RALLY (Home 복귀 불가 시 CH 50003 최단 가용 패드 대피)
       │    ├── [Action] ACT_FS_HOVER_HOLD (GPS 5,000ms 두절 등 일시 정지/선회 대기)
-      │    └── [Action] ACT_FS_EMERG_LAND (2차 위험 fuel <= 0.15 시 -2.0m/s 즉시 착륙)
+      │    └── [Action] ACT_FS_EMERG_LAND (2차 위험 fuel <= 0.10 시 -2.0m/s 즉시 착륙)
       └── [Action] ACT_SYS_DISARM (치명적 제어 불능 시 ACT_SYS_TERMINATE Base+1 E_STOP)
 ```
 
@@ -344,8 +345,8 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
     "headingMode": "AUTO"
   },
   "failsafePolicy": {
-    "lowFuelRtlThreshold": 0.30,
-    "criticalFuelLandThreshold": 0.15,
+    "lowFuelRtlThreshold": 0.20,
+    "criticalFuelLandThreshold": 0.10,
     "gpsTimeoutSec": 5.0,
     "linkLossAction": "ACT_FS_RTL_HOME",
     "rallyFallbackAction": "ACT_FS_GOTO_RALLY"
@@ -449,7 +450,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
       "preconditions": {
         "controlState": "NORMAL",
         "gpsValid": true,
-        "minFuel": 0.35
+        "minFuel": 0.25
       },
       "completeWhen": {
         "logic": "ALL",
@@ -460,7 +461,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
       "abortWhen": {
         "logic": "ANY",
         "conditions": [
-          { "type": "FUEL_LEVEL_BELOW", "threshold": 0.30 }
+          { "type": "FUEL_LEVEL_BELOW", "threshold": 0.20 }
         ]
       }
     },
@@ -498,7 +499,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
       },
       "preconditions": {
         "controlState": "NORMAL",
-        "minFuel": 0.18
+        "minFuel": 0.12
       },
       "completeWhen": {
         "logic": "ALL",
