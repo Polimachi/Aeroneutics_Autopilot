@@ -355,4 +355,86 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_eq(arb.emergencyGoal.flightMode, "EMERGENCY_LAND")
         assert_true(string.find(arb.lastBanner, "CRITICAL FUEL") ~= nil)
     end)
+
+    it("propagates mission pause and abort fallbackPolicy goals through c2_arbiter:get_effective_goal for [I-12]", function()
+        local mission_engine = require("mission_engine")
+        local q, net, arb = create_fixture()
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        assert_true(eng:load_table({
+            missionId = "FALLBACK_I12",
+            fallbackPolicy = "RTH",
+            checkpoints = {
+                {
+                    checkpointId = "CP_1",
+                    action = "FLY_TO",
+                    params = { targetPos = { x = 500, z = 500 }, targetAlt = 150 },
+                    fallbackPolicy = "RTH",
+                    abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 5 } } },
+                },
+                {
+                    checkpointId = "CP_2",
+                    action = "FLY_TO",
+                    params = { targetPos = { x = 800, z = 800 }, targetAlt = 150 },
+                    fallbackPolicy = "HOVER_HOLD",
+                    abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 5 } } },
+                },
+                {
+                    checkpointId = "CP_3",
+                    action = "FLY_TO",
+                    params = { targetPos = { x = 900, z = 900 }, targetAlt = 150 },
+                    fallbackPolicy = "LOITER",
+                    abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 5 } } },
+                },
+            },
+        }))
+
+        -- 1. Pause while EN_ROUTE -> LOITER standby goal with arm=true, flightActive=true
+        assert_true(eng:start("SINGLE", 1000))
+        eng:step_telemetry({ fsmState = "ACTIVE_TRACKING", navigation = { currentPos = { x = 10, y = 150, z = 10 } } }, 1050)
+        assert_true(eng:pause())
+        local g_pause = arb:get_effective_goal()
+        assert_eq(g_pause.flightMode, "LOITER")
+        assert_true(g_pause.arm)
+        assert_true(g_pause.flightActive)
+
+        -- 2. Resume restores EN_ROUTE CRUISE goal, then abort with RTH -> FAILSAFE_RTH
+        assert_true(eng:resume(2000))
+        assert_eq(arb:get_effective_goal().flightMode, "CRUISE")
+        eng:tick(8000)
+        assert_eq(eng.state, "ABORTED")
+        local g_rth = arb:get_effective_goal()
+        assert_eq(g_rth.flightMode, "FAILSAFE_RTH")
+        assert_true(g_rth.arm)
+        assert_true(g_rth.flightActive)
+
+        -- 3. Abort with HOVER_HOLD -> HOVER_HOLD
+        assert_true(eng:goto_index(2, 9000))
+        assert_eq(arb:get_effective_goal().flightMode, "CRUISE")
+        eng:tick(15000)
+        assert_eq(eng.state, "ABORTED")
+        local g_hover = arb:get_effective_goal()
+        assert_eq(g_hover.flightMode, "HOVER_HOLD")
+        assert_true(g_hover.arm)
+        assert_true(g_hover.flightActive)
+
+        -- 4. Abort with LOITER -> LOITER
+        assert_true(eng:goto_index(3, 16000))
+        eng:tick(22000)
+        assert_eq(eng.state, "ABORTED")
+        local g_loiter = arb:get_effective_goal()
+        assert_eq(g_loiter.flightMode, "LOITER")
+        assert_true(g_loiter.arm)
+        assert_true(g_loiter.flightActive)
+
+        -- 5. Deliberate stop while DISARMED on ground -> IDLE with arm=false, flightActive=false
+        assert_true(eng:start("SINGLE", 23000))
+        eng:step_telemetry({ fsmState = "DISARMED", navigation = { currentPos = { x = 0, y = 64, z = 0 } } }, 23050)
+        assert_true(eng:stop(23100))
+        local g_stop = arb:get_effective_goal()
+        assert_eq(g_stop.flightMode, "IDLE")
+        assert_false(g_stop.arm)
+        assert_false(g_stop.flightActive)
+    end)
 end)

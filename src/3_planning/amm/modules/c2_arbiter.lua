@@ -406,9 +406,15 @@ function c2_arbiter:get_effective_goal()
     if self.emergencyGoal then
         return self.emergencyGoal
     end
-    if self.engine and self.engine.state == "EN_ROUTE" and self.engine.get_trajectory_goal then
-        local g = self.engine:get_trajectory_goal()
-        if g then return g end
+    if self.engine then
+        if self.engine.state == "EN_ROUTE" and self.engine.get_trajectory_goal then
+            local g = self.engine:get_trajectory_goal()
+            if g then return g end
+        elseif (self.engine.state == "ABORTED" or self.engine.state == "SUSPENDED")
+            and self.engine.get_fallback_goal then
+            local fg = self.engine:get_fallback_goal()
+            if fg then return fg end
+        end
     end
     if self.queue and self.queue.state == "EN_ROUTE" then
         local wp = self.queue:get_active()

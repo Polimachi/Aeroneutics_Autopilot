@@ -165,6 +165,8 @@ local function dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp)
         actuatorHealth = ctx.nav.actuatorHealth,
         vasSat = ctx.lastTelemPayload and ctx.lastTelemPayload.satFlags,
         currentState = currState,
+        arm = ctx.fsm.arm,
+        flightActive = ctx.fsm.flightActive,
     }
     local cmd = outer_loop_controller.compute(ctx.ctrl, ctx.nav, sp, satFlags, dt)
     network_manager.send_attitude_cmd(ctx.net, cmd)

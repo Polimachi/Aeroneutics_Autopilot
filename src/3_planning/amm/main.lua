@@ -487,7 +487,7 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
     elseif chan == base + 4 then
         if pkt.type == "MSG_OUTER_LOOP_STATUS" and app.arbiter and app.arbiter.handle_outer_loop_status then
             app.arbiter:handle_outer_loop_status(pkt, now_ms)
-        elseif (pkt.type == "MSG_CHANNEL_REBIND_ACK" or pkt.type == "MSG_CHANNEL_REBIND") and app.sentinel then
+        elseif pkt.type == "MSG_CHANNEL_REBIND_ACK" and app.sentinel then
             channel_sentinel.on_rebind_ack(app.sentinel, pkt, now_ms)
         end
     elseif chan == base + 5 and app.nav and pkt.type == "MSG_GPS_RESPONSE" then
@@ -644,6 +644,10 @@ local function step_20hz_tick(app, dt, now_ms)
 
     if app.arbiter and app.arbiter.check_timeouts then
         app.arbiter:check_timeouts(now)
+    end
+
+    if app.nav and nav_engine.update_timeout then
+        nav_engine.update_timeout(app.nav, now)
     end
 
     if app.nav and app.net then

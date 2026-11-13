@@ -191,6 +191,23 @@ describe("vas flight_dynamics_core normal-flight vertical PI removal", function(
         assert_near(wAcro.rollTorque, 0.0, 1e-3)
         assert_near(wAcro.yawTorque, 0.0, 1e-3)
     end)
+
+    it("ignores deprecated targetOrientation key in flight_dynamics_core.compute (Zero-Fallback)", function()
+        local fdc = flight_dynamics_core.init({})
+        local telem = {
+            orientation = quat.identity(),
+            angularRate = { x = 0, y = 0, z = 0 },
+        }
+        local legacyGuidance = {
+            commandType = "QUATERNION_RATE",
+            targetOrientation = quat.from_euler(35.0, -25.0, 45.0),
+            collectiveThrust = 0.635,
+        }
+        local wrench = flight_dynamics_core.compute(fdc, telem, legacyGuidance, 0.05)
+        assert_near(wrench.rollTorque, 0.0, 1e-6)
+        assert_near(wrench.pitchTorque, 0.0, 1e-6)
+        assert_near(wrench.yawTorque, 0.0, 1e-6)
+    end)
 end)
 
 describe("vas state_machine failsafe vertical PI and C2 arbitration", function()

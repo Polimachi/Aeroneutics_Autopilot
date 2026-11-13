@@ -396,6 +396,16 @@ local function prepare_fsm_setpoint(state, nav, setpoint, fsmCtx)
     return sp
 end
 
+local function resolve_bool_flag(fsmCtx, sp, key, defaultVal)
+    if fsmCtx and fsmCtx[key] ~= nil then
+        return fsmCtx[key] == true
+    end
+    if sp and sp[key] ~= nil then
+        return sp[key] == true
+    end
+    return defaultVal
+end
+
 function outer_loop_controller.compute(state, nav, setpoint, fsmCtx, dt)
     local d_t = (tonumber(dt) and dt > 0) and dt or 0.05
     local s = state or outer_loop_controller.init()
@@ -426,8 +436,8 @@ function outer_loop_controller.compute(state, nav, setpoint, fsmCtx, dt)
         quat, rates, colThrust, flap, bias = project_winged_vtol(s, a_des, nav, sp, fsmCtx, d_t, new_h, yawRateFF)
     end
 
-    local arm = (fsmCtx and fsmCtx.arm ~= nil) and fsmCtx.arm or (sp.arm ~= nil and sp.arm) or true
-    local flightActive = (fsmCtx and fsmCtx.flightActive ~= nil) and fsmCtx.flightActive or (sp.flightActive ~= nil and sp.flightActive) or true
+    local arm = resolve_bool_flag(fsmCtx, sp, "arm", true)
+    local flightActive = resolve_bool_flag(fsmCtx, sp, "flightActive", true)
 
     return {
         source = "FCP",

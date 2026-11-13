@@ -671,6 +671,8 @@ function mission_engine.new(opts)
         lastMfd = nil,
         touchdownArmed = false,
         patrolState = nil,
+        currentGoal = nil,
+        fallbackGoal = nil,
         lastConditionSummary = "NONE",
     }, mission_engine)
 end
@@ -705,6 +707,8 @@ function mission_engine:load_table(data)
     self.state = "IDLE"
     self.enteredAtMs = 0
     self.patrolState = nil
+    self.currentGoal = nil
+    self.fallbackGoal = nil
     self.touchdownArmed = false
     self.lastConditionSummary = "NONE"
     return true, nil
@@ -1011,6 +1015,19 @@ function mission_engine:update_patrol(cp, mfd_payload, t_ms)
     return nil
 end
 
+local function build_loiter_fallback(self, cp)
+    local p = cp and cp.params or {}
+    local nav_pos = self.lastMfd and self.lastMfd.navigation and self.lastMfd.navigation.currentPos
+    local pos = nav_pos or p.targetPos
+    return {
+        flightMode = "LOITER",
+        arm = true,
+        flightActive = true,
+        targetPos = pos,
+        targetAlt = p.targetAlt or (self.defaults and self.defaults.targetAlt),
+    }
+end
+
 local FALLBACK_HANDLERS = {
     SKIP_NEXT = function(self, cp, now_ms)
         cp.status = "ABORTED"
@@ -1020,11 +1037,13 @@ local FALLBACK_HANDLERS = {
             return "SKIPPED"
         end
         self.state = "ABORTED"
+        self.fallbackGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
         return "ABORTED"
     end,
     RTH = function(self, cp, _now_ms)
         cp.status = "ABORTED"
         self.state = "ABORTED"
+        self.fallbackGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
         if self.net then
             self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "RTH", self.authority)
         end
@@ -1033,6 +1052,7 @@ local FALLBACK_HANDLERS = {
     HOVER_HOLD = function(self, cp, _now_ms)
         cp.status = "ABORTED"
         self.state = "ABORTED"
+        self.fallbackGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
         if self.net then
             self.net:send_operator_cmd("HOVER_HOLD", "HOVER_HOLD", {}, "HOVER_HOLD", self.authority)
         end
@@ -1041,6 +1061,7 @@ local FALLBACK_HANDLERS = {
     LOITER = function(self, cp, _now_ms)
         cp.status = "ABORTED"
         self.state = "ABORTED"
+        self.fallbackGoal = build_loiter_fallback(self, cp)
         if self.net then
             self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
         end
@@ -1060,6 +1081,7 @@ function mission_engine:apply_abort(cp, now_ms)
     end
     cp.status = "ABORTED"
     self.state = "ABORTED"
+    self.fallbackGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
     if self.net then
         self.net:send_operator_cmd("CRUISE", "CRUISE", {}, policy, self.authority)
     end
@@ -1075,6 +1097,7 @@ function mission_engine:enter_checkpoint(index, now_ms)
         self.state = "ABORTED"
         return false, mission_engine.DEFERRED_ERROR
     end
+    self.fallbackGoal = nil
     self.active_index = index
     self.enteredAtMs = get_time_ms(now_ms)
     cp.status = "ACTIVE"
@@ -1205,6 +1228,8 @@ function mission_engine:start(execution_mode, now_ms)
     if execution_mode then self.executionMode = execution_mode end
     for _, cp in ipairs(self.checkpoints) do cp.status = nil end
     self.touchdownArmed = false
+    self.currentGoal = nil
+    self.fallbackGoal = nil
     self.state = "EN_ROUTE"
     local ok, err = self:enter_checkpoint(1, now_ms)
     if not ok then
@@ -1214,12 +1239,19 @@ function mission_engine:start(execution_mode, now_ms)
 end
 
 function mission_engine:stop(now_ms)
+    local prev_state = self.state
     local cp = self:get_active()
     self.hook_runner:cleanup()
     if cp and cp.onAbort then
         self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms)
     end
     self.state = "ABORTED"
+    local is_disarmed = self.lastMfd and self.lastMfd.fsmState == "DISARMED"
+    if (prev_state == "EN_ROUTE" or prev_state == "SUSPENDED") and not is_disarmed then
+        self.fallbackGoal = build_loiter_fallback(self, cp)
+    else
+        self.fallbackGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+    end
     if self.net then
         self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
     end
@@ -1230,6 +1262,7 @@ function mission_engine:pause()
     if self.state ~= "EN_ROUTE" then return false end
     self.hook_runner:cleanup()
     self.state = "SUSPENDED"
+    self.fallbackGoal = build_loiter_fallback(self, self:get_active())
     if self.net then
         self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
     end
@@ -1238,6 +1271,7 @@ end
 
 function mission_engine:resume(now_ms)
     if self.state ~= "SUSPENDED" then return false end
+    self.fallbackGoal = nil
     self.state = "EN_ROUTE"
     self:enter_checkpoint(self.active_index, now_ms)
     return true
@@ -1279,6 +1313,10 @@ end
 
 function mission_engine:get_trajectory_goal()
     return self.currentGoal
+end
+
+function mission_engine:get_fallback_goal()
+    return self.fallbackGoal
 end
 
 return mission_engine

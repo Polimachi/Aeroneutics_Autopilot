@@ -181,7 +181,7 @@ function channel_sentinel.on_rebind_ack(state, packet, now_ms)
     local payload = packet and packet.payload or {}
     if state and state.rebindTx and payload.transactionId == state.rebindTx.txId then
         local st = payload.status
-        if st == "READY" or st == "PREPARED" or st == "ACKED" or not st then
+        if st == "READY" then
             state.rebindTx.status = "ACKED"
             return true
         end

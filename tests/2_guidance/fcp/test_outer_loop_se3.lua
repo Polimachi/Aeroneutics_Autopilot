@@ -444,4 +444,32 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
         assert_true(pitch_sl <= 5.01, "Pitch below stall speed must be clamped to <= 5.0 deg, got: " .. tostring(pitch_sl))
     end)
 
+    it("preserves explicit false values for arm and flightActive without Lua and/or true coercion", function()
+        local cfg = make_base_cfg("VECTORED_VTOL")
+        local state = outer_loop_controller.init(cfg)
+        local nav = make_nav(0, 64, 0, 0, 0, 0, 0, 0, 0)
+
+        -- 1. fsmCtx explicit false overrides setpoint true
+        local sp_true = make_setpoint(0, 64, 0, 0, 0, 0, 0, "CRUISE", "STRICT_LEVEL")
+        local cmd_fsm_false = outer_loop_controller.compute(state, nav, sp_true, {
+            currentState = "ACTIVE_TRACKING",
+            rampAlpha = 1.0,
+            arm = false,
+            flightActive = false,
+        }, 0.05)
+        assert_false(cmd_fsm_false.arm, "fsmCtx.arm = false must yield cmd.arm == false")
+        assert_false(cmd_fsm_false.flightActive, "fsmCtx.flightActive = false must yield cmd.flightActive == false")
+
+        -- 2. setpoint explicit false when fsmCtx omits arm/flightActive
+        local sp_false = make_setpoint(0, 64, 0, 0, 0, 0, 0, "IDLE", "STRICT_LEVEL")
+        sp_false.arm = false
+        sp_false.flightActive = false
+        local cmd_sp_false = outer_loop_controller.compute(state, nav, sp_false, {
+            currentState = "ACTIVE_TRACKING",
+            rampAlpha = 1.0,
+        }, 0.05)
+        assert_false(cmd_sp_false.arm, "sp.arm = false must yield cmd.arm == false when fsmCtx.arm is nil")
+        assert_false(cmd_sp_false.flightActive, "sp.flightActive = false must yield cmd.flightActive == false when fsmCtx.flightActive is nil")
+    end)
+
 end)

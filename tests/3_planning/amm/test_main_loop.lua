@@ -526,4 +526,39 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(blit_count, 38)
         assert_eq(tick_count, 0)
     end)
+
+    it("detects live GPS timeout in step_20hz_tick and propagates gpsTimedOut to Base+4 setpoint and Base+3 MFD telemetry", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            navigation = { gpsTimeoutMs = 5000 },
+        }, { top = top_m, back = back_m })
+
+        app.nav.lastGpsFixMs = 1000
+        app.nav.gpsStale = false
+
+        -- Within timeout (now = 5000, elapsed = 4000 <= 5000): gpsTimedOut remains false
+        local sp_ok = main_mod.step_20hz_tick(app, 0.05, 5000)
+        assert_false(app.nav.gpsStale)
+        assert_false(sp_ok.gpsTimedOut)
+
+        -- Stalled beyond timeout (now = 6500, elapsed = 5500 > 5000): gpsTimedOut flips true on setpoint and Base+3 MFD
+        app.tickCount = 3 -- next step_20hz_tick hits tickCount % 4 == 0 to emit Base+3 MFD telemetry
+        local sp_stale = main_mod.step_20hz_tick(app, 0.05, 6500)
+        assert_true(app.nav.gpsStale)
+        assert_true(sp_stale.gpsTimedOut)
+
+        local mfd_pkt = nil
+        for _, tx in ipairs(top_m._transmitted) do
+            if tx.tx == 10003 and tx.pkt and tx.pkt.type == "MSG_MFD_STATE" then
+                mfd_pkt = tx.pkt
+            end
+        end
+        assert_not_nil(mfd_pkt)
+        assert_true(mfd_pkt.payload.navigation.gpsTimedOut)
+    end)
 end)

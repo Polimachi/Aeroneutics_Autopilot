@@ -125,7 +125,7 @@ end
 function flight_dynamics_core.compute(state, telem, guidance, dt, satStatus)
     local deltaT = math.max(0.005, math.min(0.2, dt or 0.05))
     local measQ = telem.orientation or quat.identity()
-    local targetQ = guidance.targetQuaternion or guidance.targetOrientation or quat.identity()
+    local targetQ = guidance.targetQuaternion or quat.identity()
     local rates = telem.angularRate or telem.rates or { x = 0, y = 0, z = 0 }
     local targetRates = guidance.targetAngularRates
     local cmdType = guidance.commandType or "QUATERNION_RATE"
