@@ -3,11 +3,11 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-206`(15대 사양서 개편), `TASK-207`(`AMM v1.3.0` 외부 게이트웨이·항법·20Hz 궤적), `TASK-208`(`FCP v2.0.0` 순수 `SE(3)` 외루프), `TASK-209`(`VAS v1.19.0` `QUATERNION_RATE` 정합화 및 `FCP v2.0.0`·`VAS v1.19.0` `Implemented` 승격 — `9 Implemented, 6 Approved`; 2026-11-13, `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-206`(15대 사양서 개편), `TASK-207`(`AMM v1.3.0` 외부 게이트웨이·항법·20Hz 궤적), `TASK-208`(`FCP v2.0.0` 순수 `SE(3)` 외루프), `TASK-209`(`VAS v1.19.0` `QUATERNION_RATE` 정합화 및 `FCP v2.0.0`·`VAS v1.19.0` `Implemented` 승격 — `9 Implemented, 6 Approved`), `TASK-124`(채터링 방지 가드 설계; 2026-11-13, `.agent/memory/workspace-root.md`).
 - **다음 액션**:
-  1. `TASK-402` / `TASK-123`: 호스트 PC 비주얼 에디터(`tools/amm_mission_editor.html`) 구현 후 `AMM v1.3.0` 승격, GPS 고부하 경합·위상 분산 수정.
-  2. `TASK-210` / `TASK-401`: `[연기] TASK-105` 재개 시 `ASA v1.7.0` 본 구현 연동, Zone 3 PAYLOAD 통신 스키마 정의.
-  3. `TASK-010` / `TASK-117` / `TASK-204`: 플레이북 5종, 무선 OTA, AMM 행동 재정의.
+  1. `TASK-123` / `TASK-204`: GPS 고부하 경합·위상 분산 수정, `AMM` `ACT_*`/`DEC_*`/`MAC_*` 행동 체계 재정의 (`TASK-401` PAYLOAD 계층 세부 스키마는 예정 백로그/로드맵 이관).
+  2. `TASK-402` / `TASK-010`~`013` / `TASK-120`: 호스트 PC WebUI 에디터(`tools/amm_mission_editor.html`) 구현 및 `AMM v1.3.0` 승격, 플레이북·FDR·사양서 전수 감사.
+  3. `TASK-117` / `TASK-210`: 무선 OTA 배포/롤백 가드 구축, `[연기] TASK-105` 재개 시 `ASA v1.7.0` 본 구현 연동.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.

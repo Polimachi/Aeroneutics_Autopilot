@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-13 — AMM 채터링 방지 가드 설계 명세(방안 A) 및 ACTION/연료 임계값 정합화 (TASK-124)
+
+- **결정 배경**: `TASK-204` 착수 전 상태 전이 경계 진동(채터링) 방지 규칙을 마인크래프트 `CC:Tweaked (Lua 5.2)` 및 현행 UAFS 코드베이스(`nav_engine.lua`, `facility_client.lua`, `fcp_config.json`, `VAS Base+2`) 제약에 맞게 정합화함 (`f2e7b10`).
+- **반영 내역**:
+  1. **`docs/superpowers/specs/2026-11-13-task-204-chattering-prevention-design.md` 신설**: `[즉시]` 36종 본 규격과 `[로드맵]`(`LOCAL_AVOID`/`REPLAN_GLB`·서브컨트랩션 동결) 격리, `step_20hz_tick` 정수 틱 vs 통신 워치독 `now_ms` 이원화, `amm_config.json` 고정 파라미터 직접 지정(`R_bound`/`a_max`/`tau_mech` 런타임 연산 배제), `TCA` 레드스톤 0~15 양자화 Limit Cycle 방지용 `N_settle`·이탈 불감대, `nav_engine` `validStreak >= 3`·`fcp_config.json` `wingedVtolVLowMps(8.0)`/`VHighMps(18.0)` 정합 및 중앙 전이 가드 **방안 A**(`chattering_guard.lua` + `condition_evaluator` `settleTicks`) 확정.
+  2. **`docs/superpowers/specs/2026-11-12-task-204-action-primitive-design.md` 동기화**: `Base+2` `fuel(0.0~1.0)` 단독 및 `0.20`/`0.10` 임계값 역통일, `ACT_NRG_HIBERNATE`의 `ACT_PER_SENTRY_HOLD` 통합 및 자가 충전 로직 반영, 상호 링크 연결.
+- **검증**: `verify_context_docs.py` `0 findings`, `TASK-124` 완료 마감 및 `TASK-401` 로드맵 이관(`TASK.md`, `GEMINI.md`) 동기화.
+
+---
+
 ## 2026-11-13 — AMM v1.3.0·FCP v2.0.0·VAS v1.19.0 4계층 SE(3) 연동 구현 및 사양서 승격 (TASK-207, TASK-208, TASK-209)
 
 - **결정 배경**: `TASK-206` Spec-First 개편(`AMM v1.3.0`, `FCP v2.0.0`, `VAS v1.19.0`)에 따라 외부 게이트웨이·항법·20Hz 궤적 생성(`AMM`), 순수 온보드 3채널 `SE(3)` 외루프(`FCP`), `QUATERNION_RATE` 내루프 단일화 및 선점·페일세이프(`VAS`)를 3단계 순차 구현(`docs/superpowers/plans/2026-11-12-task-207-208-209-sequential-plan.md`, `feat/task-207-208-209` 워크트리)하고 4계층 폐루프 E2E 및 전계층 회귀 검증을 거쳐 `FCP`와 `VAS` 사양서를 `Implemented`로 승격함 (`AMM v1.3.0`은 `TASK-402` WebUI 에디터 구현 완료 시까지 `Approved` 유지).

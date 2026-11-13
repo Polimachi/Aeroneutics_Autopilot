@@ -14,8 +14,8 @@
 
 - **구현 등급 표기**:
   - **`[TASK-204 즉시]`**: 현행 UAFS 인프라(`GPS`, `GAC`, `LANDING_PAD`), 6대 기체, `AMM`/`FCP`/`VAS` 20Hz 폐루프로 즉시 구현 가능한 표준 행동
-  - **`[로드맵 - <선행과제/센서>]`**: 인게임 모드 API/물리로 구현 가능하나 후속 태스크(`TASK-103`, `TASK-104`, `TASK-108`, `TASK-401`, `Zone 4`) 또는 선택적 탑재 센서가 필요한 확장 행동
-  - **`TBD [TASK-401]`**: Zone 3 탑재체 통신 스키마 정의(`TASK-401`) 하위 항목으로 위임된 세부 페이로드 행동
+  - **`[로드맵 - <선행과제/센서>]`**: 인게임 모드 API/물리로 구현 가능하나 후속 연기·로드맵 태스크(`[연기] TASK-103`, `TASK-104`, `TASK-108`, `TASK-401`, `Zone 4`) 또는 선택적 탑재 센서가 필요한 확장 행동
+  - **`[로드맵: TASK-401]` (`TBD [TASK-401]`)**: 로드맵(예정 백로그)으로 이관된 Zone 3 PAYLOAD 계층 통신 스키마 정의(`[연기] TASK-401`) 하위 확장 행동 (`TASK-204` 착수를 차단하지 않음)
 
 ---
 
@@ -95,7 +95,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 
 ---
 
-## 3. 기본 8대 도메인 표준 행동 리스트 (총 45종 + `TASK-401 TBD`)
+## 3. 기본 8대 도메인 표준 행동 리스트 (총 45종 + `[로드맵: TASK-401]`)
 
 표준 비행 및 기본 임무 수행을 위한 8개 도메인 표준 행동 명세입니다.
 
@@ -159,17 +159,17 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 | **`ACT_PER_TRACK_TGT`** | `[로드맵: Radars/PD]` | **레이더·플레이어 실시간 표적 추격 및 거리 유지**<br>`CC:Radars` (`getTracks`/`getSelectedTrack`), `CC:Avionics` (`radar.getContact`), `playerDetector`가 반환한 `{x, y, z, velocity}`를 추종하며 이격 거리 유지 | • 비행 중(`NORMAL`)<br>• 표적 트랙 `id` 잠금(`TRACK_LOCKED == true`) 및 타임스탬프 유효 | 추적 종료 명령 수신(표적 소실 시 `ACT_PAT_EXP_SPIRAL` 등 분기) |
 | **`ACT_PER_SENTRY_HOLD`** | `[로드맵: 착지 초계/자가충전]` | **착지 상태 감시 초계·저부하 대기 및 자가 충전 (Sentry Hold & Self-Recharge)**<br>지정 안전 평지/패드에 착륙해 `DISARM` 상태로 20Hz 궤적/제어 루프를 일시 중단(저부하 Standby Sleep)하고 `radar`/`playerDetector`·`modem_message`·`redstone`·타이머 감시를 유지하다 조건 충족 시 재이륙 연결.<br>*(구 `ACT_NRG_HIBERNATE`의 저부하 Standby Sleep 및 이벤트 웨이크업 방식을 본 행동으로 완전 통합)*<br>• **전기 기체 자가 충전(Self-Recharge) 메커니즘**:<br>기체 프로파일(`Profile`)이 전기 구동(`isElectric == true`)이고 태양광 패널 등 자가 충전 수단(`hasSelfCharging == true`)을 갖춘 경우, 에너지가 일정량 이하(`fuel <= lowEnergyThreshold`, 기본 `0.30`)로 저하되거나 초계 중 충전 필요 시 안전 지점에 착륙(`DISARM`)하여 일광 아래 자가 충전을 수행하며 대기. 목표 에너지(`targetFuel`, 기본 `0.85`) 보충 완료 시 `ACT_SYS_ARM` $\to$ 이륙하여 중단되었던 직전 행동(`Action`) 및 미션(`Mission`)을 자동 복귀하여 지속 수행. | • 지정 안전 지점 착지(`DISARMED`) 완료 또는 비행 중 저에너지 발생 시 안전 착륙 시퀀스 선행<br>• `radar`/`playerDetector`/모뎀/타이머/레드스톤 감시 리소스 중 최소 1종 유효<br>• 자가 충전 진입 시: 전기 프로파일(`isElectric == true`), 자가 충전 장비(`hasSelfCharging == true`), 천공 개방(태양광 차폐 없음) | • **초계/웨이크업**: 감시 표적 포착(`TARGET_LOCKED`), `Base+0` 명령 수신, 레드스톤 입력 감지, 대기 시간 만료 시 `ACT_SYS_ARM` $\to$ `TAKEOFF` 연계<br>• **자가 충전 완료**: `telemetry.fuel >= targetFuel` 충전 완료 시 자동 재시동(`ACT_SYS_ARM`) 후 직전 Action 및 미션 시퀀스 복귀 재개 |
 
-### 3.6 임무 장비(Payload) 및 레드스톤 제어 계층 (`ACT_PAY_*`, 4종 + `TASK-401 TBD`)
+### 3.6 임무 장비(Payload) 및 레드스톤 제어 계층 (`ACT_PAY_*`, 기본 4종 + `[로드맵: TASK-401]`)
 
-*(실세계 짐벌 카메라 연속 촬영 `CAM_TRIG`, 장력 윈치 `WINCH_DLV`, 농약 살포 `SPRAY_CTRL` 삭제)*
+*(실세계 짐벌 카메라 연속 촬영 `CAM_TRIG`, 장력 윈치 `WINCH_DLV`, 농약 살포 `SPRAY_CTRL` 삭제; `TASK-401` Zone 3 세부 통신 스키마 및 확장 행동군은 선행 우선도를 취소하고 로드맵 백로그(`[연기] TASK-401`)로 분리)*
 
 | 행동 ID | 등급 | 행동 명칭 및 상세 설명 | 핵심 진입 조건 (Pre-conditions) | 완료 조건 및 UAFS 연동 |
 | :--- | :---: | :--- | :--- | :--- |
-| **`ACT_PAY_BUS_CMD`** | `[즉시 / TASK-401 연계]` | **Zone 3 탑재체 버스 범용 명령 송출 (`PAYLOAD_ACTION`)**<br>`Base + 20 ~ 29` 채널을 동적 개방해 탑재체 노드에 `MSG_PAYLOAD_REQ`를 전송하고 응답(`MSG_PAYLOAD_ACK`)을 대기 | • `channelOffset`($20 \sim 29$) 유효 및 미션 스텝 활성<br>• 지정 Zone 3 탑재체 통신 가능 상태 | `waitForAck == false` 시 즉시 완료, 기본(`true`) 시 `PAYLOAD_RESP_MATCH` |
+| **`ACT_PAY_BUS_CMD`** | `[즉시]` | **Zone 3 탑재체 버스 범용 명령 송출 (`PAYLOAD_ACTION`)**<br>현행 `AMM v1.3.0` 기본 계약(`Base + 20 ~ 29` 동적 개방 후 `MSG_PAYLOAD_REQ` 송출 및 `MSG_PAYLOAD_ACK` 대기)으로 동작하며, `TASK-401` 확장 스키마는 로드맵 이관 | • `channelOffset`($20 \sim 29$) 유효 및 미션 스텝 활성<br>• 지정 Zone 3 탑재체 통신 가능 상태 | `waitForAck == false` 시 즉시 완료, 기본(`true`) 시 `PAYLOAD_RESP_MATCH` |
 | **`ACT_PAY_REDSTONE`** | `[즉시]` | **로컬 레드스톤 및 16색 번들 케이블 제어 (`REDSTONE_ACTION`)**<br>컴퓨터 6면(`top`~`back`) 또는 번들 케이블로 비차단 디지털/아날로그 출력(`EMIT`) 또는 입력 신호 대기(`WAIT_INPUT`) 수행 | • `side`가 6면 중 하나이며, `mode`(`"EMIT"`/`"WAIT_INPUT"`) 유효 | `EMIT` 시 `durationMs` 만료, `WAIT_INPUT` 시 `REDSTONE_INPUT_HIGH` 충족 |
 | **`ACT_PAY_SET_ROI`** | `[즉시]` | **기수 `POI` 및 Zone 3 터렛/포인터 조준 고정**<br>기수 `headingMode = "POI"` 또는 Zone 3(`Base+20/21`) `CC:Radars` 터렛(`auto_pitch`/`auto_yaw`)·`laser_pointer`를 특정 `(X, Y, Z)`에 지향 고정 | • ROI 좌표 `(X, Y, Z)` 유효<br>• 기수 지향(비고정익) 또는 Zone 3 조준 탑재체 응답 정상 | 기수/터렛 조준 정렬 및 `ROI_LOCK` 활성화 ACK 확인 |
 | **`ACT_PAY_CLEAR_ROI`** | `[즉시]` | **관심 영역 지향 고정 해제 및 중립 복귀**<br>기수 `POI` 고정 및 `auto_pitch`/`auto_yaw`/`laser_pointer` 조준을 해제해 진행 방향(`AUTO`) 중립 상태로 복귀 | • 현재 모드가 `POI` 또는 `ROI_LOCK` 상태 | 중립 복귀(`AUTO`) 및 탑재체 해제 ACK 확인 |
-| **`TBD [TASK-401]`** | `[로드맵: TASK-401]` | **세부 탑재체 전용 표준 행동군 (`CARGO_DROP`, `FIRE_CTRL`, `GEO_SCAN` 등)**<br>화물 투하구(Chute/Dispenser/Bomb Bay), `CC:Radars` `fire_controller`(`Base+21` `CH_WEAPON_BUS`), `geoScanner` 주기 스캔 등 세부 표준 액션은 **`TASK-401` (Zone 3 통신 스키마 정의) 하위 항목으로 위임하여 확정** | • `TASK-401` Discovery/Capability 및 인터록 스키마 확정 후 정의 | `TASK-401` 표준 `MSG_PAYLOAD_ACK` 상태 코드 연동 (`TBD`) |
+| **`TBD [TASK-401]`** | `[로드맵: TASK-401]` | **세부 탑재체 전용 표준 행동군 (`CARGO_DROP`, `FIRE_CTRL`, `GEO_SCAN` 등)**<br>화물 투하구(Chute/Dispenser/Bomb Bay), `CC:Radars` `fire_controller`(`Base+21` `CH_WEAPON_BUS`), `geoScanner` 주기 스캔 및 Discovery/Capability·안전 인터록 스키마는 **로드맵(`[연기] TASK-401`)으로 이관하여 후속 확정** (`TASK-204` 미차단) | • `[연기] TASK-401` Discovery/Capability 및 인터록 스키마 확정 후 정의 | `TASK-401` 표준 `MSG_PAYLOAD_ACK` 상태 코드 연동 (`TBD`) |
 
 ### 3.7 통신·편대 협동 및 공역 통제 계층 (`ACT_COM_*`, 3종)
 
@@ -254,7 +254,7 @@ UAFS(Universal Autonomous Flight Stack)의 자율 제어 시스템은 지상·�
 | **`MAC_PATROL_RADAR`** | `[로드맵]` | **광역 레이더 수색·표적 추적 매크로** | `ACT_PAT_GRID_SURVEY` 수행 중 표적 포착 시 $\to$ `ACT_PER_TRACK_TGT` (또는 `ACT_PAT_POI_HOLD`) $\to$ 경보 보고 $\to$ 수색/복귀 | `CC:Radars` 기반 구역 초계 및 침입자 추적 |
 | **`MAC_SHIP_RECOVERY`** | `[즉시: 동적 패드]` | **해상·차량 이동 갑판 자동 착함 매크로** | `ACT_MOB_RV_TRACK` $\to$ (`WINGED_VTOL` 시 `ACT_TKL_TRANS_FW2MC`) $\to$ `ACT_MOB_DECK_SYNC` $\to$ [`DEC_RETRY_N(3)` + `ACT_TKL_LAND_PREC`] $\to$ `ACT_SYS_DISARM` | `Create: High Seas` 항모 및 `Offroad` 이동 기지 착함 |
 | **`MAC_ARM_RESUPPLY`** | `[로드맵: TASK-104]` | **도킹암 포획·엄빌리컬 보급 사이클** | `ACT_MOB_RV_TRACK` $\to$ [`DEC_RETRY_N(2)` + `ACT_MOB_ARM_DOCK`] $\to$ `ACT_NRG_REFUEL_DOCK` $\to$ `ACT_MOB_ARM_UNDOCK` | 무인기 장기 연속 작전을 위한 공중/지상 도킹 재보급 |
-| **`MAC_CARGO_SORTIE`** | `[즉시 / TASK-401]` | **화물 투하·레드스톤 작동 왕복 출격** | `ACT_TKL_TAKEOFF_VERT` $\to$ `ACT_NAV_GOTO_WP` $\to$ [`DEC_HUMAN_AUTH` + `ACT_PAY_BUS_CMD`/`ACT_PAY_REDSTONE`] $\to$ `ACT_FS_RTL_HOME` $\to$ `ACT_TKL_LAND_PREC` | 구호품/폭장 투하 및 원격 레드스톤 시설 트리거 출격 |
+| **`MAC_CARGO_SORTIE`** | `[즉시]` | **화물 투하·레드스톤 작동 왕복 출격** *(표준 `CARGO_DROP` 확장은 `[로드맵: TASK-401]`)* | `ACT_TKL_TAKEOFF_VERT` $\to$ `ACT_NAV_GOTO_WP` $\to$ [`DEC_HUMAN_AUTH` + `ACT_PAY_BUS_CMD`/`ACT_PAY_REDSTONE`] $\to$ `ACT_FS_RTL_HOME` $\to$ `ACT_TKL_LAND_PREC` | 구호품/폭장 투하 및 원격 레드스톤 시설 트리거 출격 |
 
 ---
 
