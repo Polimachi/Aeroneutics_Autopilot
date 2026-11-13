@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.3` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v2.4.4` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/landing_pad/` |
 | **주관 도메인 (Domain)** | 지상 인프라 수직이착륙 착륙패드 비콘 (Landing Pad) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v2.4.4` | 2026-11-14 | GPS 고부하 경합 완화 및 위상 분산 규격 반영 (`Implemented` $\to$ `Approved`, `TASK-123`): ① `CH 60001` (`GPS_PING_CHANNEL`)을 송신 전용(Transmit-Only)으로 전환해 `main.lua`의 `modem.open(60001)` 개방을 제거(타 클라이언트 핑 패킷의 수신 큐 유입 차단), ② `gps_client.lua` `should_query_gps`에 `computerId` 기반 결정론적 틱 위상 분산(`offset = (computerId or 0) % interval`, `ID = 0`일 때 `offset = 0`) 추가 | 다수 패드·비행체의 동시 측위 질의 집중 완화 및 모뎀 수신 이벤트 큐 보호 |
 | `v2.4.3` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0)에 따른 기체 외부 교신·2차 테일러 외삽·300ms 복행 및 `landingPermitted`/`DANGEROUS` 호버 게이팅 주체 용어 정렬(`FCP (Node 04)` $\to$ `AMM (Node 03)`, `Base+4`로 `FCP`에 세트포인트 전달) 및 연관 규격서 버전 동기화 (`src/0_infra/landing_pad/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v2.4.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v2.4.1` | 2026-11-08 | GAC v1.4.0 전용 시설물 아키텍처 연동 및 전용 패드 슬롯 배정 원칙 명시 | 상위 GAC 전용 시설물 규격 동기화 |
@@ -28,7 +29,7 @@
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
 > - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.13.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.1)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
 > - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
@@ -109,20 +110,21 @@
      $$\vec{v}_{\text{touchdown}}(t) = \vec{v}_{\text{comp}}(t) + \mathbf{R}(\psi, \theta, \phi) \cdot (\vec{\omega}_{\text{rad}} \times \Delta\vec{s}_{\text{body}})$$
      *(단, $\vec{\omega}_{\text{rad}} = [\text{math.rad}(p), \text{math.rad}(q), \text{math.rad}(r)]^T$ 단위 변환 엄수)*
 
-#### 1.4.2 GPS 모뎀 기반 수평 좌표 자동 획득 및 상태별 이중 주기 운용 (GPS Acquisition & Dual-Rate Operation)
-1. **자체 GPS 프로토콜 정합 및 전용 응답 채널 (`Base_sec + 5`)**:
+#### 1.4.2 GPS 모뎀 기반 수평 좌표 자동 획득, 송신 전용 `CH 60001` 및 위상 분산 주기 운용 (GPS Acquisition, Transmit-Only PING & Staggered Cadence)
+1. **자체 GPS 프로토콜 정합 및 전용 응답 채널 (`Base_sec + 5`), `CH 60001` 송신 전용**:
    - 바닐라 CC `gps.locate()` API의 브로드캐스트 부하 및 동기 지연을 배제하고, 프로젝트 표준 자체 GPS 시스템([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md))을 단일 채택합니다.
-   - 요청 패킷(`MSG_GPS_REQUEST`)은 `CH_GPS_PING` (60001)으로 송출하며, 응답은 기체 전용 응답 채널($Base+5$)과 대칭되는 섹터 관할 시설물 전용 채널 **`CH_SECTOR_GPS_REPLY` ($Base_{\text{sec}} + 5$)**로 수신합니다.
-   - 응답 패킷(`MSG_GPS_RESPONSE`) 수신 시 `payload.targetClient == facilityId` 조건을 검사하여 타 시설물과의 패킷 간섭을 원천 필터링합니다.
-2. **정적 패드 (Static Pad) 하이브리드 수평·수직 좌표 획득**:
-   - 수평 좌표 $(X, Z)$는 부팅 시 `CH 60001` GPS 질의 1회를 통해 자동 계측 및 메모리에 불변 저장합니다.
+   - 요청 패킷(`MSG_GPS_REQUEST`)은 **`CH_GPS_PING` (`60001`) 송신 전용(Transmit-Only)**으로 송출하며(`main.lua`는 `modem.open(60001)`을 호출하지 않음), 응답은 섹터 관할 시설물 전용 채널 **`CH_SECTOR_GPS_REPLY` ($Base_{\text{sec}} + 5$)**로만 수신합니다. 이를 통해 타 클라이언트·비행체의 `CH 60001` 브로드캐스트가 패드 모뎀 이벤트 큐에 적재되는 간섭을 방지합니다.
+   - 응답 패킷(`MSG_GPS_RESPONSE`) 수신 시 `payload.targetClient == facilityId` 조건을 검사하여 타 시설물과의 패킷 간섭을 필터링합니다.
+2. **정적 패드 (Static Pad) 하이브리드 수평·수직 좌표 획득 및 위상 분산**:
+   - 수평 좌표 $(X, Z)$는 유효 위치 확보 전까지 `interval = 20` 틱 주기로 `offset = (computerId or 0) % 20` 위상에 맞춰 `CH 60001` GPS 질의를 송출해 자동 계측 및 메모리에 저장합니다.
    - 수직 고도 $Y$ 및 방위각 $\psi_0$는 인접 장착된 `altitude_sensor` 및 `gimbal_sensor`가 존재할 경우 자동 리딩하고, 무선 모뎀 단독 장착 구성일 경우 초기 TUI 마법사에서 컴퓨터 블록 $Y$ 좌표와 4방위 정면(`N=0°`, `E=90°`, `S=180°`, `W=270°`)을 작업자가 입력합니다.
-3. **동적 패드 (Dynamic Pad) 상태 의존형 이중 측위 주기**:
+3. **동적 패드 (Dynamic Pad) 상태 의존형 이중 측위 주기 및 `computerId` 위상 분산**:
+   - **결정론적 틱 위상 분산 (`should_query_gps`)**: 다수의 동적 패드가 동일 틱에 `CH 60001` 질의를 집중시키는 현상을 완화하기 위해 `offset = (computerId or 0) % interval`을 적용해 `(tickCount % interval) == offset`인 틱에만 질의를 송출합니다 (`computerId == 0` 또는 미설정 시 `offset = 0`).
    - **비착륙 상태 전체 (`IDLE`, `OCCUPIED`, `GO_AROUND`, `DEPARTURE_PENDING`)**:
-     - 무선 트래픽 절감을 위해 **1Hz** 비동기 GPS 질의(`CH 60001` $\to$ $Base_{\text{sec}}+5$)를 수행합니다.
+     - 무선 트래픽 절감을 위해 **1Hz (`interval = 20`틱)** 비동기 GPS 질의(`CH 60001` $\to$ $Base_{\text{sec}}+5$)를 수행합니다.
      - 실측된 패드 중심 좌표 및 자세를 GAC 직속 로컬 백본($Base_{\text{sec}}+1$)의 `MSG_ATC_FACILITY_UPDATE` (`touchdownPoint`, `heading`, `velocity`)로 1Hz 송출하여 GAC의 섹터 종합 맵을 갱신합니다.
    - **착륙 진행 중 (`RESERVED`, `APPROACH_DYNAMIC`)**:
-     - **5Hz(200ms)** 비동기 GPS 질의 + **20Hz(50ms)** 온보드 `velocity_sensor` 수치 적분(추측항법 보간) 융합으로 전술 유도 채널($Base_{\text{sec}}+10+\text{Idx}$)에 20Hz 고정밀 `MSG_FACILITY_DYNAMIC_GUIDE`를 실시간 스트리밍합니다.
+     - **5Hz (`interval = 4`틱, 200ms)** 비동기 GPS 질의 + **20Hz(50ms)** 온보드 `velocity_sensor` 수치 적분(추측항법 보간) 융합으로 전술 유도 채널($Base_{\text{sec}}+10+\text{Idx}$)에 20Hz 고정밀 `MSG_FACILITY_DYNAMIC_GUIDE`를 실시간 스트리밍합니다.
 
 #### 1.4.3 동적 패드 필수 센서 3종 바인딩 및 이원화 안전 인터록 (Sensor Binding & Dual-Stage Failsafe)
 1. **필수 센서 3종 표준 네임스페이스 통일**:
@@ -167,7 +169,7 @@ flowchart TD
 | **`50001`** | `CH_ATC_COMM` | AMM / Tower ATC | Tower ATC / AMM | 이벤트 | 대공 광역 관제 및 관할 GAC 섹터 채널 이양 교신 |
 | **`50002`** | `CH_ATC_FACILITY` | Tower ATC / GAC | GAC / Tower ATC | 1Hz / 이벤트 | 광역 관제탑과 GAC 간 섹터 핸드오프 교신 |
 | **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (AMM, GCS) | 1Hz | **Sector 0 대표 집약 비콘**: 관할 구역 요약 정보 및 가용 현황 송출 (개별 패드는 직접 송출 중단) |
-| **`60001`** | `CH_GPS_PING` | Pad Node | GPS 위성/서버 | 1회(정적) / 1Hz(비착륙) / 5Hz(착륙) | 자체 GPS 서버로 비콘 컴퓨터 물리 위치 질의 (`MSG_GPS_REQUEST`, clientType: "FACILITY") |
+| **`60001`** | `CH_GPS_PING` | Pad Node | GPS 위성/서버 | 위상 분산(ID%20 / ID%4, 송신 전용) | 자체 GPS 서버로 비콘 컴퓨터 물리 위치 질의 (`MSG_GPS_REQUEST`, clientType: "FACILITY", `modem.open(60001)` 미개방) |
 | **$Base_{\text{sec}} + 0$** | `CH_GAC_COMM` | AMM / GAC | GAC / AMM | 이벤트 | 기체 체크인(`MSG_GAC_CHECKIN_REQ`), 패드 배정 인가(`MSG_GAC_APPROACH_CLEARANCE`), 로컬 복행 ($Base_{\text{sec}} = 50001 + S \times 200$) |
 | **$Base_{\text{sec}} + 1$** | `CH_SECTOR_FACILITY` | Pad Node / GAC | GAC / Pad Node | 1Hz / 이벤트 | **직속 섹터 로컬 백본**: GAC와 패드 간 슬롯 예약(`MSG_ATC_SLOT_ASSIGN/ACK`), 상태/위치 동기화(`MSG_ATC_FACILITY_UPDATE`), 복행 제어 |
 | **$Base_{\text{sec}} + 5$** | `CH_SECTOR_GPS_REPLY` | GPS 위성/서버 | Pad Node | 1회 / 1Hz / 5Hz | **섹터 관할 시설물 전용 GPS 응답 수신**: `targetClient == facilityId` 필터링 기반 측위 수신 (`MSG_GPS_RESPONSE`) |

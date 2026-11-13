@@ -184,6 +184,89 @@ describe("gps client_core 40-channel auto-resolution and message handling", func
 
         assert_nil(c:poll(seq))
     end)
+
+    it("enforces monotonic lastReceivedSeq guard while allowing FAIL_GEOMETRY same-seq retry and reset", function()
+        local c = client_core.new()
+        c:init("AIRCRAFT_02", "AIRCRAFT")
+        local s1, _ = c:nextRequestPacket(100.0, 1000)
+        local s2, _ = c:nextRequestPacket(100.0, 1100)
+        assert_eq(s1, 1)
+        assert_eq(s2, 2)
+
+        local resp2 = protocol.buildResponse("GPS_BASE_NET", 1, {
+            targetClient = "AIRCRAFT_02",
+            clientSeq = s2,
+            status = "FIX_OK",
+            nodeCount = 4,
+            position = { x = 10, z = 20 },
+            accuracy = 0.05,
+            hdop = 1.0
+        }, 1110)
+        assert_true(c:handleMessage(10045, resp2, 1110))
+        assert_not_nil(c:poll(s2))
+
+        -- Duplicate FIX_OK on s2 must be rejected
+        assert_false(c:handleMessage(10045, resp2, 1120))
+        assert_nil(c:poll(s2))
+
+        -- Delayed older FIX_OK and FAIL_GEOMETRY on s1 must be rejected
+        local staleResp1 = protocol.buildResponse("GPS_BASE_NET", 2, {
+            targetClient = "AIRCRAFT_02",
+            clientSeq = s1,
+            status = "FIX_OK",
+            nodeCount = 4,
+            position = { x = 5, z = 5 },
+            accuracy = 0.05,
+            hdop = 1.0
+        }, 1130)
+        assert_false(c:handleMessage(10045, staleResp1, 1130))
+        assert_nil(c:poll(s1))
+
+        local staleFail1 = protocol.buildResponse("GPS_BASE_NET", 3, {
+            targetClient = "AIRCRAFT_02",
+            clientSeq = s1,
+            status = "FAIL_GEOMETRY",
+            nodeCount = 3,
+            hdop = 9.9
+        }, 1135)
+        assert_false(c:handleMessage(10045, staleFail1, 1135))
+
+        -- Advance to s3: FAIL_GEOMETRY followed by same-seq retry FIX_OK must both work
+        local s3, _ = c:nextRequestPacket(100.0, 1200)
+        assert_eq(s3, 3)
+        local fail3 = protocol.buildResponse("GPS_BASE_NET", 4, {
+            targetClient = "AIRCRAFT_02",
+            clientSeq = s3,
+            status = "FAIL_GEOMETRY",
+            nodeCount = 3,
+            hdop = 9.9
+        }, 1210)
+        assert_true(c:handleMessage(10045, fail3, 1210))
+        local pollFail3 = c:poll(s3)
+        assert_not_nil(pollFail3)
+        assert_eq(pollFail3.status, "FAIL_GEOMETRY")
+
+        local retryOk3 = protocol.buildResponse("GPS_BASE_NET", 5, {
+            targetClient = "AIRCRAFT_02",
+            clientSeq = s3,
+            status = "FIX_OK",
+            nodeCount = 4,
+            position = { x = 12, z = 24 },
+            accuracy = 0.05,
+            hdop = 1.0
+        }, 1460)
+        assert_true(c:handleMessage(10045, retryOk3, 1460))
+        local pollOk3 = c:poll(s3)
+        assert_not_nil(pollOk3)
+        assert_eq(pollOk3.status, "FIX_OK")
+        assert_false(c:handleMessage(10045, retryOk3, 1470))
+
+        -- overrideSeq < lastReceivedSeq resets monotonic guard (seq wraparound)
+        local ovSeq, _ = c:nextRequestPacket(100.0, 1500, 1)
+        assert_eq(ovSeq, 1)
+        assert_true(c:handleMessage(10045, staleResp1, 1510))
+        assert_not_nil(c:poll(1))
+    end)
 end)
 
 describe("gps config_store 4-channel node configuration and standalone gps_client load", function()
@@ -360,6 +443,73 @@ describe("gps session_scheduler early solve and FAIL_GEOMETRY retry window", fun
         assert_eq(responses[4].payload.targetClient, "AIRCRAFT_04")
         assert_eq(responses[5].payload.targetClient, "AIRCRAFT_05")
         assert_eq(responses[6].payload.targetClient, "AIRCRAFT_06")
+    end)
+
+    it("evicts older incomplete active sessions on newer seq ingest and skips <= HWM sessions in flushExpired", function()
+        local sched = session_scheduler.new({ windowMs = 50, tombstoneTtlMs = 1000 })
+        local registry = { nodes = {} }
+        local rNodes = {
+            { id = "N1", x = 0, y = 80, z = 0 },
+            { id = "N2", x = 500, y = 80, z = 0 },
+            { id = "N3", x = 0, y = 80, z = 500 },
+            { id = "N4", x = 500, y = 80, z = 500 },
+        }
+        -- Ingest only 2 reports for seq=1 (buffered)
+        for i = 1, 2 do
+            local n = rNodes[i]
+            local act = sched:ingestReport({
+                targetClient = "AIRCRAFT_01",
+                clientSeq = 1,
+                nodeId = n.id,
+                nodePos = { x = n.x, y = n.y, z = n.z },
+                measuredDistance = 200,
+                clientAltitudeY = 80,
+                replyChannel = 10005,
+            }, registry, 1000)
+            assert_eq(act, "BUFFERED")
+        end
+        assert_not_nil(sched.active_sessions["AIRCRAFT_01:1"])
+
+        -- Newer seq=2 arrives before seq=1 finishes: seq=1 must be evicted and tombstoned
+        local act2 = sched:ingestReport({
+            targetClient = "AIRCRAFT_01",
+            clientSeq = 2,
+            nodeId = rNodes[1].id,
+            nodePos = { x = rNodes[1].x, y = rNodes[1].y, z = rNodes[1].z },
+            measuredDistance = 200,
+            clientAltitudeY = 80,
+            replyChannel = 10005,
+        }, registry, 1010)
+        assert_eq(act2, "BUFFERED")
+        assert_nil(sched.active_sessions["AIRCRAFT_01:1"])
+
+        local lateAct, _, lateReason = sched:ingestReport({
+            targetClient = "AIRCRAFT_01",
+            clientSeq = 1,
+            nodeId = rNodes[3].id,
+            nodePos = { x = rNodes[3].x, y = rNodes[3].y, z = rNodes[3].z },
+            measuredDistance = 200,
+            clientAltitudeY = 80,
+            replyChannel = 10005,
+        }, registry, 1020)
+        assert_eq(lateAct, "DROPPED")
+        assert_eq(lateReason, "TOMBSTONE")
+
+        -- Verify HWM pre-check in flushExpired blocks stale active sessions <= client_last_solved
+        sched.client_last_solved["AIRCRAFT_01"] = 5
+        sched.active_sessions["AIRCRAFT_01:4"] = {
+            targetClient = "AIRCRAFT_01",
+            clientSeq = 4,
+            clientAltitudeY = 80,
+            replyChannel = 10005,
+            reports = { N1 = rNodes[1], N2 = rNodes[2], N3 = rNodes[3], N4 = rNodes[4] },
+            reportsList = { rNodes[1], rNodes[2], rNodes[3], rNodes[4] },
+            expireMs = 1050,
+        }
+        -- Also clear seq=2 so flushExpired only evaluates seq=4 (stale) and seq=2 (also <= 5)
+        local responses = sched:flushExpired(registry, 2000)
+        assert_eq(#responses, 0)
+        assert_nil(sched.active_sessions["AIRCRAFT_01:4"])
     end)
 end)
 

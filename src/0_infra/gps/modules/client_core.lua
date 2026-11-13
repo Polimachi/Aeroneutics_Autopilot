@@ -21,6 +21,8 @@ function client_core.new()
     self.clientType = "AIRCRAFT"
     self.replyChannel = protocol.DEFAULT_REPLY_CHANNEL
     self.seq = 0
+    self.lastReceivedSeq = 0
+    self.lastSolvedSeq = 0
     self.isManaged = false
     self.pendingResponses = {}
     self.latestStatus = nil
@@ -36,6 +38,8 @@ function client_core:init(domainId, clientType, replyChannel)
     else
         self.replyChannel = protocol.resolveDomainReplyChannel(self.domainId) or protocol.DEFAULT_REPLY_CHANNEL
     end
+    self.lastReceivedSeq = 0
+    self.lastSolvedSeq = 0
 end
 
 function client_core:setManaged(managed)
@@ -50,6 +54,10 @@ function client_core:nextRequestPacket(altitudeY, nowMs, overrideSeq)
     else
         self.seq = self.seq + 1
         targetSeq = self.seq
+    end
+    if targetSeq < (self.lastReceivedSeq or 0) then
+        self.lastReceivedSeq = 0
+        self.lastSolvedSeq = 0
     end
     local pkt = protocol.buildRequest(self.domainId, targetSeq, {
         replyChannel = self.replyChannel,
@@ -79,6 +87,13 @@ function client_core:handleMessage(channel, message, nowMs)
         if pl.targetClient ~= self.domainId then return false end
         local cSeq = tonumber(pl.clientSeq)
         if not cSeq then return false end
+        if cSeq < (self.lastReceivedSeq or 0) or cSeq <= (self.lastSolvedSeq or 0) then
+            return false
+        end
+        self.lastReceivedSeq = cSeq
+        if pl.status == "FIX_OK" or pl.status == "FIX_DEGRADED" then
+            self.lastSolvedSeq = cSeq
+        end
         pruneExpiredPending(self, nowMs)
         self.pendingResponses[cSeq] = { payload = pl, storedAt = tonumber(nowMs) or 0 }
         return true

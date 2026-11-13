@@ -15,6 +15,10 @@ function nav_engine.init(config)
     local bCh = chs.baseChannel or cfg.baseChannel or 10000
     local dAlpha = nav.drComplementaryAlpha or 0.35
     local degAlpha = nav.degradedAlpha or 0.10
+    local rawCid = sys.computerId
+    if rawCid == nil then rawCid = cfg.computerId end
+    if rawCid == nil and os and os.getComputerID then rawCid = os.getComputerID() end
+    local cid = math.max(0, math.floor(tonumber(rawCid) or 0))
     return {
         pos = { x = 0.0, y = 0.0, z = 0.0 },
         vel = { x = 0.0, y = 0.0, z = 0.0 },
@@ -27,6 +31,7 @@ function nav_engine.init(config)
         coreArmed = false,
         hdop = 1.0,
         domainId = dId,
+        computerId = cid,
         baseChannel = bCh,
         drComplementaryAlpha = dAlpha,
         degradedAlpha = degAlpha,
@@ -43,6 +48,7 @@ function nav_engine.init(config)
         lastCoreRxMs = 0,
         lastGpsFixMs = 0,
         lastGpsReqMs = 0,
+        gpsPhaseAnchorMs = nil,
         gpsReqSeq = 0,
         lastGpsFixSeq = 0,
         lastGpsSeqSeen = 0,
@@ -54,6 +60,20 @@ end
 function nav_engine.should_query_gps(state, now_ms)
     local now = now_ms or 0
     local interval = math.floor(1000 / (state.gpsRequestRateHz or 10))
+    if (state.lastGpsReqMs or 0) == 0 then
+        local cid = state.computerId or 0
+        local slots = math.max(1, math.floor(interval / 50))
+        local offsetMs = (cid % slots) * 50
+        if not state.gpsPhaseAnchorMs then
+            state.gpsPhaseAnchorMs = now
+        end
+        if (now - state.gpsPhaseAnchorMs) < offsetMs then
+            return false, nil
+        end
+        state.lastGpsReqMs = now
+        state.gpsReqSeq = (state.gpsReqSeq or 0) + 1
+        return true, state.gpsReqSeq
+    end
     if (now - (state.lastGpsReqMs or 0)) >= interval then
         state.lastGpsReqMs = now
         state.gpsReqSeq = (state.gpsReqSeq or 0) + 1

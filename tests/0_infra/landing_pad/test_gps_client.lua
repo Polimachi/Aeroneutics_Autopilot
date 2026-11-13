@@ -303,4 +303,41 @@ describe("Landing pad GPS client and 20Hz dead reckoning", function()
         assert_near(client:get_current_comp_pos().x, 300.0, 1e-4)
         assert_near(client:get_current_comp_pos().z, 400.0, 1e-4)
     end)
+
+    it("staggers GPS query ticks deterministically by computerId (id=0 keeps offset 0)", function()
+        local ot = require("modules.offset_transform")
+        local clients = {}
+        for cid = 0, 3 do
+            clients[cid] = gps_client.create({
+                facilityId = "PAD_DY_" .. cid,
+                mobility = "DYNAMIC",
+                sectorIndex = 1,
+                computerId = cid,
+            }, ot)
+        end
+
+        assert_false(clients[0]:should_query_gps("RESERVED", 0))
+        for t = 1, 7 do
+            for cid = 0, 3 do
+                local expected = (t % 4) == (cid % 4)
+                assert_eq(clients[cid]:should_query_gps("RESERVED", t), expected, "RESERVED mismatch cid=" .. cid .. " tick=" .. t)
+            end
+        end
+
+        assert_true(clients[0]:should_query_gps("IDLE", 20))
+        assert_false(clients[0]:should_query_gps("IDLE", 1))
+        assert_true(clients[1]:should_query_gps("IDLE", 1))
+        assert_false(clients[1]:should_query_gps("IDLE", 20))
+        assert_true(clients[1]:should_query_gps("IDLE", 21))
+        assert_true(clients[3]:should_query_gps("IDLE", 3))
+
+        local staticClient = gps_client.create({
+            facilityId = "PAD_ST_03",
+            mobility = "STATIC",
+            sectorIndex = 1,
+            computerId = 3,
+        }, ot)
+        assert_false(staticClient:should_query_gps("IDLE", 20))
+        assert_true(staticClient:should_query_gps("IDLE", 3))
+    end)
 end)

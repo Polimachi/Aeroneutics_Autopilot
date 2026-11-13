@@ -89,6 +89,17 @@ function session_scheduler:ingestReport(reportPayload, registry, nowMs)
     if not ok then return "DROPPED", nil, resReason end
     local session = self.active_sessions[sKey]
     if not session then
+        local evictedKeys = {}
+        for oldKey, oldSess in pairs(self.active_sessions) do
+            if oldSess.targetClient == target and oldSess.clientSeq < seq then
+                table.insert(evictedKeys, oldKey)
+            end
+        end
+        for _, oldKey in ipairs(evictedKeys) do
+            self.active_sessions[oldKey] = nil
+            self:addTombstone(oldKey, nowMs + self.tombstoneTtlMs)
+        end
+
         session = {
             targetClient = target,
             clientSeq = seq,
@@ -119,61 +130,66 @@ function session_scheduler:flushExpired(registry, nowMs)
     for _, sKey in ipairs(expiredKeys) do
         local session = self.active_sessions[sKey]
         self.active_sessions[sKey] = nil
-        local count = #session.reportsList
-        if count >= 3 then
-            local bbox = config_store.computeSwarmBBox(registry, session.reportsList)
-            local sol, solErr = trilateration.solve(session.reportsList, session.clientAltitudeY, bbox)
-            if sol then
-                self:addTombstone(sKey, nowMs + self.tombstoneTtlMs)
-                self.client_last_solved[session.targetClient] = math.max(
-                    self.client_last_solved[session.targetClient] or 0,
-                    session.clientSeq
-                )
-                self.client_last_solve_time[session.targetClient] = nowMs
-                local resp = protocol.buildResponse("GPS_BASE_NET", 1, {
-                    targetClient = session.targetClient,
-                    clientSeq = session.clientSeq,
-                    status = sol.status,
-                    position = { x = sol.x, z = sol.z },
-                    accuracy = sol.accuracy,
-                    hdop = sol.hdop,
-                    nodeCount = sol.nodeCount,
-                    selectedNodes = sol.selectedNodes,
-                }, nowMs)
-                table.insert(responses, {
-                    replyChannel = session.replyChannel,
-                    clientAltitudeY = session.clientAltitudeY,
-                    payload = resp.payload,
-                })
+        local lastSeq = self.client_last_solved[session.targetClient]
+        if lastSeq and session.clientSeq <= lastSeq then
+            self:addTombstone(sKey, nowMs + self.tombstoneTtlMs)
+        else
+            local count = #session.reportsList
+            if count >= 3 then
+                local bbox = config_store.computeSwarmBBox(registry, session.reportsList)
+                local sol, solErr = trilateration.solve(session.reportsList, session.clientAltitudeY, bbox)
+                if sol then
+                    self:addTombstone(sKey, nowMs + self.tombstoneTtlMs)
+                    self.client_last_solved[session.targetClient] = math.max(
+                        self.client_last_solved[session.targetClient] or 0,
+                        session.clientSeq
+                    )
+                    self.client_last_solve_time[session.targetClient] = nowMs
+                    local resp = protocol.buildResponse("GPS_BASE_NET", 1, {
+                        targetClient = session.targetClient,
+                        clientSeq = session.clientSeq,
+                        status = sol.status,
+                        position = { x = sol.x, z = sol.z },
+                        accuracy = sol.accuracy,
+                        hdop = sol.hdop,
+                        nodeCount = sol.nodeCount,
+                        selectedNodes = sol.selectedNodes,
+                    }, nowMs)
+                    table.insert(responses, {
+                        replyChannel = session.replyChannel,
+                        clientAltitudeY = session.clientAltitudeY,
+                        payload = resp.payload,
+                    })
+                else
+                    self:addTombstone(sKey, nowMs + 150)
+                    local failGeom = protocol.buildResponse("GPS_BASE_NET", 1, {
+                        targetClient = session.targetClient,
+                        clientSeq = session.clientSeq,
+                        status = solErr or "FAIL_GEOMETRY",
+                        nodeCount = count,
+                        selectedNodes = {},
+                    }, nowMs)
+                    table.insert(responses, {
+                        replyChannel = session.replyChannel,
+                        clientAltitudeY = session.clientAltitudeY,
+                        payload = failGeom.payload,
+                    })
+                end
             else
                 self:addTombstone(sKey, nowMs + 150)
-                local failGeom = protocol.buildResponse("GPS_BASE_NET", 1, {
+                local failResp = protocol.buildResponse("GPS_BASE_NET", 1, {
                     targetClient = session.targetClient,
                     clientSeq = session.clientSeq,
-                    status = solErr or "FAIL_GEOMETRY",
+                    status = "FAIL_INSUFFICIENT",
                     nodeCount = count,
                     selectedNodes = {},
                 }, nowMs)
                 table.insert(responses, {
                     replyChannel = session.replyChannel,
                     clientAltitudeY = session.clientAltitudeY,
-                    payload = failGeom.payload,
+                    payload = failResp.payload,
                 })
             end
-        else
-            self:addTombstone(sKey, nowMs + 150)
-            local failResp = protocol.buildResponse("GPS_BASE_NET", 1, {
-                targetClient = session.targetClient,
-                clientSeq = session.clientSeq,
-                status = "FAIL_INSUFFICIENT",
-                nodeCount = count,
-                selectedNodes = {},
-            }, nowMs)
-            table.insert(responses, {
-                replyChannel = session.replyChannel,
-                clientAltitudeY = session.clientAltitudeY,
-                payload = failResp.payload,
-            })
         end
     end
     return responses

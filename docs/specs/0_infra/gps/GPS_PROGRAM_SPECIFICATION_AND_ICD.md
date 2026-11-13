@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.3.1` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v2.3.2` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |
 | **주관 도메인 (Domain)** | 중앙 고정밀 GPS 서버 및 분산 노드 군 (GPS Infrastructure) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.3.2` | 2026-11-14 | 고부하 경합 및 지연 보고 방어 강화 (`Implemented` $\to$ `Approved`, `TASK-123`): ① `session_scheduler.lua`의 `ingestReport` 내 동일 클라이언트 구형 활성 세션(`clientSeq < seq`) 즉시 축출·툼스톤 전환, ② `flushExpired` 만료 3노드 해법 성공 시 HWM(`client_last_solved`) 갱신 및 만료 루프 HWM 재검사, ③ `client_core.lua`의 `lastReceivedSeq` 단조 증가 수신 가드(구형/중복 `MSG_GPS_RESPONSE` 폐기 및 시퀀스 래핑 리셋), ④ 클라이언트(`AMM nav_engine` · `landing_pad gps_client`) `computerId` 기반 결정론적 송출 위상 분산(`offset = computerId % interval`) 및 착륙패드 `CH 60001` 송신 전용(Listen 제거) 규격 동기화 | TASK-123 다중 클라이언트/고부하 GPS 경합 및 스테일 세션 잔류 문제 해소 |
 | `v2.3.1` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 비행체 GPS 클라이언트 주체를 `AMM (Node 03)`(`nav_engine` + `gps/client.lua` 관리 모드)으로 일원화하고 `5,000ms` DR 로이터·`HDOP > 5.0` 정밀 착륙 잠금 주체를 `AMM`으로 정렬, 구 `10045` `[DEPRECATED]` 잔재 예시 정리 및 연관 규격서 버전 동기화 (`src/0_infra/gps/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·항법 융합 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v2.3.0` | 2026-11-11 | `FAIL_GEOMETRY` 세션 만료 응답 및 150ms 단기 툼스톤(HWM 비갱신으로 250ms 재시도 허용), `CH 60002` 상태 조회 API(`requestStatus`/`pollStatus`/`queryStatus`), `isManaged` 50% 타임아웃 재시도 동등성, 멀티 코드베이스 독립 완결 클라이언트 와이어 호환 규칙 및 `/gps_data/node.json` 설정 경로 명시 (`Implemented` $\to$ `Approved`) | TASK-122 GPS ↔ 클라이언트 프로토콜 정합화 및 런타임 누락 보완 |
 | `v2.2.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
@@ -33,7 +34,7 @@
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.11.1 동기화)  
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.6.1 동기화)  
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.11.2 동기화)  
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.3 동기화)  
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.4.4 동기화)  
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.10.7 동기화)  
 
 ---
@@ -867,8 +868,9 @@ client_last_solved[targetClient] = maxSolvedClientSeq
 #### 스케줄링 및 지연 보고 필터링 규칙 (2-Tier Defense Architecture)
 1. **보고 수신 (0-tick Event) 및 2단계 지연 보고 방어선**:
    - 노드로부터 `MSG_GPS_NODE_REPORT` 수신 시 `sessionKey = targetClient .. ":" .. clientSeq` 생성.
-   - **제2방어선 (하이워터마크 영구 필터)**: 유입된 `clientSeq`가 `client_last_solved[targetClient]` 이하인 경우, **이미 과거에 해결 완료된 구형 요청의 지연 보고(Late Report)로 즉시 확정 판정하여 세션 생성 없이 무조건 침묵 폐기(Silent Drop)**합니다. 이를 통해 요청률 $>128\text{ req/s}$ 상황에서 툼스톤이 조기 축출되더라도 좀비 세션 오생성을 100% 영구 차단합니다.
-   - **제1방어선 (1024-슬롯 LRU 툼스톤 캐시)**: 만약 `completed_tombstones[sessionKey]`에 등록되어 있고 만료되지 않았다면, Early-Solve 직후 유입된 지연 보고이므로 즉시 침묵 폐기합니다 (1024개로 확장되어 200 req/s 고부하에서도 최소 5.12초간 유지).
+   - **제2방어선 (하이워터마크 영구 필터)**: 유입된 `clientSeq`가 `client_last_solved[targetClient]` 이하인 경우, 이미 과거에 해결 완료된 구형 요청의 지연 보고(Late Report)로 확정 판정하여 세션 생성 없이 침묵 폐기(Silent Drop)합니다.
+   - **제1방어선 (1024-슬롯 LRU 툼스톤 캐시)**: 만약 `completed_tombstones[sessionKey]`에 등록되어 있고 만료되지 않았다면, 완료 직후 유입된 지연 보고이므로 즉시 침묵 폐기합니다.
+   - **선행 미완료 구형 활성 세션 즉시 축출 (Superseded Active Session Eviction)**: `ingestReport`가 동일 `targetClient`에 대해 더 큰 `clientSeq`의 새 활성 세션을 생성할 때, `active_sessions`에 남아 있는 구형 활성 세션(`oldSess.clientSeq < seq`)을 즉시 삭제하고 단조 툼스톤(`completed_tombstones[oldKey]`)으로 전환합니다. 이를 통해 먼저 발신되었으나 아직 3~4노드가 모이지 않은 구형 시퀀스로 지연 보고가 유입되어 구형 세션이 재개되거나 만료 실패 응답을 양산하는 경합을 차단합니다.
    - 유효 보고만 `active_sessions[sessionKey].reports` 테이블에 적재하고 유효 기하 노드 수를 검사합니다.
 2. **0ms Early-Solve 트리거**:
    - 수집된 유효 비일직선 노드가 **4개 이상 도달한 즉시**, 대기 타이머 없이 `trilateration.solve()`를 즉각 호출하고 `MSG_GPS_RESPONSE`를 `replyChannel`로 회신합니다.
@@ -877,7 +879,8 @@ client_last_solved[targetClient] = maxSolvedClientSeq
 3. **단일 틱 통합 타이머 만료 (50ms Tick Dispatcher)**:
    - 서버 메인 루프는 50ms(1틱) 주기 타이머를 단 1개만 상시 순환 가동합니다.
    - 타이머 발화 시 만료 틱에 도달한 미완료 세션들을 일괄 수합:
-     - 수집 노드가 3개 이상이고 연산에 성공한 경우: WLS + 가우스-뉴턴 해법으로 연산 후 최종 HDOP 판정($\text{HDOP} \le 5.0 \text{ AND } \text{RMS}_{\text{res}} \le 1.5\text{m} \implies \text{FIX\_OK}$, 그 외 $\text{FIX\_DEGRADED}$) 회신, `client_last_solved[targetClient]` 하이워터마크 갱신 및 1.0초 정규 툼스톤 등록.
+     - **만료 직전 HWM 재검사**: 만료 처리 루프 진입 시 `session.clientSeq <= client_last_solved[targetClient]`인 세션은 이미 상위 시퀀스로 측위가 완료되었으므로 연산 및 응답을 건너뛰고 정규 툼스톤(`nowMs + tombstoneTtlMs`)으로 즉시 정리합니다.
+     - 수집 노드가 3개 이상이고 연산에 성공한 경우: WLS + 가우스-뉴턴 해법으로 연산 후 최종 HDOP 판정($\text{HDOP} \le 5.0 \text{ AND } \text{RMS}_{\text{res}} \le 1.5\text{m} \implies \text{FIX\_OK}$, 그 외 $\text{FIX\_DEGRADED}$) 회신, **`client_last_solved[targetClient] = session.clientSeq` 및 `client_last_solve_time[targetClient] = nowMs` 하이워터마크 갱신**, 그리고 1.0초 정규 툼스톤을 등록합니다.
      - 수집 노드가 3개 이상이나 `trilateration.solve()`가 기하 결함으로 실패(`FAIL_GEOMETRY`)한 경우: `status = "FAIL_GEOMETRY"`, `position = nil`, `nodeCount = count`, `selectedNodes = {}` 회신, **150ms 단기 툼스톤(`nowMs + 150`) 등록**, 그리고 **`client_last_solved[targetClient]`를 갱신하지 않음**(클라이언트의 250ms 재시도가 동일 `clientSeq`로 유입될 때 하이워터마크에 의해 조기 폐기되지 않고 재평가받을 수 있도록 허용).
      - 수집 노드가 $< 3$개인 경우: `status = "FAIL_INSUFFICIENT"`, `position = nil`, `nodeCount = count`, `selectedNodes = {}` 회신, **150ms 단기 툼스톤(`nowMs + 150`) 등록**, 및 `client_last_solved[targetClient]` 비갱신.
    - 처리 완료된 세션은 해당 툼스톤(정규 1.0초 또는 단기 150ms)에 등록 후 `active_sessions`에서 메모리를 일괄 회수합니다.
@@ -1028,9 +1031,14 @@ local statusData = gpsClient.queryStatus([timeoutSec], [queryType]) -- 동기 �
 
 - **`handleMessage(side, channel, replyChannel, message, distance) -> boolean`**:
   - `AMM (Node 03)`의 전담 `network_manager` 또는 상위 네트워크 데몬이 모든 모뎀 이벤트를 일원화 수신하고, GPS 관련 패킷만 `gpsClient.handleMessage()`로 주입합니다.
-  - 수신된 메시지가 자신의 `replyChannel` 및 `type == "MSG_GPS_RESPONSE"`인 경우 측위 큐에 적재하고 `true`를 반환합니다.
+  - **단조 증가 응답 시퀀스 가드 (`client_core.lua` `lastReceivedSeq`)**: `MSG_GPS_RESPONSE` 수신 시 `clientSeq <= lastReceivedSeq`인 구형/중복 지연 응답은 즉시 폐기하고 `false`를 반환하며, 최신 시퀀스(`clientSeq > lastReceivedSeq`)만 `lastReceivedSeq`를 전진시키고 측위 큐에 적재하여 `true`를 반환합니다. (`init()` 호출 또는 `nextRequestPacket`에 명시적 `overrideSeq < lastReceivedSeq`가 주어지면 `lastReceivedSeq = 0`으로 초기화합니다.)
   - 수신된 메시지가 자신의 `replyChannel` 또는 `CH_GPS_SERVICE`(`60002`)이고 `type == "MSG_GPS_STATUS_RESP"`인 경우 상태 응답 큐에 적재하고 `true`를 반환합니다.
   - 이를 통해 `client.lua`가 독자적으로 `os.pullEvent`를 호출하지 않으므로 CC 이벤트 큐 오염을 방지합니다.
+
+- **다중 클라이언트 결정론적 위상 분산 (Deterministic Phase Staggering, `TASK-123`)**:
+  - 다수의 비행체(`AMM`)와 이동형 지상 시설물(`LANDING_PAD`)이 동일 틱에 `CH 60001`으로 동시 질의하여 중앙 서버와 스웜 노드의 50ms 버킷에 폭주(Thundering Herd)를 일으키는 것을 완화하기 위해, 각 클라이언트는 자신의 `computerId` 기반 결정론적 송출 오프셋을 적용합니다.
+  - **`LANDING_PAD` (`gps_client.lua`)**: `offset = (computerId or 0) % interval` 틱 위상을 적용하며(`STATIC` 및 기본 `DYNAMIC` `interval = 20`, `RESERVED`/`APPROACH_DYNAMIC` `interval = 4`, `computerId == 0`이면 `offset = 0`), `CH 60001`은 **송신 전용(Transmit-Only)**으로 운용해 `modem.open(60001)`을 호출하지 않습니다.
+  - **`AMM` (`nav_engine.lua`)**: 10Hz(`interval = 100ms`) 등 주기적 질의 시 `computerId > 0`이면 50ms 틱 슬롯 기반 위상 오프셋(`offset_ms = (cid % slots) * 50`, `cid == 0`이면 `0`)으로 초기 질의 시점을 분산합니다.
 
 - **멀티 코드베이스 독립 완결 클라이언트 와이어 호환 규칙 (Multi-Codebase Isolation & Wire Contract)**:
   - `AMM`(`src/3_planning/amm/modules/network_manager.lua` + `nav_engine.lua`) 및 착륙패드(`src/0_infra/landing_pad/modules/gps_client.lua`) 등 타 도메인 노드는 저장소 전역 아키텍처 원칙에 따라 `/apis/gps_client.lua`를 교차 참조(`require`)하지 않고 독립 완결 구조를 유지합니다.

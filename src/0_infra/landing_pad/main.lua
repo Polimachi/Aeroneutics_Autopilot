@@ -37,8 +37,7 @@ local function main()
     local channelsToOpen = {
         cfg.channels and cfg.channels.sectorFacilityChannel or 50202,
         cfg.channels and cfg.channels.sectorGpsReplyChannel or 50206,
-        cfg.channels and cfg.channels.tacticalChannel or 50211,
-        GPS_PING_CHANNEL
+        cfg.channels and cfg.channels.tacticalChannel or 50211
     }
 
     if modem then

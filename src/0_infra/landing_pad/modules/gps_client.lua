@@ -48,6 +48,7 @@ function gps_client.create(config, offsetTransform)
         facilityId = facilityId,
         mobility = mobility,
         replyChannel = replyChannel,
+        computerId = math.max(0, math.floor(tonumber(config.computerId or (os and os.getComputerID and os.getComputerID()) or 0) or 0)),
         seq = 0,
         compPos = {
             x = config.position and tonumber(config.position.x) or 0.0,
@@ -185,10 +186,13 @@ function gps_client.create(config, offsetTransform)
         local tick = tonumber(tickCount) or 0
         if tick <= 0 then return false end
         if state.mobility == "STATIC" then
-            return (not state.hasValidFix) and (tick % 20 == 0)
+            local interval = 20
+            local offset = state.computerId % interval
+            return (not state.hasValidFix) and ((tick % interval) == offset)
         end
         local interval = (fsmState == "RESERVED" or fsmState == "APPROACH_DYNAMIC") and 4 or 20
-        return (tick % interval) == 0
+        local offset = state.computerId % interval
+        return (tick % interval) == offset
     end
 
     function client:is_degraded()

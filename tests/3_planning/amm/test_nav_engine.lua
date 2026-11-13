@@ -79,4 +79,38 @@ describe("AMM nav_engine GPS+DR complementary filter, monotonic seq and epoch sy
         assert_eq(st.lastGpsFixSeq, s3)
         assert_false(st.gpsStale)
     end)
+
+    it("staggers initial GPS queries across 50ms slots based on computerId (cid=0 remains immediate)", function()
+        local st0 = nav_engine.init({ system = { domainId = "AIRCRAFT_01", computerId = 0 }, navigation = { gpsRequestRateHz = 5 } })
+        local st1 = nav_engine.init({ system = { domainId = "AIRCRAFT_02", computerId = 1 }, navigation = { gpsRequestRateHz = 5 } })
+        local st2 = nav_engine.init({ system = { domainId = "AIRCRAFT_03", computerId = 2 }, navigation = { gpsRequestRateHz = 5 } })
+        local st3 = nav_engine.init({ system = { domainId = "AIRCRAFT_04", computerId = 3 }, navigation = { gpsRequestRateHz = 5 } })
+
+        -- At t=1000: only cid=0 fires immediately (offset 0ms)
+        local q0, _ = nav_engine.should_query_gps(st0, 1000)
+        local q1, _ = nav_engine.should_query_gps(st1, 1000)
+        local q2, _ = nav_engine.should_query_gps(st2, 1000)
+        local q3, _ = nav_engine.should_query_gps(st3, 1000)
+        assert_true(q0)
+        assert_false(q1)
+        assert_false(q2)
+        assert_false(q3)
+
+        -- At t=1050: cid=1 fires (offset 50ms)
+        assert_false(nav_engine.should_query_gps(st0, 1050))
+        assert_true(nav_engine.should_query_gps(st1, 1050))
+        assert_false(nav_engine.should_query_gps(st2, 1050))
+        assert_false(nav_engine.should_query_gps(st3, 1050))
+
+        -- At t=1100: cid=2 fires (offset 100ms)
+        assert_true(nav_engine.should_query_gps(st2, 1100))
+        assert_false(nav_engine.should_query_gps(st3, 1100))
+
+        -- At t=1150: cid=3 fires (offset 150ms)
+        assert_true(nav_engine.should_query_gps(st3, 1150))
+
+        -- Steady state interval (200ms at 5Hz): st1 next fires at 1250
+        assert_false(nav_engine.should_query_gps(st1, 1200))
+        assert_true(nav_engine.should_query_gps(st1, 1250))
+    end)
 end)

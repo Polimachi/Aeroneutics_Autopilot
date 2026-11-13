@@ -246,6 +246,44 @@ describe("Scenario 3: GPS Closed-Loop Swarm Triangulation, Service Status & Mult
         padReplayOk = padGps:handle_response_packet(lastPadEnvelope, bus.time)
         assert_false(padReplayOk, "Landing Pad client must reject replayed clientSeq")
 
+        -- 5. TASK-123 High-load active session eviction, monotonic client guard & computerId staggering
+        nodeEnabled[3] = false
+        nodeEnabled[4] = false
+        local seqStale = cli_hal.request(100.0)
+        bus:step(0.01)
+        bus:step(0.01)
+        assert_not_nil(sched.active_sessions["AIRCRAFT_02:" .. seqStale])
+
+        nodeEnabled[3] = true
+        nodeEnabled[4] = true
+        local seqFresh = cli_hal.request(100.0)
+        bus:step(0.01)
+        bus:step(0.01)
+        bus:step(0.01)
+        assert_nil(sched.active_sessions["AIRCRAFT_02:" .. seqStale], "Incomplete older session must be evicted by newer seq")
+        local freshFix = cli_hal.poll(seqFresh)
+        assert_not_nil(freshFix)
+        assert_eq(freshFix.status, "FIX_OK")
+        assert_eq(sched.client_last_solved["AIRCRAFT_02"], seqFresh)
+
+        -- Stale & duplicate responses rejected by client_core monotonic guard
+        local proto_mod = gps_cli:require("protocol")
+        local staleRespPkt = proto_mod.buildResponse("GPS_BASE_NET", 10, {
+            targetClient = "AIRCRAFT_02", clientSeq = seqStale, status = "FIX_OK",
+            nodeCount = 4, position = { x = 0, z = 0 }, accuracy = 0.1, hdop = 1.0
+        }, 3000)
+        assert_false(cli_hal.handleMessage("top", 10045, 60001, staleRespPkt, 10))
+        assert_nil(cli_hal.poll(seqStale))
+
+        -- Phase staggering on AMM nav_engine & Landing Pad gps_client
+        local ammStagger = nav_engine.init({ system = { domainId = "AIRCRAFT_03", computerId = 1 }, navigation = { gpsRequestRateHz = 5 } })
+        assert_false(nav_engine.should_query_gps(ammStagger, 1000))
+        assert_true(nav_engine.should_query_gps(ammStagger, 1050))
+
+        local padStagger = pad_gps_mod.create({ facilityId = "PAD_BRAVO_02", mobility = "DYNAMIC", sectorIndex = 1, computerId = 2 }, pad_offset)
+        assert_false(padStagger:should_query_gps("RESERVED", 4))
+        assert_true(padStagger:should_query_gps("RESERVED", 2))
+
         assert_eq(#handlerErrors, 0, table.concat(handlerErrors, "; "))
     end)
 end)
