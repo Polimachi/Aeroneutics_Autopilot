@@ -2,7 +2,14 @@
   "schemaVersion": "1.0.0",
   "envelope": {
     "ver": "1.9.5",
-    "requiredKeys": ["ver", "domainId", "seq", "type", "time", "payload"],
+    "requiredKeys": [
+      "ver",
+      "domainId",
+      "seq",
+      "type",
+      "time",
+      "payload"
+    ],
     "types": {
       "ver": "string",
       "domainId": "string",
@@ -22,29 +29,64 @@
         "zone1_flight_core": {
           "start": 0,
           "end": 9,
-          "offsets": [0, 1, 2, 3, 4, 5],
+          "offsets": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
           "description": "Core C2, guidance, telemetry, MFD, trajectory setpoints, external comms"
         },
         "zone2_inner_actuation": {
           "start": 10,
           "end": 19,
-          "offsets": [10, 11],
+          "offsets": [
+            10,
+            11
+          ],
           "description": "Distributed actuator buses: TCA thrust (offset 10) & ASA aero (offset 11)"
         },
         "zone3_payload_bus": {
           "start": 20,
           "end": 29,
-          "offsets": [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+          "offsets": [
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29
+          ],
           "description": "Dynamic payload nodes: cargo, magnets, radar, weapons"
         },
         "zone4_swarm_formation": {
           "start": 30,
           "end": 39,
-          "offsets": [30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+          "offsets": [
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
           "description": "Swarm & formation broadcast bus"
         }
       },
-      "deprecatedOffsets": [6, 7]
+      "deprecatedOffsets": [
+        6,
+        7
+      ]
     },
     "hangar": {
       "baseMin": 101,
@@ -57,11 +99,41 @@
         "facilityInterlock": 2,
         "calibTap": 3
       },
-      "deprecatedOffsets": [1001, 1002]
+      "deprecatedOffsets": [
+        1001,
+        1002
+      ]
     },
     "global": {
-      "fixed": [50000, 50001, 50002, 50003, 50004, 60001, 60002, 60003, 60004],
-      "reservedGps": [60005, 60006, 60007, 60008, 60009, 60010, 60011, 60012, 60013, 60014, 60015, 60016, 60017, 60018, 60019, 60020],
+      "fixed": [
+        50000,
+        50001,
+        50002,
+        50003,
+        50004,
+        60001,
+        60002,
+        60003,
+        60004
+      ],
+      "reservedGps": [
+        60005,
+        60006,
+        60007,
+        60008,
+        60009,
+        60010,
+        60011,
+        60012,
+        60013,
+        60014,
+        60015,
+        60016,
+        60017,
+        60018,
+        60019,
+        60020
+      ],
       "descriptions": {
         "50000": "GCS Channel Manager Bootstrap",
         "50001": "Tower ATC Wide-Area Airspace Ingress",
@@ -84,10 +156,18 @@
         "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 2 },
-        { "kind": "hangar_offset", "offset": 1 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 2
+        },
+        {
+          "kind": "hangar_offset",
+          "offset": 1
+        }
       ],
-      "deprecatedOffsets": [1002],
+      "deprecatedOffsets": [
+        1002
+      ],
       "packets": {
         "MSG_FLIGHT_TELEMETRY": {
           "requiredKeys": [
@@ -104,11 +184,21 @@
           ],
           "optionalKeys": [],
           "numericBounds": {
-            "fuel": [0.0, 1.0],
-            "dynamicLoad": [0.0, 1.0]
+            "fuel": [
+              0.0,
+              1.0
+            ],
+            "dynamicLoad": [
+              0.0,
+              1.0
+            ]
           },
           "enums": {
-            "activeSource": ["FCP", "MFD_ACRO", "EMERGENCY_DIRECT"]
+            "activeSource": [
+              "FCP",
+              "MFD_ACRO",
+              "EMERGENCY_DIRECT"
+            ]
           }
         }
       },
@@ -128,7 +218,10 @@
         "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 1 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 1
+        }
       ],
       "deprecatedOffsets": [],
       "packets": {
@@ -149,11 +242,21 @@
             "translationBias"
           ],
           "enums": {
-            "commandType": ["QUATERNION_RATE", "RATE_COMMAND"]
+            "commandType": [
+              "QUATERNION_RATE",
+              "RATE_COMMAND"
+            ]
           },
           "numericBounds": {
-            "collectiveThrust": [0.0, 1.0]
-          }
+            "collectiveThrust": [
+              0.0,
+              1.0
+            ]
+          },
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_EMERGENCY_OVERRIDE": {
           "requiredKeys": [
@@ -163,8 +266,12 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "action": ["E_STOP"],
-            "authKey": ["ESTOP_CONFIRM_KEY"]
+            "action": [
+              "E_STOP"
+            ],
+            "authKey": [
+              "ESTOP_CONFIRM_KEY"
+            ]
           }
         },
         "MSG_EMERGENCY_ALERT": {
@@ -174,7 +281,12 @@
             "fsmState",
             "altitude"
           ],
-          "optionalKeys": []
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -200,9 +312,14 @@
         "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 10 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 10
+        }
       ],
-      "deprecatedOffsets": [6],
+      "deprecatedOffsets": [
+        6
+      ],
       "packets": {
         "MSG_THRUST_CMD": {
           "requiredKeys": [
@@ -228,12 +345,24 @@
             "gimbalSaturated"
           ],
           "enums": {
-            "interactionMode": ["REDSTONE", "API"]
+            "interactionMode": [
+              "REDSTONE",
+              "API"
+            ]
           },
           "numericBounds": {
-            "appliedSignal": [0, 15],
-            "activeCount": [0, 16],
-            "totalCount": [1, 16]
+            "appliedSignal": [
+              0,
+              15
+            ],
+            "activeCount": [
+              0,
+              16
+            ],
+            "totalCount": [
+              1,
+              16
+            ]
           }
         },
         "MSG_ACTUATOR_DISCOVER_REQ": {
@@ -256,7 +385,10 @@
             "gimbalLimits"
           ],
           "enums": {
-            "interactionMode": ["REDSTONE", "API"]
+            "interactionMode": [
+              "REDSTONE",
+              "API"
+            ]
           }
         }
       },
@@ -277,12 +409,27 @@
         "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 0 },
-        { "kind": "hangar_offset", "offset": 0 },
-        { "kind": "hangar_offset", "offset": 1 },
-        { "kind": "hangar_offset", "offset": 3 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 0
+        },
+        {
+          "kind": "hangar_offset",
+          "offset": 0
+        },
+        {
+          "kind": "hangar_offset",
+          "offset": 1
+        },
+        {
+          "kind": "hangar_offset",
+          "offset": 3
+        }
       ],
-      "deprecatedOffsets": [1001, 1002],
+      "deprecatedOffsets": [
+        1001,
+        1002
+      ],
       "packets": {
         "MSG_CALIBRATION_INIT": {
           "requiredKeys": [
@@ -294,6 +441,10 @@
             "targetCraftDomain",
             "timeoutSec",
             "targetThruster"
+          ],
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
           ]
         },
         "MSG_CALIBRATION_INIT_ACK": {
@@ -308,8 +459,15 @@
             "baseChannel"
           ],
           "enums": {
-            "status": ["READY", "BUSY"]
-          }
+            "status": [
+              "READY",
+              "BUSY"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CALIB_BAY_BIND": {
           "requiredKeys": [
@@ -322,8 +480,15 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "action": ["OPEN", "CLOSE"]
-          }
+            "action": [
+              "OPEN",
+              "CLOSE"
+            ]
+          },
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CALIB_START": {
           "requiredKeys": [
@@ -335,8 +500,15 @@
             "stationId"
           ],
           "enums": {
-            "action": ["ENTER_CALIBRATION", "ABORT_CALIBRATION"]
-          }
+            "action": [
+              "ENTER_CALIBRATION",
+              "ABORT_CALIBRATION"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CALIB_PULSE": {
           "requiredKeys": [
@@ -348,9 +520,21 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "stepIndex": [1, 2, 3],
-            "pulseLevel": [4, 8, 12]
-          }
+            "stepIndex": [
+              1,
+              2,
+              3
+            ],
+            "pulseLevel": [
+              4,
+              8,
+              12
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_PROFILE_SYNC": {
           "requiredKeys": [
@@ -361,7 +545,11 @@
             "discoveredSurfaces",
             "thrusterCoefficients"
           ],
-          "optionalKeys": []
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CALIB_ACK": {
           "requiredKeys": [
@@ -370,8 +558,15 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "status": ["ACCEPTED", "REJECTED"]
-          }
+            "status": [
+              "ACCEPTED",
+              "REJECTED"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CALIBRATION_CLOSE": {
           "requiredKeys": [
@@ -383,9 +578,18 @@
             "saveProfile"
           ],
           "enums": {
-            "action": ["CLOSE_SESSION"],
-            "reason": ["COMPLETE", "MANUAL"]
-          }
+            "action": [
+              "CLOSE_SESSION"
+            ],
+            "reason": [
+              "COMPLETE",
+              "MANUAL"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CALIBRATION_CLOSE_ACK": {
           "requiredKeys": [
@@ -396,8 +600,14 @@
             "currentFsmState"
           ],
           "enums": {
-            "status": ["CLOSED"]
-          }
+            "status": [
+              "CLOSED"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -417,9 +627,28 @@
         "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "global_fixed", "channels": [50001, 50002, 50003, 50004] },
-        { "kind": "sector_offset", "offsets": [0, 1, 2, 5] },
-        { "kind": "aircraft_offset", "offset": 5 }
+        {
+          "kind": "global_fixed",
+          "channels": [
+            50001,
+            50002,
+            50003,
+            50004
+          ]
+        },
+        {
+          "kind": "sector_offset",
+          "offsets": [
+            0,
+            1,
+            2,
+            5
+          ]
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 5
+        }
       ],
       "deprecatedOffsets": [],
       "packets": {
@@ -428,7 +657,14 @@
             "sectorId",
             "facilitiesSummary"
           ],
-          "optionalKeys": []
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_ATC_FACILITY_UPDATE": {
           "requiredKeys": [
@@ -437,8 +673,19 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "status": ["FREE", "RESERVED", "OCCUPIED", "MAINTENANCE"]
-          }
+            "status": [
+              "FREE",
+              "RESERVED",
+              "OCCUPIED",
+              "MAINTENANCE"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md"
+          ]
         },
         "MSG_FACILITY_STATIC_GUIDE": {
           "requiredKeys": [
@@ -459,10 +706,30 @@
             "heaveRateMps"
           ],
           "enums": {
-            "approachDirection": ["FRONT", "BACK", "LEFT", "RIGHT", "UPWARD", "DOWNWARD"],
-            "deckStatus": ["STABLE", "DANGEROUS"],
-            "facilityType": ["LANDING_PAD", "RUNWAY", "DOCKING_ARM"]
-          }
+            "approachDirection": [
+              "FRONT",
+              "BACK",
+              "LEFT",
+              "RIGHT",
+              "UPWARD",
+              "DOWNWARD"
+            ],
+            "deckStatus": [
+              "STABLE",
+              "DANGEROUS"
+            ],
+            "facilityType": [
+              "LANDING_PAD",
+              "RUNWAY",
+              "DOCKING_ARM"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_FACILITY_DYNAMIC_GUIDE": {
           "requiredKeys": [
@@ -489,23 +756,54 @@
             "heaveRateMps"
           ],
           "enums": {
-            "approachDirection": ["FRONT", "BACK", "LEFT", "RIGHT", "UPWARD", "DOWNWARD"],
-            "deckStatus": ["STABLE", "DANGEROUS"],
-            "facilityType": ["LANDING_PAD", "RUNWAY", "DOCKING_ARM"]
-          }
+            "approachDirection": [
+              "FRONT",
+              "BACK",
+              "LEFT",
+              "RIGHT",
+              "UPWARD",
+              "DOWNWARD"
+            ],
+            "deckStatus": [
+              "STABLE",
+              "DANGEROUS"
+            ],
+            "facilityType": [
+              "LANDING_PAD",
+              "RUNWAY",
+              "DOCKING_ARM"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_GAC_DEPARTURE_CLEARANCE": {
           "requiredKeys": [
             "aircraftId",
             "status"
           ],
-          "optionalKeys": []
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md"
+          ]
         },
         "MSG_GAC_ABORT_CLEAR": {
           "requiredKeys": [
             "aircraftId"
           ],
-          "optionalKeys": []
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_ATC_APPROACH_CLEARANCE": {
           "requiredKeys": [
@@ -521,8 +819,16 @@
             "retryAfterSec"
           ],
           "enums": {
-            "status": ["CLEARED", "DENIED"]
-          }
+            "status": [
+              "CLEARED",
+              "DENIED"
+            ]
+          },
+          "specs": [
+            "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md"
+          ]
         },
         "MSG_GAC_CHECKIN_REQ": {
           "requiredKeys": [
@@ -534,6 +840,13 @@
           ],
           "optionalKeys": [
             "estimatedArrivalTime"
+          ],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
           ]
         },
         "MSG_GAC_APPROACH_CLEARANCE": {
@@ -546,6 +859,12 @@
             "approachHeading",
             "safeDescentRate",
             "slotDurationSec"
+          ],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
           ]
         }
       },
@@ -567,8 +886,14 @@
         "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 0 },
-        { "kind": "aircraft_offset", "offset": 3 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 0
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 3
+        }
       ],
       "deprecatedOffsets": [],
       "packets": {
@@ -582,9 +907,21 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "authority": ["PILOT_PRIMARY", "GCS_OVERRIDE"],
-            "emergencyAction": ["NONE", "RTH", "HOVER_HOLD", "EMERGENCY_LAND"]
-          }
+            "authority": [
+              "PILOT_PRIMARY",
+              "GCS_OVERRIDE"
+            ],
+            "emergencyAction": [
+              "NONE",
+              "RTH",
+              "HOVER_HOLD",
+              "EMERGENCY_LAND"
+            ]
+          },
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
         },
         "MSG_MISSION_CMD": {
           "requiredKeys": [
@@ -596,8 +933,19 @@
             "forceRestart"
           ],
           "enums": {
-            "action": ["RUN", "STOP", "PAUSE", "RESUME", "NEXT", "CONFIRM"]
-          }
+            "action": [
+              "RUN",
+              "STOP",
+              "PAUSE",
+              "RESUME",
+              "NEXT",
+              "CONFIRM"
+            ]
+          },
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
         },
         "MSG_MISSION_ACK": {
           "requiredKeys": [
@@ -621,7 +969,10 @@
               "PRECONDITION_FAILED",
               "INVALID_CMD"
             ]
-          }
+          },
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_MFD_STATE": {
           "requiredKeys": [
@@ -640,6 +991,10 @@
             "angularRates",
             "nav",
             "sensorHealth"
+          ],
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
           ]
         }
       },
@@ -655,11 +1010,27 @@
         "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "global_fixed", "channels": [60001, 60002] },
-        { "kind": "aircraft_offset", "offset": 5 },
-        { "kind": "sector_offset", "offsets": [5] }
+        {
+          "kind": "global_fixed",
+          "channels": [
+            60001,
+            60002
+          ]
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 5
+        },
+        {
+          "kind": "sector_offset",
+          "offsets": [
+            5
+          ]
+        }
       ],
-      "deprecatedOffsets": [10045],
+      "deprecatedOffsets": [
+        10045
+      ],
       "packets": {
         "MSG_GPS_REQUEST": {
           "requiredKeys": [
@@ -684,7 +1055,11 @@
             "selectedNodes"
           ],
           "enums": {
-            "status": ["FIX_OK", "FIX_DEGRADED", "NO_FIX"]
+            "status": [
+              "FIX_OK",
+              "FIX_DEGRADED",
+              "NO_FIX"
+            ]
           }
         }
       },
@@ -702,9 +1077,16 @@
         "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "global_fixed", "channels": [50000] }
+        {
+          "kind": "global_fixed",
+          "channels": [
+            50000
+          ]
+        }
       ],
-      "deprecatedOffsets": [10040],
+      "deprecatedOffsets": [
+        10040
+      ],
       "packets": {
         "MSG_BLOCK_REQUEST": {
           "requiredKeys": [
@@ -724,7 +1106,10 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "status": ["ASSIGNED", "FAILED"]
+            "status": [
+              "ASSIGNED",
+              "FAILED"
+            ]
           }
         }
       },
@@ -743,13 +1128,31 @@
         "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 0 },
-        { "kind": "aircraft_offset", "offset": 4 },
-        { "kind": "aircraft_offset", "offset": 1 },
-        { "kind": "aircraft_offset", "offset": 10 },
-        { "kind": "aircraft_offset", "offset": 11 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 0
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 4
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 1
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 10
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 11
+        }
       ],
-      "deprecatedOffsets": [6, 7],
+      "deprecatedOffsets": [
+        6,
+        7
+      ],
       "packets": {
         "MSG_CHANNEL_PROBE": {
           "requiredKeys": [
@@ -757,7 +1160,11 @@
             "candidateBase",
             "bandwidth"
           ],
-          "optionalKeys": []
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CHANNEL_PROBE_ACK": {
           "requiredKeys": [
@@ -767,8 +1174,14 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "status": ["CONFLICT_DETECTED"]
-          }
+            "status": [
+              "CONFLICT_DETECTED"
+            ]
+          },
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CHANNEL_REBIND": {
           "requiredKeys": [
@@ -780,8 +1193,19 @@
           ],
           "optionalKeys": [],
           "enums": {
-            "action": ["PREPARE", "COMMIT", "ROLLBACK"]
-          }
+            "action": [
+              "PREPARE",
+              "COMMIT",
+              "ROLLBACK"
+            ]
+          },
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md"
+          ]
         },
         "MSG_CHANNEL_REBIND_ACK": {
           "requiredKeys": [
@@ -796,8 +1220,20 @@
             "subNodesReady"
           ],
           "enums": {
-            "status": ["READY", "COMMITTED", "ROLLED_BACK", "FAILED"]
-          }
+            "status": [
+              "READY",
+              "COMMITTED",
+              "ROLLED_BACK",
+              "FAILED"
+            ]
+          },
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -822,9 +1258,14 @@
         "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 11 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 11
+        }
       ],
-      "deprecatedOffsets": [7],
+      "deprecatedOffsets": [
+        7
+      ],
       "packets": {
         "MSG_AERO_CMD": {
           "requiredKeys": [
@@ -836,7 +1277,10 @@
             "dynamicPressureFactor"
           ],
           "numericBounds": {
-            "dynamicPressureFactor": [0.1, 1.0]
+            "dynamicPressureFactor": [
+              0.1,
+              1.0
+            ]
           }
         },
         "MSG_AERO_STATUS": {
@@ -853,11 +1297,21 @@
             "isJammed"
           ],
           "enums": {
-            "healthStatus": ["NOMINAL", "DEGRADED", "TOTAL_LOSS"],
-            "interactionMode": ["API", "REDSTONE"]
+            "healthStatus": [
+              "NOMINAL",
+              "DEGRADED",
+              "TOTAL_LOSS"
+            ],
+            "interactionMode": [
+              "API",
+              "REDSTONE"
+            ]
           },
           "numericBounds": {
-            "appliedDeflection": [-1.0, 1.0]
+            "appliedDeflection": [
+              -1.0,
+              1.0
+            ]
           }
         },
         "MSG_SURFACE_DISCOVER_REQ": {
@@ -887,9 +1341,7 @@
       ],
       "deprecatedPayloadKeys": [
         "mode",
-        "appliedDeg",
-        "API_NOMINAL",
-        "API_TOTAL_LOSS"
+        "appliedDeg"
       ]
     },
     {
@@ -899,7 +1351,11 @@
         "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset_range", "minOffset": 20, "maxOffset": 29 }
+        {
+          "kind": "aircraft_offset_range",
+          "minOffset": 20,
+          "maxOffset": 29
+        }
       ],
       "deprecatedOffsets": [],
       "packets": {
@@ -936,7 +1392,10 @@
         "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md"
       ],
       "channelMatchers": [
-        { "kind": "aircraft_offset", "offset": 4 }
+        {
+          "kind": "aircraft_offset",
+          "offset": 4
+        }
       ],
       "deprecatedOffsets": [],
       "packets": {
@@ -969,7 +1428,10 @@
             ]
           },
           "numericBounds": {
-            "targetHeading": [0.0, 360.0]
+            "targetHeading": [
+              0.0,
+              360.0
+            ]
           }
         },
         "MSG_OUTER_LOOP_STATUS": {
@@ -994,7 +1456,10 @@
             ]
           },
           "numericBounds": {
-            "commandedCollectiveThrust": [0.0, 1.0]
+            "commandedCollectiveThrust": [
+              0.0,
+              1.0
+            ]
           }
         }
       },
