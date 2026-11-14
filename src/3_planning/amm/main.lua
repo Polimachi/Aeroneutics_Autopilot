@@ -10,6 +10,7 @@ local channel_sentinel = require("channel_sentinel")
 local nav_engine = require("nav_engine")
 local facility_client = require("facility_client")
 local trajectory_generator = require("trajectory_generator")
+local chattering_guard = require("chattering_guard")
 
 local function load_config(path)
     local cfg_path = path or "config/amm_config.json"
@@ -59,20 +60,24 @@ end
 
 local function queue_to_mission_table(q)
     local cps = {}
-    for i, it in ipairs(q.items or {}) do
+    local items = q.items or {}
+    for i, it in ipairs(items) do
+        local is_land = (it.facilityId ~= nil and it.facilityId ~= "" and i == #items)
         table.insert(cps, {
             checkpointId = string.format("WP_%02d", i),
-            action = "FLY_TO",
+            action = is_land and "ACT_TKL_LAND_PREC" or "ACT_NAV_SPLINE_WP",
             params = {
                 targetPos = { x = it.x, z = it.z },
                 targetAlt = it.alt,
                 cruiseSpeed = it.speed,
                 acceptanceRadius = q.arrivalRadius or 15.0,
+                facilityId = it.facilityId,
             },
         })
     end
     return {
         missionId = "MANUAL_QUEUE",
+        version = "2.0.0",
         executionMode = "SINGLE",
         checkpoints = cps,
     }
@@ -315,6 +320,14 @@ local MISSION_SUBCOMMANDS = {
         local tot = (app.engine and app.engine:count()) or (app.queue and app.queue:count()) or 0
         app.arbiter.lastBanner = string.format("MSN: %s [%s] %d/%d", mid, st, idx, tot)
     end,
+    confirm = function(app, _subargs, now_ms)
+        if app.engine and app.engine.confirm then
+            local ok, err = app.engine:confirm(now_ms)
+            if app.arbiter then
+                app.arbiter.lastBanner = ok and "HUMAN AUTH CONFIRMED" or ("CONFIRM FAIL: " .. tostring(err))
+            end
+        end
+    end,
 }
 
 local function handle_cli_mission(app, a, now_ms)
@@ -388,6 +401,14 @@ local CLI_HANDLERS = {
     end,
     resume = function(app, _a, now_ms)
         app.arbiter:handle_pilot_action("RESUME", {}, now_ms)
+    end,
+    confirm = function(app, _a, now_ms)
+        if app.engine and app.engine.confirm then
+            local ok, err = app.engine:confirm(now_ms)
+            if app.arbiter then
+                app.arbiter.lastBanner = ok and "HUMAN AUTH CONFIRMED" or ("CONFIRM FAIL: " .. tostring(err))
+            end
+        end
     end,
     save = handle_cli_save,
     alt = function(app, a, _now_ms)
@@ -581,6 +602,7 @@ local function create_app(config, modems)
         colors = colors,
     })
     local arbiter = c2_arbiter.new(queue, net, cfg, engine)
+    local guard = chattering_guard.init(cfg)
     local input = input_handler.new()
     local screen_buf = (not cfg.headless) and ui_renderer.create_buffer(51, 19) or nil
 
@@ -596,6 +618,7 @@ local function create_app(config, modems)
         traj = traj,
         engine = engine,
         arbiter = arbiter,
+        guard = guard,
         input = input,
         screen_buf = screen_buf,
         render_timer = os.startTimer(0.2),
@@ -650,11 +673,21 @@ local function step_20hz_tick(app, dt, now_ms)
         nav_engine.update_timeout(app.nav, now)
     end
 
-    if app.nav and app.net then
+    local pre_goal = (app.arbiter and app.arbiter.get_effective_goal and app.arbiter:get_effective_goal())
+        or { flightMode = "IDLE", arm = false, flightActive = false }
+    local emcon_active = (pre_goal.emconActive == true) or (app.engine and app.engine.emconActive == true)
+    if app.nav and app.net and not emcon_active then
         local should_gps, _, gps_pkt = nav_engine.build_gps_request(app.nav, now)
         if should_gps and gps_pkt then
             app.net:send_gps_request(gps_pkt)
         end
+    end
+
+    local mfd_live = app.lastMfd or (app.arbiter and app.arbiter.latest_mfd_payload)
+    local fuel_live = (mfd_live and mfd_live.fuel) or (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.fuel)
+    local is_disarmed = mfd_live and (mfd_live.controlState == "DISARMED" or mfd_live.fsmState == "DISARMED")
+    if app.guard and type(fuel_live) == "number" then
+        chattering_guard.update_fuel_latches(app.guard, fuel_live, app.config, is_disarmed)
     end
 
     if app.sentinel and app.sentinel.rebindTx then

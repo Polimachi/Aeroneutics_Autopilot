@@ -1,6 +1,8 @@
 -- src/3_planning/amm/modules/hook_runner.lua
 -- AMM 0-Tick Non-Blocking Hook Runner & Zone 3 / Redstone Device Driver
 
+local action_registry = require("action_registry")
+
 local hook_runner = {}
 hook_runner.__index = hook_runner
 
@@ -9,13 +11,6 @@ hook_runner.VALID_HOOK_TYPES = {
     REDSTONE_PULSE = true,
     ZONE3_PAYLOAD_CMD = true,
     NOTIFY_OPERATOR = true,
-}
-
-local DEFERRED_ACTIONS = {
-    TAKEOFF_RUNWAY = true,
-    LAND_RUNWAY = true,
-    DOCK_ARM = true,
-    UNDOCK_ARM = true,
 }
 
 local VALID_SIDES = {
@@ -161,9 +156,10 @@ local function start_payload_action(self, cp)
     local sel = (p.channelOffset ~= nil) and p.channelOffset or (p.targetChannel ~= nil and p.targetChannel or p.channel)
     local ch_valid, ch_err = self.net:resolve_payload_channel(sel)
     if not ch_valid then return false, ch_err end
-    local wait_ack = (p.waitForAck ~= false)
+    local wait_ack = (p.waitForAck ~= false and p.awaitAck ~= false)
     self.lastPayloadAck = nil
-    local ok, ch_or_err = self.net:send_payload_req(sel, cp.checkpointId, p.command, p.commandPayload or {}, { keepOpen = wait_ack })
+    local cmd_body = p.commandPayload or p.payload or {}
+    local ok, ch_or_err = self.net:send_payload_req(sel, cp.checkpointId, p.command, cmd_body, { keepOpen = wait_ack })
     if not ok then return false, ch_or_err end
     if wait_ack then
         self.pendingPayload = {
@@ -193,12 +189,15 @@ function hook_runner:start_action(checkpoint, now_ms)
     if type(checkpoint) ~= "table" or type(checkpoint.action) ~= "string" then
         return false, "INVALID_CHECKPOINT"
     end
-    if DEFERRED_ACTIONS[checkpoint.action] then
+    if action_registry.is_action_deferred(checkpoint.action) then
         return false, "DEFERRED_ACTION_UNSUPPORTED"
     end
-    if checkpoint.action == "PAYLOAD_ACTION" then
+    if action_registry.is_legacy_action(checkpoint.action) then
+        return false, "SCHEMA_INVALID"
+    end
+    if checkpoint.action == "ACT_PAY_BUS_CMD" then
         return start_payload_action(self, checkpoint)
-    elseif checkpoint.action == "REDSTONE_ACTION" then
+    elseif checkpoint.action == "ACT_PAY_REDSTONE" then
         return start_redstone_action(self, checkpoint, now_ms)
     end
     return true, nil

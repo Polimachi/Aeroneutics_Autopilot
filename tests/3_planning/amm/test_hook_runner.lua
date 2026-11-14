@@ -74,7 +74,7 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
 
         local ok = runner:start_action({
             checkpointId = "CP_04",
-            action = "PAYLOAD_ACTION",
+            action = "ACT_PAY_BUS_CMD",
             params = { channelOffset = 20, command = "RELEASE_BAY", commandPayload = { bayId = 1 }, waitForAck = true },
         }, 1000)
         assert_true(ok)
@@ -88,7 +88,7 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
         assert_nil(runner:get_last_payload_ack())
     end)
 
-    it("manages PAYLOAD_ACTION dynamic Zone 3 open-ACK-close lifecycle, rejects wrong channel/checkpointId, and handles ZONE3_PAYLOAD_CMD", function()
+    it("manages ACT_PAY_BUS_CMD dynamic Zone 3 open-ACK-close lifecycle, rejects wrong channel/checkpointId, and handles ZONE3_PAYLOAD_CMD", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local m = mock.modem({ wireless = true })
         net:bind_modem(m)
@@ -96,7 +96,7 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
 
         local ok, err = runner:start_action({
             checkpointId = "CP_04",
-            action = "PAYLOAD_ACTION",
+            action = "ACT_PAY_BUS_CMD",
             params = { channelOffset = 20, command = "RELEASE_BAY", commandPayload = { bayId = 1 }, waitForAck = true },
         }, 2000)
         assert_nil(err)
@@ -139,24 +139,24 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
         -- Invalid Zone 3 channel or deferred action returns explicit error without transmitting
         local ok_bad_ch, err_bad_ch = runner:start_action({
             checkpointId = "CP_BAD_CH",
-            action = "PAYLOAD_ACTION",
+            action = "ACT_PAY_BUS_CMD",
             params = { channelOffset = 10, command = "HIJACK_TCA" },
         }, 3050)
         assert_false(ok_bad_ch)
         assert_eq(err_bad_ch, "INVALID_ZONE3_CHANNEL")
 
-        local ok_def, err_def = runner:start_action({ checkpointId = "CP_DEF", action = "DOCK_ARM", params = {} }, 3100)
+        local ok_def, err_def = runner:start_action({ checkpointId = "CP_DEF", action = "ACT_MOB_ARM_DOCK", params = {} }, 3100)
         assert_false(ok_def)
         assert_eq(err_def, "DEFERRED_ACTION_UNSUPPORTED")
     end)
 
-    it("executes REDSTONE_ACTION EMIT pulses and ignores WAIT_INPUT without side effects", function()
+    it("executes ACT_PAY_REDSTONE EMIT pulses and ignores WAIT_INPUT without side effects", function()
         local rs = mock.redstone()
         local runner = hook_runner.new({ redstone = rs })
 
         local ok_e = runner:start_action({
             checkpointId = "CP_RS1",
-            action = "REDSTONE_ACTION",
+            action = "ACT_PAY_REDSTONE",
             params = { mode = "EMIT", side = "bottom", level = 12, durationMs = 250 },
         }, 5000)
         assert_true(ok_e)
@@ -169,7 +169,7 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
 
         local ok_w = runner:start_action({
             checkpointId = "CP_RS2",
-            action = "REDSTONE_ACTION",
+            action = "ACT_PAY_REDSTONE",
             params = { mode = "WAIT_INPUT", side = "back", minLevel = 1 },
         }, 5300)
         assert_true(ok_w)

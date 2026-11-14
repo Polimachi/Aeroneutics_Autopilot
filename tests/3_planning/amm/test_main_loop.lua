@@ -109,13 +109,13 @@ describe("AMM Main Event Pump and Command Processing", function()
             checkpoints = {
                 {
                     checkpointId = "CP_PAYLOAD",
-                    action = "PAYLOAD_ACTION",
+                    action = "ACT_PAY_BUS_CMD",
                     params = { channelOffset = 20, command = "SCAN", expectedStatus = "DONE" },
                     onEnter = { { type = "REDSTONE_PULSE", side = "top", durationMs = 400 } },
                 },
                 {
                     checkpointId = "CP_HOLD",
-                    action = "ORBIT",
+                    action = "ACT_PAT_LOITER_TIME",
                     params = { targetPos = { x = 100, z = 100 }, durationSec = 5 },
                 },
             },
@@ -172,12 +172,12 @@ describe("AMM Main Event Pump and Command Processing", function()
         local f = fs.open(temp_path, "w")
         assert_true(f ~= nil)
         f.write(textutils.serializeJSON({
-            version = "1.1.0",
+            version = "2.0.0",
             missionId = "PATROL_REPEAT",
             executionMode = "REPEAT",
             checkpoints = {
-                { checkpointId = "CP_01", action = "FLY_TO", params = { targetPos = { x = 10, z = 20 } } },
-                { checkpointId = "CP_02", action = "FLY_TO", params = { targetPos = { x = 30, z = 40 } } },
+                { checkpointId = "CP_01", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 10, z = 20 } } },
+                { checkpointId = "CP_02", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 30, z = 40 } } },
             },
         }))
         f.close()
@@ -193,10 +193,11 @@ describe("AMM Main Event Pump and Command Processing", function()
         -- 2. Test auto-start with config override cfg.autoExecutionMode
         local eng2 = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
         main_mod.try_auto_start_mission(eng2, {
+            version = "2.0.0",
             missionId = "OVERRIDE_TEST",
             executionMode = "SINGLE",
             checkpoints = {
-                { checkpointId = "CP_01", action = "FLY_TO", params = { targetPos = { x = 50, z = 60 } } },
+                { checkpointId = "CP_01", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 50, z = 60 } } },
             },
         }, 2000, { autoExecutionMode = "REPEAT" })
         assert_eq(eng2.state, "EN_ROUTE")
@@ -213,11 +214,12 @@ describe("AMM Main Event Pump and Command Processing", function()
         local eng = mission_engine.new({ net = net, redstone = rs, colors = colors, config = { baseChannel = 10000 } })
 
         assert_true(eng:load_table({
+            version = "2.0.0",
             missionId = "SHUTDOWN_TEST",
             checkpoints = {
                 {
                     checkpointId = "CP_01",
-                    action = "PAYLOAD_ACTION",
+                    action = "ACT_PAY_BUS_CMD",
                     params = { channelOffset = 20, command = "COLLECT" },
                     onEnter = { { type = "REDSTONE_PULSE", side = "bottom", durationMs = 5000 } },
                 },
@@ -258,10 +260,11 @@ describe("AMM Main Event Pump and Command Processing", function()
         if not fs.exists("/disk") then fs.makeDir("/disk") end
         local f = fs.open("/disk/cli_sortie.json", "w")
         f.write(textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "CLI_SORTIE",
             checkpoints = {
-                { checkpointId = "CP_1", action = "FLY_OVER", params = { x = 100, z = 200 } },
-                { checkpointId = "CP_2", action = "ORBIT", params = { x = 300, z = 400, radius = 35 } },
+                { checkpointId = "CP_1", action = "ACT_NAV_SPLINE_WP", params = { x = 100, z = 200 } },
+                { checkpointId = "CP_2", action = "ACT_PAT_LOITER_TIME", params = { x = 300, z = 400, radius = 35 } },
             },
         }))
         f.close()
@@ -332,8 +335,9 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
 
         local valid_json = textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "DROPPED_01",
-            checkpoints = { { checkpointId = "CP_1", action = "FLY_TO", params = { x = 250, z = -350 } } },
+            checkpoints = { { checkpointId = "CP_1", action = "ACT_NAV_GOTO_WP", params = { x = 250, z = -350 } } },
         })
         local app = {
             config = { domainId = "AIRCRAFT_01", baseChannel = 10000, autoRunDroppedFile = false },
@@ -358,8 +362,9 @@ describe("AMM Main Event Pump and Command Processing", function()
         -- 3. Drop with autoRunDroppedFile = true while IDLE -> auto starts EN_ROUTE
         app.config.autoRunDroppedFile = true
         local valid2 = textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "DROPPED_02",
-            checkpoints = { { checkpointId = "CP_A", action = "FLY_OVER", params = { x = 10, z = 20 } } },
+            checkpoints = { { checkpointId = "CP_A", action = "ACT_NAV_SPLINE_WP", params = { x = 10, z = 20 } } },
         })
         main_mod.process_event(app, "file_transfer", make_transfer("dropped_02.json", valid2))
         assert_eq(eng.missionId, "DROPPED_02")
@@ -367,8 +372,9 @@ describe("AMM Main Event Pump and Command Processing", function()
 
         -- 4. Drop valid file while EN_ROUTE -> saves to disk only, active flight stays DROPPED_02!
         local valid3 = textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "DROPPED_03",
-            checkpoints = { { checkpointId = "CP_B", action = "FLY_OVER", params = { x = 99, z = 99 } } },
+            checkpoints = { { checkpointId = "CP_B", action = "ACT_NAV_SPLINE_WP", params = { x = 99, z = 99 } } },
         })
         main_mod.process_event(app, "file_transfer", make_transfer("../escape/dropped_03.json", valid3))
         assert_true(fs.exists("missions/dropped_03.json"))
@@ -397,9 +403,10 @@ describe("AMM Main Event Pump and Command Processing", function()
         if not fs.exists("/disk") then fs.makeDir("/disk") end
         local f = fs.open("/disk/boot_sortie.json", "w")
         f.write(textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "BOOT_SORTIE",
             executionMode = "SINGLE",
-            checkpoints = { { checkpointId = "CP_1", action = "FLY_OVER", params = { x = 10, z = 20 } } },
+            checkpoints = { { checkpointId = "CP_1", action = "ACT_NAV_SPLINE_WP", params = { x = 10, z = 20 } } },
         }))
         f.close()
 
@@ -560,5 +567,47 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
         assert_not_nil(mfd_pkt)
         assert_true(mfd_pkt.payload.navigation.gpsTimedOut)
+    end)
+
+    it("integrates chattering_guard fuel latches in step_20hz_tick and confirm CLI command for DEC_HUMAN_AUTH", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            safety = {
+                lowFuelRthThreshold = 0.20,
+                emergencyLandFuelThreshold = 0.10,
+                chattering = { lowFuelDebounceTicks = 3, emergFuelDebounceTicks = 2, fuelLatchResetMargin = 0.05 },
+            },
+        }, { top = top_m, back = back_m })
+
+        assert_not_nil(app.guard)
+        assert_true(app.engine:load_table({
+            version = "2.0.0",
+            missionId = "CLI_CONFIRM",
+            checkpoints = {
+                {
+                    checkpointId = "CP_AUTH",
+                    action = "ACT_PAY_BUS_CMD",
+                    decorators = { { decoratorId = "DEC_HUMAN_AUTH" } },
+                    params = { channelOffset = 20, command = "DROP" },
+                },
+            },
+        }))
+        app.engine:start("SINGLE", 1000)
+        assert_true(app.engine.waitingHumanAuth)
+
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "confirm", args = {} }, 1100)
+        assert_false(app.engine.waitingHumanAuth)
+
+        app.lastMfd = { controlState = "NORMAL", fuel = 0.15 }
+        main_mod.step_20hz_tick(app, 0.05, 1150)
+        main_mod.step_20hz_tick(app, 0.05, 1200)
+        assert_false(app.guard.latches.lowFuelLatched)
+        main_mod.step_20hz_tick(app, 0.05, 1250)
+        assert_true(app.guard.latches.lowFuelLatched)
     end)
 end)

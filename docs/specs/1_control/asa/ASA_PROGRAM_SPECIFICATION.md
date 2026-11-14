@@ -12,9 +12,9 @@
 | **주관 도메인 (Domain)** | 공력 조종면 및 날개 구동기 분산 클러스터 (ASA / Node 06-xx) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.13.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v1.3.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.11.1)
@@ -541,11 +541,11 @@ end
 ## 7. 교차 참조 및 버전 메타데이터
 
 - 본 규격서 시맨틱 버전: **v1.7.0**
-- 연계 상위 마스터 ICD: **v1.28.0**
-- 연계 AMM 규격서: **v1.3.0**
+- 연계 상위 마스터 ICD: **v1.29.0**
+- 연계 AMM 규격서: **v2.0.0**
 - 연계 FCP 비행 제어 규격서: **v2.0.0**
 - 연계 VAS 규격서: **v1.19.0**
-- 연계 전체 구조도: **v2.13.0**
+- 연계 전체 구조도: **v2.14.0**
 - 연계 TCA 규격서: **v1.11.1**
 - 연계 Alignment 규격서: **v2.6.1**
 - 연계 GPS 체계 규격서: **v2.3.2**

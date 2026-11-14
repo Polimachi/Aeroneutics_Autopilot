@@ -5,7 +5,7 @@ local condition_evaluator = require("condition_evaluator")
 local hook_runner = require("hook_runner")
 
 describe("AMM Mission Core Cross-Module Integration", function()
-    it("runs ORBIT with onEnter pulse + duration completion + low-fuel abort hook sequence", function()
+    it("runs ACT_PAT_LOITER_TIME with onEnter pulse + duration completion + low-fuel abort hook sequence", function()
         local rs = mock.redstone()
         local notes = {}
         local runner = hook_runner.new({
@@ -16,8 +16,8 @@ describe("AMM Mission Core Cross-Module Integration", function()
 
         local cp, err = mission_engine.normalize_checkpoint({
             checkpointId = "CP_ORBIT_01",
-            action = "ORBIT",
-            params = { targetPos = { x = 600, z = -1500 }, radius = 40, direction = "CW" },
+            action = "ACT_PAT_LOITER_TIME",
+            params = { targetPos = { x = 600, z = -1500 }, radius = 40, direction = "CW", durationSec = 30 },
             onEnter = {
                 { type = "NOTIFY_OPERATOR", level = "INFO", message = "ORBIT START" },
                 { type = "REDSTONE_PULSE", side = "top", durationMs = 500 },
@@ -49,7 +49,7 @@ describe("AMM Mission Core Cross-Module Integration", function()
         assert_true(rs.getOutput("right"))
     end)
 
-    it("runs PAYLOAD_ACTION dynamic Zone 3 lifecycle into PAYLOAD_RESP_MATCH completion and channel close", function()
+    it("runs ACT_PAY_BUS_CMD dynamic Zone 3 lifecycle into PAYLOAD_RESP_MATCH completion and channel close", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local m = mock.modem({ wireless = true })
         net:bind_modem(m)
@@ -57,7 +57,7 @@ describe("AMM Mission Core Cross-Module Integration", function()
 
         local cp, err = mission_engine.normalize_checkpoint({
             checkpointId = "CP_CARGO",
-            action = "PAYLOAD_ACTION",
+            action = "ACT_PAY_BUS_CMD",
             params = { channelOffset = 20, command = "RELEASE_BAY", commandPayload = { bayId = 1 }, expectedStatus = "DROPPED" },
             onExit = { { type = "ZONE3_PAYLOAD_CMD", channelOffset = 20, command = "LOCK_DOOR", payload = {} } },
         }, nil, 1, { baseChannel = 10000 })
@@ -84,13 +84,13 @@ describe("AMM Mission Core Cross-Module Integration", function()
         assert_true(m.isOpen(10003))
     end)
 
-    it("runs REDSTONE_ACTION WAIT_INPUT to completion and executes onExit cleanup cleanly", function()
+    it("runs ACT_PAY_REDSTONE WAIT_INPUT to completion and executes onExit cleanup cleanly", function()
         local rs = mock.redstone()
         local runner = hook_runner.new({ redstone = rs, colors = colors })
 
         local cp, err = mission_engine.normalize_checkpoint({
             checkpointId = "CP_RS_WAIT",
-            action = "REDSTONE_ACTION",
+            action = "ACT_PAY_REDSTONE",
             params = { mode = "WAIT_INPUT", side = "back", minLevel = 8 },
             onExit = { { type = "REDSTONE_SET", side = "left", state = true } },
         }, nil, 1)

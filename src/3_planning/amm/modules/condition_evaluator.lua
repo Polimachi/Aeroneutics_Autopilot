@@ -1,6 +1,8 @@
 -- src/3_planning/amm/modules/condition_evaluator.lua
 -- AMM 12-Type Complete/Abort Condition Evaluator & Default Completion Resolver
 
+local action_registry = require("action_registry")
+
 local condition_evaluator = {}
 
 condition_evaluator.CONDITION_TYPES = {
@@ -16,13 +18,8 @@ condition_evaluator.CONDITION_TYPES = {
     CROSS_TRACK_ERROR = true,
     ARM_DOCKED = true,
     ARM_RELEASED = true,
-}
-
-local DEFERRED_ACTIONS = {
-    TAKEOFF_RUNWAY = true,
-    LAND_RUNWAY = true,
-    DOCK_ARM = true,
-    UNDOCK_ARM = true,
+    SYS_ARMED = true,
+    IMMEDIATE = true,
 }
 
 local ARM_TOUCHDOWN_STATES = {
@@ -44,7 +41,8 @@ local function resolve_target_xz(cond, ctx)
     if type(ctx.target) == "table" and is_finite(ctx.target.x) and is_finite(ctx.target.z) then
         return ctx.target.x, ctx.target.z
     end
-    local cp_pos = ctx.checkpoint and ctx.checkpoint.params and ctx.checkpoint.params.targetPos
+    local params = ctx.checkpoint and ctx.checkpoint.params
+    local cp_pos = params and (params.targetPos or params.endPos)
     if type(cp_pos) == "table" and is_finite(cp_pos.x) and is_finite(cp_pos.z) then
         return cp_pos.x, cp_pos.z
     end
@@ -183,6 +181,15 @@ local function eval_arm_state(field, cond, ctx)
     return true
 end
 
+local function eval_sys_armed(_cond, ctx)
+    local mfd = ctx.mfd
+    if type(mfd) ~= "table" then return false end
+    return mfd.controlState == "IDLE_ARMED"
+        or mfd.fsmState == "IDLE_ARMED"
+        or mfd.fsmState == "TAKEOFF"
+        or mfd.fsmState == "CRUISE"
+end
+
 local EVALUATORS = {
     PROXIMITY_2D = eval_proximity_2d,
     PROXIMITY_3D = eval_proximity_3d,
@@ -196,59 +203,90 @@ local EVALUATORS = {
     CROSS_TRACK_ERROR = eval_cross_track_error,
     ARM_DOCKED = function(cond, ctx) return eval_arm_state("docked", cond, ctx) end,
     ARM_RELEASED = function(cond, ctx) return eval_arm_state("released", cond, ctx) end,
+    SYS_ARMED = eval_sys_armed,
+    IMMEDIATE = function() return true end,
 }
 
 function condition_evaluator.should_arm_touchdown(fsm_state)
     return ARM_TOUCHDOWN_STATES[fsm_state] == true
 end
 
+local function make_prox2d(cp, p, def)
+    return { logic = "ALL", conditions = { { type = "PROXIMITY_2D", toleranceM = p.acceptanceRadius or def.acceptanceRadius or 20.0, settleTicks = 0 } } }
+end
+
+local function make_prox3d(cp, p)
+    return { logic = "ALL", conditions = { { type = "PROXIMITY_3D", toleranceM = p.acceptanceRadius or 5.0, settleTicks = 4 } } }
+end
+
+local function make_alt_reached(cp, p, def)
+    local allow = (cp.action == "ACT_TKL_TAKEOFF_VERT" or cp.action == "ACT_MOB_MOVING_TKOFF")
+    return { logic = "ANY", conditions = { { type = "ALTITUDE_REACHED", toleranceM = 5.0, targetAlt = p.targetAlt or def.targetAlt, allowFsmCruise = allow, settleTicks = 4 } } }
+end
+
+local function make_touchdown(_cp, p)
+    return { logic = "ALL", conditions = { { type = "FACILITY_TOUCHDOWN", facilityId = p.facilityId } } }
+end
+
+local function make_hold_or_dur(_cp, p)
+    if is_finite(p.durationSec) then
+        return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = p.durationSec } } }
+    end
+    return { logic = "ALL", conditions = {} }
+end
+
+local function make_payload(cp, p)
+    if p.waitForAck == false or p.awaitAck == false then
+        return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = 0 } } }
+    end
+    return {
+        logic = "ALL",
+        conditions = { { type = "PAYLOAD_RESP_MATCH", expectedStatus = p.expectedStatus or "OK", command = p.command, checkpointId = cp.checkpointId } },
+    }
+end
+
+local function make_redstone(_cp, p)
+    if p.mode == "EMIT" then
+        return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = (p.durationMs or 0) / 1000.0 } } }
+    end
+    return { logic = "ALL", conditions = { { type = "REDSTONE_INPUT_HIGH", side = p.side, color = p.color, minLevel = p.minLevel or 1 } } }
+end
+
+local DEFAULT_RESOLVERS = {
+    ACT_NAV_SPLINE_WP = make_prox2d, ACT_FS_RTL_HOME = make_prox2d, ACT_FS_GOTO_RALLY = make_prox2d,
+    ACT_NAV_GOTO_WP = make_prox3d, ACT_NAV_CORRIDOR = make_prox3d, ACT_MOB_RV_TRACK = make_prox3d,
+    ACT_TKL_TAKEOFF_VERT = make_alt_reached, ACT_MOB_MOVING_TKOFF = make_alt_reached,
+    ACT_TKL_ABORT_LAND = make_alt_reached, ACT_NAV_CHANGE_ALT = make_alt_reached, ACT_PAT_LOITER_ALT = make_alt_reached,
+    ACT_TKL_LAND_PREC = make_touchdown, ACT_TKL_LAND_NORM = make_touchdown, ACT_FS_EMERG_LAND = make_touchdown,
+    ACT_PAT_LOITER_TIME = make_hold_or_dur, ACT_PAT_POI_HOLD = make_hold_or_dur,
+    ACT_PAT_HOLD_POS = make_hold_or_dur, ACT_COM_ATC_HOLD = make_hold_or_dur,
+    ACT_PAT_LOITER_TURNS = function(_cp, p) return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = p.durationSec or 30 } } } end,
+    ACT_PAY_BUS_CMD = make_payload, ACT_PAY_REDSTONE = make_redstone,
+    ACT_SYS_ARM = function() return { logic = "ANY", conditions = { { type = "SYS_ARMED" } } } end,
+    ACT_SYS_LOAD = function() return { logic = "ALL", conditions = {} } end,
+    ACT_SYS_PREFLIGHT = function() return { logic = "ALL", conditions = {} } end,
+    ACT_FS_HOVER_HOLD = function() return { logic = "ALL", conditions = {} } end,
+}
+
 function condition_evaluator.resolve_default_complete(cp, defaults)
     if type(cp) ~= "table" or type(cp.action) ~= "string" then
         return nil, "INVALID_CHECKPOINT"
     end
-    if DEFERRED_ACTIONS[cp.action] then
+    if action_registry.is_action_deferred(cp.action) then
         return nil, "DEFERRED_ACTION_UNSUPPORTED"
     end
-    local p = cp.params or {}
-    local def = defaults or {}
-    local act = cp.action
-    if act == "FLY_OVER" then
-        local tol = p.acceptanceRadius or def.acceptanceRadius or 20.0
-        return { logic = "ALL", conditions = { { type = "PROXIMITY_2D", toleranceM = tol } } }, nil
-    elseif act == "FLY_TO" then
-        return { logic = "ALL", conditions = { { type = "PROXIMITY_3D", toleranceM = p.acceptanceRadius or 5.0 } } }, nil
-    elseif act == "TAKEOFF_LAUNCHPAD" then
-        return {
-            logic = "ANY",
-            conditions = { { type = "ALTITUDE_REACHED", toleranceM = 5.0, targetAlt = p.targetAlt or def.targetAlt, allowFsmCruise = true } },
-        }, nil
-    elseif act == "LAND_LAUNCHPAD" then
-        return { logic = "ALL", conditions = { { type = "FACILITY_TOUCHDOWN", facilityId = p.facilityId } } }, nil
-    elseif act == "ORBIT" or act == "POI_HOLD" or act == "PATROL" then
-        if is_finite(p.durationSec) then
-            return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = p.durationSec } } }, nil
-        end
-        return { logic = "ALL", conditions = {} }, nil
-    elseif act == "PAYLOAD_ACTION" then
-        if p.waitForAck == false then
-            return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = 0 } } }, nil
-        end
-        return {
-            logic = "ALL",
-            conditions = { {
-                type = "PAYLOAD_RESP_MATCH",
-                expectedStatus = p.expectedStatus or "OK",
-                command = p.command,
-                checkpointId = cp.checkpointId,
-            } },
-        }, nil
-    elseif act == "REDSTONE_ACTION" then
-        if p.mode == "EMIT" then
-            return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = (p.durationMs or 0) / 1000.0 } } }, nil
-        end
-        return { logic = "ALL", conditions = { { type = "REDSTONE_INPUT_HIGH", side = p.side, color = p.color, minLevel = p.minLevel or 1 } } }, nil
+    if action_registry.is_legacy_action(cp.action) then
+        return nil, "SCHEMA_INVALID"
     end
-    return nil, "UNKNOWN_ACTION"
+    if not action_registry.is_action_supported(cp.action) then
+        return nil, "UNKNOWN_ACTION"
+    end
+    local fn = DEFAULT_RESOLVERS[cp.action]
+    if fn then
+        return fn(cp, cp.params or {}, defaults or {}), nil
+    end
+    local dur = (cp.params and cp.params.durationSec) or 0
+    return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = dur } } }, nil
 end
 
 function condition_evaluator.evaluate_condition(cond, ctx, defaults)
@@ -259,7 +297,16 @@ function condition_evaluator.evaluate_condition(cond, ctx, defaults)
     if not fn then
         return false, { type = cond.type, error = "UNKNOWN_CONDITION_TYPE" }
     end
-    local met = fn(cond, ctx or {}, defaults) == true
+    local eval_ctx = ctx or {}
+    if cond.allowFsmCruise == true and eval_ctx.mfd and eval_ctx.mfd.fsmState == "CRUISE" then
+        return true, { type = cond.type, met = true }
+    end
+    local met = fn(cond, eval_ctx, defaults) == true
+    if is_finite(cond.settleTicks) and cond.settleTicks > 1 and type(eval_ctx.checkpoint) == "table" and type(eval_ctx.checkpoint.settleState) == "table" then
+        local st = eval_ctx.checkpoint.settleState
+        st[cond.type] = met and ((st[cond.type] or 0) + 1) or 0
+        met = met and (st[cond.type] >= cond.settleTicks)
+    end
     return met, { type = cond.type, met = met }
 end
 
@@ -283,12 +330,12 @@ end
 
 function condition_evaluator.format_progress(cp, ctx, defaults)
     if type(cp) ~= "table" then return "NONE" end
-    if DEFERRED_ACTIONS[cp.action] then return "DEFERRED" end
+    if action_registry.is_action_deferred(cp.action) then return "DEFERRED" end
     local grp = cp.completeWhen
     if not grp then grp = condition_evaluator.resolve_default_complete(cp, defaults) end
     local conds = grp and grp.conditions
     if type(conds) ~= "table" or #conds == 0 then
-        return (cp.action == "PATROL") and "PATROL LOOP" or "HOLD/MANUAL"
+        return "HOLD/MANUAL"
     end
     local c = conds[1]
     local logic = grp.logic or "ALL"
@@ -318,7 +365,7 @@ function condition_evaluator.evaluate_checkpoint(cp, ctx, defaults)
     if type(cp) ~= "table" then
         return { aborted = false, completed = false, error = "INVALID_CHECKPOINT" }
     end
-    if DEFERRED_ACTIONS[cp.action] then
+    if action_registry.is_action_deferred(cp.action) then
         return { aborted = false, completed = false, error = "DEFERRED_ACTION_UNSUPPORTED" }
     end
     local eval_ctx = {}
@@ -335,8 +382,6 @@ function condition_evaluator.evaluate_checkpoint(cp, ctx, defaults)
     local completed, comp_res = false, {}
     if cp.completeWhen ~= nil then
         completed, comp_res = condition_evaluator.evaluate_group(cp.completeWhen, eval_ctx, "ALL", defaults)
-    elseif cp.action == "PATROL" and not (cp.params and is_finite(cp.params.durationSec)) then
-        completed = (eval_ctx.patrolCompleted == true)
     else
         local def_grp, err = condition_evaluator.resolve_default_complete(cp, defaults)
         if not def_grp then

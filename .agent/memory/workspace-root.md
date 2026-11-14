@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-14 — GPS 고부하·위상 분산 수정 및 AMM v2.0.0 행동 체계·채터링 가드 통합 (TASK-123, TASK-204)
+
+- **결정 배경**: `TASK-122` 후속 고부하 GPS 경합·버스트·채널 오염 결함(`TASK-123`)을 먼저 해소한 뒤, `TASK-124` 채터링 방지 규격과 `2026-11-12` 설계서를 기반으로 `AMM`의 구 13종 체크포인트를 Zero-Fallback 폐기하고 `AMM v2.0.0` `ACT_*`/`DEC_*`/`MAC_*`/진입조건/방안 A 채터링 방지 가드 체계(`TASK-204`)를 통합함 (`TASK.md`, `GEMINI.md` 동기화).
+- **반영 내역**:
+  1. **`TASK-123` — GPS 고부하 경합·위상 분산·채널 오염 수정 (`e9fdce4`)**: `src/0_infra/gps/modules/session_scheduler.lua`(`ingestReport` 선제 세션 대체 및 `flushExpired` Window-Solve HWM 역전 가드), `src/0_infra/gps/modules/client_core.lua`(`lastReceivedSeq` 단조 필터 및 `CH 60001` 미개방 가드), `src/0_infra/landing_pad/modules/gps_client.lua`·`src/3_planning/amm/modules/nav_engine.lua`(`os.getComputerID()` 기반 `should_query_gps` 위상 분산), `src/0_infra/landing_pad/main.lua`(`CH 60001` 수신 개방 제거), `GPS_PROGRAM_SPECIFICATION_AND_ICD.md` (`v2.3.2 Implemented`), `LANDING_PAD_SPECIFICATION_AND_ICD.md` (`v2.4.4 Implemented`) 및 연관 사양서 배지·`test_e2e_gps_triangulation.lua` 검증을 반영함.
+  2. **`TASK-204` Spec-First 개편 (`Stage 3A`)**: `AMM_PROGRAM_SPECIFICATION.md` (`v2.0.0 Approved`), `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.2.0 Draft`), `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.29.0 Approved`), `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (`v2.14.0 Approved`) 및 연관 11종 사양서를 일괄 동기화함 (`AMM` 사양서는 `TASK-402` 완료 시 `Implemented` 승격 예정).
+  3. **`TASK-204` AMM v2.0.0 & 채터링 가드 구현 (`Stage 3B`)**: `src/3_planning/amm/modules/chattering_guard.lua`(`PRIORITY`, `DEFAULT_CONFIG`, `init`, `reset`, `eval_hysteresis`, `eval_debounce`, `start_dwell`, `is_dwell_locked`, `update_fuel_latches`, `should_skip_on_repeat`), `src/3_planning/amm/modules/action_registry.lua`(활성 36종 `ACT_*`, 예약 22종, 구 13종 `SCHEMA_INVALID` 차단, 6+1종 `DEC_*`, 3+2종 `MAC_*` `deep_copy` 전개, 4대 정적/동적 진입조건), `src/3_planning/amm/config/amm_config.json`(`v2.0.0` + `safety.chattering` 20키), `condition_evaluator.lua`·`hook_runner.lua`·`ui_renderer.lua`·`input_handler.lua`(`guard`/`confirm`)·`c2_arbiter.lua`·`mission_engine.lua`·`main.lua`(`ACT_NAV_SPLINE_WP`/`ACT_TKL_LAND_PREC`, `DEC_EMCON` GPS 억제, `set_cruise_goal`/`set_land_goal` 2인자 수정) 및 `src/0_development/installer/modules/manifest.lua`(`v2.0.0` + 신규 2모듈)를 통합함.
+- **검증**: 단위 12타겟 `469/469 PASS`(`3_planning/amm` `122/122`, `0_infra/gps` `29/29`, `0_infra/landing_pad` `46/46`), E2E 8스위트 `12/12 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), Lua 5.2 `123/123 PASS`, `verify_manifest_sync.py`(`12` 모듈/`112` 경로/`126` 소스/`9` GDrive)·`verify_all_specs.py --check-readmes`(15종) `0 Errors, 0 Warnings`, `verify_spec_status.py` `9 Implemented, 6 Approved PASS`, 하네스 `82/82 PASS`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-13 — AMM 채터링 방지 가드 설계 명세(방안 A) 및 ACTION/연료 임계값 정합화 (TASK-124)
 
 - **결정 배경**: `TASK-204` 착수 전 상태 전이 경계 진동(채터링) 방지 규칙을 마인크래프트 `CC:Tweaked (Lua 5.2)` 및 현행 UAFS 코드베이스(`nav_engine.lua`, `facility_client.lua`, `fcp_config.json`, `VAS Base+2`) 제약에 맞게 정합화함 (`f2e7b10`).

@@ -76,46 +76,51 @@ describe("AMM Multi-Path Resolver and Preflight Schema Validator (external_loade
         assert_false(found_txt)
     end)
 
-    it("validates mission schema across 13 actions, shorthand coords, 12 conditions, and 4 hooks", function()
+    it("validates v2.0.0 mission schema across ACT_*/DEC_*/MAC_*, preconditions, shorthand coords, 12 conditions, and Zero-Fallback rejections", function()
         local ok_valid, err_v, det_v = mission_engine.validate_mission_table({
             missionId = "EDITOR_EXPORT_01",
+            version = "2.0.0",
             executionMode = "REPEAT",
             fallbackPolicy = "LOITER",
             checkpoints = {
-                { action = "FLY_OVER", params = { x = 100, z = -200 } },
-                { action = "ORBIT", params = { targetPos = { x = 200, z = -300 }, radius = 35, direction = "CW" } },
-                { action = "PATROL", params = { waypoints = { { x = 0, z = 0 }, { x = 50, z = 50 } } } },
-                { action = "POI_HOLD", params = { targetPos = { x = 10, z = 10 }, poiPos = { x = 20, y = 65, z = 20 } } },
-                { action = "LAND_LAUNCHPAD", params = { facilityId = "PAD_01" } },
+                { action = "ACT_NAV_SPLINE_WP", params = { x = 100, z = -200 } },
+                { action = "ACT_PAT_LOITER_TIME", decorators = { { decoratorId = "DEC_SMOOTH_TRAJ" } }, params = { targetPos = { x = 200, z = -300 }, radius = 35, direction = "CW", durationSec = 30 } },
+                { action = "ACT_NAV_CORRIDOR", params = { startPos = { x = 0, z = 0 }, endPos = { x = 50, z = 50 } } },
+                { action = "ACT_PAT_POI_HOLD", params = { targetPos = { x = 10, z = 10 }, poiPos = { x = 20, y = 65, z = 20 } } },
+                { action = "ACT_TKL_LAND_PREC", params = { facilityId = "PAD_01" } },
                 {
-                    action = "PAYLOAD_ACTION",
+                    action = "ACT_PAY_BUS_CMD",
                     params = { channelOffset = 20, command = "DROP" },
+                    preconditions = { minFuel = 0.30, disallowedAirframes = { "FIXED_WING" } },
                     completeWhen = { logic = "ALL", conditions = { { type = "PAYLOAD_RESP_MATCH", expectedStatus = "OK" } } },
                     onEnter = { { type = "NOTIFY_OPERATOR", level = "INFO", message = "DROP" } },
                 },
-                { action = "REDSTONE_ACTION", params = { mode = "EMIT", side = "top", durationMs = 250 } },
-                { action = "TAKEOFF_RUNWAY", params = {} },
+                { action = "ACT_PAY_REDSTONE", params = { mode = "EMIT", side = "top", durationMs = 250 } },
+                { action = "ACT_TKL_TAKEOFF_RWY", params = {} },
             },
-        })
+        }, { system = { airframeType = "VECTORED_VTOL" } })
         assert_true(ok_valid, tostring(det_v))
         assert_nil(err_v)
 
         local invalid_cases = {
+            { tbl = { items = { { id = 1, x = 10, z = 20 } } }, substr = "LEGACY_ITEMS" },
             { tbl = { checkpoints = {} }, substr = "EMPTY_CHECKPOINTS" },
-            { tbl = { executionMode = "FOREVER", checkpoints = { { action = "FLY_OVER", params = { x = 1, z = 2 } } } }, substr = "EXECUTION_MODE" },
-            { tbl = { fallbackPolicy = "CRASH", checkpoints = { { action = "FLY_OVER", params = { x = 1, z = 2 } } } }, substr = "FALLBACK_POLICY" },
+            { tbl = { executionMode = "FOREVER", checkpoints = { { action = "ACT_NAV_SPLINE_WP", params = { x = 1, z = 2 } } } }, substr = "EXECUTION_MODE" },
+            { tbl = { fallbackPolicy = "CRASH", checkpoints = { { action = "ACT_NAV_SPLINE_WP", params = { x = 1, z = 2 } } } }, substr = "FALLBACK_POLICY" },
+            { tbl = { checkpoints = { { action = "FLY_OVER", params = { x = 1, z = 2 } } } }, substr = "CP#1" },
             { tbl = { checkpoints = { { action = "WARP", params = {} } } }, substr = "CP#1" },
-            { tbl = { checkpoints = { { action = "ORBIT", params = { targetPos = { x = 0, z = 0 }, radius = 0 } } } }, substr = "CP#1" },
-            { tbl = { checkpoints = { { action = "PATROL", params = { waypoints = {} } } } }, substr = "CP#1" },
-            { tbl = { checkpoints = { { action = "POI_HOLD", params = {} } } }, substr = "CP#1" },
-            { tbl = { checkpoints = { { action = "LAND_LAUNCHPAD", params = {} } } }, substr = "CP#1" },
-            { tbl = { checkpoints = { { action = "PAYLOAD_ACTION", params = { channelOffset = 19, command = "X" } } } }, substr = "CP#1" },
-            { tbl = { checkpoints = { { action = "REDSTONE_ACTION", params = { mode = "EMIT", side = "middle" } } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_PAT_LOITER_TIME", params = { targetPos = { x = 0, z = 0 }, radius = 0 } } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_NAV_CORRIDOR", params = {} } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_PAT_POI_HOLD", params = {} } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_TKL_LAND_PREC", params = {} } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 19, command = "X" } } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_PAY_REDSTONE", params = { mode = "EMIT", side = "middle" } } } }, substr = "CP#1" },
+            { tbl = { checkpoints = { { action = "ACT_TKL_TAKEOFF_VERT", preconditions = { disallowedAirframes = { "VECTORED_VTOL" } }, params = {} } } }, substr = "CP#1" },
             {
                 tbl = {
                     checkpoints = {
                         {
-                            action = "FLY_OVER",
+                            action = "ACT_NAV_SPLINE_WP",
                             params = { x = 10, z = 20 },
                             completeWhen = { logic = "ALL", conditions = { { type = "TELEPORTED" } } },
                         },
@@ -127,7 +132,7 @@ describe("AMM Multi-Path Resolver and Preflight Schema Validator (external_loade
                 tbl = {
                     checkpoints = {
                         {
-                            action = "FLY_OVER",
+                            action = "ACT_NAV_SPLINE_WP",
                             params = { x = 10, z = 20 },
                             onEnter = { { type = "PLAY_SOUND" } },
                         },
@@ -138,7 +143,7 @@ describe("AMM Multi-Path Resolver and Preflight Schema Validator (external_loade
         }
 
         for _, tc in ipairs(invalid_cases) do
-            local ok, code, detail = mission_engine.validate_mission_table(tc.tbl)
+            local ok, code, detail = mission_engine.validate_mission_table(tc.tbl, { system = { airframeType = "VECTORED_VTOL" } })
             assert_false(ok)
             assert_eq(code, "SCHEMA_INVALID")
             assert_true(string.find(tostring(detail), tc.substr, 1, true) ~= nil, "Missing " .. tc.substr .. " in " .. tostring(detail))
@@ -147,9 +152,10 @@ describe("AMM Multi-Path Resolver and Preflight Schema Validator (external_loade
 
     it("loads external mission JSON using shorthand params.x/params.z via resolve_path", function()
         write_raw("/disk/shorthand_sortie.json", textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "DISK_SHORT",
             checkpoints = {
-                { checkpointId = "CP_1", action = "FLY_OVER", params = { x = 120, z = -340 } },
+                { checkpointId = "CP_1", action = "ACT_NAV_SPLINE_WP", params = { x = 120, z = -340 } },
             },
         }))
         local eng = mission_engine.new({ config = { baseChannel = 10000 } })

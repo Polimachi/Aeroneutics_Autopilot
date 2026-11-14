@@ -93,52 +93,81 @@ describe("AMM 12-Type Condition Evaluator and Default Resolver", function()
         assert_true(condition_evaluator.evaluate_group(grp_any, ctx))
     end)
 
-    it("resolves default completeWhen across all 9 active actions, rejects 4 deferred actions, and formats compact progress", function()
-        local over_def = condition_evaluator.resolve_default_complete({ action = "FLY_OVER", params = {} }, { acceptanceRadius = 15 })
-        assert_eq(over_def.conditions[1].type, "PROXIMITY_2D")
-        assert_eq(over_def.conditions[1].toleranceM, 15)
+    it("resolves default completeWhen across v2.0.0 ACT_* actions, rejects deferred/legacy actions, and enforces settleTicks", function()
+        local spl_def = condition_evaluator.resolve_default_complete({ action = "ACT_NAV_SPLINE_WP", params = {} }, { acceptanceRadius = 15 })
+        assert_eq(spl_def.conditions[1].type, "PROXIMITY_2D")
+        assert_eq(spl_def.conditions[1].toleranceM, 15)
+        assert_eq(spl_def.conditions[1].settleTicks, 0)
 
-        local to_def = condition_evaluator.resolve_default_complete({ action = "FLY_TO", params = {} }, { acceptanceRadius = 15 })
+        local to_def = condition_evaluator.resolve_default_complete({ action = "ACT_NAV_GOTO_WP", params = {} }, { acceptanceRadius = 15 })
         assert_eq(to_def.conditions[1].type, "PROXIMITY_3D")
         assert_eq(to_def.conditions[1].toleranceM, 5.0)
+        assert_eq(to_def.conditions[1].settleTicks, 4)
 
-        local tk_cp = { action = "TAKEOFF_LAUNCHPAD", params = { targetAlt = 140 } }
+        local tk_cp = { action = "ACT_TKL_TAKEOFF_VERT", params = { targetAlt = 140 } }
+        local tk_def = condition_evaluator.resolve_default_complete(tk_cp)
+        assert_eq(tk_def.conditions[1].type, "ALTITUDE_REACHED")
+        assert_eq(tk_def.conditions[1].settleTicks, 4)
         local tk_eval = condition_evaluator.evaluate_checkpoint(tk_cp, { mfd = { fsmState = "CRUISE", dynamics = { altitudeY = 80 } } })
         assert_true(tk_eval.completed)
 
-        local land_def = condition_evaluator.resolve_default_complete({ action = "LAND_LAUNCHPAD", params = { facilityId = "PAD_01" } })
+        local land_def = condition_evaluator.resolve_default_complete({ action = "ACT_TKL_LAND_PREC", params = { facilityId = "PAD_01" } })
         assert_eq(land_def.conditions[1].type, "FACILITY_TOUCHDOWN")
 
-        local poi_hold = condition_evaluator.resolve_default_complete({ action = "POI_HOLD", params = {} })
+        local poi_hold = condition_evaluator.resolve_default_complete({ action = "ACT_PAT_POI_HOLD", params = {} })
         assert_eq(#poi_hold.conditions, 0)
 
-        local pat_cp = { action = "PATROL", params = { waypoints = { { x = 0, z = 0 } } } }
-        assert_false(condition_evaluator.evaluate_checkpoint(pat_cp, { patrolCompleted = false }).completed)
-        assert_true(condition_evaluator.evaluate_checkpoint(pat_cp, { patrolCompleted = true }).completed)
-
-        local orb_hold = condition_evaluator.resolve_default_complete({ action = "ORBIT", params = {} })
+        local orb_hold = condition_evaluator.resolve_default_complete({ action = "ACT_PAT_LOITER_TIME", params = {} })
         assert_eq(#orb_hold.conditions, 0)
-        local orb_dur = condition_evaluator.resolve_default_complete({ action = "ORBIT", params = { durationSec = 30 } })
+        local orb_dur = condition_evaluator.resolve_default_complete({ action = "ACT_PAT_LOITER_TIME", params = { durationSec = 30 } })
         assert_eq(orb_dur.conditions[1].type, "DURATION_SEC")
 
-        local pld_imm = condition_evaluator.resolve_default_complete({ action = "PAYLOAD_ACTION", params = { command = "PING", waitForAck = false } })
+        local pld_imm = condition_evaluator.resolve_default_complete({ action = "ACT_PAY_BUS_CMD", params = { command = "PING", waitForAck = false } })
         assert_eq(pld_imm.conditions[1].type, "DURATION_SEC")
         assert_eq(pld_imm.conditions[1].durationSec, 0)
 
-        local rs_emit = condition_evaluator.resolve_default_complete({ action = "REDSTONE_ACTION", params = { mode = "EMIT", side = "top", durationMs = 500 } })
+        local rs_emit = condition_evaluator.resolve_default_complete({ action = "ACT_PAY_REDSTONE", params = { mode = "EMIT", side = "top", durationMs = 500 } })
         assert_eq(rs_emit.conditions[1].durationSec, 0.5)
 
-        local rs_wait = condition_evaluator.resolve_default_complete({ action = "REDSTONE_ACTION", params = { mode = "WAIT_INPUT", side = "back" } })
+        local rs_wait = condition_evaluator.resolve_default_complete({ action = "ACT_PAY_REDSTONE", params = { mode = "WAIT_INPUT", side = "back" } })
         assert_eq(rs_wait.conditions[1].type, "REDSTONE_INPUT_HIGH")
 
-        for _, def_act in ipairs({ "TAKEOFF_RUNWAY", "LAND_RUNWAY", "DOCK_ARM", "UNDOCK_ARM" }) do
+        for _, def_act in ipairs({ "ACT_TKL_TAKEOFF_RWY", "ACT_TKL_LAND_RWY", "ACT_MOB_ARM_DOCK", "ACT_MOB_ARM_UNDOCK", "ACT_PAY_CARGO_DROP" }) do
             local d_res, d_err = condition_evaluator.resolve_default_complete({ action = def_act, params = {} })
             assert_nil(d_res)
             assert_eq(d_err, "DEFERRED_ACTION_UNSUPPORTED")
         end
 
+        -- Zero-Fallback rejection of legacy v1.x action names
+        local leg_res, leg_err = condition_evaluator.resolve_default_complete({ action = "FLY_OVER", params = {} })
+        assert_nil(leg_res)
+        assert_eq(leg_err, "SCHEMA_INVALID")
+
+        -- settleTicks = 4 anti-chattering dwell verification for PROXIMITY_3D
+        local settle_cp = {
+            checkpointId = "CP_SETTLE",
+            action = "ACT_NAV_GOTO_WP",
+            params = { targetPos = { x = 100, z = 0 }, targetAlt = 140, acceptanceRadius = 5.0 },
+            settleState = {},
+        }
+        local in_ctx = {
+            checkpoint = settle_cp,
+            mfd = { fsmState = "CRUISE", dynamics = { altitudeY = 140 }, navigation = { currentPos = { x = 98, z = 0 } } },
+        }
+        local out_ctx = {
+            checkpoint = settle_cp,
+            mfd = { fsmState = "CRUISE", dynamics = { altitudeY = 140 }, navigation = { currentPos = { x = 90, z = 0 } } },
+        }
+        assert_false(condition_evaluator.evaluate_checkpoint(settle_cp, in_ctx).completed) -- tick 1
+        assert_false(condition_evaluator.evaluate_checkpoint(settle_cp, in_ctx).completed) -- tick 2
+        assert_false(condition_evaluator.evaluate_checkpoint(settle_cp, out_ctx).completed) -- reset!
+        assert_false(condition_evaluator.evaluate_checkpoint(settle_cp, in_ctx).completed) -- tick 1
+        assert_false(condition_evaluator.evaluate_checkpoint(settle_cp, in_ctx).completed) -- tick 2
+        assert_false(condition_evaluator.evaluate_checkpoint(settle_cp, in_ctx).completed) -- tick 3
+        assert_true(condition_evaluator.evaluate_checkpoint(settle_cp, in_ctx).completed)  -- tick 4 -> complete!
+
         local str = condition_evaluator.format_progress(
-            { action = "ORBIT", params = { durationSec = 30 } },
+            { action = "ACT_PAT_LOITER_TIME", params = { durationSec = 30 } },
             { enteredAtMs = 0, nowMs = 12000 }
         )
         assert_true(#str > 0 and #str <= 25)

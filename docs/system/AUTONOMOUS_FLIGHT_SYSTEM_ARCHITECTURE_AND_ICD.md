@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.28.0` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.29.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.29.0` | `2026-11-14` | AMM v2.0.0 행동 프리미티브 체계(`ACT_*`/`DEC_*`/`MAC_*`) 및 채터링 방지 가드(`chattering_guard`) 반영: `[I-6]` `MSG_MISSION_CMD` `CONFIRM` 명령 및 `MSG_MISSION_ACK` `PRECONDITION_FAILED` 응답 추가, 구 13종 액션명 및 `v1.0.0 items[]` `[DEPRECATED]`(Zero-Fallback 거부), §5.1 AMM 행 `v2.0.0 Approved` 및 교차 참조(`Diagram v2.14.0`) 동기화 | `TASK-204` & `TASK-124` 표준 미션 스키마 v2.0.0 및 안전 인터록 일원화 |
 | `v1.28.0` | 2026-11-12 | FCP-AMM 역할 분리 및 인터페이스 단일화 개정: AMM(Node 03)을 듀얼 모뎀 외부 게이트웨이(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`)·C2(`Base+0`)·5Hz MFD(`Base+3`)·항법 융합·20Hz 궤적 생성기 전담 노드로 승격, FCP(Node 04)를 `Base+4`↔`Base+1` 순수 `SE(3)` 외루프 제어기로 축소, `Base+4`를 `[I-12]` `CH_TRAJECTORY_CMD`(`MSG_TRAJECTORY_SETPOINT` / `MSG_OUTER_LOOP_STATUS`, 구 `CH_NAV_SENSOR` `[DEPRECATED]`)로 재편, `[I-2]` `Base+1` 지령을 `QUATERNION_RATE` 스키마로 정규화(구 `ATTITUDE_ANGLE` 등 `[DEPRECATED]`), `[I-10]` `Base+11` 패킷을 `MSG_AERO_CMD` / `MSG_AERO_STATUS`(`MSG_SURFACE_CMD`/`STATUS` `[DEPRECATED]`)로 단일화, 섹션 4~5 워치독(3단계 타임아웃 격리) 및 교차 참조 버전 동기화 | AMM-FCP-VAS 계층 직교성 확립 및 Zero-Fallback 와이어 계약 일원화 |
 | `v1.27.0` | 2026-11-11 | 조종석 AMM(Node 03, v1.2.0) 외부 미션 에디터(`tools/amm_mission_editor.html`) 및 외부 파일 즉시 구동 파이프라인 반영: `MSG_MISSION_CMD.payload.missionName` 다중 경로(`/disk/...` 등) 지원 및 `MSG_MISSION_ACK.payload.status`에 프리플라이트 스키마 검증 실패 코드(`SCHEMA_INVALID`) 추가 | 외부 GUI 에디터 저작 미션 및 외부 투입 파일의 스키마 검증·즉시 구동 연동 |
 | `v1.26.0` | 2026-11-11 | 조종석 AMM(Node 03, v1.1.0) 통합 미션 시퀀서 인터페이스 반영: Interface I-6(`Base+0`)에 원격 미션 제어 패킷(`MSG_MISSION_CMD`/`MSG_MISSION_ACK`) 및 `MSG_OPERATOR_CMD` 확장 파라미터(`POI_HOLD`, `loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 추가, Interface I-11(`Base+20~29` Zone 3 탑재체 버스 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK`) 명세 신설 | TASK-202 통합 미션 시퀀서 엔진 및 Zone 3 탑재체 인터페이스 확립 |
@@ -36,7 +37,7 @@
 본 문서는 자율 비행체 시스템을 구성하는 소프트웨어/하드웨어 프로그램 간에 오고 가는 **모든 데이터 패킷의 필드 규격, 데이터 타입, 물리 단위, 인코딩 포맷 및 상태 전이 규칙**을 정의한 표준 인터페이스 제어 규격서(ICD)입니다.
 
 > [!TIP]
-> - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.13.0)에 시각화되어 있습니다.
+> - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.14.0)에 시각화되어 있습니다.
 > - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.4.2)에 상세 기술되어 있습니다.
 > - 자율 비행 외루프 제어기(FCP, Node 04)의 순수 온보드 `SE(3)` 가속도/자세 투영 법칙($g = 11.0\text{ m/s}^2$, `Base+4`/`Base+2`/`Base+1` 단일 `top` 모뎀 격리), 6대 기체 타입별 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`) 생성, 6-State 외루프 FSM(`PASSIVE_TRACKING` 2.0s 범프리스 복귀 및 `AMM_TIMEOUT` 500ms $\to$ 10s 홀드 $\to$ `EMERGENCY_LAND`) 명세는 **[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md)** (v2.0.0)에 상세 기술되어 있습니다.
 > - 공력 날개 및 조종면(에일러론/승강타/방향타/플랩) 분산 구동기, VAS 산하 3구역 노드(Node 06-xx, Base+11, 구 Base+7 `[DEPRECATED]`), `MSG_AERO_CMD`/`MSG_AERO_STATUS`(`MSG_SURFACE_CMD`/`STATUS` `[DEPRECATED]`), `peripheral.find` 동적 탐색 및 300ms 안전 활공 트림(Safe Glide Trim) 규격은 **[ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md)** (v1.7.0)에 상세 기술되어 있습니다.
@@ -48,7 +49,7 @@
 > - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.4.4)에 상세 기술되어 있습니다.
 > - 고정익 활주로 및 항모 비행갑판의 가상 ILS, 유선 모뎀 조명망(PAPI/RWSL) 제어, 무선 상태 추적 및 유도로 GAC 연동 관제 명세는 **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.10.7)에 상세 기술되어 있습니다.
 > - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.11.2)에 상세 기술되어 있습니다.
-> - 조종석 통합 단말 및 외부 게이트웨이(AMM, Node 03)의 듀얼 모뎀 외부 통신(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), 온보드 C2 단일 진입(`Base+0`), 평시 5Hz MFD 다운링크(`Base+3`, `MFD_ACRO` 시 양보), 20Hz `nav_engine` GPS/DR 융합 및 `trajectory_generator`(`Base+4` `[I-12]`), 20Hz 코루틴 A / 5Hz TUI 코루틴 B 분리, 3분할 미션 코어(`mission_engine`, `condition_evaluator`, `hook_runner`), 13종 체크포인트 스키마, Zone 3 탑재체 버스(`Base+20~29`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 외부 에디터(`tools/amm_mission_editor.html`) 및 다중 경로 구동 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v1.3.0)에 상세 기술되어 있습니다.
+> - 조종석 통합 단말 및 외부 게이트웨이(AMM, Node 03)의 듀얼 모뎀 외부 통신(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), 온보드 C2 단일 진입(`Base+0`), 평시 5Hz MFD 다운링크(`Base+3`, `MFD_ACRO` 시 양보), 20Hz `nav_engine` GPS/DR 융합 및 `trajectory_generator`(`Base+4` `[I-12]`), 20Hz 코루틴 A / 5Hz TUI 코루틴 B 분리, 5모듈 미션 코어(`mission_engine`, `action_registry`, `chattering_guard`, `condition_evaluator`, `hook_runner`), `ACT_*`/`DEC_*`/`MAC_*` 3계층 행동 및 4대 `preconditions`, Zone 3 탑재체 버스(`Base+20~29`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), 외부 에디터(`tools/amm_mission_editor.html`) 및 다중 경로 구동 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v2.0.0)에 상세 기술되어 있습니다.
 
 ### 1.1 공통 패킷 엔벨로프 (Common Message Envelope)
 CC:Tweaked Rednet 및 모뎀 전송의 직렬화 오버헤드를 최소화하고 고속 역직렬화를 보장하기 위해, 모든 메시지는 다음의 표준 공통 Lua 테이블 엔벨로프를 필수 적용합니다.
@@ -1025,7 +1026,7 @@ flowchart TD
 
 #### 1-B. 원격 미션 시퀀서 제어 패킷 (`MSG_MISSION_CMD` / `MSG_MISSION_ACK`, Base+0)
 - **수신/발신자**: `GCS` $\leftrightarrow$ `AMM` (Node 03)
-- **동작 원리**: 별도 채널을 추가하지 않고 `Base + 0` (`CH_OPERATOR_C2`)에서 AMM이 `MSG_MISSION_CMD`를 수신하여 온보드 미션 시퀀서(`RUN`, `STOP`, `PAUSE`, `RESUME`, `NEXT`)를 제어한 뒤 `MSG_MISSION_ACK`를 회신합니다.
+- **동작 원리**: 별도 채널을 추가하지 않고 `Base + 0` (`CH_OPERATOR_C2`)에서 AMM이 `MSG_MISSION_CMD`를 수신하여 온보드 미션 시퀀서(`RUN`, `STOP`, `PAUSE`, `RESUME`, `NEXT`, `CONFIRM`)를 제어한 뒤 `MSG_MISSION_ACK`를 회신합니다.
 
 ```lua
 -- 1. GCS -> AMM: 원격 미션 제어 요청 (MSG_MISSION_CMD, Base+0)
@@ -1036,7 +1037,7 @@ flowchart TD
     type = "MSG_MISSION_CMD",
     time = 1729845010000,
     payload = {
-        action = "RUN",                -- "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT"
+        action = "RUN",                -- "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT" | "CONFIRM"
         missionName = "patrol_alpha",  -- 단축 미션명 또는 외부/플로피 경로 (예: "/disk/sortie.json")
         executionMode = "SINGLE",      -- "SINGLE" | "REPEAT"
         forceRestart = false
@@ -1052,7 +1053,7 @@ flowchart TD
     time = 1729845010020,
     payload = {
         action = "RUN",
-        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "SCHEMA_INVALID" | "DEFERRED_ACTION_UNSUPPORTED" | "INVALID_CMD"
+        status = "ACCEPTED",           -- "ACCEPTED" | "BUSY_REJECTED" | "FILE_NOT_FOUND" | "SCHEMA_INVALID" | "DEFERRED_ACTION_UNSUPPORTED" | "PRECONDITION_FAILED" | "INVALID_CMD"
         missionId = "PATROL_ALPHA",
         missionState = "EN_ROUTE",
         activeIndex = 1,
@@ -1546,7 +1547,7 @@ flowchart TD
 ### 5.1 온보드 및 인프라 프로그램 사양·구현 현황
 | 프로그램 명 | 노드 ID | 사양 버전 / 상태 | 구현 및 검증 현황 | 비고 |
 | :--- | :---: | :---: | :--- | :--- |
-| **AMM** | Node 03 | `v1.3.0` (`Approved`) | `v1.2.0` 코어·에디터 구현 완료, `v1.3.0` 외부 게이트웨이/항법/궤적 생성 사양 확정 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+20~29` |
+| **AMM** | Node 03 | `v2.0.0` (`Approved`) | `v2.0.0` `ACT_*`/`DEC_*`/`MAC_*`·`preconditions`·채터링 가드 사양 확정 (WebUI 에디터 `TASK-402` 잔여로 `Approved` 유지) | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+20~29` |
 | **FCP** | Node 04 | `v2.0.0` (`Approved`) | `v1.16.0` 기반 축소 개편, `v2.0.0` 순수 `SE(3)` 외루프 사양 확정 | 단일 `top` 모뎀 `Base+4/+2/+1`, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 6-State FSM |
 | **VAS** | Node 01 | `v1.19.0` (`Approved`) | `v1.18.0` 기반 개편, `v1.19.0` `QUATERNION_RATE` 및 `FCP_TIMEOUT` 격리 사양 확정 | `SO(3)` 내루프, `E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD |
 | **TCA 클러스터** | Node 02-xx | `v1.11.1` (`Implemented`) | 구현 및 단위/E2E 검증 완료 | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독 |

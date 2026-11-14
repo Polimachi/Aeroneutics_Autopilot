@@ -7,19 +7,46 @@ local ui_renderer = {}
 local W, H = 51, 19
 
 local ACTION_SHORT = {
-    TAKEOFF_LAUNCHPAD = "TKOFF",
-    LAND_LAUNCHPAD = "LAND",
-    FLY_OVER = "FLYOV",
-    FLY_TO = "FLYTO",
-    ORBIT = "ORBIT",
-    PATROL = "PATROL",
-    POI_HOLD = "POIHLD",
-    PAYLOAD_ACTION = "PAYLD",
-    REDSTONE_ACTION = "RDSTN",
-    TAKEOFF_RUNWAY = "TKORW",
-    LAND_RUNWAY = "LNDRW",
-    DOCK_ARM = "DCKARM",
-    UNDOCK_ARM = "UNDCK",
+    ACT_SYS_LOAD = "LOAD",
+    ACT_SYS_PREFLIGHT = "PREFLT",
+    ACT_SYS_SET_HOME = "SETHM",
+    ACT_SYS_ARM = "ARM",
+    ACT_SYS_DISARM = "DISARM",
+    ACT_SYS_TERMINATE = "TERM",
+    ACT_TKL_TAKEOFF_VERT = "TKOFF",
+    ACT_TKL_TRANS_MC2FW = "MC2FW",
+    ACT_TKL_TRANS_FW2MC = "FW2MC",
+    ACT_TKL_LAND_NORM = "LAND",
+    ACT_TKL_LAND_PREC = "LAND",
+    ACT_TKL_ABORT_LAND = "ABTLND",
+    ACT_NAV_GOTO_WP = "GOTO",
+    ACT_NAV_SPLINE_WP = "SPLINE",
+    ACT_NAV_CORRIDOR = "CORR",
+    ACT_NAV_CHANGE_ALT = "CHGALT",
+    ACT_NAV_CHANGE_SPD = "CHGSPD",
+    ACT_NAV_CHANGE_YAW = "CHGYAW",
+    ACT_PAT_HOLD_POS = "HOLD",
+    ACT_PAT_POI_HOLD = "POIHLD",
+    ACT_PAT_LOITER_TIME = "ORBIT",
+    ACT_PAT_LOITER_TURNS = "ORBIT",
+    ACT_PAT_LOITER_ALT = "ORBIT",
+    ACT_PAY_BUS_CMD = "PAYLD",
+    ACT_PAY_REDSTONE = "RDSTN",
+    ACT_PAY_SET_ROI = "SETROI",
+    ACT_PAY_CLEAR_ROI = "CLRROI",
+    ACT_COM_ATC_HOLD = "ATCHLD",
+    ACT_MOB_RV_TRACK = "RVTRK",
+    ACT_MOB_DECK_SYNC = "DCKSYN",
+    ACT_MOB_MOVING_TKOFF = "MVTKOF",
+    ACT_FS_RTL_HOME = "RTH",
+    ACT_FS_GOTO_RALLY = "RALLY",
+    ACT_FS_FENCE_BRAKE = "BRAKE",
+    ACT_FS_HOVER_HOLD = "HOVER",
+    ACT_FS_EMERG_LAND = "EMLND",
+    ACT_TKL_TAKEOFF_RWY = "TKORW",
+    ACT_TKL_LAND_RWY = "LNDRW",
+    ACT_MOB_ARM_DOCK = "DCKARM",
+    ACT_MOB_ARM_UNDOCK = "UNDCK",
 }
 
 local function pad(str, len, align_right)
@@ -221,20 +248,16 @@ local function format_action_detail(cp, source, is_engine)
     if not cp then return "NONE" end
     local act = cp.action or "NONE"
     local p = cp.params or {}
-    if act == "ORBIT" then
+    if act == "ACT_PAT_LOITER_TIME" or act == "ACT_PAT_LOITER_TURNS" or act == "ACT_PAT_LOITER_ALT" then
         return string.format("ORBIT %s R:%dm", p.direction or "CW", math.floor(p.radius or 50))
-    elseif act == "PATROL" then
-        local p_idx = (source and source.patrolState and source.patrolState.waypointIndex) or 1
-        local p_tot = (p.waypoints and #p.waypoints) or 0
-        return string.format("PATROL (%d/%d) %s", p_idx, p_tot, p.patrolMode or "LOOP")
-    elseif act == "PAYLOAD_ACTION" then
+    elseif act == "ACT_PAY_BUS_CMD" then
         local ch = p.channelOffset and string.format("CH+%d", p.channelOffset) or (p.command or "")
         return "PAYLD " .. ch
-    elseif act == "REDSTONE_ACTION" then
+    elseif act == "ACT_PAY_REDSTONE" then
         return string.format("RDSTN %s %s", p.side or "top", p.mode or "EMIT")
-    elseif act == "TAKEOFF_LAUNCHPAD" then
+    elseif act == "ACT_TKL_TAKEOFF_VERT" or act == "ACT_MOB_MOVING_TKOFF" then
         return "TKOFF " .. tostring(p.facilityId or "")
-    elseif act == "LAND_LAUNCHPAD" then
+    elseif act == "ACT_TKL_LAND_PREC" or act == "ACT_TKL_LAND_NORM" then
         return "LAND " .. tostring(p.facilityId or "")
     end
     return ACTION_SHORT[act] or act
@@ -250,12 +273,7 @@ local function resolve_active_target_pos(cp, source, is_engine)
     end
     if not cp then return nil, nil end
     local p = cp.params or {}
-    if cp.action == "PATROL" and p.waypoints then
-        local p_idx = (source and source.patrolState and source.patrolState.waypointIndex) or 1
-        local wp = p.waypoints[p_idx]
-        if wp and wp.x and wp.z then return wp.x, wp.z end
-    end
-    local pos = p.targetPos or (p.x and p.z and { x = p.x, z = p.z })
+    local pos = p.targetPos or p.endPos or (p.x and p.z and { x = p.x, z = p.z })
     if pos and pos.x and pos.z then return pos.x, pos.z end
     return nil, nil
 end

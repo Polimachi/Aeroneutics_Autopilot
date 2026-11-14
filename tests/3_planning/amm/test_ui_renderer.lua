@@ -104,17 +104,17 @@ describe("AMM 51x19 Dual-Pane TUI Renderer (ui_renderer)", function()
         local cps = {}
         for i = 1, 10 do
             if i == 1 then
-                cps[i] = { checkpointId = "CP_01", action = "TAKEOFF_LAUNCHPAD", params = { facilityId = "PAD_BRAVO", targetAlt = 150 } }
+                cps[i] = { checkpointId = "CP_01", action = "ACT_TKL_TAKEOFF_VERT", params = { facilityId = "PAD_BRAVO", targetAlt = 150 } }
             elseif i == 5 then
-                cps[i] = { checkpointId = "CP_05", action = "PAYLOAD_ACTION", params = { channelOffset = 20, command = "DROP" } }
+                cps[i] = { checkpointId = "CP_05", action = "ACT_PAY_BUS_CMD", params = { channelOffset = 20, command = "DROP" } }
             elseif i == 6 then
                 cps[i] = {
                     checkpointId = "CP_06",
-                    action = "ORBIT",
+                    action = "ACT_PAT_LOITER_TIME",
                     params = { targetPos = { x = 450, z = -1200 }, targetAlt = 150, cruiseSpeed = 18, radius = 40, direction = "CW", durationSec = 30 },
                 }
             else
-                cps[i] = { checkpointId = "CP_" .. i, action = "FLY_OVER", params = { targetPos = { x = i * 100, z = -100 }, acceptanceRadius = 20 } }
+                cps[i] = { checkpointId = "CP_" .. i, action = "ACT_NAV_SPLINE_WP", params = { targetPos = { x = i * 100, z = -100 }, acceptanceRadius = 20 } }
             end
         end
         assert_true(eng:load_table({ missionId = "SORTIE_LONG_NAME_99", executionMode = "REPEAT", checkpoints = cps }))
@@ -168,7 +168,7 @@ describe("AMM 51x19 Dual-Pane TUI Renderer (ui_renderer)", function()
         local eng_short = mission_engine.new({ config = { baseChannel = 10000 } })
         assert_true(eng_short:load_table({
             missionId = "SHORT",
-            checkpoints = { { action = "FLY_TO", params = { x = 10, z = 20 } } },
+            checkpoints = { { action = "ACT_NAV_GOTO_WP", params = { x = 10, z = 20 } } },
         }))
         ui_renderer.render_screen(buf, mfd, eng_short, { domainId = "AIRCRAFT_01", authority = "PILOT_PRIMARY", banner = "SHORT", input_mode = "NAV", now_ms = 1000 })
         for r = 5, 9 do

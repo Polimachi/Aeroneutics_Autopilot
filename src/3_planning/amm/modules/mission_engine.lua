@@ -1,6 +1,8 @@
 -- src/3_planning/amm/modules/mission_engine.lua
--- AMM Mission Engine: 13-Action Checkpoint Taxonomy, Polymorphic Loader & Sequencer FSM
+-- AMM v2.0.0 Mission Engine: 3-Tier Action Primitives, Macros, Decorators & Sequencer FSM
 
+local action_registry = require("action_registry")
+local chattering_guard = require("chattering_guard")
 local condition_evaluator = require("condition_evaluator")
 local hook_runner = require("hook_runner")
 
@@ -8,46 +10,12 @@ local mission_engine = {}
 mission_engine.__index = mission_engine
 
 mission_engine.DEFERRED_ERROR = "DEFERRED_ACTION_UNSUPPORTED"
+mission_engine.ACTIVE_ACTIONS = action_registry.ACTIVE_LIFECYCLES
+mission_engine.DEFERRED_ACTIONS = action_registry.DEFERRED_ACTIONS
 
-mission_engine.ACTIVE_ACTIONS = {
-    FLY_OVER = true,
-    FLY_TO = true,
-    ORBIT = true,
-    PATROL = true,
-    POI_HOLD = true,
-    TAKEOFF_LAUNCHPAD = true,
-    LAND_LAUNCHPAD = true,
-    PAYLOAD_ACTION = true,
-    REDSTONE_ACTION = true,
-}
-
-mission_engine.DEFERRED_ACTIONS = {
-    TAKEOFF_RUNWAY = true,
-    LAND_RUNWAY = true,
-    DOCK_ARM = true,
-    UNDOCK_ARM = true,
-}
-
-mission_engine.ACTION_TAXONOMY = {
-    FLY_OVER = { domain = "NAV", status = "ACTIVE" },
-    FLY_TO = { domain = "NAV", status = "ACTIVE" },
-    ORBIT = { domain = "NAV", status = "ACTIVE" },
-    PATROL = { domain = "NAV", status = "ACTIVE" },
-    POI_HOLD = { domain = "NAV", status = "ACTIVE" },
-    TAKEOFF_LAUNCHPAD = { domain = "INFRA", status = "ACTIVE" },
-    LAND_LAUNCHPAD = { domain = "INFRA", status = "ACTIVE" },
-    TAKEOFF_RUNWAY = { domain = "INFRA", status = "DEFERRED" },
-    LAND_RUNWAY = { domain = "INFRA", status = "DEFERRED" },
-    DOCK_ARM = { domain = "INFRA", status = "DEFERRED" },
-    UNDOCK_ARM = { domain = "INFRA", status = "DEFERRED" },
-    PAYLOAD_ACTION = { domain = "SPECIAL", status = "ACTIVE" },
-    REDSTONE_ACTION = { domain = "SPECIAL", status = "ACTIVE" },
-}
-
-local VALID_SIDES = {
-    top = true, bottom = true, left = true,
-    right = true, front = true, back = true,
-}
+local VALID_SIDES = { top = true, bottom = true, left = true, right = true, front = true, back = true }
+local VALID_EXEC_MODES = { SINGLE = true, REPEAT = true, LOOP = true }
+local VALID_FALLBACKS = { SKIP_NEXT = true, RTH = true, HOVER_HOLD = true, LOITER = true }
 
 local function is_finite(n)
     return type(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge
@@ -61,27 +29,18 @@ local function is_pos_xz(pos)
     return type(pos) == "table" and is_finite(pos.x) and is_finite(pos.z)
 end
 
-local function shallow_copy(src)
-    local out = {}
-    if type(src) ~= "table" then return out end
-    for k, v in pairs(src) do
-        out[k] = v
-    end
-    return out
+local function get_time_ms(now_ms)
+    return (type(now_ms) == "number" and now_ms) or ((os.epoch and os.epoch("utc")) or (os.time() * 1000)) or 0
 end
 
-local function is_zone3_spec(p, base_channel)
-    if p.channelOffset ~= nil then
-        return is_finite_int(p.channelOffset) and p.channelOffset >= 20 and p.channelOffset <= 29
+local function extract_target_pos(p)
+    if type(p) ~= "table" then return nil end
+    if is_pos_xz(p.targetPos) then return p.targetPos end
+    if is_finite(p.x) and is_finite(p.z) then
+        p.targetPos = { x = p.x, z = p.z }
+        return p.targetPos
     end
-    local ch = (p.targetChannel ~= nil) and p.targetChannel or p.channel
-    if not is_finite_int(ch) then return false end
-    if is_finite_int(base_channel) then
-        return ch >= base_channel + 20 and ch <= base_channel + 29
-    end
-    if ch < 10000 then return false end
-    local rem = ch % 40
-    return rem >= 20 and rem <= 29
+    return nil
 end
 
 local function inherit_flight_defaults(p, defaults, opts, default_radius)
@@ -97,14 +56,16 @@ local function inherit_flight_defaults(p, defaults, opts, default_radius)
     end
 end
 
-local function extract_target_pos(p)
-    if type(p) ~= "table" then return nil end
-    if is_pos_xz(p.targetPos) then return p.targetPos end
-    if is_finite(p.x) and is_finite(p.z) then
-        p.targetPos = { x = p.x, z = p.z }
-        return p.targetPos
+local function is_zone3_spec(p, base_channel)
+    if p.channelOffset ~= nil then
+        return is_finite_int(p.channelOffset) and p.channelOffset >= 20 and p.channelOffset <= 29
     end
-    return nil
+    local ch = (p.targetChannel ~= nil) and p.targetChannel or p.channel
+    if not is_finite_int(ch) then return false end
+    if is_finite_int(base_channel) then
+        return ch >= base_channel + 20 and ch <= base_channel + 29
+    end
+    return ch >= 10000 and (ch % 40) >= 20 and (ch % 40) <= 29
 end
 
 local function validate_fly_over(p, defaults, opts)
@@ -118,11 +79,19 @@ end
 
 local function validate_fly_to(p, defaults, opts)
     if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
-    local explicit_rad = p.acceptanceRadius
-    inherit_flight_defaults(p, defaults, opts, explicit_rad or 5.0)
+    inherit_flight_defaults(p, defaults, opts, p.acceptanceRadius or 5.0)
     if not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0 then
         return false, "INVALID_ACCEPTANCE_RADIUS"
     end
+    return true
+end
+
+local function validate_corridor(p, defaults, opts)
+    if not is_pos_xz(p.startPos) or not is_pos_xz(p.endPos) then
+        return false, "INVALID_CORRIDOR_BOUNDS"
+    end
+    if p.targetPos == nil then p.targetPos = p.endPos end
+    inherit_flight_defaults(p, defaults, opts, p.acceptanceRadius or 5.0)
     return true
 end
 
@@ -130,7 +99,7 @@ local function validate_orbit(p, defaults, opts)
     if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
     inherit_flight_defaults(p, defaults, opts)
     p.radius = (p.radius ~= nil) and p.radius or 30.0
-    if not is_finite(p.radius) or p.radius <= 0 then
+    if not is_finite(p.radius) or p.radius < 5.0 then
         return false, "INVALID_ORBIT_RADIUS"
     end
     p.direction = p.direction or "CW"
@@ -140,27 +109,10 @@ local function validate_orbit(p, defaults, opts)
     return true
 end
 
-local function validate_patrol(p, defaults, opts)
-    if type(p.waypoints) ~= "table" or #p.waypoints < 1 then
-        return false, "INVALID_PATROL_WAYPOINTS"
-    end
-    for _, wp in ipairs(p.waypoints) do
-        if not is_pos_xz(wp) then return false, "INVALID_PATROL_WAYPOINTS" end
-    end
-    inherit_flight_defaults(p, defaults, opts)
-    p.patrolMode = p.patrolMode or "LOOP"
-    if p.patrolMode ~= "LOOP" and p.patrolMode ~= "PING_PONG" then
-        return false, "INVALID_PATROL_MODE"
-    end
-    p.cycles = (p.cycles ~= nil) and p.cycles or 1
-    if not is_finite_int(p.cycles) or p.cycles < 1 then
-        return false, "INVALID_PATROL_CYCLES"
-    end
-    return true
-end
-
 local function validate_poi_hold(p, defaults, opts)
-    if not is_pos_xz(p.targetPos) then return false, "INVALID_TARGET_POS" end
+    if (p.targetPos ~= nil or p.x ~= nil or p.z ~= nil) and not extract_target_pos(p) then
+        return false, "INVALID_TARGET_POS"
+    end
     if p.poiPos == nil then return false, "MISSING_POI_POS" end
     if not is_pos_xz(p.poiPos) or (p.poiPos.y ~= nil and not is_finite(p.poiPos.y)) then
         return false, "INVALID_POI_POS"
@@ -171,293 +123,146 @@ local function validate_poi_hold(p, defaults, opts)
     return true
 end
 
-local function validate_takeoff_launchpad(p, defaults, opts)
-    if p.targetPos ~= nil and not is_pos_xz(p.targetPos) then
+local function validate_takeoff(p, defaults, opts)
+    if (p.targetPos ~= nil or p.x ~= nil or p.z ~= nil) and not extract_target_pos(p) then
         return false, "INVALID_TARGET_POS"
     end
     inherit_flight_defaults(p, defaults, opts)
-    if p.targetAlt ~= nil and not is_finite(p.targetAlt) then
-        return false, "INVALID_TARGET_ALT"
-    end
+    if p.targetAlt ~= nil and not is_finite(p.targetAlt) then return false, "INVALID_TARGET_ALT" end
     if p.facilityId ~= nil and (type(p.facilityId) ~= "string" or p.facilityId == "") then
         return false, "INVALID_FACILITY_ID"
     end
     return true
 end
 
-local function validate_land_launchpad(p, defaults, opts)
+local function validate_land(p, defaults, opts)
     local has_fac = type(p.facilityId) == "string" and p.facilityId ~= ""
-    local has_pos = is_pos_xz(p.targetPos)
-    if not has_fac and not has_pos then
-        return false, "INVALID_LAND_PARAMS"
-    end
-    if p.targetPos ~= nil and not has_pos then
+    local has_pos = extract_target_pos(p) ~= nil
+    if not has_fac and not has_pos then return false, "INVALID_LAND_PARAMS" end
+    if p.targetPos ~= nil and not is_pos_xz(p.targetPos) then return false, "INVALID_TARGET_POS" end
+    inherit_flight_defaults(p, defaults, opts)
+    return true
+end
+
+local function validate_payload_action(p, _defaults, opts)
+    if not is_zone3_spec(p, opts and opts.baseChannel) then return false, "INVALID_ZONE3_CHANNEL" end
+    if type(p.command) ~= "string" or p.command == "" then return false, "MISSING_PAYLOAD_COMMAND" end
+    if p.waitForAck == nil then p.waitForAck = (p.awaitAck ~= false) end
+    if p.expectedStatus == nil then p.expectedStatus = "OK" end
+    if p.commandPayload == nil then p.commandPayload = p.payload or {} end
+    return true
+end
+
+local function validate_redstone_action(p)
+    if p.mode ~= "EMIT" and p.mode ~= "WAIT_INPUT" then return false, "INVALID_REDSTONE_MODE" end
+    if not VALID_SIDES[p.side] then return false, "INVALID_REDSTONE_SIDE" end
+    p.durationMs = (p.durationMs ~= nil) and p.durationMs or 0
+    if not is_finite(p.durationMs) or p.durationMs < 0 then return false, "INVALID_REDSTONE_DURATION" end
+    if p.mode == "WAIT_INPUT" and p.minLevel == nil then p.minLevel = 1 end
+    return true
+end
+
+local function validate_optional_pos(p, defaults, opts)
+    if (p.targetPos ~= nil or p.x ~= nil or p.z ~= nil) and not extract_target_pos(p) then
         return false, "INVALID_TARGET_POS"
     end
     inherit_flight_defaults(p, defaults, opts)
     return true
 end
 
-local function validate_payload_action(p, _defaults, opts)
-    local base_ch = opts and opts.baseChannel
-    if not is_zone3_spec(p, base_ch) then
-        return false, "INVALID_ZONE3_CHANNEL"
-    end
-    if type(p.command) ~= "string" or p.command == "" then
-        return false, "MISSING_PAYLOAD_COMMAND"
-    end
-    if p.waitForAck == nil then p.waitForAck = true end
-    if p.expectedStatus == nil then p.expectedStatus = "OK" end
-    if p.commandPayload == nil then p.commandPayload = {} end
-    return true
-end
-
-local function validate_redstone_action(p)
-    if p.mode ~= "EMIT" and p.mode ~= "WAIT_INPUT" then
-        return false, "INVALID_REDSTONE_MODE"
-    end
-    if not VALID_SIDES[p.side] then
-        return false, "INVALID_REDSTONE_SIDE"
-    end
-    p.durationMs = (p.durationMs ~= nil) and p.durationMs or 0
-    if not is_finite(p.durationMs) or p.durationMs < 0 then
-        return false, "INVALID_REDSTONE_DURATION"
-    end
-    if p.mode == "WAIT_INPUT" and p.minLevel == nil then
-        p.minLevel = 1
-    end
-    return true
-end
-
 local ACTION_VALIDATORS = {
-    FLY_OVER = validate_fly_over,
-    FLY_TO = validate_fly_to,
-    ORBIT = validate_orbit,
-    PATROL = validate_patrol,
-    POI_HOLD = validate_poi_hold,
-    TAKEOFF_LAUNCHPAD = validate_takeoff_launchpad,
-    LAND_LAUNCHPAD = validate_land_launchpad,
-    PAYLOAD_ACTION = validate_payload_action,
-    REDSTONE_ACTION = validate_redstone_action,
+    ACT_NAV_SPLINE_WP = validate_fly_over,
+    ACT_NAV_GOTO_WP = validate_fly_to,
+    ACT_NAV_CORRIDOR = validate_corridor,
+    ACT_PAT_LOITER_TIME = validate_orbit,
+    ACT_PAT_LOITER_TURNS = validate_orbit,
+    ACT_PAT_LOITER_ALT = validate_orbit,
+    ACT_PAT_POI_HOLD = validate_poi_hold,
+    ACT_TKL_TAKEOFF_VERT = validate_takeoff,
+    ACT_MOB_MOVING_TKOFF = validate_takeoff,
+    ACT_TKL_LAND_PREC = validate_land,
+    ACT_TKL_LAND_NORM = validate_land,
+    ACT_PAY_BUS_CMD = validate_payload_action,
+    ACT_PAY_REDSTONE = validate_redstone_action,
 }
 
 function mission_engine.is_action_supported(action)
-    return mission_engine.ACTIVE_ACTIONS[action] == true
+    return action_registry.is_action_supported(action)
 end
 
 function mission_engine.is_action_deferred(action)
-    return mission_engine.DEFERRED_ACTIONS[action] == true
+    return action_registry.is_action_deferred(action)
 end
 
 function mission_engine.normalize_checkpoint(raw_cp, defaults, index, opts)
     if type(raw_cp) ~= "table" or type(raw_cp.action) ~= "string" then
         return nil, "INVALID_CHECKPOINT"
     end
-    if mission_engine.DEFERRED_ACTIONS[raw_cp.action] then
+    if action_registry.is_action_deferred(raw_cp.action) then
         return nil, mission_engine.DEFERRED_ERROR
     end
-    local validator = ACTION_VALIDATORS[raw_cp.action]
-    if not validator then
+    if action_registry.is_legacy_action(raw_cp.action) then
+        return nil, "SCHEMA_INVALID"
+    end
+    if not action_registry.is_action_supported(raw_cp.action) then
         return nil, "UNKNOWN_ACTION"
     end
-    local params = shallow_copy(raw_cp.params)
+    local params = action_registry.shallow_copy(raw_cp.params)
+    local validator = ACTION_VALIDATORS[raw_cp.action] or validate_optional_pos
     local ok, err = validator(params, defaults, opts)
-    if not ok then
-        return nil, err
-    end
+    if not ok then return nil, err end
+    local ok_pre, err_pre = action_registry.check_static_preconditions(raw_cp, opts)
+    if not ok_pre then return nil, err_pre end
     return {
         checkpointId = raw_cp.checkpointId or string.format("CP_%02d", index or 1),
         action = raw_cp.action,
         params = params,
+        preconditions = raw_cp.preconditions,
+        decorators = raw_cp.decorators,
         onEnter = raw_cp.onEnter,
         onExit = raw_cp.onExit,
         onAbort = raw_cp.onAbort,
         completeWhen = raw_cp.completeWhen,
         abortWhen = raw_cp.abortWhen,
         fallbackPolicy = raw_cp.fallbackPolicy,
+        settleState = {},
     }, nil
 end
 
 function mission_engine.validate_checkpoint(cp, opts)
     local norm, err = mission_engine.normalize_checkpoint(cp, nil, 1, opts)
-    if not norm then
-        return false, err
-    end
-    return true, nil
+    return norm ~= nil, err
 end
 
 function mission_engine.validate_mission(mission_tbl, opts)
-    if type(mission_tbl) ~= "table" or type(mission_tbl.checkpoints) ~= "table" or #mission_tbl.checkpoints == 0 then
-        return false, { index = 0, error = "INVALID_MISSION" }
+    if type(mission_tbl) ~= "table" or mission_tbl.items ~= nil or type(mission_tbl.checkpoints) ~= "table" or #mission_tbl.checkpoints == 0 then
+        local code = (type(mission_tbl) == "table" and mission_tbl.items ~= nil) and "SCHEMA_INVALID" or "INVALID_MISSION"
+        return false, { index = 0, error = code }
+    end
+    local airframe = opts and opts.system and opts.system.airframeType
+    local expanded, merr = action_registry.expand_macros(mission_tbl.checkpoints, airframe)
+    if not expanded then
+        local ecode = (merr == "DEFERRED_MACRO_UNSUPPORTED") and mission_engine.DEFERRED_ERROR or merr
+        return false, { index = 1, error = ecode }
     end
     local normalized_cps = {}
-    for i, raw_cp in ipairs(mission_tbl.checkpoints) do
+    for i, raw_cp in ipairs(expanded) do
         local norm, err = mission_engine.normalize_checkpoint(raw_cp, mission_tbl.defaults, i, opts)
         if not norm then
-            return false, {
-                index = i,
-                checkpointId = type(raw_cp) == "table" and raw_cp.checkpointId or nil,
-                error = err,
-            }
+            return false, { index = i, checkpointId = type(raw_cp) == "table" and raw_cp.checkpointId or nil, error = err }
         end
         normalized_cps[i] = norm
     end
     return true, {
         missionId = mission_tbl.missionId or "MISSION_01",
-        version = mission_tbl.version or "1.1.0",
+        version = mission_tbl.version or "2.0.0",
         description = mission_tbl.description,
         executionMode = mission_tbl.executionMode or "SINGLE",
         fallbackPolicy = mission_tbl.fallbackPolicy or "RTH",
-        defaults = shallow_copy(mission_tbl.defaults),
+        defaults = action_registry.shallow_copy(mission_tbl.defaults),
         checkpoints = normalized_cps,
     }
 end
-
-local function get_time_ms(now_ms)
-    return (type(now_ms) == "number" and now_ms) or ((os.epoch and os.epoch("utc")) or (os.time() * 1000)) or 0
-end
-
-local function convert_legacy_items(data)
-    local checkpoints = {}
-    for i, item in ipairs(data.items) do
-        checkpoints[#checkpoints + 1] = {
-            checkpointId = string.format("CP_%02d", item.id or i),
-            action = "FLY_OVER",
-            params = {
-                targetPos = { x = item.x, z = item.z },
-                targetAlt = item.alt,
-                cruiseSpeed = item.speed,
-            },
-        }
-    end
-    local last = data.items[#data.items]
-    if last and type(last.facilityId) == "string" and last.facilityId ~= "" then
-        checkpoints[#checkpoints + 1] = {
-            checkpointId = string.format("CP_%02d", #checkpoints + 1),
-            action = "LAND_LAUNCHPAD",
-            params = {
-                facilityId = last.facilityId,
-                targetPos = { x = last.x, z = last.z },
-                targetAlt = last.alt,
-            },
-        }
-    end
-    return {
-        version = "1.1.0",
-        missionId = data.missionId or "LEGACY_MISSION",
-        executionMode = data.executionMode or "SINGLE",
-        fallbackPolicy = data.fallbackPolicy or "RTH",
-        defaults = data.defaults or {},
-        checkpoints = checkpoints,
-    }
-end
-
-local SCHEMA_PARAM_CHECKS = {
-    FLY_OVER = function(p)
-        if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
-        if p.acceptanceRadius ~= nil and (not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0) then
-            return false, "INVALID_ACCEPTANCE_RADIUS"
-        end
-        return true
-    end,
-    FLY_TO = function(p)
-        if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
-        if p.acceptanceRadius ~= nil and (not is_finite(p.acceptanceRadius) or p.acceptanceRadius <= 0) then
-            return false, "INVALID_ACCEPTANCE_RADIUS"
-        end
-        return true
-    end,
-    ORBIT = function(p)
-        if not extract_target_pos(p) then return false, "INVALID_TARGET_POS" end
-        if p.radius ~= nil and (not is_finite(p.radius) or p.radius <= 0) then
-            return false, "INVALID_ORBIT_RADIUS"
-        end
-        if p.direction ~= nil and p.direction ~= "CW" and p.direction ~= "CCW" then
-            return false, "INVALID_ORBIT_DIRECTION"
-        end
-        return true
-    end,
-    PATROL = function(p)
-        if type(p.waypoints) ~= "table" or #p.waypoints < 1 then
-            return false, "INVALID_PATROL_WAYPOINTS"
-        end
-        for _, wp in ipairs(p.waypoints) do
-            if not is_pos_xz(wp) then return false, "INVALID_PATROL_WAYPOINTS" end
-        end
-        if p.patrolMode ~= nil and p.patrolMode ~= "LOOP" and p.patrolMode ~= "PING_PONG" then
-            return false, "INVALID_PATROL_MODE"
-        end
-        if p.cycles ~= nil and (not is_finite_int(p.cycles) or p.cycles < 1) then
-            return false, "INVALID_PATROL_CYCLES"
-        end
-        return true
-    end,
-    POI_HOLD = function(p)
-        local has_tgt = (p.targetPos ~= nil) or (is_finite(p.x) and is_finite(p.z))
-        local has_poi = (p.poiPos ~= nil)
-        if not has_tgt and not has_poi then
-            return false, "MISSING_POI_OR_TARGET"
-        end
-        if has_tgt and not extract_target_pos(p) then
-            return false, "INVALID_TARGET_POS"
-        end
-        if has_poi then
-            if not is_pos_xz(p.poiPos) or (p.poiPos.y ~= nil and not is_finite(p.poiPos.y)) then
-                return false, "INVALID_POI_POS"
-            end
-        end
-        return true
-    end,
-    TAKEOFF_LAUNCHPAD = function(p)
-        if p.targetPos ~= nil and not is_pos_xz(p.targetPos) then
-            return false, "INVALID_TARGET_POS"
-        end
-        if p.targetAlt ~= nil and not is_finite(p.targetAlt) then
-            return false, "INVALID_TARGET_ALT"
-        end
-        if p.facilityId ~= nil and (type(p.facilityId) ~= "string" or p.facilityId == "") then
-            return false, "INVALID_FACILITY_ID"
-        end
-        return true
-    end,
-    LAND_LAUNCHPAD = function(p)
-        local has_fac = type(p.facilityId) == "string" and p.facilityId ~= ""
-        local has_pos = is_pos_xz(p.targetPos) or (is_finite(p.x) and is_finite(p.z))
-        if not has_fac and not has_pos then
-            return false, "INVALID_LAND_PARAMS"
-        end
-        if p.targetPos ~= nil and not is_pos_xz(p.targetPos) then
-            return false, "INVALID_TARGET_POS"
-        end
-        return true
-    end,
-    PAYLOAD_ACTION = function(p, opts)
-        local base_ch = opts and opts.baseChannel
-        if not is_zone3_spec(p, base_ch) then
-            return false, "INVALID_ZONE3_CHANNEL"
-        end
-        if type(p.command) ~= "string" or p.command == "" then
-            return false, "MISSING_PAYLOAD_COMMAND"
-        end
-        return true
-    end,
-    REDSTONE_ACTION = function(p)
-        if p.mode ~= "EMIT" and p.mode ~= "WAIT_INPUT" then
-            return false, "INVALID_REDSTONE_MODE"
-        end
-        if not VALID_SIDES[p.side] then
-            return false, "INVALID_REDSTONE_SIDE"
-        end
-        if p.durationMs ~= nil and (not is_finite(p.durationMs) or p.durationMs < 0) then
-            return false, "INVALID_REDSTONE_DURATION"
-        end
-        return true
-    end,
-    TAKEOFF_RUNWAY = function() return true end,
-    LAND_RUNWAY = function() return true end,
-    DOCK_ARM = function() return true end,
-    UNDOCK_ARM = function() return true end,
-}
 
 local function validate_conditions_list(cond_block)
     if type(cond_block) ~= "table" then return false, "INVALID_COND_BLOCK" end
@@ -483,20 +288,38 @@ local function validate_hooks_list(hooks)
     return true
 end
 
+local function validate_decorators_list(decs, i)
+    if decs == nil then return true end
+    if type(decs) ~= "table" then return false, string.format("CP#%d: INVALID_DECORATORS", i) end
+    for _, d in ipairs(decs) do
+        local ok, derr = action_registry.check_decorator(d)
+        if not ok and derr ~= "DEFERRED_DECORATOR_UNSUPPORTED" then
+            return false, string.format("CP#%d: %s", i, tostring(derr))
+        end
+    end
+    return true
+end
+
 local function validate_cp_schema(cp, i, opts)
     if type(cp) ~= "table" or type(cp.action) ~= "string" then
         return false, string.format("CP#%d: INVALID_CHECKPOINT", i)
     end
-    if not mission_engine.ACTION_TAXONOMY[cp.action] then
+    if action_registry.is_legacy_action(cp.action) then
+        return false, string.format("CP#%d: DEPRECATED_ACTION '%s'", i, tostring(cp.action))
+    end
+    local known = action_registry.is_action_supported(cp.action) or action_registry.is_action_deferred(cp.action)
+        or action_registry.is_macro_supported(cp.action) or action_registry.is_macro_deferred(cp.action)
+    if not known then
         return false, string.format("CP#%d: UNKNOWN_ACTION '%s'", i, tostring(cp.action))
     end
-    local checker = SCHEMA_PARAM_CHECKS[cp.action]
-    local p = (type(cp.params) == "table") and cp.params or {}
-    if checker then
-        local ok_p, err_p = checker(p, opts)
-        if not ok_p then
-            return false, string.format("CP#%d: %s", i, tostring(err_p))
-        end
+    local ok_pre, err_pre = action_registry.check_static_preconditions(cp, opts)
+    if not ok_pre then return false, string.format("CP#%d: PRECONDITION %s", i, tostring(err_pre)) end
+    local ok_dec, err_dec = validate_decorators_list(cp.decorators, i)
+    if not ok_dec then return false, err_dec end
+    if action_registry.is_action_supported(cp.action) then
+        local validator = ACTION_VALIDATORS[cp.action] or validate_optional_pos
+        local ok_p, err_p = validator(action_registry.shallow_copy(cp.params), nil, opts)
+        if not ok_p then return false, string.format("CP#%d: %s", i, tostring(err_p)) end
     end
     if cp.completeWhen ~= nil then
         local ok_c, err_c = validate_conditions_list(cp.completeWhen)
@@ -516,30 +339,20 @@ local function validate_cp_schema(cp, i, opts)
 end
 
 function mission_engine.validate_mission_table(tbl, opts)
-    if type(tbl) ~= "table" then
-        return false, "SCHEMA_INVALID", "NOT_A_TABLE"
-    end
-    if tbl.executionMode ~= nil and tbl.executionMode ~= "SINGLE" and tbl.executionMode ~= "REPEAT" then
-        return false, "SCHEMA_INVALID", "INVALID_EXECUTION_MODE"
-    end
-    if tbl.fallbackPolicy ~= nil and tbl.fallbackPolicy ~= "RTH"
-       and tbl.fallbackPolicy ~= "HOVER_HOLD" and tbl.fallbackPolicy ~= "LOITER"
-       and tbl.fallbackPolicy ~= "SKIP_NEXT" then
-        return false, "SCHEMA_INVALID", "INVALID_FALLBACK_POLICY"
-    end
-    local raw = tbl
-    if type(tbl.items) == "table" and type(tbl.checkpoints) ~= "table" then
-        raw = convert_legacy_items(tbl)
-    end
-    local cps = raw.checkpoints
-    if type(cps) ~= "table" or #cps == 0 then
+    if type(tbl) ~= "table" then return false, "SCHEMA_INVALID", "INVALID_TABLE" end
+    if tbl.items ~= nil then return false, "SCHEMA_INVALID", "LEGACY_ITEMS_UNSUPPORTED" end
+    if type(tbl.checkpoints) ~= "table" or #tbl.checkpoints == 0 then
         return false, "SCHEMA_INVALID", "EMPTY_CHECKPOINTS"
     end
-    for i, cp in ipairs(cps) do
-        local ok_cp, detail = validate_cp_schema(cp, i, opts)
-        if not ok_cp then
-            return false, "SCHEMA_INVALID", detail
-        end
+    if tbl.executionMode ~= nil and not VALID_EXEC_MODES[tbl.executionMode] then
+        return false, "SCHEMA_INVALID", "INVALID_EXECUTION_MODE"
+    end
+    if tbl.fallbackPolicy ~= nil and not VALID_FALLBACKS[tbl.fallbackPolicy] then
+        return false, "SCHEMA_INVALID", "INVALID_FALLBACK_POLICY"
+    end
+    for i, cp in ipairs(tbl.checkpoints) do
+        local ok_cp, err_cp = validate_cp_schema(cp, i, opts)
+        if not ok_cp then return false, "SCHEMA_INVALID", err_cp end
     end
     return true, nil, nil
 end
@@ -549,15 +362,11 @@ function mission_engine.resolve_path(spec, fs_api)
         return nil, "INVALID_PATH"
     end
     local fs_obj = fs_api or fs
-    if not fs_obj then
-        return nil, "FS_UNAVAILABLE"
-    end
+    if not fs_obj then return nil, "FS_UNAVAILABLE" end
     local candidates = {}
     local function add_cand(c)
         candidates[#candidates + 1] = c
-        if not string.match(c, "%.json$") then
-            candidates[#candidates + 1] = c .. ".json"
-        end
+        if not string.match(c, "%.json$") then candidates[#candidates + 1] = c .. ".json" end
     end
     add_cand(spec)
     if not string.match(spec, "^/") then
@@ -566,17 +375,14 @@ function mission_engine.resolve_path(spec, fs_api)
         add_cand("/disk/missions/" .. spec)
     end
     for _, cand in ipairs(candidates) do
-        if fs_obj.exists(cand) and not (fs_obj.isDir and fs_obj.isDir(cand)) then
-            return cand, nil
-        end
+        if fs_obj.exists(cand) and not (fs_obj.isDir and fs_obj.isDir(cand)) then return cand, nil end
     end
     return nil, "FILE_NOT_FOUND"
 end
 
 function mission_engine.list_mission_files(fs_api)
     local fs_obj = fs_api or fs
-    local results = {}
-    local seen = {}
+    local results, seen = {}, {}
     if not fs_obj then return results end
     local dirs = {
         { path = "missions", prefix = "" },
@@ -585,16 +391,11 @@ function mission_engine.list_mission_files(fs_api)
     }
     for _, d in ipairs(dirs) do
         if fs_obj.exists(d.path) and (not fs_obj.isDir or fs_obj.isDir(d.path)) then
-            local items = fs_obj.list(d.path)
-            for _, item in ipairs(items or {}) do
+            for _, item in ipairs(fs_obj.list(d.path) or {}) do
                 local full = d.path .. "/" .. item
                 if string.match(item, "%.json$") and not (fs_obj.isDir and fs_obj.isDir(full)) then
-                    local stem = string.sub(item, 1, -6)
-                    local entry = d.prefix .. stem
-                    if not seen[entry] then
-                        seen[entry] = true
-                        results[#results + 1] = entry
-                    end
+                    local entry = d.prefix .. string.sub(item, 1, -6)
+                    if not seen[entry] then seen[entry] = true; results[#results + 1] = entry end
                 end
             end
         end
@@ -603,33 +404,37 @@ function mission_engine.list_mission_files(fs_api)
     return results
 end
 
+local function find_deferred_in_table(data)
+    for i, cp in ipairs(data.checkpoints or {}) do
+        if type(cp) == "table" then
+            if action_registry.is_action_deferred(cp.action) or action_registry.is_macro_deferred(cp.action) then
+                return string.format("CP#%d: %s", i, tostring(cp.action))
+            end
+            for _, d in ipairs(cp.decorators or {}) do
+                if type(d) == "table" and action_registry.is_decorator_deferred(d.decoratorId) then
+                    return string.format("CP#%d: %s", i, tostring(d.decoratorId))
+                end
+            end
+        end
+    end
+    return nil
+end
+
 function mission_engine.preflight_file(spec, opts, fs_api)
     local resolved, err_path = mission_engine.resolve_path(spec, fs_api)
-    if not resolved then
-        return nil, err_path, nil
-    end
+    if not resolved then return nil, err_path, nil end
     local fs_obj = fs_api or fs
     local h = fs_obj.open(resolved, "r")
-    if not h then
-        return nil, "FS_OPEN_ERROR", nil
-    end
+    if not h then return nil, "FS_OPEN_ERROR", nil end
     local raw = h.readAll()
     h.close()
     local data = textutils.unserializeJSON(raw)
-    if type(data) ~= "table" then
-        return nil, "PARSE_ERROR", "INVALID_JSON"
-    end
+    if type(data) ~= "table" then return nil, "PARSE_ERROR", "INVALID_JSON" end
     local ok_v, err_v, det_v = mission_engine.validate_mission_table(data, opts)
-    if not ok_v then
-        return nil, err_v, det_v
-    end
-    local allow_def = opts and opts.allowDeferred
-    if not allow_def and type(data.checkpoints) == "table" then
-        for i, cp in ipairs(data.checkpoints) do
-            if type(cp) == "table" and mission_engine.DEFERRED_ACTIONS[cp.action] then
-                return nil, mission_engine.DEFERRED_ERROR, string.format("CP#%d: %s", i, tostring(cp.action))
-            end
-        end
+    if not ok_v then return nil, err_v, det_v end
+    if not (opts and opts.allowDeferred) then
+        local def_det = find_deferred_in_table(data)
+        if def_det then return nil, mission_engine.DEFERRED_ERROR, def_det end
     end
     return data, nil, nil
 end
@@ -639,19 +444,12 @@ function mission_engine.new(opts)
     local cfg = o.config or {}
     local base_ch = cfg.baseChannel or (o.net and o.net.baseChannel) or 10000
     local runner = o.hook_runner or hook_runner.new({
-        net = o.net,
-        redstone = o.redstone,
-        colors = o.colors,
-        on_notify = o.on_notify,
+        net = o.net, redstone = o.redstone, colors = o.colors, on_notify = o.on_notify,
     })
     return setmetatable({
-        net = o.net,
-        hook_runner = runner,
-        config = cfg,
-        baseChannel = base_ch,
-        redstone = o.redstone,
-        colors = o.colors,
-        on_notify = o.on_notify,
+        net = o.net, hook_runner = runner, config = cfg, baseChannel = base_ch,
+        redstone = o.redstone, colors = o.colors, on_notify = o.on_notify,
+        guard = chattering_guard.init(cfg),
         authority = "PILOT_PRIMARY",
         defaults = {
             cruiseSpeed = cfg.defaultSpeed or 18.0,
@@ -660,7 +458,7 @@ function mission_engine.new(opts)
             headingMode = "AUTO",
         },
         missionId = "SORTIE",
-        version = "1.1.0",
+        version = "2.0.0",
         executionMode = "SINGLE",
         fallbackPolicy = "RTH",
         checkpoints = {},
@@ -670,360 +468,227 @@ function mission_engine.new(opts)
         lastFsmState = "DISARMED",
         lastMfd = nil,
         touchdownArmed = false,
-        patrolState = nil,
+        waitingHumanAuth = false,
+        emconActive = false,
         currentGoal = nil,
         fallbackGoal = nil,
-        lastConditionSummary = "NONE",
     }, mission_engine)
 end
 
-function mission_engine:load_table(data)
-    if type(data) ~= "table" then return false, "INVALID_MISSION" end
-    local raw = data
-    if type(data.items) == "table" and type(data.checkpoints) ~= "table" then
-        raw = convert_legacy_items(data)
-    end
-    local opts = {
+function mission_engine:load_table(tbl)
+    local ok_t, err_t, det_t = mission_engine.validate_mission_table(tbl, self.config)
+    if not ok_t then return false, err_t, det_t end
+    local ok_m, res = mission_engine.validate_mission(tbl, {
         baseChannel = self.baseChannel,
-        defaultAlt = self.defaults and self.defaults.targetAlt,
-        defaultSpeed = self.defaults and self.defaults.cruiseSpeed,
-        arrivalRadius = self.defaults and self.defaults.acceptanceRadius,
-    }
-    local ok, validated = mission_engine.validate_mission(raw, opts)
-    if not ok then
-        return false, (type(validated) == "table" and validated.error) or "INVALID_MISSION"
+        defaultAlt = self.defaults.targetAlt,
+        defaultSpeed = self.defaults.cruiseSpeed,
+        arrivalRadius = self.defaults.acceptanceRadius,
+        system = self.config and self.config.system,
+    })
+    if not ok_m then
+        local code = (res and res.error) or "SCHEMA_INVALID"
+        if code ~= mission_engine.DEFERRED_ERROR then code = "SCHEMA_INVALID" end
+        return false, code, res
     end
-    self.missionId = validated.missionId
-    self.version = validated.version
-    self.executionMode = validated.executionMode
-    self.fallbackPolicy = validated.fallbackPolicy
-    local defs = shallow_copy(self.defaults)
-    if validated.defaults then
-        for k, v in pairs(validated.defaults) do defs[k] = v end
+    self.hook_runner:cleanup()
+    self.missionId = res.missionId
+    self.version = "2.0.0"
+    self.executionMode = (res.executionMode == "LOOP") and "REPEAT" or res.executionMode
+    self.fallbackPolicy = res.fallbackPolicy
+    if type(res.defaults) == "table" then
+        for k, v in pairs(res.defaults) do self.defaults[k] = v end
     end
-    self.defaults = defs
-    self.checkpoints = validated.checkpoints
+    self.checkpoints = res.checkpoints
     self.active_index = 1
     self.state = "IDLE"
-    self.enteredAtMs = 0
-    self.patrolState = nil
+    self.waitingHumanAuth = false
+    self.emconActive = false
     self.currentGoal = nil
     self.fallbackGoal = nil
-    self.touchdownArmed = false
-    self.lastConditionSummary = "NONE"
     return true, nil
 end
 
-function mission_engine:load(filepath, fs_api)
-    local opts = {
-        baseChannel = self.baseChannel,
-        defaultAlt = self.defaults and self.defaults.targetAlt,
-        defaultSpeed = self.defaults and self.defaults.cruiseSpeed,
-        arrivalRadius = self.defaults and self.defaults.acceptanceRadius,
-    }
-    local data, err, detail = mission_engine.preflight_file(filepath, opts, fs_api)
-    if not data then return false, err, detail end
+function mission_engine:load(filepath)
+    local resolved, err_path = mission_engine.resolve_path(filepath)
+    if not resolved then return false, err_path end
+    local h = fs.open(resolved, "r")
+    if not h then return false, "FS_OPEN_ERROR" end
+    local raw = h.readAll()
+    h.close()
+    local data = textutils.unserializeJSON(raw)
+    if type(data) ~= "table" then return false, "SCHEMA_INVALID", "INVALID_JSON" end
     return self:load_table(data)
 end
 
 function mission_engine:save(filepath)
     if type(filepath) ~= "string" or filepath == "" then return false, "INVALID_FILEPATH" end
     local dir = fs.getDir(filepath)
-    if dir ~= "" and not fs.exists(dir) then
-        fs.makeDir(dir)
-    end
+    if dir ~= "" and not fs.exists(dir) then fs.makeDir(dir) end
     local h = fs.open(filepath, "w")
     if not h then return false, "FS_OPEN_ERROR" end
-    local payload = {
-        version = "1.1.0",
+    h.write(textutils.serializeJSON({
+        version = "2.0.0",
         missionId = self.missionId or "MISSION_01",
         executionMode = self.executionMode or "SINGLE",
         fallbackPolicy = self.fallbackPolicy or "RTH",
         defaults = self.defaults or {},
         checkpoints = self.checkpoints or {},
-    }
-    h.write(textutils.serializeJSON(payload))
+    }))
     h.close()
     return true, nil
 end
 
-function mission_engine:get_active()
-    return self.checkpoints[self.active_index]
+function mission_engine:get_active() return self.checkpoints[self.active_index] end
+function mission_engine:count() return #self.checkpoints end
+
+local function set_cruise_goal(self, cp)
+    local p = cp.params or {}
+    local tgt = p.targetPos or p.endPos
+    local spd = p.cruiseSpeed or self.defaults.cruiseSpeed
+    local alt = p.targetAlt or self.defaults.targetAlt
+    self.currentGoal = {
+        flightMode = "CRUISE",
+        arm = true,
+        flightActive = true,
+        targetPos = tgt,
+        targetAlt = alt,
+        targetSpeed = spd,
+        headingMode = p.headingMode or "AUTO",
+        fixedHeadingDeg = p.targetHeading or p.headingDeg,
+        acceptanceRadius = p.acceptanceRadius,
+    }
+    if self.net then
+        self.net:send_operator_cmd("CRUISE", "CRUISE", {
+            targetWaypoint = tgt, targetAlt = alt, cruiseSpeed = spd,
+        }, "NONE", self.authority)
+    end
+    return true
 end
 
-function mission_engine:count()
-    return #self.checkpoints
+local function set_takeoff_goal(self, cp)
+    local p = cp.params or {}
+    local fsm = (self.lastMfd and self.lastMfd.fsmState) or "DISARMED"
+    if fsm == "DISARMED" and self.net then
+        self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", self.authority)
+    end
+    local alt = p.targetAlt or self.defaults.targetAlt
+    local fac = p.facilityId or p.designatedFacilityId
+    self.currentGoal = { flightMode = "TAKEOFF", arm = true, flightActive = true, targetAlt = alt, facilityId = fac }
+    if self.net then
+        self.net:send_operator_cmd("TAKEOFF", "TAKEOFF", { targetAlt = alt, designatedFacilityId = fac }, "NONE", self.authority)
+    end
+    return true
+end
+
+local function set_loiter_goal(self, cp)
+    local p = cp.params or {}
+    local alt = p.targetAlt or self.defaults.targetAlt
+    local spd = p.cruiseSpeed or self.defaults.cruiseSpeed
+    self.currentGoal = {
+        flightMode = "LOITER", arm = true, flightActive = true,
+        targetPos = p.targetPos, targetAlt = alt, targetSpeed = spd,
+        loiterRadius = p.radius, loiterDirection = p.direction,
+    }
+    if self.net then
+        self.net:send_operator_cmd("LOITER", "LOITER", {
+            targetWaypoint = p.targetPos, targetAlt = alt, cruiseSpeed = spd,
+            loiterRadius = p.radius, loiterDirection = p.direction,
+        }, "NONE", self.authority)
+    end
+    return true
+end
+
+local function set_poi_goal(self, cp)
+    local p = cp.params or {}
+    local alt = p.targetAlt or self.defaults.targetAlt
+    local spd = p.cruiseSpeed or self.defaults.cruiseSpeed
+    self.currentGoal = {
+        flightMode = "POI_HOLD", arm = true, flightActive = true,
+        targetPos = p.targetPos, poiPos = p.poiPos, targetAlt = alt, targetSpeed = spd,
+    }
+    if self.net then
+        self.net:send_operator_cmd("POI_HOLD", "POI_HOLD", {
+            targetWaypoint = p.targetPos, poiTarget = p.poiPos, targetAlt = alt, cruiseSpeed = spd,
+        }, "NONE", self.authority)
+    end
+    return true
+end
+
+local function set_land_goal(self, cp)
+    local p = cp.params or {}
+    local fac = p.facilityId or p.designatedFacilityId
+    self.currentGoal = {
+        flightMode = "LANDING", arm = true, flightActive = true,
+        facilityId = fac, targetPos = p.targetPos, targetAlt = p.targetAlt,
+    }
+    if self.net then
+        self.net:send_operator_cmd("LANDING", "LANDING", {
+            designatedFacilityId = fac, targetWaypoint = p.targetPos, targetAlt = p.targetAlt,
+        }, "NONE", self.authority)
+    end
+    return true
+end
+
+local function dispatch_failsafe_cmd(self, mode, em_act)
+    self.currentGoal = { flightMode = mode, arm = true, flightActive = true }
+    if self.net then
+        local cmd = (mode == "HOVER_HOLD") and "HOVER_HOLD" or "CRUISE"
+        self.net:send_operator_cmd(cmd, cmd, {}, em_act, self.authority)
+    end
+    return true
 end
 
 local FCP_DISPATCHERS = {
-    TAKEOFF_LAUNCHPAD = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        local fsm = (self.lastMfd and self.lastMfd.fsmState) or "DISARMED"
-        if fsm == "DISARMED" and self.net then
-            self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", self.authority)
-        end
-        self.currentGoal = {
-            flightMode = "TAKEOFF",
-            arm = true,
-            flightActive = true,
-            targetAlt = p.targetAlt or self.defaults.targetAlt,
-            facilityId = p.facilityId or p.designatedFacilityId,
-        }
-        if self.net then
-            self.net:send_operator_cmd("TAKEOFF", "TAKEOFF", {
-                targetAlt = p.targetAlt or self.defaults.targetAlt,
-                designatedFacilityId = p.facilityId or p.designatedFacilityId,
-            }, "NONE", self.authority)
+    ACT_SYS_ARM = function(self)
+        self.currentGoal = { flightMode = "IDLE", arm = true, flightActive = false }
+        if self.net then self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", self.authority) end
+        return true
+    end,
+    ACT_SYS_DISARM = function(self)
+        self.currentGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+        return true
+    end,
+    ACT_SYS_TERMINATE = function(self)
+        self.currentGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+        if self.net and self.net.send_emergency_override then
+            self.net:send_emergency_override("E_STOP", "MISSION_TERMINATE", "ESTOP_CONFIRM_KEY", "AMM")
         end
         return true
     end,
-    FLY_OVER = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        self.currentGoal = {
-            flightMode = "CRUISE",
-            arm = true,
-            flightActive = true,
-            targetPos = p.targetPos,
-            targetAlt = p.targetAlt or self.defaults.targetAlt,
-            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-            headingMode = p.headingMode or "AUTO",
-            acceptanceRadius = p.acceptanceRadius,
-        }
-        if self.net then
-            self.net:send_operator_cmd("CRUISE", "CRUISE", {
-                targetWaypoint = p.targetPos,
-                targetAlt = p.targetAlt or self.defaults.targetAlt,
-                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-            }, "NONE", self.authority)
-        end
-        return true
-    end,
-    FLY_TO = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        self.currentGoal = {
-            flightMode = "CRUISE",
-            arm = true,
-            flightActive = true,
-            targetPos = p.targetPos,
-            targetAlt = p.targetAlt or self.defaults.targetAlt,
-            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-            headingMode = p.headingMode or "AUTO",
-            acceptanceRadius = p.acceptanceRadius,
-        }
-        if self.net then
-            self.net:send_operator_cmd("CRUISE", "CRUISE", {
-                targetWaypoint = p.targetPos,
-                targetAlt = p.targetAlt or self.defaults.targetAlt,
-                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-            }, "NONE", self.authority)
-        end
-        return true
-    end,
-    ORBIT = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        self.currentGoal = {
-            flightMode = "LOITER",
-            arm = true,
-            flightActive = true,
-            targetPos = p.targetPos,
-            targetAlt = p.targetAlt or self.defaults.targetAlt,
-            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-            loiterRadius = p.radius,
-            loiterDirection = p.direction,
-        }
-        if self.net then
-            self.net:send_operator_cmd("LOITER", "LOITER", {
-                targetWaypoint = p.targetPos,
-                targetAlt = p.targetAlt or self.defaults.targetAlt,
-                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-                loiterRadius = p.radius,
-                loiterDirection = p.direction,
-            }, "NONE", self.authority)
-        end
-        return true
-    end,
-    POI_HOLD = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        self.currentGoal = {
-            flightMode = "POI_HOLD",
-            arm = true,
-            flightActive = true,
-            targetPos = p.targetPos,
-            poiPos = p.poiPos,
-            targetAlt = p.targetAlt or self.defaults.targetAlt,
-            targetSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-        }
-        if self.net then
-            self.net:send_operator_cmd("POI_HOLD", "POI_HOLD", {
-                targetWaypoint = p.targetPos,
-                poiTarget = p.poiPos,
-                targetAlt = p.targetAlt or self.defaults.targetAlt,
-                cruiseSpeed = p.cruiseSpeed or self.defaults.cruiseSpeed,
-            }, "NONE", self.authority)
-        end
-        return true
-    end,
-    PATROL = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        if not self.patrolState then
-            self.patrolState = { subIndex = 1, dir = 1, completedCycles = 0, completed = false }
-        end
-        local wp = p.waypoints and p.waypoints[self.patrolState.subIndex]
-        if wp then
-            self.currentGoal = {
-                flightMode = "CRUISE",
-                arm = true,
-                flightActive = true,
-                targetPos = wp,
-                targetAlt = wp.alt or p.targetAlt or self.defaults.targetAlt,
-                targetSpeed = wp.speed or p.cruiseSpeed or self.defaults.cruiseSpeed,
-            }
-        end
-        if not wp or not self.net then return false end
-        return self.net:send_operator_cmd("CRUISE", "CRUISE", {
-            targetWaypoint = wp,
-            targetAlt = wp.alt or p.targetAlt or self.defaults.targetAlt,
-            cruiseSpeed = wp.speed or p.cruiseSpeed or self.defaults.cruiseSpeed,
-        }, "NONE", self.authority)
-    end,
-    LAND_LAUNCHPAD = function(self, cp, _now_ms)
-        local p = cp.params or {}
-        self.currentGoal = {
-            flightMode = "LANDING",
-            arm = true,
-            flightActive = true,
-            facilityId = p.facilityId or p.designatedFacilityId,
-            targetPos = p.targetPos,
-            targetAlt = p.targetAlt,
-        }
-        if self.net then
-            self.net:send_operator_cmd("LANDING", "LANDING", {
-                designatedFacilityId = p.facilityId or p.designatedFacilityId,
-                targetWaypoint = p.targetPos,
-                targetAlt = p.targetAlt,
-            }, "NONE", self.authority)
-        end
-        return true
-    end,
-    PAYLOAD_ACTION = function(self, cp, now_ms)
-        return self.hook_runner:start_action(cp, now_ms)
-    end,
-    REDSTONE_ACTION = function(self, cp, now_ms)
-        return self.hook_runner:start_action(cp, now_ms)
-    end,
+    ACT_TKL_TAKEOFF_VERT = set_takeoff_goal,
+    ACT_MOB_MOVING_TKOFF = set_takeoff_goal,
+    ACT_TKL_ABORT_LAND = set_takeoff_goal,
+    ACT_NAV_SPLINE_WP = set_cruise_goal,
+    ACT_NAV_GOTO_WP = set_cruise_goal,
+    ACT_NAV_CORRIDOR = set_cruise_goal,
+    ACT_NAV_CHANGE_ALT = set_cruise_goal,
+    ACT_NAV_CHANGE_SPD = set_cruise_goal,
+    ACT_NAV_CHANGE_YAW = set_cruise_goal,
+    ACT_MOB_RV_TRACK = set_cruise_goal,
+    ACT_PAT_LOITER_TIME = set_loiter_goal,
+    ACT_PAT_LOITER_TURNS = set_loiter_goal,
+    ACT_PAT_LOITER_ALT = set_loiter_goal,
+    ACT_PAT_HOLD_POS = set_loiter_goal,
+    ACT_COM_ATC_HOLD = set_loiter_goal,
+    ACT_PAT_POI_HOLD = set_poi_goal,
+    ACT_TKL_LAND_PREC = set_land_goal,
+    ACT_TKL_LAND_NORM = set_land_goal,
+    ACT_MOB_DECK_SYNC = set_land_goal,
+    ACT_PAY_BUS_CMD = function(self, cp, now_ms) return self.hook_runner:start_action(cp, now_ms) end,
+    ACT_PAY_REDSTONE = function(self, cp, now_ms) return self.hook_runner:start_action(cp, now_ms) end,
+    ACT_FS_RTL_HOME = function(self) return dispatch_failsafe_cmd(self, "FAILSAFE_RTH", "RTH") end,
+    ACT_FS_GOTO_RALLY = function(self) return dispatch_failsafe_cmd(self, "FAILSAFE_RTH", "RTH") end,
+    ACT_FS_HOVER_HOLD = function(self) return dispatch_failsafe_cmd(self, "HOVER_HOLD", "HOVER_HOLD") end,
+    ACT_FS_FENCE_BRAKE = function(self) return dispatch_failsafe_cmd(self, "HOVER_HOLD", "HOVER_HOLD") end,
+    ACT_FS_EMERG_LAND = function(self) return dispatch_failsafe_cmd(self, "EMERGENCY_LAND", "EMERGENCY_LAND") end,
 }
-
-local function step_ping_pong(state, n_wp, cycles)
-    if state.dir == 1 then
-        if state.subIndex >= n_wp then
-            state.dir = -1
-            state.subIndex = n_wp - 1
-        else
-            state.subIndex = state.subIndex + 1
-        end
-    else
-        if state.subIndex <= 1 then
-            state.completedCycles = state.completedCycles + 1
-            if state.completedCycles >= cycles then
-                state.completed = true
-            else
-                state.dir = 1
-                state.subIndex = 2
-            end
-        else
-            state.subIndex = state.subIndex - 1
-        end
-    end
-end
-
-local function step_loop(state, n_wp, cycles)
-    if state.subIndex >= n_wp then
-        state.completedCycles = state.completedCycles + 1
-        if state.completedCycles >= cycles then
-            state.completed = true
-        else
-            state.subIndex = 1
-        end
-    else
-        state.subIndex = state.subIndex + 1
-    end
-end
-
-local function advance_patrol_state(self, cp)
-    local p = cp.params or {}
-    local waypoints = p.waypoints or {}
-    local n_wp = #waypoints
-    local state = self.patrolState
-    local cycles = p.cycles or 1
-
-    if n_wp <= 1 then
-        state.completedCycles = state.completedCycles + 1
-        if state.completedCycles >= cycles then state.completed = true end
-        return
-    end
-
-    if p.patrolMode == "PING_PONG" then
-        step_ping_pong(state, n_wp, cycles)
-    else
-        step_loop(state, n_wp, cycles)
-    end
-
-    if not state.completed and self.net then
-        local next_wp = waypoints[state.subIndex]
-        local alt = next_wp.alt or p.targetAlt or self.defaults.targetAlt
-        local spd = next_wp.speed or p.cruiseSpeed or self.defaults.cruiseSpeed
-        self.net:send_operator_cmd("CRUISE", "CRUISE", {
-            targetWaypoint = next_wp,
-            targetAlt = alt,
-            cruiseSpeed = spd,
-        }, "NONE", self.authority)
-    end
-end
-
-function mission_engine:update_patrol(cp, mfd_payload, t_ms)
-    local nav = mfd_payload and mfd_payload.navigation
-    local cur = nav and nav.currentPos
-    if not cur or type(cur.x) ~= "number" or type(cur.z) ~= "number" or not self.patrolState or self.patrolState.completed then
-        return nil
-    end
-    local p = cp.params or {}
-    local waypoints = p.waypoints or {}
-    local cur_wp = waypoints[self.patrolState.subIndex]
-    if not cur_wp then return nil end
-
-    local tol = cur_wp.acceptanceRadius or p.acceptanceRadius or (self.defaults and self.defaults.acceptanceRadius) or 15.0
-    local dx = cur_wp.x - cur.x
-    local dz = cur_wp.z - cur.z
-    if (dx * dx + dz * dz) > (tol * tol) then
-        return nil
-    end
-
-    local ctx = {
-        mfd = mfd_payload,
-        enteredAtMs = self.enteredAtMs,
-        nowMs = t_ms,
-        redstone = self.redstone,
-        colors = self.colors,
-        checkpoint = cp,
-    }
-    local aborted = condition_evaluator.evaluate_group(cp.abortWhen, ctx, "ANY", self.defaults)
-    if aborted then
-        return self:apply_abort(cp, t_ms)
-    end
-
-    advance_patrol_state(self, cp)
-    return nil
-end
 
 local function build_loiter_fallback(self, cp)
     local p = cp and cp.params or {}
     local nav_pos = self.lastMfd and self.lastMfd.navigation and self.lastMfd.navigation.currentPos
-    local pos = nav_pos or p.targetPos
     return {
-        flightMode = "LOITER",
-        arm = true,
-        flightActive = true,
-        targetPos = pos,
+        flightMode = "LOITER", arm = true, flightActive = true,
+        targetPos = nav_pos or p.targetPos,
         targetAlt = p.targetAlt or (self.defaults and self.defaults.targetAlt),
     }
 end
@@ -1031,40 +696,33 @@ end
 local FALLBACK_HANDLERS = {
     SKIP_NEXT = function(self, cp, now_ms)
         cp.status = "ABORTED"
-        local next_idx = self.active_index + 1
-        if next_idx <= #self.checkpoints then
-            self:enter_checkpoint(next_idx, now_ms)
+        if self.active_index + 1 <= #self.checkpoints then
+            self:enter_checkpoint(self.active_index + 1, now_ms)
             return "SKIPPED"
         end
         self.state = "ABORTED"
         self.fallbackGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
         return "ABORTED"
     end,
-    RTH = function(self, cp, _now_ms)
+    RTH = function(self, cp)
         cp.status = "ABORTED"
         self.state = "ABORTED"
         self.fallbackGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
-        if self.net then
-            self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "RTH", self.authority)
-        end
+        if self.net then self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "RTH", self.authority) end
         return "ABORTED"
     end,
-    HOVER_HOLD = function(self, cp, _now_ms)
+    HOVER_HOLD = function(self, cp)
         cp.status = "ABORTED"
         self.state = "ABORTED"
         self.fallbackGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
-        if self.net then
-            self.net:send_operator_cmd("HOVER_HOLD", "HOVER_HOLD", {}, "HOVER_HOLD", self.authority)
-        end
+        if self.net then self.net:send_operator_cmd("HOVER_HOLD", "HOVER_HOLD", {}, "HOVER_HOLD", self.authority) end
         return "ABORTED"
     end,
-    LOITER = function(self, cp, _now_ms)
+    LOITER = function(self, cp)
         cp.status = "ABORTED"
         self.state = "ABORTED"
         self.fallbackGoal = build_loiter_fallback(self, cp)
-        if self.net then
-            self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
-        end
+        if self.net then self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority) end
         return "ABORTED"
     end,
 }
@@ -1072,77 +730,114 @@ local FALLBACK_HANDLERS = {
 function mission_engine:apply_abort(cp, now_ms)
     local policy = cp.fallbackPolicy or self.fallbackPolicy or "RTH"
     self.hook_runner:cleanup()
-    if cp.onAbort then
-        self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms)
-    end
+    self.waitingHumanAuth = false
+    if cp.onAbort then self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms) end
     local handler = FALLBACK_HANDLERS[policy]
-    if handler then
-        return handler(self, cp, now_ms)
-    end
+    if handler then return handler(self, cp, now_ms) end
     cp.status = "ABORTED"
     self.state = "ABORTED"
     self.fallbackGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
-    if self.net then
-        self.net:send_operator_cmd("CRUISE", "CRUISE", {}, policy, self.authority)
-    end
+    if self.net then self.net:send_operator_cmd("CRUISE", "CRUISE", {}, policy, self.authority) end
     return "ABORTED"
+end
+
+local function inspect_decorators(cp)
+    local has_human = false
+    for _, d in ipairs(cp.decorators or {}) do
+        local ok, derr = action_registry.check_decorator(d)
+        if not ok then return false, (derr == "DEFERRED_DECORATOR_UNSUPPORTED" and mission_engine.DEFERRED_ERROR or derr), false end
+        if d.decoratorId == "DEC_HUMAN_AUTH" then has_human = true end
+    end
+    return true, nil, has_human
+end
+
+local function apply_runtime_decorators(self, cp)
+    self.emconActive = false
+    if type(self.currentGoal) ~= "table" then return end
+    for _, d in ipairs(cp.decorators or {}) do
+        if d.decoratorId == "DEC_EMCON" then
+            self.currentGoal.emconActive = true
+            self.emconActive = true
+        elseif d.decoratorId == "DEC_ENERGY_ECO" then
+            local spd = self.currentGoal.targetSpeed or self.defaults.cruiseSpeed or 18.0
+            self.currentGoal.targetSpeed = spd * 0.75
+        elseif d.decoratorId == "DEC_SMOOTH_TRAJ" then
+            self.currentGoal.constraintProfile = "STRICT_LEVEL"
+        end
+    end
+end
+
+local function dispatch_checkpoint(self, cp, t_ms)
+    if cp.onEnter then self.hook_runner:execute_hooks(cp.onEnter, cp, t_ms) end
+    local dispatcher = FCP_DISPATCHERS[cp.action]
+    if dispatcher then dispatcher(self, cp, t_ms) end
+    apply_runtime_decorators(self, cp)
 end
 
 function mission_engine:enter_checkpoint(index, now_ms)
     local cp = self.checkpoints[index]
     if not cp then return false, "INVALID_INDEX" end
-    if mission_engine.is_action_deferred(cp.action) then
-        self.hook_runner:cleanup()
-        cp.status = "ABORTED"
-        self.state = "ABORTED"
+    if action_registry.is_action_deferred(cp.action) then
+        self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
         return false, mission_engine.DEFERRED_ERROR
+    end
+    local ok_dec, err_dec, has_human = inspect_decorators(cp)
+    if not ok_dec then
+        self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
+        return false, err_dec
+    end
+    local pre_ctx = { mfd = self.lastMfd, channelBound = true, atcCleared = true, zone3Available = true, geofenceMarginM = 100.0 }
+    local ok_dyn, err_dyn = action_registry.check_dynamic_preconditions(cp, pre_ctx)
+    if not ok_dyn then
+        self:apply_abort(cp, get_time_ms(now_ms))
+        return false, err_dyn
     end
     self.fallbackGoal = nil
     self.active_index = index
     self.enteredAtMs = get_time_ms(now_ms)
     cp.status = "ACTIVE"
-    if cp.action == "PATROL" then
-        self.patrolState = { subIndex = 1, dir = 1, completedCycles = 0, completed = false }
-    else
-        self.patrolState = nil
+    cp.settleState = {}
+    if has_human then
+        self.waitingHumanAuth = true
+        self.currentGoal = build_loiter_fallback(self, cp)
+        return true
     end
-    if cp.onEnter then
-        self.hook_runner:execute_hooks(cp.onEnter, cp, self.enteredAtMs)
-    end
-    local dispatcher = FCP_DISPATCHERS[cp.action]
-    if dispatcher then
-        dispatcher(self, cp, self.enteredAtMs)
-    end
+    self.waitingHumanAuth = false
+    dispatch_checkpoint(self, cp, self.enteredAtMs)
     return true
+end
+
+function mission_engine:confirm(now_ms)
+    if not self.waitingHumanAuth then return false, "NOT_WAITING_AUTH" end
+    local cp = self:get_active()
+    if not cp then return false, "INVALID_INDEX" end
+    self.waitingHumanAuth = false
+    self.enteredAtMs = get_time_ms(now_ms)
+    dispatch_checkpoint(self, cp, self.enteredAtMs)
+    return true, nil
 end
 
 function mission_engine:advance(now_ms)
     local cp = self:get_active()
     if cp then
         cp.status = "COMPLETED"
-        if cp.onExit then
-            self.hook_runner:execute_hooks(cp.onExit, cp, now_ms)
-        end
+        if cp.onExit then self.hook_runner:execute_hooks(cp.onExit, cp, now_ms) end
     end
     self.hook_runner:clear_step_state()
     local next_idx = self.active_index + 1
     if next_idx <= #self.checkpoints then
         local ok, err = self:enter_checkpoint(next_idx, now_ms)
-        if not ok then
-            return "ABORTED", err
-        end
+        if not ok then return "ABORTED", err end
         return "ADVANCED"
     end
     if self.executionMode == "REPEAT" then
         for _, c in ipairs(self.checkpoints) do c.status = nil end
         local wrap_idx = 1
-        if self.checkpoints[1] and self.checkpoints[1].action == "TAKEOFF_LAUNCHPAD" and #self.checkpoints >= 2 then
-            wrap_idx = 2
+        while wrap_idx < #self.checkpoints and chattering_guard.should_skip_on_repeat(self.checkpoints[wrap_idx].action) do
+            wrap_idx = wrap_idx + 1
         end
         local ok, err = self:enter_checkpoint(wrap_idx, now_ms)
-        if not ok then
-            return "ABORTED", err
-        end
+        if not ok then return "ABORTED", err end
         return "LOOPED"
     end
     self.state = "COMPLETED"
@@ -1150,36 +845,23 @@ function mission_engine:advance(now_ms)
 end
 
 function mission_engine:evaluate_active(now_ms)
-    if self.state ~= "EN_ROUTE" then
-        return self.state
-    end
+    if self.state ~= "EN_ROUTE" then return self.state end
+    if self.waitingHumanAuth then return "WAITING_AUTH" end
     local cp = self:get_active()
     if not cp then return "IDLE" end
     local ctx = {
-        mfd = self.lastMfd,
-        enteredAtMs = self.enteredAtMs,
-        nowMs = now_ms,
-        touchdownArmed = self.touchdownArmed,
-        payloadAck = self.hook_runner:get_last_payload_ack(),
-        redstone = self.redstone,
-        colors = self.colors,
-        patrolCompleted = self.patrolState and self.patrolState.completed,
-        checkpoint = cp,
+        mfd = self.lastMfd, enteredAtMs = self.enteredAtMs, nowMs = now_ms,
+        touchdownArmed = self.touchdownArmed, payloadAck = self.hook_runner:get_last_payload_ack(),
+        redstone = self.redstone, colors = self.colors, checkpoint = cp,
     }
     local res = condition_evaluator.evaluate_checkpoint(cp, ctx, self.defaults)
     if res.error == mission_engine.DEFERRED_ERROR then
-        self.hook_runner:cleanup()
-        cp.status = "ABORTED"
-        self.state = "ABORTED"
+        self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
         return "ABORTED", mission_engine.DEFERRED_ERROR
     end
     self.lastConditionSummary = res.summary or "NONE"
-    if res.aborted then
-        return self:apply_abort(cp, now_ms)
-    end
-    if res.completed then
-        return self:advance(now_ms)
-    end
+    if res.aborted then return self:apply_abort(cp, now_ms) end
+    if res.completed then return self:advance(now_ms) end
     return "ACTIVE", self.lastConditionSummary
 end
 
@@ -1189,62 +871,46 @@ function mission_engine:step_telemetry(mfd_payload, now_ms)
     if mfd_payload and condition_evaluator.should_arm_touchdown(mfd_payload.fsmState) then
         self.touchdownArmed = true
     end
-    if self.state ~= "EN_ROUTE" then
-        return self.state
-    end
-    local cp = self:get_active()
-    if not cp then return "IDLE" end
-    if cp.action == "PATROL" then
-        local pat_st = self:update_patrol(cp, mfd_payload, t_ms)
-        if pat_st then return pat_st end
-    end
+    if self.state ~= "EN_ROUTE" then return self.state end
     return self:evaluate_active(t_ms)
 end
 
 function mission_engine:tick(now_ms)
     local t_ms = get_time_ms(now_ms)
     self.hook_runner:tick(t_ms)
-    if self.state ~= "EN_ROUTE" then
-        return self.state
-    end
+    if self.state ~= "EN_ROUTE" then return self.state end
     return self:evaluate_active(t_ms)
 end
 
 function mission_engine:on_payload_ack(packet, channel, now_ms)
     local t_ms = get_time_ms(now_ms)
     local ok, res = self.hook_runner:on_payload_ack(packet, channel)
-    if not ok then
-        return false, res
-    end
-    if self.state == "EN_ROUTE" then
-        local st = self:evaluate_active(t_ms)
-        return true, st
-    end
+    if not ok then return false, res end
+    if self.state == "EN_ROUTE" then return true, self:evaluate_active(t_ms) end
     return true, res
 end
 
 function mission_engine:start(execution_mode, now_ms)
     if #self.checkpoints == 0 then return false, "NO_CHECKPOINTS" end
-    if execution_mode then self.executionMode = execution_mode end
+    if execution_mode then
+        self.executionMode = (execution_mode == "LOOP") and "REPEAT" or execution_mode
+    end
     for _, cp in ipairs(self.checkpoints) do cp.status = nil end
     self.touchdownArmed = false
+    self.waitingHumanAuth = false
     self.currentGoal = nil
     self.fallbackGoal = nil
     self.state = "EN_ROUTE"
     local ok, err = self:enter_checkpoint(1, now_ms)
-    if not ok then
-        return false, err
-    end
+    if not ok then return false, err end
     return true, nil
 end
 
 function mission_engine:stop(now_ms)
-    local prev_state = self.state
-    local cp = self:get_active()
+    local prev_state, cp = self.state, self:get_active()
     self.hook_runner:cleanup()
-    if cp and cp.onAbort then
-        self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms)
-    end
+    self.waitingHumanAuth = false
+    if cp and cp.onAbort then self.hook_runner:execute_hooks(cp.onAbort, cp, now_ms) end
     self.state = "ABORTED"
     local is_disarmed = self.lastMfd and self.lastMfd.fsmState == "DISARMED"
     if (prev_state == "EN_ROUTE" or prev_state == "SUSPENDED") and not is_disarmed then
@@ -1252,9 +918,7 @@ function mission_engine:stop(now_ms)
     else
         self.fallbackGoal = { flightMode = "IDLE", arm = false, flightActive = false }
     end
-    if self.net then
-        self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
-    end
+    if self.net then self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority) end
     return true
 end
 
@@ -1263,9 +927,7 @@ function mission_engine:pause()
     self.hook_runner:cleanup()
     self.state = "SUSPENDED"
     self.fallbackGoal = build_loiter_fallback(self, self:get_active())
-    if self.net then
-        self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority)
-    end
+    if self.net then self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority) end
     return true
 end
 
@@ -1281,17 +943,14 @@ function mission_engine:skip_next(now_ms)
     local cp = self:get_active()
     if cp then
         cp.status = "SKIPPED"
-        if cp.onExit then
-            self.hook_runner:execute_hooks(cp.onExit, cp, now_ms)
-        end
+        if cp.onExit then self.hook_runner:execute_hooks(cp.onExit, cp, now_ms) end
     end
     self.hook_runner:cleanup()
+    self.waitingHumanAuth = false
     local next_idx = self.active_index + 1
     if next_idx <= #self.checkpoints then
         local ok, err = self:enter_checkpoint(next_idx, now_ms)
-        if not ok then
-            return false, err
-        end
+        if not ok then return false, err end
         return true, "ADVANCED"
     end
     self.state = "COMPLETED"
@@ -1299,24 +958,16 @@ function mission_engine:skip_next(now_ms)
 end
 
 function mission_engine:goto_index(index, now_ms)
-    if type(index) ~= "number" or index < 1 or index > #self.checkpoints then
-        return false, "INVALID_INDEX"
-    end
+    if type(index) ~= "number" or index < 1 or index > #self.checkpoints then return false, "INVALID_INDEX" end
     self.hook_runner:cleanup()
+    self.waitingHumanAuth = false
     self.state = "EN_ROUTE"
     local ok, err = self:enter_checkpoint(index, now_ms)
-    if not ok then
-        return false, err
-    end
+    if not ok then return false, err end
     return true
 end
 
-function mission_engine:get_trajectory_goal()
-    return self.currentGoal
-end
-
-function mission_engine:get_fallback_goal()
-    return self.fallbackGoal
-end
+function mission_engine:get_trajectory_goal() return self.currentGoal end
+function mission_engine:get_fallback_goal() return self.fallbackGoal end
 
 return mission_engine

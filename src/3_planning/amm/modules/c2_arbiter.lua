@@ -75,6 +75,7 @@ local LOAD_ERR_TO_ACK = {
     SCHEMA_INVALID = "SCHEMA_INVALID",
     PARSE_ERROR = "SCHEMA_INVALID",
     DEFERRED_ACTION_UNSUPPORTED = "DEFERRED_ACTION_UNSUPPORTED",
+    PRECONDITION_FAILED = "PRECONDITION_FAILED",
 }
 
 local function send_ack(self, action, status, reason)
@@ -129,7 +130,8 @@ local function handle_cmd_run(self, p, now_ms)
 
     local ok_start, err_start = eng:start(p.executionMode, now_ms)
     if not ok_start then
-        local status = (err_start == "DEFERRED_ACTION_UNSUPPORTED") and "DEFERRED_ACTION_UNSUPPORTED" or "INVALID_CMD"
+        local passthrough = (err_start == "DEFERRED_ACTION_UNSUPPORTED" or err_start == "PRECONDITION_FAILED" or err_start == "SCHEMA_INVALID")
+        local status = passthrough and err_start or "INVALID_CMD"
         send_ack(self, "RUN", status, err_start)
         return false, status
     end
@@ -178,12 +180,27 @@ local function handle_cmd_next(self, _p, now_ms)
     return ok, status
 end
 
+local function handle_cmd_confirm(self, _p, now_ms)
+    if not self.engine or not self.engine.waitingHumanAuth or not self.engine.confirm then
+        send_ack(self, "CONFIRM", "INVALID_CMD", "NOT_WAITING_AUTH")
+        return false, "INVALID_CMD"
+    end
+    local ok, err = self.engine:confirm(now_ms)
+    local status = ok and "ACCEPTED" or (LOAD_ERR_TO_ACK[err] or "INVALID_CMD")
+    send_ack(self, "CONFIRM", status, not ok and err or nil)
+    if ok then
+        self.lastBanner = "HUMAN AUTH CONFIRMED"
+    end
+    return ok, status
+end
+
 local MISSION_CMD_HANDLERS = {
     RUN = handle_cmd_run,
     STOP = handle_cmd_stop,
     PAUSE = handle_cmd_pause,
     RESUME = handle_cmd_resume,
     NEXT = handle_cmd_next,
+    CONFIRM = handle_cmd_confirm,
 }
 
 function c2_arbiter:handle_mission_cmd(packet, now_ms)

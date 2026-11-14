@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-206`(15대 사양서 개편), `TASK-207`(`AMM v1.3.0` 외부 게이트웨이·항법·20Hz 궤적), `TASK-208`(`FCP v2.0.0` 순수 `SE(3)` 외루프), `TASK-209`(`VAS v1.19.0` `QUATERNION_RATE` 정합화 및 `FCP v2.0.0`·`VAS v1.19.0` `Implemented` 승격 — `9 Implemented, 6 Approved`), `TASK-124`(채터링 방지 가드 설계; 2026-11-13, `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-206`(15대 사양서 개편), `TASK-207`(`AMM v1.3.0`), `TASK-208`(`FCP v2.0.0` 순수 `SE(3)`), `TASK-209`(`VAS v1.19.0` 승격), `TASK-124`(채터링 방지 가드 설계), `TASK-123`(`GPS v2.3.2`·`LANDING_PAD v2.4.4` 경합/위상 분산/채널 수정), `TASK-204`(`AMM v2.0.0` `ACT_*`/`DEC_*`/`MAC_*`·`chattering_guard.lua`·`action_registry.lua`; 2026-11-14, `.agent/memory/workspace-root.md`).
 - **다음 액션**:
-  1. `TASK-123` / `TASK-204`: GPS 고부하 경합·위상 분산 수정, `AMM` `ACT_*`/`DEC_*`/`MAC_*` 행동 체계 재정의 (`TASK-401` PAYLOAD 계층 세부 스키마는 예정 백로그/로드맵 이관).
-  2. `TASK-402` / `TASK-010`~`013` / `TASK-120`: 호스트 PC WebUI 에디터(`tools/amm_mission_editor.html`) 구현 및 `AMM v1.3.0` 승격, 플레이북·FDR·사양서 전수 감사.
+  1. `TASK-402`: 호스트 PC WebUI 에디터(`tools/amm_mission_editor.html`) 구현 및 `AMM v2.0.0` `Implemented` 승격 (`TASK-401` PAYLOAD 계층 세부 스키마는 예정 백로그 이관).
+  2. `TASK-010`~`013` / `TASK-120`: 플레이북(5종+인프라 4종), 블랙박스 FDR, 사양서 전수 감사.
   3. `TASK-117` / `TASK-210`: 무선 OTA 배포/롤백 가드 구축, `[연기] TASK-105` 재개 시 `ASA v1.7.0` 본 구현 연동.
 
 ## 2. Confirmed Architecture & Paths
@@ -25,12 +25,12 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 455/455 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 469/469 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (8개 스위트 12/12 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (82/82 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (121 파일), `python tools/verify_spec_status.py` (9 Implemented, 6 Approved).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (123 파일), `python tools/verify_spec_status.py` (9 Implemented, 6 Approved).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants

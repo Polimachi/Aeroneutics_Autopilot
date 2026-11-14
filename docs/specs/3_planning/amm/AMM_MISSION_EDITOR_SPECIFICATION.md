@@ -8,21 +8,22 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Draft` |
-| **문서 버전 (Version)** | `v0.1.0` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v0.2.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `tools/amm_mission_editor.html` |
 | **주관 도메인 (Domain)** | 임무 계획 외부 웹 GUI 미션 에디터 (AMM Companion Tool / Host PC) |
 
 > **연관 문서**:
-> - [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) (AMM 항공 임무 관리자 v1.3.0 Approved)
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.28.0 Approved)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.13.0 Approved)
+> - [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) (AMM 항공 임무 관리자 v2.0.0 Approved)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0 Approved)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0 Approved)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 컨텍스트 및 규칙)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.2.0` | `2026-11-14` | **`AMM v2.0.0` (`TASK-204` + `TASK-124`) 스키마 전면 정합 (`Draft` 유지)**: ① `version: "2.0.0"` 단일 출력 및 구 13종 액션/`items[]` (`convertLegacyItems` `[DEPRECATED - v2.0.0]`) Zero-Fallback 거부, ② `ACT_*` 팔레트(`[즉시]` 36종 + `[로드맵]` 19종 + `TASK-401`), `DEC_*` 7종 데코레이터, `MAC_*` 5종 매크로 전개, 4대 범주 `preconditions` 인스펙터, `PROXIMITY_2D`/`PROXIMITY_3D`/`ALTITUDE_REACHED` `settleTicks` 지원, ③ 참조 배지 `AMM v2.0.0` / `ICD v1.29.0` / `Diagram v2.14.0` 동기화 | `TASK-204`·`TASK-124` 온보드 `AMM v2.0.0` 규격과의 동등성 확보 (`tools/amm_mission_editor.html` 구현은 `TASK-402`로 지속) |
 | `v0.1.0` | `2026-11-12` | `AMM WebUI Mission Editor`(`tools/amm_mission_editor.html`) 상세 규격 초안(`Draft`) 수립: `AMM v1.3.0` / `ICD v1.28.0` / `Diagram v2.13.0` 외부 파일 파이프라인, Flexbox Column UI 셸(`.app-shell`)·네이티브 대화상자 금지(`#exportConfirmModal`/`#toastContainer`), 상태 모델(`version: "1.3.0"` 및 `v1.0.0`~`v1.2.0` 임포트), 13종 액션·12종 조건·4종 훅 빌더, Lua 동등성 + `defaults`/`ARM_*` 프리플라이트 검증기, 2D `(X, Z)` 전술 캔버스(`hitTestCanvas` 4종 드래그·라벨 스태킹·`Alt` 미세 조정), JSON 입출력 및 `TASK-402` 인수 기준 명세 | `TASK-202-5` 사양 수립 (`tools/amm_mission_editor.html` 구현은 `TASK-402`로 분리) |
 
 ---
@@ -30,11 +31,11 @@
 ## 1. 프로그램 개요 및 불변 제약 (Overview, Constraints & Non-Goals)
 
 ### 1.1 목적 및 기능 범위
-`tools/amm_mission_editor.html`은 마인크래프트 CC:Tweaked 인게임 `51x19` 터미널의 해상도 한계 밖에서, 호스트 PC 브라우저를 통해 `AMM (Node 03)`의 다중 체크포인트 미션 JSON 파일을 시각적으로 설계·검증·입출력하는 **독립형 오프라인 웹 GUI 컴패니언 도구**입니다.
+`tools/amm_mission_editor.html`은 마인크래프트 CC:Tweaked 인게임 `51x19` 터미널의 해상도 한계 밖에서, 호스트 PC 브라우저를 통해 `AMM (Node 03)`의 `v2.0.0` 다중 체크포인트 미션 JSON 파일을 시각적으로 설계·검증·입출력하는 **독립형 오프라인 웹 GUI 컴패니언 도구**입니다.
 
-1. **AMM 미션 스키마 동등성**: `AMM_PROGRAM_SPECIFICATION.md` (`v1.3.0 Approved`) §6·§9가 정의한 **13종 체크포인트 액션(활성 9종 + 예약 4종)**, **12종 `completeWhen`/`abortWhen` 조건**, **4종 `onEnter`/`onExit`/`onAbort` 라이프사이클 훅**, **하위 호환 `v1.0.0` `items[]` 업그레이드** 및 **`v1.1.0` / `v1.2.0` 임포트 정규화**를 지원합니다.
-2. **2D `(X, Z)` 전술 경로 시각화**: 마인크래프트 수평 좌표계($+X$ 동쪽, $-Z$ 북쪽) 위에서 웨이포인트, 도달 허용 반경(`acceptanceRadius`), `ORBIT` 선회 원, `PATROL` 순찰 루프, `POI_HOLD` 조준선을 실시간 렌더링하고 마우스 클릭·드래그로 좌표를 편집합니다.
-3. **실시간 프리플라이트 검증**: 온보드 `mission_engine.validate_mission_table` 및 `normalize_checkpoint` 규칙과 동등한 정적 검증(`validateMission()`)을 편집 즉시 실행해, 인게임 투입 전 `CP#idx` 단위 오류와 예약(`DEFERRED`) 경고를 사전 검출합니다.
+1. **AMM `v2.0.0` 미션 스키마 동등성**: `AMM_PROGRAM_SPECIFICATION.md` (`v2.0.0 Approved`) §6·§9가 정의한 **3계층 `ACT_*`(활성 36종 + 예약 19종 + `TASK-401`) / `DEC_*`(7종) / `MAC_*`(5종) 매크로 전개**, **4대 범주 `preconditions`**, **12종 `completeWhen`/`abortWhen` 조건(`settleTicks` 포함)**, **4종 `onEnter`/`onExit`/`onAbort` 라이프사이클 훅**을 지원합니다. 구 `v1.0.0` `items[]` 및 구 13종 액션(`FLY_OVER` 등 `[DEPRECATED - v2.0.0]`)은 Zero-Fallback 정책에 따라 오류(`ERROR`)로 거부합니다.
+2. **2D `(X, Z)` 전술 경로 시각화**: 마인크래프트 수평 좌표계($+X$ 동쪽, $-Z$ 북쪽) 위에서 웨이포인트, 도달 허용 반경(`acceptanceRadius`), `ACT_PAT_LOITER_*` 선회 원, `ACT_NAV_GOTO_WP` 접선 진입 오프셋(`tangentEntryOffsetM`), `ACT_NAV_CORRIDOR` 회랑선, `ACT_PAT_POI_HOLD` 조준선을 실시간 렌더링하고 마우스 클릭·드래그로 좌표를 편집합니다.
+3. **실시간 프리플라이트 검증**: 온보드 `mission_engine.validate_mission_table` 및 `action_registry` 규칙과 동등한 정적 검증(`validateMission()`)을 편집 즉시 실행해, 인게임 투입 전 `CP#idx` 단위 오류(`SCHEMA_INVALID`)와 예약(`DEFERRED_ACTION_UNSUPPORTED`) 경고를 사전 검출합니다.
 
 ### 1.2 불변 제약 (Hard Constraints)
 - **무설치(Zero-Install) 단일 파일 구조**: `tools/amm_mission_editor.html`은 별도 빌드 도구, 로컬 HTTP 서버, npm 패키지 없이 단일 `.html` 파일(인라인 `<style>` + `<script>`)로 완결되어야 하며 `file://` 프로토콜에서 즉시 열려야 합니다.
@@ -52,15 +53,15 @@
 
 ## 2. 시스템 연동 및 외부 파일 파이프라인 (System Context & In-Game Workflow)
 
-### 2.1 호스트 PC $\to$ AMM 인게임 구동 파이프라인 (`AMM v1.3.0`)
-`tools/amm_mission_editor.html`에서 내보낸 `.json` 미션 파일은 3대 외부 파일 주입 경로를 통해 `AMM (Node 03)`으로 전달되며, `AMM v1.3.0`의 듀얼 코루틴(`Coroutine B 5Hz` / `Coroutine A 20Hz`)과 `trajectory_generator`를 거쳐 `FCP (Node 04)` `Base+4` (`[I-12]`) 및 `Zone 3` (`Base+20~29`, `[I-11]`)로 집행됩니다.
+### 2.1 호스트 PC $\to$ AMM 인게임 구동 파이프라인 (`AMM v2.0.0`)
+`tools/amm_mission_editor.html`에서 내보낸 `.json` 미션 파일은 3대 외부 파일 주입 경로를 통해 `AMM (Node 03)`으로 전달되며, `AMM v2.0.0`의 듀얼 코루틴(`Coroutine B 5Hz` / `Coroutine A 20Hz`), `action_registry`/`chattering_guard`, `trajectory_generator`를 거쳐 `FCP (Node 04)` `Base+4` (`[I-12]`) 및 `Zone 3` (`Base+20~29`, `[I-11]`)로 집행됩니다.
 
 ```mermaid
 flowchart LR
     subgraph HOST["Host PC (Offline Browser)"]
-        ED["tools/amm_mission_editor.html<br/>* 13 Actions / 12 Conds / 4 Hooks<br/>* 2D (X,Z) Tactical Canvas"]
-        VAL_WEB["validateMission()<br/>* Lua-Parity Preflight Check"]
-        EXP["exportJson()<br/>* version: 1.3.0 / 2-Space JSON"]
+        ED["tools/amm_mission_editor.html<br/>* ACT_*/DEC_*/MAC_* / preconditions<br/>* 12 Conds(settleTicks) / 4 Hooks"]
+        VAL_WEB["validateMission()<br/>* v2.0.0 Zero-Fallback Check"]
+        EXP["exportJson()<br/>* version: 2.0.0 / 2-Space JSON"]
         ED --> VAL_WEB --> EXP
     end
 
@@ -94,12 +95,13 @@ flowchart LR
 ```
 
 ### 2.2 설정 기준선 및 RF 채널 프리뷰 계산식
-- **기본값 기준선 (`AMM v1.3.0` §10.2 `config/amm_config.json`)**:
+- **기본값 기준선 (`AMM v2.0.0` §10.2 `config/amm_config.json`)**:
   - `channels.baseChannel`: `10000` (기체 블록 번호 $N = 1$, 대역폭 `40`)
   - `trajectory.defaultAlt`: `150.0` m
   - `trajectory.defaultSpeed`: `18.0` m/s
   - `trajectory.arrivalRadius`: `15.0` m
-  - *(과도기 참고)* `TASK-202-4` 기준 현행 디스크 내 `src/3_planning/amm/config/amm_config.json` (`v1.0.0`)은 평면 키(`baseChannel`, `defaultAlt`, `defaultSpeed`, `arrivalRadius`)를 사용하며, `TASK-207`에서 `v1.3.0` 중첩 키로 이행됩니다. 에디터 UI는 사용자 편의를 위해 기체 번호 $N$ (`1..1000`)과 `baseChannel` 프리뷰만 보조 계산하며, 내보내는 미션 JSON에는 하드웨어 설정 키를 혼입하지 않습니다.
+  - `safety.chattering.arrivalSettleTicks`: `4` Ticks (무정지 통과형 `ACT_NAV_SPLINE_WP`는 `0`)
+  - 에디터 UI는 사용자 편의를 위해 기체 번호 $N$ (`1..1000`)과 `baseChannel` 프리뷰만 보조 계산하며, 내보내는 미션 JSON에는 하드웨어 설정 키를 혼입하지 않습니다.
 - **Zone 3 RF 채널 계산식 (`Base` 프리뷰)**:
   - $\text{Base} = 10000 + (N - 1) \times 40 \quad (1 \le N \le 1000)$
   - $\text{Zone 3} = \text{Base} + \text{channelOffset} \quad (20 \le \text{channelOffset} \le 29)$
@@ -176,8 +178,8 @@ flowchart LR
 ```json
 {
   "mission": {
-    "missionId": "SORTIE_ALPHA",
-    "version": "1.3.0",
+    "missionId": "MSN_RECON_001",
+    "version": "2.0.0",
     "description": "",
     "executionMode": "SINGLE",
     "fallbackPolicy": "RTH",
@@ -220,15 +222,12 @@ flowchart LR
 
 - **미지 필드 보존 (`_extra` Preservation)**: 수기 편집된 미션 JSON을 불러올 때 최상위, `defaults`, 개별 체크포인트, `params`, 조건 객체, 훅 객체에 존재하는 비표준/확장 키(예: 향후 `TASK-204` 진입 조건 메타데이터나 사용자 메모)는 내부 `_extra` 맵에 보존하고 `exportJson()` 시 원래 위치에 병합 출력합니다. 단, 아래 정규화 대상 단축 좌표(`params.x`, `params.z`)는 `params.targetPos`로 승격한 뒤 출력에서 제거합니다.
 
-### 4.2 버전 호환 임포트 및 레거시 `v1.0.0` 자동 업그레이드 (`convertLegacyItems`)
-1. **체크포인트 기반 스키마 (`v1.1.0` / `v1.2.0` / `v1.3.0`)**:
-   - `Array.isArray(raw.checkpoints)`가 참이면 체크포인트 스키마로 간주합니다.
-   - 원본 `raw.version`이 `"1.1.0"` 또는 `"1.2.0"`인 경우 `ui.importedFromVersion`에 원본 버전을 기록하고 툴바 배지로 안내하며, 내보내기(`exportJson`) 시 표준 `"version": "1.3.0"`으로 정규화합니다. *(참고: 현행 온보드 `mission_engine.lua` `v1.2.0`은 임의의 `version` 문자열을 수용하며, `TASK-207`/`TASK-402`에서 `1.3.0` 기준과 정합화됩니다.)*
-2. **레거시 `v1.0.0` 단순 큐 변환 (`convertLegacyItems(raw)`)**:
-   - `Array.isArray(raw.items) && !Array.isArray(raw.checkpoints)` 조건 감지 시 `mission_engine.lua`의 `convert_legacy_items`와 동일한 규칙으로 즉시 업그레이드합니다:
-     - 각 `item[i]` $\to$ `{ checkpointId: formatCpId(item.id ?? i + 1), action: "FLY_OVER", params: { targetPos: { x: item.x, z: item.z }, ...(isFiniteNum(item.alt) && { targetAlt: item.alt }), ...(isFiniteNum(item.speed) && { cruiseSpeed: item.speed }) } }` (`formatCpId(n)`은 정수 시 `CP_%02d`, 문자열 시 그대로 사용).
-     - 마지막 원소 `last = raw.items[raw.items.length - 1]`에 비어 있지 않은 문자열 `last.facilityId`가 있으면 후속 체크포인트 `{ checkpointId: formatCpId(checkpoints.length + 1), action: "LAND_LAUNCHPAD", params: { facilityId: last.facilityId, targetPos: { x: last.x, z: last.z }, ...(isFiniteNum(last.alt) && { targetAlt: last.alt }) } }`를 자동 추가합니다.
-     - 상단 `missionId = raw.missionId || "LEGACY_MISSION"`, `version = "1.3.0"`, `executionMode = raw.executionMode || "SINGLE"`, `fallbackPolicy = raw.fallbackPolicy || "RTH"`, `defaults = raw.defaults || defaultMissionDefaults()`를 설정하고 비차단 토스트(`"Legacy v1.0.0 queue upgraded to v1.3.0 checkpoints"`)를 표출합니다.
+### 4.2 스키마 버전 검증 및 레거시 Zero-Fallback 거부 정책
+1. **표준 `v2.0.0` 체크포인트 스키마**:
+   - `Array.isArray(raw.checkpoints)`가 참이어야 하며 내보내기(`exportJson`) 시 항상 `"version": "2.0.0"`을 출력합니다.
+   - `ADD_MACRO` 버튼을 통해 `MAC_RECON_ORBIT` / `MAC_SHIP_RECOVERY` / `MAC_CARGO_SORTIE` 템플릿 선택 시 에디터가 즉시 선형 `ACT_*` + `DEC_*` 체크포인트 배열로 전개(Expand)할 수 있으며, 원형 `MAC_*` 노드 유지 저장도 허용합니다.
+2. **레거시 `v1.0.0` `items[]` 및 구 13종 액션 `[DEPRECATED - v2.0.0]` 거부 (Zero-Fallback)**:
+   - `raw.items[]` 단독 포맷 또는 구 13종 액션명(`FLY_OVER`, `FLY_TO`, `ORBIT`, `PATROL`, `POI_HOLD`, `TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`, `PAYLOAD_ACTION`, `REDSTONE_ACTION`, `TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM` `[DEPRECATED - v2.0.0]`)을 임포트하면 자동 변환(`convertLegacyItems` `[DEPRECATED - v2.0.0]`) 없이 `ERROR` (`SCHEMA_INVALID`)로 차단하고 `ACT_*` 규격으로 재작성하도록 안내합니다.
 
 ### 4.3 단축 좌표 정규화 (`params.{x, z}` $\to$ `params.targetPos`)
 `TASK-202-4` `mission_engine.extract_target_pos`와 동등하게, 임포트된 체크포인트의 `params`에 `params.targetPos`가 없고 유한 수치 `params.x`와 `params.z`가 존재하면 즉시 `params.targetPos = { x: params.x, z: params.z }`로 승격하고 임시 `params.x`, `params.z` 키는 제거합니다.
@@ -240,48 +239,57 @@ flowchart LR
 
 ---
 
-## 5. 미션 헤더 및 13종 체크포인트 액션 폼 매트릭스 (§5)
+## 5. 미션 헤더 및 3계층 (`ACT_*` / `DEC_*` / `MAC_*`) 액션 · `preconditions` 폼 매트릭스 (§5)
 
 ### 5.1 미션 헤더 및 전역 기본값 (`defaults`) 입력 규격
 
 | JSON 필드 경로 | 타입 | 기본값 | UI 컨트롤 | 설명 및 제약 |
 | :--- | :---: | :---: | :--- | :--- |
-| `missionId` | `string` | `"SORTIE_ALPHA"` | Text Input | 파일명 기본값(`${missionId.toLowerCase()}.json`) 및 식별자 |
-| `version` | `string` | `"1.3.0"` | Readonly / Badge Input | 표준 `"1.3.0"` 출력 (`v1.1.0`/`v1.2.0` 임포트 시 업그레이드 표기) |
+| `missionId` | `string` | `"MSN_RECON_001"` | Text Input | 파일명 기본값(`${missionId.toLowerCase()}.json`) 및 식별자 |
+| `version` | `string` | `"2.0.0"` | Readonly / Badge Input | 단일 표준 `"2.0.0"` 출력 (`v1.0.0` `items[]` Zero-Fallback 거부) |
 | `description` | `string` | `""` | Text Input (Optional) | 임무 설명 (빈 문자열이면 export 시 생략 가능) |
 | `executionMode` | `enum` | `"SINGLE"` | Segmented Toggle | `"SINGLE"` \| `"REPEAT"` |
 | `fallbackPolicy` | `enum` | `"RTH"` | Select | `"RTH"` \| `"HOVER_HOLD"` \| `"LOITER"` \| `"SKIP_NEXT"` |
 | `defaults.cruiseSpeed` | `number` | `18.0` | Number (`step=0.5`, `>0`) | 하위 체크포인트 미지정 시 상속되는 기본 순항 속도 (m/s) |
 | `defaults.targetAlt` | `number` | `150.0` | Number (`step=5`) | 하위 체크포인트 미지정 시 상속되는 기본 순항 고도 (m) |
-| `defaults.acceptanceRadius` | `number` | `15.0` | Number (`step=1`, `>0`) | `FLY_OVER` 등의 기본 수평 도달 반경 (m) |
+| `defaults.acceptanceRadius` | `number` | `15.0` | Number (`step=1`, `>0`) | `ACT_NAV_SPLINE_WP` 등의 기본 수평 도달 반경 (m) |
 | `defaults.headingMode` | `enum` | `"AUTO"` | Select | `"AUTO"` \| `"FIXED"` \| `"POI"` |
 
-### 5.2 체크포인트 엔벨로프 및 시퀀스 레일 제어
+### 5.2 체크포인트 엔벨로프, `decorators`, `preconditions` 및 시퀀스 레일 제어
 - **공통 헤더 필드**:
   - `checkpointId` (`string`): 자동 생성(`CP_01`, `CP_02`, ...), 사용자 수정 가능.
-  - `action` (`enum`): 4개 `<optgroup>`으로 분류하여 선택:
-    - `1. Navigation (Active 5)`: `FLY_OVER`, `FLY_TO`, `ORBIT`, `PATROL`, `POI_HOLD`
-    - `2A. Infrastructure (Active 2)`: `TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`
-    - `3. Special Devices (Active 2)`: `PAYLOAD_ACTION`, `REDSTONE_ACTION`
-    - `2B. Infrastructure (Deferred 4)`: `TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`
+  - `action` (`enum`): 도메인별 `<optgroup>`으로 선택:
+    - `ACT_SYS_*` (Active 6): `ACT_SYS_LOAD`, `ACT_SYS_PREFLIGHT`, `ACT_SYS_SET_HOME`, `ACT_SYS_ARM`, `ACT_SYS_DISARM`, `ACT_SYS_TERMINATE`
+    - `ACT_TKL_*` (Active 6): `ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_TRANS_MC2FW`, `ACT_TKL_TRANS_FW2MC`, `ACT_TKL_LAND_NORM`, `ACT_TKL_LAND_PREC`, `ACT_TKL_ABORT_LAND`
+    - `ACT_NAV_*` (Active 6): `ACT_NAV_GOTO_WP`, `ACT_NAV_SPLINE_WP`, `ACT_NAV_CORRIDOR`, `ACT_NAV_CHANGE_ALT`, `ACT_NAV_CHANGE_SPD`, `ACT_NAV_CHANGE_YAW`
+    - `ACT_PAT_*` (Active 5): `ACT_PAT_HOLD_POS`, `ACT_PAT_POI_HOLD`, `ACT_PAT_LOITER_TIME`, `ACT_PAT_LOITER_TURNS`, `ACT_PAT_LOITER_ALT`
+    - `ACT_PAY_*` (Active 4): `ACT_PAY_BUS_CMD`, `ACT_PAY_REDSTONE`, `ACT_PAY_SET_ROI`, `ACT_PAY_CLEAR_ROI`
+    - `ACT_COM_*` (Active 1): `ACT_COM_ATC_HOLD`
+    - `ACT_MOB_*` (Active 3): `ACT_MOB_RV_TRACK`, `ACT_MOB_DECK_SYNC`, `ACT_MOB_MOVING_TKOFF`
+    - `ACT_FS_*` (Active 5): `ACT_FS_RTL_HOME`, `ACT_FS_GOTO_RALLY`, `ACT_FS_FENCE_BRAKE`, `ACT_FS_HOVER_HOLD`, `ACT_FS_EMERG_LAND`
+    - `Deferred / Roadmap` (19종 + `TASK-401` 3종): `ACT_TKL_TAKEOFF_RWY`, `ACT_TKL_LAND_RWY`, `ACT_NAV_TERRAIN_FLW`, `ACT_PAT_FIG_EIGHT`, `ACT_PAT_GRID_SURVEY`, `ACT_PAT_EXP_SPIRAL`, `ACT_PER_LOCAL_AVOID`, `ACT_PER_REPLAN_GLB`, `ACT_PER_TRACK_TGT`, `ACT_PER_SENTRY_HOLD`, `ACT_COM_SWARM_FOLLOW`, `ACT_COM_HANDOVER`, `ACT_MOB_ARM_DOCK`, `ACT_MOB_ARM_UNDOCK`, `ACT_NRG_REFUEL_DOCK`, `ACT_NRG_HIBERNATE`, `ACT_MUMT_WINGMAN`, `ACT_MUMT_UGV_SCOUT`, `ACT_MUMT_CROSS_CUE`, `ACT_PAY_CARGO_DROP`, `ACT_PAY_FIRE_CTRL`, `ACT_PAY_GEO_SCAN`
+    - `MAC_*` 매크로 (Active 3 / Deferred 2): `MAC_RECON_ORBIT`, `MAC_SHIP_RECOVERY`, `MAC_CARGO_SORTIE`, `MAC_PATROL_RADAR`, `MAC_ARM_RESUPPLY`
+  - `decorators[]` (선택 토글): `[즉시]` 6종(`DEC_EMCON`, `DEC_ENERGY_ECO`, `DEC_SMOOTH_TRAJ`, `DEC_HUMAN_AUTH`, `DEC_RETRY_N`, `DEC_TIMEOUT_GUARD`) + `[로드맵]` 1종(`DEC_TIME_CRIT` 경고).
+  - `preconditions{}` (4대 범주 인스펙터): `State Flag`(`controlState`, `allowedAirframes`, `disallowedAirframes`), `Sensor & Est`(`sensorOk`, `gpsValid`, `maxHdop`), `Resource`(`minFuel`, `channelBound`), `Spatial & Safety`(`minAlt`, `maxAlt`, `maxSpeed`).
   - `fallbackPolicy` (선택 오버라이드): `(Inherit Mission)`(저장 시 키 생략) | `"RTH"` | `"HOVER_HOLD"` | `"LOITER"` | `"SKIP_NEXT"`.
-- **시퀀스 제어**: `+ Add`, `Duplicate` (`_copy` ID 생성), `Delete`, `Move Up` (`▲`), `Move Down` (`▼`), Drag-to-Reorder. 순서 변경 시 배열 인덱스를 즉시 재계산하고 `validateMission()`을 재실행합니다.
-- **액션 전환 시 필드 정리 정책**: 사용자가 기존 체크포인트의 `action`을 변경하면 이전 액션 전용 잔존 필드를 정리(신규 액션 스키마에 유효한 공통 필드 `targetPos`, `targetAlt`, `cruiseSpeed`는 가급적 보존)해 불필요한 잉여 키가 남지 않게 합니다.
+- **시퀀스 제어**: `+ Add`, `+ Macro`, `Duplicate` (`_copy` ID 생성), `Delete`, `Move Up` (`▲`), `Move Down` (`▼`), Drag-to-Reorder. 순서 변경 시 배열 인덱스를 즉시 재계산하고 `validateMission()`을 재실행합니다.
+- **액션 전환 시 필드 정리 정책**: 사용자가 기존 체크포인트의 `action`을 변경하면 이전 액션 전용 잔존 필드를 정리(신규 액션 스키마에 유효한 공통 필드 `targetPos`, `targetAlt`, `cruiseSpeed` 보존)해 불필요한 잉여 키가 남지 않게 합니다.
 
-### 5.3 13종 체크포인트 액션 파라미터 매트릭스
+### 5.3 주요 체크포인트 액션 파라미터 매트릭스
 
-| 액션 (`action`) | 상태 | JSON 키 경로 (`params.*`) | 타입 / UI 위젯 | 기본값 및 상속 규칙 | 검증 규칙 |
+| 도메인 / 액션 | 상태 | JSON 키 경로 (`params.*`) | 타입 / UI 위젯 | 기본값 및 상속 규칙 | 검증 규칙 |
 | :--- | :---: | :--- | :--- | :--- | :--- |
-| **`FLY_OVER`** | Active | `targetPos.{x, z}`<br/>`targetAlt`<br/>`cruiseSpeed`<br/>`acceptanceRadius`<br/>`headingMode`<br/>`fixedHeading` | Number Pair<br/>Number (opt)<br/>Number (opt)<br/>Number (opt)<br/>Select (opt)<br/>Number (`0..360`) | 필수<br/>상속 `defaults.targetAlt`<br/>상속 `defaults.cruiseSpeed`<br/>상속 `defaults.acceptanceRadius` (최후 `20.0`)<br/>상속 `defaults.headingMode`<br/>유효 `headingMode == "FIXED"`일 때 노출 | `targetPos.{x,z}` 유한 실수 필수<br/>`acceptanceRadius > 0`<br/>`cruiseSpeed > 0` (지정 시) |
-| **`FLY_TO`** | Active | `targetPos.{x, z}`<br/>`targetAlt`<br/>`cruiseSpeed`<br/>`acceptanceRadius`<br/>`headingMode`<br/>`fixedHeading` | Number Pair<br/>Number (opt)<br/>Number (opt)<br/>Number (opt)<br/>Select (opt)<br/>Number (`0..360`) | 필수<br/>상속 `defaults.targetAlt`<br/>상속 `defaults.cruiseSpeed`<br/>**명시적 기본 `5.0` m** (`defaults.acceptanceRadius` 미상속)<br/>상속 `defaults.headingMode`<br/>유효 `headingMode == "FIXED"`일 때 노출 | `targetPos.{x,z}` 유한 실수 필수<br/>`acceptanceRadius > 0`<br/>`5.0` 플레이스홀더 강조 |
-| **`ORBIT`** | Active | `targetPos.{x, z}`<br/>`radius`<br/>`direction`<br/>`durationSec`<br/>`targetAlt`<br/>`cruiseSpeed` | Number Pair<br/>Number (`>0`)<br/>Toggle (`CW`\|`CCW`)<br/>Number (`>=0`, opt)<br/>Number (opt)<br/>Number (opt) | 필수<br/>기본 `30.0` m<br/>기본 `"CW"`<br/>미지정 시 수동(`next`/`stop`) 체공<br/>상속 `defaults.targetAlt`<br/>상속 `defaults.cruiseSpeed` | `targetPos.{x,z}` 필수<br/>`radius > 0` (`< 5.0` 시 FCP/LOITER 클램프 주의 배지)<br/>`direction` ∈ `{"CW","CCW"}` |
-| **`PATROL`** | Active | `waypoints[]` (`{x, z, alt?, speed?, acceptanceRadius?}`)<br/>`patrolMode`<br/>`cycles`<br/>`durationSec`<br/>`targetAlt`<br/>`cruiseSpeed`<br/>`acceptanceRadius` | 동적 행 테이블 (`Add/Del/▲/▼` + 캔버스 입력)<br/>Select (`LOOP`\|`PING_PONG`)<br/>Integer (`>=1`)<br/>Number (`>=0`, opt)<br/>Number/Select (opt) | 최소 1행 필수<br/>기본 `"LOOP"`<br/>기본 `1`<br/>미지정 시 `cycles` 기준 완주<br/>상속 `defaults.*` | `waypoints.length >= 1` 및 모든 행 `{x,z}` 유한 실수<br/>`patrolMode` ∈ `{"LOOP","PING_PONG"}`<br/>`cycles` 정수 `>= 1` |
-| **`POI_HOLD`** | Active | `targetPos.{x, z}`<br/>`poiPos.{x, y?, z}`<br/>`headingMode`<br/>`durationSec`<br/>`targetAlt`<br/>`cruiseSpeed` | Number Pair<br/>Number Triple (`y` opt)<br/>Select (opt)<br/>Number (`>=0`, opt)<br/>Number (opt)<br/>Number (opt) | 체공 좌표 필수<br/>조준 표적 `x, z` 필수 (`y` opt)<br/>기본 `"POI"`<br/>미지정 시 수동 체공<br/>상속 `defaults.*` | `mission_engine.normalize_checkpoint` 기준 `targetPos.{x,z}` 및 `poiPos.{x,z}` 모두 필수 (`poiPos.y` 지정 시 유한 실수) |
-| **`TAKEOFF_LAUNCHPAD`** | Active | `facilityId`<br/>`targetAlt`<br/>`targetPos.{x, z}` | Text (opt)<br/>Number (opt)<br/>Number Pair (opt) | 선택 문자열<br/>상속 `defaults.targetAlt`<br/>캔버스 이륙 마커용 선택 좌표 | `facilityId` 지정 시 비어 있지 않은 문자열<br/>`targetAlt`·`targetPos` 지정 시 유한 실수 |
-| **`LAND_LAUNCHPAD`** | Active | `facilityId`<br/>`targetPos.{x, z}`<br/>`targetAlt` | Text<br/>Number Pair<br/>Number (opt) | 둘 중 **최소 1개 필수**<br/>상속 `defaults.targetAlt` | `facilityId`(비어 있지 않음) 또는 `targetPos.{x,z}` 중 1개 이상 필수 (`INVALID_LAND_PARAMS`) |
-| **`PAYLOAD_ACTION`** | Active | `channelOffset` 또는 `targetChannel`<br/>`command`<br/>`commandPayload`<br/>`waitForAck`<br/>`expectedStatus` | Integer (`20..29`) / Absolute CH + `Base+offset` 프리뷰<br/>Text<br/>JSON Object Textarea<br/>Checkbox<br/>Text | 기본 `channelOffset = 20`<br/>필수 문자열<br/>기본 `"{}"` (`{}` 객체)<br/>기본 `true`<br/>기본 `"OK"` (`waitForAck==true` 활성) | `channelOffset` ∈ `[20,29]` 정수 또는 유효 `Base+20..29`<br/>`command` 비어 있지 않음<br/>`commandPayload` 유효 JSON 객체 (배열/원시값 금지) |
-| **`REDSTONE_ACTION`** | Active | `mode`<br/>`side`<br/>`color`<br/>`level`<br/>`state`<br/>`durationMs`<br/>`minLevel` | Select (`EMIT`\|`WAIT_INPUT`)<br/>Select (6면)<br/>Select (16색 \| None)<br/>Integer (`0..15`, opt)<br/>Toggle (`true`/`false`)<br/>Number (`>=0`)<br/>Integer (`1..15`) | 필수<br/>필수 (`top..back`)<br/>선택 (번들 출력/입력)<br/>아날로그 `EMIT` 시 사용<br/>디지털 `EMIT` 기본 `true`<br/>기본 `0` (`EMIT` 펄스 ms)<br/>기본 `1` (`WAIT_INPUT`) | `mode` ∈ `{"EMIT","WAIT_INPUT"}`<br/>`side` ∈ 6면<br/>`durationMs >= 0`<br/>`color` 지정 시 16색 중 하나 |
-| **`TAKEOFF_RUNWAY`**<br/>**`LAND_RUNWAY`**<br/>**`DOCK_ARM`**<br/>**`UNDOCK_ARM`** | `DEFERRED` | `facilityId`<br/>`targetPos.{x, z}`<br/>`targetAlt` | 상단 Amber 배너 + Text (opt) / Number Pair (opt) / Number (opt) | `TASK-103/104` 미구현으로 런타임 진입 시 `DEFERRED_ACTION_UNSUPPORTED` 거부 안내 | 구조 오류 아님(`WARNING`: `DEFERRED_ACTION_UNSUPPORTED` 표출) |
+| **`ACT_NAV_SPLINE_WP`** | Active | `targetPos.{x, z}`, `targetAlt`, `cruiseSpeed`, `acceptanceRadius`, `headingMode`, `fixedHeading` | Number Pair + Option Inputs | 상속 `defaults.*` (`acceptanceRadius` 기본 `15.0`/`20.0`, `settleTicks=0`) | `targetPos.{x,z}` 유한 실수, `acceptanceRadius > 0` |
+| **`ACT_NAV_GOTO_WP`** | Active | `targetPos.{x, z}`, `targetAlt`, `cruiseSpeed`, `acceptanceRadius`, `tangentEntryOffsetM` | Number Pair + Tangency | **명시적 기본 `5.0` m** (`settleTicks=4`, `tangentEntryOffsetM >= 0` 선택) | `targetPos.{x,z}` 유한 실수, `acceptanceRadius > 0` |
+| **`ACT_NAV_CORRIDOR`** | Active | `startPos.{x, z}`, `endPos.{x, z}`, `targetPos.{x, z}`, `maxCrossTrackM`, `targetAlt`, `cruiseSpeed` | Pair × 2 + Max Deviation | `maxCrossTrackM` 기본 `15.0` m | `endPos` 또는 `targetPos` 필수, `maxCrossTrackM > 0` |
+| **`ACT_NAV_CHANGE_ALT` / `_SPD` / `_YAW`** | Active | `targetAlt` / `cruiseSpeed` / `targetYaw` (`fixedHeading`) | Single Scalar Input | 해당 단일 목표치 변경 | 각 대상 필드 유한 실수 필수 (`cruiseSpeed > 0`) |
+| **`ACT_PAT_LOITER_TIME` / `_TURNS` / `_ALT`** | Active | `targetPos.{x, z}`, `radius`, `direction`, `durationSec` / `turns` / `targetAlt` | Center + Orbit Params | `radius=30.0`, `direction="CW"`, `turns >= 1` | `targetPos.{x,z}` 필수, `radius > 0`, `turns >= 1` |
+| **`ACT_PAT_HOLD_POS` / `ACT_PAT_POI_HOLD`** | Active | `targetPos.{x, z}`, `poiPos.{x, y?, z}`, `headingMode`, `durationSec` | Point + Target 3D | `headingMode="POI"` (`POI_HOLD`), 미지정 시 수동 대기 | `POI_HOLD` 시 `targetPos` 및 `poiPos.{x,z}` 필수 |
+| **`ACT_TKL_TAKEOFF_VERT` / `ACT_TKL_LAND_*`** | Active | `facilityId`, `targetPos.{x, z}`, `targetAlt` | Facility / Pos Inputs | `LAND_PREC`/`LAND_NORM`: `facilityId` 또는 `targetPos` | `LAND_*` 시 `facilityId` 또는 `targetPos.{x,z}` 중 1개 이상 필수 |
+| **`ACT_PAY_BUS_CMD` / `_SET_ROI` / `_CLEAR_ROI`** | Active | `channelOffset`, `command`, `commandPayload`, `waitForAck`, `expectedStatus`, `poiPos` | Zone 3 Payload Builder | `channelOffset=20`, `waitForAck=true`, `expectedStatus="OK"` | `channelOffset` ∈ `[20,29]`, `command` 비어 있지 않음 |
+| **`ACT_PAY_REDSTONE`** | Active | `mode`, `side`, `color`, `level`, `state`, `durationMs`, `minLevel` | 6-Side Redstone Form | `mode="EMIT"\|"WAIT_INPUT"`, `durationMs=0`, `minLevel=1` | `side` ∈ 6면, `durationMs >= 0` |
+| **`ACT_SYS_*` / `ACT_COM_ATC_HOLD` / `ACT_MOB_*` / `ACT_FS_*`** | Active | 도메인별 선택 파라미터 (`targetPos`, `facilityId`, `targetAlt`, `cruiseSpeed`) | Contextual Form | 기본 `defaults.*` 및 `amm_config.safety.chattering` 연동 | 지정 시 각 좌표/고도 유한 실수 검증 |
+| **예약 19종 + `TASK-401` 3종 + 지연 `DEC_*`/`MAC_*`** | `DEFERRED` | 해당 표준 키 (`facilityId`, `targetPos` 등) | Amber `[DEFERRED]` 배너 | 런타임 진입 시 `DEFERRED_ACTION_UNSUPPORTED` 반환 안내 | 구조 오류 아님(`WARNING`: `DEFERRED_ACTION_UNSUPPORTED` 표출) |
 
 ---
 
@@ -293,25 +301,24 @@ flowchart LR
   - 온보드 `condition_evaluator.evaluate_group(group, ctx, ...)`는 `conditions`가 빈 배열(`{}`)일 때 기본 조건으로 폴백하지 않고 `false`를 반환합니다.
   - 따라서 UI에서 `conditions.length === 0`인 `completeWhen` 또는 `abortWhen`은 인스펙터에 `"Default completion active (no custom override)"` / `"No abort conditions"` 배너로 표시하고, **`exportJson()` 시 `completeWhen` / `abortWhen` 키 자체를 JSON에서 생략**합니다(기존 JSON에 명시적 `{ logic, conditions: [] }`가 들어온 경우 검증 경고를 표시).
 
-#### 액션별 기본 `completeWhen` 프리뷰 (`AMM v1.3.0` §6.3 / `condition_evaluator.resolve_default_complete`)
+#### 액션별 기본 `completeWhen` 프리뷰 (`AMM v2.0.0` §6.3 / `condition_evaluator.resolve_default_complete`)
 | 액션 (`action`) | `completeWhen` 생략 시 온보드 엔진 자동 적용 조건 |
 | :--- | :--- |
-| **`FLY_OVER`** | `{ logic: "ALL", conditions: [{ type: "PROXIMITY_2D", toleranceM: acceptanceRadius (20.0) }] }` |
-| **`FLY_TO`** | `{ logic: "ALL", conditions: [{ type: "PROXIMITY_3D", toleranceM: params.acceptanceRadius ?? 5.0 }] }` |
-| **`TAKEOFF_LAUNCHPAD`** | `{ logic: "ANY", conditions: [{ type: "ALTITUDE_REACHED", toleranceM: 5.0, allowFsmCruise: true }] }` (`flightMode == "CRUISE"` 전이 시에도 완료 인정) |
-| **`LAND_LAUNCHPAD`** | `{ logic: "ALL", conditions: [{ type: "FACILITY_TOUCHDOWN", facilityId }] }` |
-| **`ORBIT` / `POI_HOLD`** | `params.durationSec` 지정 시 `DURATION_SEC`, 미지정 시 `HOLD/MANUAL` (`next`/`stop` 명령까지 체공) |
-| **`PATROL`** | `params.durationSec` 지정 시 `DURATION_SEC`, 미지정 시 `cycles`회 순환 완주(`patrolCompleted`) |
-| **`PAYLOAD_ACTION`** | `waitForAck == false`이면 `DURATION_SEC(0)`, 기본(`true`)이면 `PAYLOAD_RESP_MATCH` (`expectedStatus = params.expectedStatus ?? "OK"`) |
-| **`REDSTONE_ACTION`** | `mode == "EMIT"`이면 `DURATION_SEC(durationMs / 1000)`, `mode == "WAIT_INPUT"`이면 `REDSTONE_INPUT_HIGH` |
+| **`ACT_NAV_SPLINE_WP`** | `{ logic: "ALL", conditions: [{ type: "PROXIMITY_2D", toleranceM: acceptanceRadius (20.0), settleTicks: 0 }] }` |
+| **`ACT_NAV_GOTO_WP`** / **`ACT_NAV_CORRIDOR`** | `{ logic: "ALL", conditions: [{ type: "PROXIMITY_3D", toleranceM: params.acceptanceRadius ?? 5.0, settleTicks: 4 }] }` |
+| **`ACT_TKL_TAKEOFF_VERT`** / **`ACT_NAV_CHANGE_ALT`** / **`ACT_PAT_LOITER_ALT`** | `{ logic: "ANY", conditions: [{ type: "ALTITUDE_REACHED", toleranceM: 5.0, settleTicks: 4 }] }` (`TAKEOFF` 시 `CRUISE` 전이 포함) |
+| **`ACT_TKL_LAND_NORM`** / **`ACT_TKL_LAND_PREC`** | `{ logic: "ALL", conditions: [{ type: "FACILITY_TOUCHDOWN", facilityId }] }` |
+| **`ACT_PAT_LOITER_TIME`** / **`ACT_PAT_HOLD_POS`** / **`ACT_PAT_POI_HOLD`** | `params.durationSec` 지정 시 `DURATION_SEC`, 미지정 시 수동 체공(`next`/`stop`) |
+| **`ACT_PAY_BUS_CMD`** / **`ACT_PAY_SET_ROI`** / **`ACT_PAY_CLEAR_ROI`** | `waitForAck == false`이면 즉시 완료, 기본(`true`)이면 `PAYLOAD_RESP_MATCH` |
+| **`ACT_PAY_REDSTONE`** | `mode == "EMIT"`이면 `DURATION_SEC(durationMs / 1000)`, `mode == "WAIT_INPUT"`이면 `REDSTONE_INPUT_HIGH` |
 
-### 6.2 12종 조건 타입 입력 매트릭스
+### 6.2 12종 조건 타입 입력 매트릭스 (`settleTicks` 포함)
 
 | 조건 타입 (`type`) | 파라미터 키 및 UI 컨트롤 | 기본값 / 제약 | 비고 |
 | :--- | :--- | :---: | :--- |
-| **`PROXIMITY_2D`** | `toleranceM` (Number, opt), `targetPos.{x, z}` (opt override) | 기본 `acceptanceRadius` (`>= 0`) | 2D 수평 도달 |
-| **`PROXIMITY_3D`** | `toleranceM` (Number, opt), `targetPos.{x, z}` (opt), `targetAlt` (opt) | 기본 `5.0` (`>= 0`) | 3D 정밀 도달 |
-| **`ALTITUDE_REACHED`** | `toleranceM` (Number, opt), `targetAlt` (opt), `allowFsmCruise` (Checkbox) | 기본 `5.0` (`>= 0`) | 목표 고도 도달 |
+| **`PROXIMITY_2D`** | `toleranceM` (Number, opt), `settleTicks` (Int `>=0`, opt), `targetPos.{x, z}` (opt) | 기본 `acceptanceRadius` (`settleTicks`: `SPLINE_WP=0`) | 2D 수평 도달 + 안착 틱 |
+| **`PROXIMITY_3D`** | `toleranceM` (Number, opt), `settleTicks` (Int `>=0`, opt), `targetPos.{x, z}`, `targetAlt` | 기본 `5.0` (`settleTicks` 기본 `4`) | 3D 정밀 도달 + 안착 틱 |
+| **`ALTITUDE_REACHED`** | `toleranceM` (Number, opt), `settleTicks` (Int `>=0`, opt), `targetAlt`, `allowFsmCruise` | 기본 `5.0` (`settleTicks` 기본 `4`) | 목표 고도 도달 + 안착 틱 |
 | **`DURATION_SEC`** | `durationSec` (Number, 필수) | `>= 0` (초) | 스텝 경과 시간 |
 | **`TIMEOUT_SEC`** | `timeout` (Number, 필수 — **키 명칭 `timeoutSec` 아님**) | `>= 0` (초) | 주로 `abortWhen` 타임아웃 |
 | **`FUEL_LEVEL_BELOW`** | `threshold` (Number, `step=0.05`) | `0.0 .. 1.0` | 잔여 연료 하한 미만/이하 중단 |
@@ -364,17 +371,18 @@ type ValidationIssue = {
 // return { valid: errors.length === 0, errors, warnings }
 ```
 
-- **구조 검증 vs 런타임 `DEFERRED` 분리**: 온보드 `mission_engine.validate_mission_table`과 동일하게 예약 액션 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 및 `completeWhen`/`abortWhen` 내 예약 조건 2종(`ARM_DOCKED`, `ARM_RELEASED`)은 `ERROR`가 아닌 `WARNING` (`DEFERRED_ACTION_UNSUPPORTED`)으로 분류하여 파일 저장 및 내보내기를 허용하되, 온보드 시퀀서 진입 또는 도킹암 조건 평가 시 제한됨을 사전에 안내합니다.
+- **구조 검증 vs 런타임 `DEFERRED` 분리**: 온보드 `mission_engine.validate_mission_table` 및 `action_registry`와 동일하게 예약 액션 19종+`TASK-401` 3종(`ACT_TKL_TAKEOFF_RWY`, `ACT_MOB_ARM_DOCK` 등), 예약 데코레이터(`DEC_TIME_CRIT`), 예약 매크로(`MAC_PATROL_RADAR`, `MAC_ARM_RESUPPLY`) 및 예약 조건(`ARM_DOCKED`, `ARM_RELEASED`)은 `ERROR`가 아닌 `WARNING` (`DEFERRED_ACTION_UNSUPPORTED`)으로 분류합니다. 반면 구 13종 액션명(`FLY_OVER` 등 `[DEPRECATED - v2.0.0]`) 및 `v1.0.0` `items[]` 단독 입력은 Zero-Fallback 원칙에 따라 **`ERROR` (`SCHEMA_INVALID`)**로 거부합니다.
 
 ### 7.2 오류 및 경고 카탈로그 (Lua 동등성 매핑)
 
 | 심각도 | 에디터 코드 (`code`) | Lua 대응 코드 (`mission_engine`) | 트리거 조건 |
 | :---: | :--- | :--- | :--- |
-| `ERROR` | `EMPTY_CHECKPOINTS` | `EMPTY_CHECKPOINTS` | `checkpoints.length === 0` |
+| `ERROR` | `EMPTY_CHECKPOINTS` | `EMPTY_CHECKPOINTS` | `checkpoints.length === 0` 또는 `items[]` 레거시 포맷 |
 | `ERROR` | `INVALID_EXECUTION_MODE` | `INVALID_EXECUTION_MODE` | `executionMode` ∉ `{"SINGLE","REPEAT"}` |
 | `ERROR` | `INVALID_FALLBACK_POLICY` | `INVALID_FALLBACK_POLICY` | `fallbackPolicy` ∉ `{"RTH","HOVER_HOLD","LOITER","SKIP_NEXT"}` |
-| `ERROR` | `UNKNOWN_ACTION` | `UNKNOWN_ACTION` | `action` ∉ 13종 표준 액션 |
-| `ERROR` | `INVALID_TARGET_POS` | `INVALID_TARGET_POS` | `FLY_OVER`/`FLY_TO`/`ORBIT`/`POI_HOLD`의 `targetPos.{x,z}` 누락 또는 비유한수 (`TAKEOFF`/`LAND` 지정 시 오타 포함) |
+| `ERROR` | `UNKNOWN_ACTION` | `UNKNOWN_ACTION` | `action` ∉ `action_registry` (`ACT_*` / `MAC_*`) 또는 구 13종 폐기 액션 사용 |
+| `ERROR` | `PRECONDITION_STATIC_INVALID` | `SCHEMA_INVALID` | `allowedAirframes`/`disallowedAirframes` 충돌 또는 정적 지오펜스 이탈 |
+| `ERROR` | `INVALID_TARGET_POS` | `INVALID_TARGET_POS` | `ACT_NAV_SPLINE_WP`/`GOTO_WP`/`ACT_PAT_LOITER_*`/`POI_HOLD`의 `targetPos.{x,z}` 누락 또는 비유한수 |
 | `ERROR` | `INVALID_ACCEPTANCE_RADIUS` | `INVALID_ACCEPTANCE_RADIUS` | `mission.defaults.acceptanceRadius` 또는 체크포인트 `params.acceptanceRadius` 지정 시 `<= 0` 또는 비유한수 |
 | `ERROR` | `INVALID_TARGET_ALT` | `INVALID_TARGET_ALT` | `mission.defaults.targetAlt` 또는 체크포인트 `params.targetAlt` 지정 시 비유한수 |
 | `ERROR` | `INVALID_FACILITY_ID` | `INVALID_FACILITY_ID` | `facilityId` 지정 시 빈 문자열 또는 비문자열 |
@@ -398,10 +406,10 @@ type ValidationIssue = {
 | `ERROR` | `INVALID_CONDITION_PARAM` | *(런타임 평가 실패 방지)* | `DURATION_SEC.durationSec < 0`, `TIMEOUT_SEC.timeout < 0`, `FUEL_LEVEL_BELOW.threshold` ∉ `[0,1]`, `CROSS_TRACK_ERROR.maxDevM < 0`, `REDSTONE_INPUT_HIGH` `side` 누락 등 |
 | `ERROR` | `UNKNOWN_HOOK_TYPE` | `INVALID_HOOK_TYPE` / `INVALID_HOOK_BLOCK` | `hook.type` ∉ 4종 표준 훅 |
 | `ERROR` | `INVALID_HOOK_PARAM` | *(런타임 훅 실패 방지)* | `REDSTONE_*` `side` 누락/`durationMs < 0`, `ZONE3_PAYLOAD_CMD` 채널·`command` 누락, `NOTIFY_OPERATOR` `level` 위반 |
-| `WARNING` | `DEFERRED_ACTION_UNSUPPORTED` | `DEFERRED_ACTION_UNSUPPORTED` | 예약 4종 액션(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 또는 예약 2종 조건(`ARM_DOCKED`, `ARM_RELEASED`) 사용 (`TASK-103/104` 미구현) |
-| `WARNING` | `ORBIT_RADIUS_BELOW_FCP_MIN` | *(FCP `LOITER` $R \ge 5.0\text{m}$ 클램프)* | `ORBIT.radius < 5.0` |
-| `WARNING` | `MISSING_DURATION_HOLD_MANUAL` | `HOLD/MANUAL` | `ORBIT`/`POI_HOLD`에 `durationSec` 및 커스텀 `completeWhen` 모두 부재(수동 `next`/`stop` 필요) |
-| `WARNING` | `PATROL_SINGLE_WP_DEGENERACY` | *(단일 점 순찰)* | `PATROL.waypoints.length === 1` |
+| `ERROR` | `UNKNOWN_DECORATOR` | `UNKNOWN_DECORATOR` | `decorators[]` 내 `decoratorId` ∉ 7종 표준 `DEC_*` |
+| `WARNING` | `DEFERRED_ACTION_UNSUPPORTED` | `DEFERRED_ACTION_UNSUPPORTED` | 예약 19종+`TASK-401` `ACT_*`, `DEC_TIME_CRIT`, `MAC_PATROL_RADAR`/`MAC_ARM_RESUPPLY`, `ARM_DOCKED`/`ARM_RELEASED` 사용 |
+| `WARNING` | `ORBIT_RADIUS_BELOW_FCP_MIN` | *(FCP `LOITER` $R \ge 5.0\text{m}$ 클램프)* | `ACT_PAT_LOITER_*.radius < 5.0` |
+| `WARNING` | `MISSING_DURATION_HOLD_MANUAL` | `HOLD/MANUAL` | `ACT_PAT_LOITER_TIME`/`POI_HOLD`에 `durationSec` 및 커스텀 `completeWhen` 모두 부재 |
 
 ### 7.3 진단 인터랙션 규칙
 - `errors.length > 0` 상태에서도 `Export .json` 버튼은 클릭 가능하게 두되, `window.confirm()` 대신 인페이지 확인 모달 `#exportConfirmModal`(`"Preflight detected N error(s). Export anyway?"`)로 사용자 실수를 방지하며, 내보내기·복사 결과는 `#toastContainer` 비차단 토스트로 알립니다.
@@ -417,66 +425,59 @@ type ValidationIssue = {
   - $\text{sx} = \frac{W}{2} + (\text{wx} - \text{camX}) \cdot \text{zoom}$, $\quad \text{sy} = \frac{H}{2} + (\text{wz} - \text{camZ}) \cdot \text{zoom}$
   - $\text{wx} = \text{camX} + \frac{\text{sx} - W / 2}{\text{zoom}}$, $\quad \text{wz} = \text{camZ} + \frac{\text{sy} - H / 2}{\text{zoom}}$
   - 격자 스냅(`gridSnapM` ∈ `{0, 1, 10, 50}`): 활성 시 $v_{\text{snap}} = \text{Math.round}(v / g) \cdot g$.
-- **방위각 변환**: 진북 $0^\circ$($-Z$) $\to$ 캔버스 라디안 $\theta = (\text{headingDeg} - 90) \cdot \frac{\pi}{180}$. `ORBIT`의 `CW` 회전은 화면상 시계 방향($+X \to +Z \to -X \to -Z$) 화살표로 표시합니다.
+- **방위각 변환**: 진북 $0^\circ$($-Z$) $\to$ 캔버스 라디안 $\theta = (\text{headingDeg} - 90) \cdot \frac{\pi}{180}$. `ACT_PAT_LOITER_*`의 `CW` 회전은 화면상 시계 방향($+X \to +Z \to -X \to -Z$) 화살표로 표시합니다.
 - **HiDPI 스케일링**: 리사이즈마다 `dpr = window.devicePixelRatio || 1`를 반영해 `canvas.width = rect.width * dpr`, `canvas.height = rect.height * dpr`, `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`를 적용합니다.
 
 ### 8.2 8계층 순차 렌더링 파이프라인
 1. **배경 및 적응형 격자**: 줌 레벨에 따라 `10m` / `50m` / `100m` / `500m` 간격 중 화면상 `40..120px` 간격이 되는 축척 자동 선택, 원점 `(0, 0)` 십자선, 우상단 `N(-Z) / E(+X) / S(+Z) / W(-X)` 나침반 표시.
-2. **주 비행 경로선 (Primary Trajectory Legs)**: 공간 좌표를 가진 체크포인트(`FLY_OVER`, `FLY_TO`, `ORBIT`, `POI_HOLD`, `PATROL` 진입/이탈, `targetPos`가 있는 `TAKEOFF_LAUNCHPAD`/`LAND_LAUNCHPAD`)를 순차 연결하고 구간 중앙에 방향 화살표를 렌더링합니다. `executionMode === "REPEAT"`일 때는 마지막 공간 체크포인트에서 첫 번째 비행 체크포인트(첫 항목이 `TAKEOFF_LAUNCHPAD`이고 길이가 `2` 이상이면 인덱스 `1`, 아니면 인덱스 `0` — `mission_engine.lua` 순환 규칙 일치)로 이어지는 점선 귀환 레그를 그립니다.
-3. **도달 허용 반경 및 `ORBIT` 선회원**: `FLY_OVER` / `FLY_TO`의 해석된 `acceptanceRadius` 점선 원, `ORBIT`의 `params.radius` 점선 원 및 원주 위 `CW`/`CCW` 접선 방향 화살표.
-4. **`PATROL` 서브웨이포인트 다각형 및 무게중심 핸들**: `P1`, `P2`, ... 번호가 붙은 폴리라인, `LOOP` 모드 시 `P_n -> P_1` 폐합선, `PING_PONG` 모드 시 양방향 셰브런 화살표, 경유지 2개 이상(`waypoints.length >= 2`)일 때 무게중심 `(cx, cz)`에 보라색 사각 핸들(`⬡ Move Patrol`)을 렌더링합니다.
-5. **`POI_HOLD` 조준선**: `targetPos`에서 `poiPos`까지 이어지는 호박색(`--accent-amber`) 점선 시선 및 `+POI` 표적 십자 마커.
+2. **주 비행 경로선 (Primary Trajectory Legs)**: 공간 좌표를 가진 체크포인트(`ACT_NAV_SPLINE_WP`, `ACT_NAV_GOTO_WP`, `ACT_NAV_CORRIDOR`, `ACT_PAT_LOITER_*`, `ACT_PAT_POI_HOLD`, `targetPos`가 있는 `ACT_TKL_*` 및 `ACT_FS_*`)를 순차 연결하고 구간 중앙에 방향 화살표를 렌더링합니다. `executionMode === "REPEAT"`일 때는 마지막 공간 체크포인트에서 첫 번째 비행 체크포인트(`ACT_SYS_*`, `ACT_TKL_TAKEOFF_*`, `ACT_MOB_MOVING_TKOFF`를 건너뛴 첫 비행 체크포인트 — `mission_engine.lua` 순환 규칙 일치)로 이어지는 점선 귀환 레그를 그립니다.
+3. **도달 허용 반경 및 `LOITER` 선회원**: `ACT_NAV_SPLINE_WP` / `ACT_NAV_GOTO_WP`의 해석된 `acceptanceRadius` 점선 원, `ACT_NAV_GOTO_WP.tangentEntryOffsetM` 접선 진입점 마커, `ACT_PAT_LOITER_*`의 `params.radius` 점선 원 및 원주 위 `CW`/`CCW` 접선 방향 화살표.
+4. **`ACT_NAV_CORRIDOR` 회랑 및 무게중심 핸들**: `startPos` $\to$ `endPos` 중심선과 $\pm \text{maxCrossTrackM}$ 회랑 경계 점선 렌더링.
+5. **`ACT_PAT_POI_HOLD` / `ACT_PAY_SET_ROI` 조준선**: `targetPos`에서 `poiPos`까지 이어지는 호박색(`--accent-amber`) 점선 시선 및 `+POI` 표적 십자 마커.
 6. **체크포인트 노드 글리프, 비공간 배지 및 중첩 라벨 스태킹**:
-   - `TAKEOFF_LAUNCHPAD`: 상향 삼각형(`▲`), `LAND_LAUNCHPAD`: 하향 착륙 패드 사각형(`▼`), `ORBIT`: 이중 링, `POI_HOLD`: 다이아몬드(`◆`), `PATROL`: 다각형 허브, `FLY_OVER`/`FLY_TO`: 원형 마커 및 순번 `1..N`.
-   - `PAYLOAD_ACTION` / `REDSTONE_ACTION` 등 좌표 없는 비공간 스텝은 직전 공간 체크포인트 옆에 위성 배지(`P#idx`, `R#idx`)로 부착해 시퀀스 내 위치를 시각화합니다.
-   - **중첩 좌표 라벨 스태킹 (`Coord Stack Offset`)**: 동일 `(X, Z)` 좌표를 공유하는 노드(예: 동일 패드의 이륙/착륙 패드)는 우측 라벨 Y 좌표를 `15px`씩 계단식으로 분리 렌더링하여 텍스트 겹침을 방지합니다.
+   - `ACT_TKL_TAKEOFF_VERT`: 상향 삼각형(`▲`), `ACT_TKL_LAND_*`: 하향 착륙 패드 사각형(`▼`), `ACT_PAT_LOITER_*`: 이중 링, `ACT_PAT_POI_HOLD`: 다이아몬드(`◆`), `ACT_NAV_CORRIDOR`: 회랑 라인, `ACT_NAV_SPLINE_WP`/`GOTO_WP`: 원형 마커 및 순번 `1..N`.
+   - `ACT_PAY_*` / `ACT_SYS_*` 등 좌표 없는 비공간 스텝은 직전 공간 체크포인트 옆에 위성 배지(`P#idx`, `R#idx`)로 부착해 시퀀스 내 위치를 시각화합니다.
+   - **중첩 좌표 라벨 스태킹 (`Coord Stack Offset`)**: 동일 `(X, Z)` 좌표를 공유하는 노드(예: 동일 패드의 이륙/착륙)는 우측 라벨 Y 좌표를 `15px`씩 계단식으로 분리 렌더링하여 텍스트 겹침을 방지합니다.
    - 선택 체크포인트는 시안(`--accent-cyan`) 외곽선, 오류 체크포인트는 적색(`--accent-red`), `DEFERRED` 체크포인트는 호박색 점선 외곽선을 부여합니다.
-7. **`FIXED` 기수 방위 벡터**: 유효 `headingMode == "FIXED"`이고 유한 `fixedHeading`이 지정된 노드에 짧은 노즈 방향 화살표를 렌더링합니다.
-8. **좌상단 캔버스 HUD 오버레이**: `Cursor (X, Z)`, `Zoom`, `Legs`, `Total 2D Path (m)`, `Est. Transit Time (s)` (`defaults.cruiseSpeed` 및 구간별 속도 기준 합산).
+7. **`FIXED` 기수 방위 벡터**: 유효 `headingMode == "FIXED"` 또는 `ACT_NAV_CHANGE_YAW` 노드에 짧은 노즈 방향 화살표를 렌더링합니다.
+8. **좌상단 캔버스 HUD 오버레이**: `Cursor (X, Z)`, `Zoom`, `Legs`, `Total 2D Path (m)`, `Est. Transit Time (s)`.
 
 ### 8.3 포인터 상태 머신, 노드 히트 테스트 및 `Fit All`
 - **줌**: 마우스 휠로 커서 위치 월드 좌표를 고정한 채 `0.05 .. 10.0 px/m` 범위 줌 인/아웃.
 - **팬(Pan)**: 마우스 중클릭 드래그, 우클릭 드래그, 또는 `Space + 좌클릭 드래그`(`cursor: grab`).
-- **`SELECT` 도구 직접 드래그 규격 (`hitTestCanvas` 4종 대상)**:
+- **`SELECT` 도구 직접 드래그 규격 (`hitTestCanvas` 대상)**:
 
 | 드래그 대상 분류 | 히트 테스트 범위 (`hitTestCanvas`) | `mousemove` 드래그 동작 |
 | :--- | :--- | :--- |
-| **`CP` (일반 공간 노드 및 라벨)** | 노드 중심 반경 `16px` 원 **또는** 우측 라벨 박스(`#k CP_ID [ACTION]`) (`TAKEOFF_LAUNCHPAD`, `LAND_LAUNCHPAD`, 유예 4종 액션 포함) | `params.targetPos.{x, z}`를 스냅(또는 `Alt` 미세) 좌표로 실시간 이동 |
-| **`POI` (`POI_HOLD` 조준점)** | `+POI` 십자 마커 중심 반경 `15px` | `targetPos` 고정 상태에서 `params.poiPos.{x, z}`만 이동 (`poiPos.y` 보존) |
-| **`PATROL_WP` (개별 경유지)** | 서브 경유지(`P1..Pn`) 중심 반경 `14px` | `params.waypoints[wIdx].{x, z}` 개별 이동 |
-| **`PATROL_ALL` (폴리곤 전체)** | 무게중심 `⬡ Move Patrol` 핸들(`15px`) 또는 라벨 영역 | 드래그 시작 대비 변위 $(\Delta X, \Delta Z)$만큼 `waypoints[]` 일괄 평행이동 |
+| **`CP` (일반 공간 노드 및 라벨)** | 노드 중심 반경 `16px` 원 **또는** 우측 라벨 박스(`#k CP_ID [ACTION]`) | `params.targetPos.{x, z}`를 스냅(또는 `Alt` 미세) 좌표로 실시간 이동 |
+| **`POI` (`POI_HOLD`/`SET_ROI` 조준점)** | `+POI` 십자 마커 중심 반경 `15px` | `targetPos` 고정 상태에서 `params.poiPos.{x, z}`만 이동 (`poiPos.y` 보존) |
+| **`CORRIDOR_END` (회랑 종점)** | `endPos` / `startPos` 핸들 반경 `14px` | `params.startPos.{x, z}` 또는 `params.endPos.{x, z}` 이동 |
 
-  - **선택 노드 최우선 히트 (`Selected-Node Priority`)**: 동일 `(X, Z)` 좌표에 여러 체크포인트가 겹칠 때 `hitTestCanvas()`는 현재 선택된 `state.ui.selectedIndex`를 최우선 판정하여 좌측 레일에서 선택한 노드를 즉시 끌어낼 수 있게 합니다.
-  - **호버링 및 드래그 시각 피드백**: 드래그 가능한 대상 호버 시 외곽 시안색 하이라이트 링(`r = 16px`)과 `cursor: grab`을 표시하고, 드래그 중에는 `cursor: grabbing` 및 노드 상단 부동 좌표 배지(`DRAGGING <checkpointId> -> X: ..., Z: ...`)를 실시간 렌더링합니다.
-  - **`Alt + 드래그` 미세 조정**: 드래그 중 `Alt` 키를 누르면 `gridSnapM` 스냅을 일시 우회하여 `0.1m` 단위로 자유롭게 배치합니다.
-  - **단일 Undo 스냅샷 (`mousedown`)**: 드래그 시작(`mousedown`) 시점에만 `pushHistorySnapshot()`을 1회 기록하여 `mousemove` 중 중복 적재를 방지하고 `Ctrl+Z` 1회 실행으로 드래그 전 좌표로 복원합니다.
+  - **선택 노드 최우선 히트 (`Selected-Node Priority`)**, **호버링/드래그 피드백**, **`Alt + 드래그` 미세 조정**, **단일 Undo 스냅샷 (`mousedown`)** 규격 유지.
 - **기타 도구 모드 (`ui.activeTool`)**:
-  - `ADD_FLY_OVER`: 캔버스 클릭 위치(스냅 적용)에 `FLY_OVER` 체크포인트 추가.
+  - `ADD_SPLINE_WP`: 캔버스 클릭 위치(스냅 적용)에 `ACT_NAV_SPLINE_WP` 체크포인트 추가.
   - `PICK_TARGET`: 캔버스 클릭 위치로 현재 선택된 체크포인트의 `targetPos` 지정/갱신.
-  - `PICK_POI`: 캔버스 클릭 위치로 현재 선택된 `POI_HOLD`의 `poiPos.{x, z}` 지정/갱신.
-  - `ADD_PATROL_WP`: 캔버스 클릭 위치에 현재 선택된 `PATROL`의 `waypoints[]` 행 추가.
-- **`Fit All`**: 모든 공간 좌표(`targetPos`, `poiPos`, `PATROL.waypoints`) 및 `ORBIT.radius`의 바운딩 박스를 계산해 `15%` 여백으로 뷰포트를 맞춥니다(공간 좌표가 없으면 `(0, 0)` 중심 `[-200, +200]` 기본 뷰).
+  - `PICK_POI`: 캔버스 클릭 위치로 현재 선택된 체크포인트의 `poiPos.{x, z}` 지정/갱신.
+- **`Fit All`**: 모든 공간 좌표(`targetPos`, `poiPos`, `startPos`/`endPos`) 및 `LOITER` `radius`의 바운딩 박스를 계산해 `15%` 여백으로 뷰포트를 맞춥니다.
 
 ---
 
 ## 9. JSON 입출력, 스타터 프리셋 및 단축키 규격 (§9)
 
 ### 9.1 스타터 프리셋 (`Presets`)
-1. **`Sortie Alpha (Full Example)`**: `AMM_PROGRAM_SPECIFICATION.md` §6.2의 5-체크포인트 복합 소티(`TAKEOFF_LAUNCHPAD` $\to$ `FLY_OVER` $\to$ `ORBIT` $\to$ `PAYLOAD_ACTION` $\to$ `LAND_LAUNCHPAD`)를 `"version": "1.3.0"` 기준으로 제공합니다.
-2. **`Patrol Perimeter`**: `TAKEOFF_LAUNCHPAD` $\to$ 4점 사각 `PATROL (LOOP)` $\to$ `LAND_LAUNCHPAD` (`REPEAT` / `SINGLE` 예시).
-3. **`Payload Delivery`**: `FLY_OVER` $\to$ `FLY_TO` $\to$ `PAYLOAD_ACTION` + `REDSTONE_PULSE` 훅 $\to$ `LAND_LAUNCHPAD`.
-4. **`Empty Draft`**: 기본 헤더와 빈 체크포인트 `[]` (사용자가 캔버스에서 `ADD_FLY_OVER`로 즉시 구축 시작).
+1. **`MSN_RECON_001 (MAC_RECON_ORBIT)`**: `AMM_PROGRAM_SPECIFICATION.md` §6.2의 5-체크포인트 복합 소티(`ACT_TKL_TAKEOFF_VERT` $\to$ `ACT_NAV_GOTO_WP` $\to$ `DEC_SMOOTH_TRAJ`+`ACT_PAT_LOITER_TIME` $\to$ `DEC_HUMAN_AUTH`+`ACT_PAY_BUS_CMD` $\to$ `DEC_RETRY_N`+`ACT_TKL_LAND_PREC`)를 `"version": "2.0.0"` 기준으로 제공합니다.
+2. **`Corridor Patrol`**: `ACT_TKL_TAKEOFF_VERT` $\to$ `ACT_NAV_CORRIDOR` $\to$ `ACT_PAT_LOITER_TURNS` $\to$ `ACT_TKL_LAND_NORM`.
+3. **`MAC_SHIP_RECOVERY` (Macro Template)**: `MAC_SHIP_RECOVERY` 또는 전개된 동적 갑판 착함 시퀀스 예시.
+4. **`Empty Draft`**: 기본 헤더와 빈 체크포인트 `[]`.
 
 ### 9.2 JSON 임포트 · 내보내기 · Raw JSON 드로어
 - **임포트 (`importJson(rawTextOrObject)`)**:
-  - 지원 경로: 상단 `Import .json` 파일 선택(`<input type="file" accept=".json">`), 브라우저 창 전체 `dragover`/`drop`, Raw JSON 드로어 `Apply JSON`.
-  - 처리 순서: `JSON.parse` $\to$ `v1.0.0` `items[]` 감지 시 `convertLegacyItems` $\to$ `params.{x, z}` 단축 좌표 승격 $\to$ `_extra` 미지 키 분리 보존 $\to$ `validateMission()` $\to$ UI/캔버스 갱신.
+  - 지원 경로: 상단 `Import .json` 파일 선택, 브라우저 창 전체 `dragover`/`drop`, Raw JSON 드로어 `Apply JSON`.
+  - 처리 순서: `JSON.parse` $\to$ 구 `items[]` / 구 13종 액션 감지 시 `ERROR` (`SCHEMA_INVALID`, Zero-Fallback 거부) $\to$ `_extra` 미지 키 보존 $\to$ `validateMission()` $\to$ UI/캔버스 갱신.
 - **내보내기 (`exportJson()` / `Copy JSON`)**:
-  - 2-space 들여쓰기 정식 JSON 생성.
-  - `"version"`은 `"1.3.0"` 출력, 빈 `description`·미지정 선택 파라미터·`(Inherit Mission)`·**빈 `completeWhen`/`abortWhen` 및 빈 훅 배열(`onEnter`/`onExit`/`onAbort`) 키는 생략**, `_extra` 보존 키는 재병합.
-  - `Export .json`: `${missionId.toLowerCase().replace(/[^a-z0-9_-]+/g, "_") || "mission"}.json` 파일명으로 브라우저 다운로드 트리거.
-  - `Copy JSON`: `navigator.clipboard.writeText()` 실행(오프라인 `file://` 권한 제한 시 숨김 `<textarea>` + `execCommand("copy")` 폴백) 후 `#toastContainer` 비차단 토스트 알림 표시.
-- **Raw JSON Drawer**: 실시간 JSON 동기화 미리보기(구문 강조 시 반드시 `<span>` + `textContent`만 생성해 DOM XSS 차단) 및 수동 편집 후 `Apply JSON` 지원.
+  - 2-space 들여쓰기 정식 JSON 생성, `"version"`은 `"2.0.0"` 단일 출력, 빈 `description`/빈 `decorators`/빈 `completeWhen`/`abortWhen`/빈 훅 배열 생략.
+  - `Export .json` 및 `Copy JSON` 동작 동일 유지.
+- **Raw JSON Drawer**: 실시간 JSON 동기화 미리보기(`<span>` + `textContent` 전용) 및 `Apply JSON`.
 
 ### 9.3 키보드 단축키
 | 단축키 | 동작 | 활성 조건 |
@@ -485,7 +486,7 @@ type ValidationIssue = {
 | **`Ctrl+Y` / `Ctrl+Shift+Z`** | 다시 실행 (`Redo`) | 전역 (`redoStack` > 0) |
 | **`F`** | 캔버스 `Fit All` | 텍스트 입력 포커스 비활성 시 |
 | **`Delete`** | 선택 체크포인트 삭제 | 텍스트 입력 포커스 비활성 시 |
-| **`1` / `2` / `3`** | 도구 전환 (`SELECT` / `ADD_FLY_OVER` / `PICK_TARGET`) | 텍스트 입력 포커스 비활성 시 |
+| **`1` / `2` / `3`** | 도구 전환 (`SELECT` / `ADD_SPLINE_WP` / `PICK_TARGET`) | 텍스트 입력 포커스 비활성 시 |
 
 ---
 
@@ -496,14 +497,14 @@ type ValidationIssue = {
 
 | 내부 모듈 | 주요 책임 | `AMM` §10 공개 심볼 매핑 |
 | :--- | :--- | :--- |
-| **`SchemaConstants`** | 13종 액션, 12종 조건, 4종 훅, 6면, 16색, `AMM v1.3.0` §10.2 기본값, 프리셋 정의 | — |
-| **`LegacyMigrator`** | `v1.0.0` `items[]` $\to$ `v1.3.0` 업그레이드, `v1.1.0`/`v1.2.0` 버전 표기, `params.{x,z}` 승격, `_extra` 추출/병합 | `convertLegacyItems()` |
-| **`DefaultResolver`** | 액션별 `defaults` 상속 해석(`FLY_TO` `5.0m` vs `FLY_OVER` `20.0m`), 기본 `completeWhen` 프리뷰 텍스트 산출 | — |
-| **`Validator`** | 13종 액션·12종 조건·4종 훅·JSON 페이로드 실시간 Lua 동등성 검증 | `validateMission()` |
-| **`Store`** | `EditorState`, `undo`/`redo`(깊은 50), `500ms` `localStorage` 자동 저장·복구, 구독자 디스패치 | — |
-| **`CanvasRenderer`** | `(X, Z)` 아핀 변환, HiDPI 스케일링, 8계층 렌더링, 줌/팬/드래그/클릭 도구 상태 머신 | `renderCanvas()` |
-| **`InspectorUI`** | 5영역 DOM 안전 렌더러(`textContent` 전용), 체크포인트 레일, 13종 동적 폼, 조건/훅 빌더, 검증 드로어 | `renderCheckpoints()` |
-| **`JsonIO`** | 파일 `<input>`/드롭 임포트, 정규 JSON 직렬화, 다운로드/클립보드 복사, Raw JSON 드로어 | `importJson()`, `exportJson()` |
+| **`SchemaConstants`** | `ACT_*`(36+19+`TASK-401`), `DEC_*`(7종), `MAC_*`(5종), 12종 조건, 4종 훅, `AMM v2.0.0` 기본값 | — |
+| **`MacroExpander`** | `MAC_RECON_ORBIT` / `MAC_SHIP_RECOVERY` / `MAC_CARGO_SORTIE` 전개 및 `_extra` 추출/병합 (`convertLegacyItems` `[DEPRECATED - v2.0.0]` 제거) | `expandMacros()` |
+| **`DefaultResolver`** | 액션별 `defaults` 상속 및 `settleTicks` (`ACT_NAV_SPLINE_WP=0` vs `4`) 해석 | — |
+| **`Validator`** | Zero-Fallback `v2.0.0` 스키마·4대 `preconditions`·`settleTicks` Lua 동등성 검증 | `validateMission()` |
+| **`Store`** | `EditorState`, `undo`/`redo`(깊은 50), `500ms` `localStorage` 자동 저장·복구 | — |
+| **`CanvasRenderer`** | `(X, Z)` 아핀 변환, HiDPI 스케일링, 8계층 렌더링, 줌/팬/드래그/클릭 도구 | `renderCanvas()` |
+| **`InspectorUI`** | 5영역 DOM 안전 렌더러(`textContent` 전용), `ACT_*`/`DEC_*`/`MAC_*` 및 `preconditions` 폼 | `renderCheckpoints()` |
+| **`JsonIO`** | 파일 `<input>`/드롭 임포트, 정규 `v2.0.0` 직렬화, 다운로드/복사, Raw JSON 드로어 | `importJson()`, `exportJson()` |
 | **`AppBootstrap`** | DOM 초기화, 단축키 바인딩, 자동 저장 복구 배너 및 초기 프리셋/빈 초안 로드 | *(선택적 읽기전용 테스트 훅 `window.__AMM_EDITOR__`)* |
 
 ### 10.2 `TASK-402` 구현 및 검증 인수 기준 (Acceptance Criteria)
@@ -514,11 +515,9 @@ type ValidationIssue = {
    - 비신뢰 JSON 문자열(테스트용 `<img src=x onerror=...>` 포함 `missionId`/`message`) 임포트 및 Raw JSON 프리뷰 시 `innerHTML` 실행 없이 리터럴 텍스트로 렌더링됨을 확인.
    - Valkyrien Skies / `kontraption:` / 금지 레거시 용어 `0`건.
 2. **스키마 및 Lua/CraftOS-PC 라운드트립 게이트**:
-   - `Sortie Alpha`, 9종 활성 액션 전체, 12종 조건, 4종 훅, `v1.0.0` 레거시 변환 결과를 내보낸 `"version": "1.3.0"` JSON 파일이 CraftOS-PC `mission_engine:load()` 및 `validate_mission_table()`에서 `ok == true`로 적재됨을 검증(`tools/run_unit_tests.py` 및 `tools/run_e2e_tests.py` 통과).
-   - 예약 4종(`TAKEOFF_RUNWAY`, `LAND_RUNWAY`, `DOCK_ARM`, `UNDOCK_ARM`) 포함 내보내기 파일이 `validate_mission_table()`은 통과하고 `enter_checkpoint()`에서 `DEFERRED_ACTION_UNSUPPORTED`를 반환함을 확인.
-   - `empty completeWhen`/`abortWhen` 생략 규칙으로 인해 `ORBIT`/`PATROL` 등이 `evaluate_group(..., {})` `false` 함정에 빠지지 않음을 확인.
+   - `MSN_RECON_001`, 36종 활성 `ACT_*`, 6종 활성 `DEC_*`, 3종 활성 `MAC_*`, `preconditions`, `settleTicks` 내보낸 `"version": "2.0.0"` JSON 파일이 CraftOS-PC `mission_engine:load()` 및 `validate_mission_table()`에서 `ok == true`로 적재됨을 검증.
+   - 예약 19종+`TASK-401` `ACT_*` / `DEC_TIME_CRIT` / `MAC_PATROL_RADAR`·`MAC_ARM_RESUPPLY` 포함 파일이 `enter_checkpoint()`에서 `DEFERRED_ACTION_UNSUPPORTED`를 반환하고, 구 13종 액션 및 `items[]` 입력이 Zero-Fallback `SCHEMA_INVALID`로 거부됨을 확인.
 3. **브라우저 실동작 수동 검증 (`file://`)**:
-   - 로컬 Chrome 등 브라우저에서 `file:///.../tools/amm_mission_editor.html` 직접 실행 시 데스크톱(`>= 1280px`)에서 `footer.bottom-validation-bar`가 `1fr`로 비정상 확장되지 않는지, 축소 뷰포트(`<= 1150px` / `~1024px`)에서 `Checkpoints`/`2D Canvas`/`Inspector` 3탭 전환이 정상 동작하는지 확인.
-   - `CP`/`POI`/`PATROL_WP`/`PATROL_ALL` 직접 드래그, 중첩 노드 선택 우선권(`Selected-Node Priority`)·라벨 스태킹, `Alt + 드래그` `0.1m` 미세 조정, `mousedown` 단일 `Undo`/`Redo`, `#exportConfirmModal`·`#toastContainer` 인페이지 대화상자, 파일 드롭 임포트/내보내기 및 CC:Tweaked 창 `file_transfer` 드롭 즉시 적재 동작을 확인.
+   - 로컬 브라우저 `file://` 직접 실행 시 데스크톱(`>= 1280px`)에서 `footer.bottom-validation-bar` 정상 배치, 축소 뷰포트(`<= 1150px`)에서 3탭 전환, 드래그·`Alt` 미세 조정·`#exportConfirmModal`·`#toastContainer`·`file_transfer` 드롭 즉시 적재 동작을 확인.
 4. **사양서 상태 전이 규칙**:
-   - 본 규격서 `Draft` $\to$ `Approved` 리뷰 승격 후 `TASK-402` 구현·검증 완료 시 `AMM_MISSION_EDITOR_SPECIFICATION.md` 상태를 `Implemented`로 승격하고 `tools/verify_all_specs.py` 및 `tools/verify_spec_status.py`에 편입합니다. *(단, 상위 `AMM_PROGRAM_SPECIFICATION.md` `v1.3.0 Approved`는 `TASK-402`와 `TASK-207`이 모두 완료될 때까지 `Approved`를 유지합니다.)*
+   - 본 규격서 `Draft` $\to$ `Approved` 리뷰 승격 후 `TASK-402` 구현·검증 완료 시 `AMM_MISSION_EDITOR_SPECIFICATION.md` 상태를 `Implemented`로 승격하고, 상위 `AMM_PROGRAM_SPECIFICATION.md` (`v2.0.0 Approved`)도 `TASK-402` 완료 후 함께 `Implemented`로 승격합니다.

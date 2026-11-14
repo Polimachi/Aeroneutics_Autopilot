@@ -17,6 +17,7 @@ input_handler.VALID_COMMANDS = {
     resume = true,
     save = true,
     load = true,
+    confirm = true,
     alt = true,
     spd = true,
     rad = true,

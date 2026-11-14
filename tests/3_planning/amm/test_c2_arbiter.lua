@@ -128,19 +128,21 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Write valid and deferred mission files
         local f_ok = fs.open("missions/patrol_alpha.json", "w")
         f_ok.write(textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "PATROL_ALPHA",
             checkpoints = {
-                { checkpointId = "CP_01", action = "FLY_OVER", params = { targetPos = { x = 100, z = 200 }, targetAlt = 150, cruiseSpeed = 18 } },
-                { checkpointId = "CP_02", action = "ORBIT", params = { targetPos = { x = 300, z = 400 }, radius = 35, direction = "CW" } },
+                { checkpointId = "CP_01", action = "ACT_NAV_SPLINE_WP", params = { targetPos = { x = 100, z = 200 }, targetAlt = 150, cruiseSpeed = 18 } },
+                { checkpointId = "CP_02", action = "ACT_PAT_LOITER_TIME", params = { targetPos = { x = 300, z = 400 }, radius = 35, direction = "CW" } },
             },
         }))
         f_ok.close()
 
         local f_def = fs.open("missions/runway_sortie.json", "w")
         f_def.write(textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "RUNWAY_SORTIE",
             checkpoints = {
-                { checkpointId = "CP_RWY", action = "TAKEOFF_RUNWAY", params = {} },
+                { checkpointId = "CP_RWY", action = "ACT_TKL_TAKEOFF_RWY", params = {} },
             },
         }))
         f_def.close()
@@ -252,19 +254,21 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         if not fs.exists("/disk") then fs.makeDir("/disk") end
         local f_bad = fs.open("/disk/bad_schema.json", "w")
         f_bad.write(textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "BAD_SCHEMA",
             checkpoints = {
-                { checkpointId = "CP_01", action = "FLY_OVER", params = { targetPos = { x = 10, z = 20 } } },
-                { checkpointId = "CP_02", action = "PAYLOAD_ACTION", params = { channelOffset = 20 } }, -- missing command
+                { checkpointId = "CP_01", action = "ACT_NAV_SPLINE_WP", params = { targetPos = { x = 10, z = 20 } } },
+                { checkpointId = "CP_02", action = "ACT_PAY_BUS_CMD", params = { channelOffset = 20 } }, -- missing command
             },
         }))
         f_bad.close()
 
         local f_disk = fs.open("/disk/disk_sortie.json", "w")
         f_disk.write(textutils.serializeJSON({
+            version = "2.0.0",
             missionId = "DISK_SORTIE",
             checkpoints = {
-                { checkpointId = "CP_01", action = "FLY_OVER", params = { x = 400, z = -500 } },
+                { checkpointId = "CP_01", action = "ACT_NAV_SPLINE_WP", params = { x = 400, z = -500 } },
             },
         }))
         f_disk.close()
@@ -364,25 +368,26 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
 
         assert_true(eng:load_table({
             missionId = "FALLBACK_I12",
+            version = "2.0.0",
             fallbackPolicy = "RTH",
             checkpoints = {
                 {
                     checkpointId = "CP_1",
-                    action = "FLY_TO",
+                    action = "ACT_NAV_GOTO_WP",
                     params = { targetPos = { x = 500, z = 500 }, targetAlt = 150 },
                     fallbackPolicy = "RTH",
                     abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 5 } } },
                 },
                 {
                     checkpointId = "CP_2",
-                    action = "FLY_TO",
+                    action = "ACT_NAV_GOTO_WP",
                     params = { targetPos = { x = 800, z = 800 }, targetAlt = 150 },
                     fallbackPolicy = "HOVER_HOLD",
                     abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 5 } } },
                 },
                 {
                     checkpointId = "CP_3",
-                    action = "FLY_TO",
+                    action = "ACT_NAV_GOTO_WP",
                     params = { targetPos = { x = 900, z = 900 }, targetAlt = 150 },
                     fallbackPolicy = "LOITER",
                     abortWhen = { logic = "ANY", conditions = { { type = "TIMEOUT_SEC", timeout = 5 } } },
@@ -436,5 +441,64 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_eq(g_stop.flightMode, "IDLE")
         assert_false(g_stop.arm)
         assert_false(g_stop.flightActive)
+    end)
+
+    it("arbitrates CONFIRM for DEC_HUMAN_AUTH and emits PRECONDITION_FAILED on dynamic precondition check failure", function()
+        local mission_engine = require("mission_engine")
+        local q, net, arb, tx = create_fixture()
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        local f_auth = fs.open("missions/auth_sortie.json", "w")
+        f_auth.write(textutils.serializeJSON({
+            version = "2.0.0",
+            missionId = "AUTH_SORTIE",
+            checkpoints = {
+                {
+                    checkpointId = "CP_AUTH",
+                    action = "ACT_PAY_BUS_CMD",
+                    decorators = { { decoratorId = "DEC_HUMAN_AUTH" } },
+                    params = { channelOffset = 20, command = "DROP" },
+                },
+            },
+        }))
+        f_auth.close()
+
+        -- CONFIRM while not waitingHumanAuth -> INVALID_CMD
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "CONFIRM" } }, 900)
+        assert_eq(tx[#tx].payload.payload.status, "INVALID_CMD")
+
+        -- RUN mission -> ACCEPTED while paused at waitingHumanAuth
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "RUN", missionName = "auth_sortie" } }, 1000)
+        assert_eq(tx[#tx].payload.payload.status, "ACCEPTED")
+        assert_true(eng.waitingHumanAuth)
+
+        -- CONFIRM releases gate -> ACCEPTED
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "CONFIRM" } }, 1100)
+        assert_eq(tx[#tx].payload.payload.status, "ACCEPTED")
+        assert_false(eng.waitingHumanAuth)
+
+        -- RUN with failing runtime precondition -> PRECONDITION_FAILED
+        eng:stop(1200)
+        local f_pre = fs.open("missions/precond_fail.json", "w")
+        f_pre.write(textutils.serializeJSON({
+            version = "2.0.0",
+            missionId = "PRECOND_FAIL",
+            checkpoints = {
+                {
+                    checkpointId = "CP_P",
+                    action = "ACT_NAV_GOTO_WP",
+                    params = { targetPos = { x = 10, z = 10 } },
+                    preconditions = { minFuel = 0.95 },
+                },
+            },
+        }))
+        f_pre.close()
+        eng:step_telemetry({ fuel = 0.50 }, 1250)
+        arb:handle_gcs_packet({ ver = "1.9.5", type = "MSG_MISSION_CMD", payload = { action = "RUN", missionName = "precond_fail" } }, 1300)
+        assert_eq(tx[#tx].payload.payload.status, "PRECONDITION_FAILED")
+
+        fs.delete("missions/auth_sortie.json")
+        fs.delete("missions/precond_fail.json")
     end)
 end)
