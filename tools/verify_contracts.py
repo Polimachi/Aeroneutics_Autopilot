@@ -515,6 +515,170 @@ def verify_code_against_contracts(
     return errors
 
 
+def validate_captured_packets(
+    packets: list[dict[str, Any]],
+    contracts: dict[str, Any],
+) -> list[str]:
+    """
+    Validates captured E2E wire packets against protocol_contracts.json SSOT.
+    Verifies channel allocation, envelope integrity, packet deprecations,
+    required payload keys, enums, and numeric bounds.
+    """
+    errors: list[str] = []
+
+    envelope_spec = contracts.get("envelope", {})
+    expected_ver = envelope_spec.get("ver", "1.9.5")
+    required_envelope_keys = envelope_spec.get(
+        "requiredKeys", ["ver", "domainId", "seq", "type", "time", "payload"]
+    )
+    envelope_types = envelope_spec.get("types", {})
+
+    channels_cfg = contracts.get("channels", {})
+    ac_cfg = channels_cfg.get("aircraft", {})
+    ac_base_min = ac_cfg.get("baseMin", 10000)
+    ac_bandwidth = ac_cfg.get("bandwidth", 40)
+    ac_max_craft = ac_cfg.get("maxAircraft", 1000)
+    ac_dep_offsets = set(ac_cfg.get("deprecatedOffsets", [6, 7]))
+
+    hg_cfg = channels_cfg.get("hangar", {})
+    hg_dep_offsets = set(hg_cfg.get("deprecatedOffsets", [1001, 1002]))
+
+    # Deprecated packet types and global payload keys
+    deprecated_packet_types: set[str] = set()
+    global_dep_payload_keys: set[str] = {"oldBase", "newBase", "appliedDeg", "API_NOMINAL", "switchTimeoutMs"}
+    packet_defs: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+
+    for iface in contracts.get("interfaces", []):
+        for dpt in iface.get("deprecatedPacketTypes", []):
+            deprecated_packet_types.add(dpt)
+        for pkt_name, pkt_spec in iface.get("packets", {}).items():
+            packet_defs[pkt_name] = (iface, pkt_spec)
+
+    for idx, pkt in enumerate(packets):
+        if not isinstance(pkt, dict):
+            errors.append(f"Packet #{idx}: entry must be a dictionary, got {type(pkt).__name__}")
+            continue
+
+        suite = pkt.get("suite") or "<unknown_suite>"
+        channel = pkt.get("channel")
+        raw_payload = pkt.get("payload")
+
+        # Channel check
+        if isinstance(channel, (int, float)):
+            ch_num = int(channel)
+            # Aircraft channel check: baseMin..baseMax
+            if ac_base_min <= ch_num < (ac_base_min + ac_max_craft * ac_bandwidth):
+                offset = (ch_num - ac_base_min) % ac_bandwidth
+                if offset in ac_dep_offsets:
+                    errors.append(
+                        f"[{suite}] Packet #{idx} on channel {ch_num}: Prohibited deprecated aircraft channel offset +{offset} used"
+                    )
+            elif ch_num < 40 and ch_num in ac_dep_offsets:
+                errors.append(
+                    f"[{suite}] Packet #{idx} on channel {ch_num}: Prohibited deprecated aircraft channel offset +{ch_num} used"
+                )
+
+            # Hangar channel check
+            if ch_num in hg_dep_offsets:
+                errors.append(
+                    f"[{suite}] Packet #{idx} on channel {ch_num}: Prohibited deprecated hangar channel {ch_num} used"
+                )
+
+        # Envelope payload check
+        if not isinstance(raw_payload, dict):
+            errors.append(
+                f"[{suite}] Packet #{idx} on channel {channel}: Payload is not a dictionary/object (got {type(raw_payload).__name__})"
+            )
+            continue
+
+        # Check required envelope keys
+        for ek in required_envelope_keys:
+            if ek not in raw_payload:
+                errors.append(
+                    f"[{suite}] Packet #{idx} on channel {channel}: Missing required envelope key '{ek}'"
+                )
+
+        # Check envelope version
+        if "ver" in raw_payload and raw_payload["ver"] != expected_ver:
+            errors.append(
+                f"[{suite}] Packet #{idx} on channel {channel}: Envelope version mismatch: expected '{expected_ver}', got '{raw_payload['ver']}'"
+            )
+
+        # Check envelope key types
+        for k, exp_type in envelope_types.items():
+            if k in raw_payload:
+                val = raw_payload[k]
+                if exp_type == "string" and not isinstance(val, str):
+                    errors.append(
+                        f"[{suite}] Packet #{idx} on channel {channel}: Envelope key '{k}' must be string, got {type(val).__name__}"
+                    )
+                elif exp_type == "number" and (not isinstance(val, (int, float)) or isinstance(val, bool)):
+                    errors.append(
+                        f"[{suite}] Packet #{idx} on channel {channel}: Envelope key '{k}' must be number, got {type(val).__name__}"
+                    )
+                elif exp_type == "object" and not isinstance(val, dict):
+                    errors.append(
+                        f"[{suite}] Packet #{idx} on channel {channel}: Envelope key '{k}' must be object/dict, got {type(val).__name__}"
+                    )
+
+        pkt_type = raw_payload.get("type")
+        if pkt_type in deprecated_packet_types:
+            errors.append(
+                f"[{suite}] Packet #{idx} on channel {channel}: Prohibited deprecated packet type '{pkt_type}' transmitted"
+            )
+
+        inner_payload = raw_payload.get("payload")
+        if isinstance(inner_payload, dict):
+            iface_match, pkt_spec_match = packet_defs.get(pkt_type, (None, None))
+            iface_dep_keys = set(iface_match.get("deprecatedPayloadKeys", [])) if iface_match else set()
+            active_dep_keys = global_dep_payload_keys | iface_dep_keys
+
+            # Check for deprecated payload keys at top level and nested levels
+            def _check_dep_keys(d: dict[str, Any], path: str = "payload") -> None:
+                for k, v in d.items():
+                    if k in active_dep_keys:
+                        errors.append(
+                            f"[{suite}] Packet #{idx} on channel {channel} ({pkt_type}): Prohibited deprecated payload key '{k}' detected at '{path}'"
+                        )
+                    if isinstance(v, dict):
+                        _check_dep_keys(v, f"{path}.{k}")
+
+            _check_dep_keys(inner_payload)
+
+            # If packet type is canonical, validate against its packet specification
+            if pkt_spec_match:
+                # Check required keys
+                for rk in pkt_spec_match.get("requiredKeys", []):
+                    if rk not in inner_payload:
+                        errors.append(
+                            f"[{suite}] Packet #{idx} on channel {channel} ({pkt_type}): Missing required payload key '{rk}'"
+                        )
+
+                # Check enums
+                for ek, allowed_vals in pkt_spec_match.get("enums", {}).items():
+                    if ek in inner_payload:
+                        val = inner_payload[ek]
+                        if val not in allowed_vals:
+                            errors.append(
+                                f"[{suite}] Packet #{idx} on channel {channel} ({pkt_type}): Field '{ek}' has invalid enum value '{val}' (allowed: {allowed_vals})"
+                            )
+
+                # Check numeric bounds
+                for nk, bounds in pkt_spec_match.get("numericBounds", {}).items():
+                    if nk in inner_payload:
+                        val = inner_payload[nk]
+                        if not isinstance(val, (int, float)) or isinstance(val, bool):
+                            errors.append(
+                                f"[{suite}] Packet #{idx} on channel {channel} ({pkt_type}): Field '{nk}' expected number, got {type(val).__name__}"
+                            )
+                        elif val < bounds[0] or val > bounds[1]:
+                            errors.append(
+                                f"[{suite}] Packet #{idx} on channel {channel} ({pkt_type}): Field '{nk}' value {val} out of bounds [{bounds[0]}, {bounds[1]}]"
+                            )
+
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Protocol contracts SSOT schema loader and verification tool."

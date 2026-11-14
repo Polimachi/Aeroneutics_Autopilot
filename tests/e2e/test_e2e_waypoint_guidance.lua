@@ -202,7 +202,14 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             type = "MSG_AERO_STATUS",
             time = 1070,
             payload = {
+                podId = "ASA_L",
+                surfaceId = "AIL_L",
+                boundSide = "left",
                 interactionMode = "API",
+                appliedDeflection = 0.0,
+                isSaturated = false,
+                isJammed = false,
+                healthStatus = "NOMINAL",
                 surfaceDeflections = { elevator = 0.0, aileronLeft = 0.0, aileronRight = 0.0, rudder = 0.0 },
                 saturatedSurfaces = {},
                 flapsPosition = 0.0,
@@ -228,11 +235,16 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             type = "MSG_FLIGHT_TELEMETRY",
             time = 1095,
             payload = {
+                attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+                angularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
                 controlState = "NORMAL",
                 activeSource = "FCP",
                 dynamics = { altitudeY = 80.0, verticalSpeed = 0.0, groundSpeed = 0.0 },
                 fuel = 0.95,
+                dynamicLoad = 0.0,
                 sensorOk = true,
+                sensorHealth = { imu = true },
+                actuatorHealth = { tap = true, asa = true, allOk = true },
             },
         })
         fcp.modem:transmit(10004, 10004, {
@@ -247,6 +259,9 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
                 posError = 0.5,
                 velError = 0.1,
                 saturated = false,
+                navStale = false,
+                activeConstraintProfile = "DEFAULT",
+                commandedCollectiveThrust = 0.5,
             },
         })
         bus:step(0.05)
@@ -274,6 +289,10 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             fsmState = "CRUISE",
             flightMode = "AUTO_NAV",
             navigation = { currentPos = { x = 0, z = 0 } },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            dynamics = { altitudeY = 80.0, verticalSpeed = 0.0, groundSpeed = 0.0 },
+            fuel = 0.95,
+            actuatorHealth = { tap = true, asa = true, allOk = true },
         }, "FCP")
         bus:step(0.05)
 
@@ -393,6 +412,10 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             fsmState = "POI_HOLD",
             flightMode = "POI_HOLD",
             navigation = { currentPos = { x = 100, y = 150, z = 60 }, distanceToWp = 40.0 },
+            attitude = { pitch = 0.0, roll = 0.0, heading = 0.0 },
+            dynamics = { altitudeY = 150.0, verticalSpeed = 0.0, groundSpeed = 0.0 },
+            fuel = 0.90,
+            actuatorHealth = { tap = true, asa = true, allOk = true },
         }, "FCP")
         bus:step(0.05)
 

@@ -146,6 +146,17 @@ function M.create_bus(opts)
             }
             table.insert(self.packet_log, logged_pkt)
 
+            if type(_G.__VIRTUAL_BUS_PACKET_LOG) == "table" then
+                table.insert(_G.__VIRTUAL_BUS_PACKET_LOG, {
+                    suite = _G.__ACTIVE_E2E_SUITE,
+                    channel = msg.channel,
+                    replyChannel = msg.replyChannel,
+                    from = msg.from,
+                    time = msg.time,
+                    payload = msg.payload,
+                })
+            end
+
             local listeners = self.channels[msg.channel]
             if listeners then
                 for lid, target_modem in pairs(listeners) do

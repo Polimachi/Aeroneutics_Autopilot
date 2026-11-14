@@ -151,6 +151,7 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
                 activeCount = 2,
                 totalCount = 2,
                 healthStatus = "REDSTONE_NOMINAL",
+                isVectorCapable = false,
             },
         })
         bus:step(0.05)
@@ -170,6 +171,7 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
                 stepIndex = 1,
                 pulseLevel = 8,
                 pulseDurationMs = 300,
+                safetyMaxTiltDeg = 12.0,
             },
         })
         bus:step(0.05)
@@ -186,6 +188,13 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
                 attitude = { pitch = 0.5, roll = 0.0, heading = 0.0 },
                 angularRates = { pitchRate = 0.12, rollRate = 0.0, yawRate = 0.0 },
                 dynamics = { altitudeY = 64.0, velocity = { vx = 0.0, vy = 0.0, vz = 0.8 } },
+                fuel = 1.0,
+                dynamicLoad = 0.0,
+                controlState = "NORMAL",
+                activeSource = "FCP",
+                sensorOk = true,
+                sensorHealth = { imu = true },
+                actuatorHealth = { tap = true, asa = true, allOk = true },
             },
         })
         bus:step(0.05)

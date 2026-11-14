@@ -477,7 +477,11 @@ function R.write_result(payload)
         fs.makeDir("/_harness_out")
     end
     local f = fs.open("/_harness_out/result.json", "w")
-    f.write(textutils.serializeJSON(payload))
+    local ok_ser, res = pcall(textutils.serializeJSON, payload, { allow_repetitions = true })
+    if not ok_ser then
+        res = textutils.serializeJSON(payload)
+    end
+    f.write(res)
     f.close()
     local df = fs.open("/_harness_out/done.flag", "w")
     df.write("OK")

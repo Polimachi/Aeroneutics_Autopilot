@@ -118,9 +118,11 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
                 angularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
                 dynamics = { altitudeY = 125.0, verticalSpeed = 0.0, groundSpeed = 16.5 },
                 fuel = 0.85,
+                dynamicLoad = 0.0,
                 controlState = "NORMAL",
                 activeSource = "FCP",
                 sensorOk = true,
+                sensorHealth = { imu = true },
                 actuatorHealth = { tap = true, asa = true, allOk = true },
             },
         })

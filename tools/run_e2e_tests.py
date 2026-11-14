@@ -17,6 +17,7 @@ if str(WORKSPACE_ROOT) not in sys.path:
 
 from harness.unit.config import resolve_craftos_paths
 from harness.unit.session import EphemeralCraftOSSession, clean_workspace_orphans
+from tools.verify_contracts import load_contracts, validate_captured_packets
 
 GUEST_DIR = WORKSPACE_ROOT / "harness" / "unit" / "guest"
 SIMULATION_DIR = WORKSPACE_ROOT / "harness" / "simulation"
@@ -42,6 +43,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--clean-orphans",
         action="store_true",
         help="Terminate lingering CraftOS-PC console processes before running.",
+    )
+    parser.add_argument(
+        "--skip-contract-check",
+        action="store_true",
+        default=False,
+        help="Skip protocol contracts validation on captured wire packets.",
     )
     parser.add_argument(
         "--timeout",
@@ -165,7 +172,10 @@ local main_ok, main_err = xpcall(function()
         end
     end
 
+    _G.__VIRTUAL_BUS_PACKET_LOG = {}
+
     for _, tf in ipairs(cfg.test_files) do
+        _G.__ACTIVE_E2E_SUITE = tf
         local fn, load_err = loadfile(tf, nil, _ENV)
         if not fn then
             R.suites[#R.suites + 1] = {
@@ -203,6 +213,7 @@ local main_ok, main_err = xpcall(function()
         suites = R.suites,
         logs = R.logs or {},
         errors = R.errors or {},
+        captured_packets = _G.__VIRTUAL_BUS_PACKET_LOG,
     })
 end, debug.traceback)
 
@@ -223,11 +234,26 @@ os.shutdown()
     total_dur_ms = round((time.perf_counter() - t0) * 1000.0, 2)
     guest_data = session_res.guest_result or {}
     suites = guest_data.get("suites", [])
+    captured_packets = guest_data.get("captured_packets", [])
 
     total_passed = sum(s.get("passed", 0) for s in suites)
     total_failed = sum(s.get("failed", 0) for s in suites)
 
-    all_pass = (total_failed == 0 and session_res.exit_code == 0 and not session_res.timed_out)
+    contract_errors: list[str] = []
+    if not args.skip_contract_check and session_res.exit_code == 0:
+        contracts_path = root / "config" / "protocol_contracts.json"
+        try:
+            contracts = load_contracts(contracts_path)
+            contract_errors = validate_captured_packets(captured_packets, contracts)
+        except Exception as exc:
+            contract_errors = [f"Failed to load contracts or validate packets: {exc}"]
+
+    all_pass = (
+        total_failed == 0
+        and len(contract_errors) == 0
+        and session_res.exit_code == 0
+        and not session_res.timed_out
+    )
     final_status = "PASS" if all_pass else "FAIL"
 
     report_payload: dict[str, Any] = {
@@ -236,6 +262,8 @@ os.shutdown()
         "total_suites": len(suites),
         "total_passed": total_passed,
         "total_failed": total_failed,
+        "captured_packet_count": len(captured_packets),
+        "contract_errors": contract_errors,
         "timed_out": session_res.timed_out,
         "exit_code": session_res.exit_code,
         "suites": suites,
@@ -262,6 +290,12 @@ os.shutdown()
                 for t in s.get("tests", []):
                     if t.get("status") == "FAIL":
                         print(f"           - {t.get('name')}: {t.get('error')}")
+        if contract_errors:
+            print(f"\n[FAIL] {len(contract_errors)} Wire Contract Violation(s) Detected:")
+            for cerr in contract_errors:
+                print(f"  - {cerr}")
+        elif not args.skip_contract_check:
+            print(f"Wire Protocol Contracts: PASS ({len(captured_packets)} packets validated, 0 violations)")
         print(f"\nOverall Result: {final_status} ({total_passed}/{total_passed + total_failed} passed, {total_dur_ms}ms)")
 
     exit_code = 0 if all_pass else 1

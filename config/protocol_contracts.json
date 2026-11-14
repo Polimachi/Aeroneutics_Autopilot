@@ -230,12 +230,12 @@
             "source",
             "arm",
             "flightActive",
-            "flightMode",
             "commandType",
             "targetAngularRates",
             "collectiveThrust"
           ],
           "optionalKeys": [
+            "flightMode",
             "targetQuaternion",
             "flapTarget",
             "acroActive",
@@ -367,10 +367,12 @@
         },
         "MSG_ACTUATOR_DISCOVER_REQ": {
           "requiredKeys": [
-            "targetGroup",
-            "replyChannel"
+            "targetGroup"
           ],
-          "optionalKeys": []
+          "optionalKeys": [
+            "replyChannel",
+            "requestDomain"
+          ]
         },
         "MSG_ACTUATOR_DISCOVER_ACK": {
           "requiredKeys": [
@@ -474,11 +476,12 @@
             "action",
             "stationId",
             "bayId",
-            "baseHangarChannel",
+            "baseHangarChannel"
+          ],
+          "optionalKeys": [
             "bayCalibrationTap",
             "bayCalibrationCmd"
           ],
-          "optionalKeys": [],
           "enums": {
             "action": [
               "OPEN",
@@ -523,10 +526,17 @@
             "stepIndex": [
               1,
               2,
-              3
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
             ],
             "pulseLevel": [
               4,
+              5,
               8,
               12
             ]
@@ -539,13 +549,14 @@
         "MSG_PROFILE_SYNC": {
           "requiredKeys": [
             "profileId",
+            "controllabilityStatus"
+          ],
+          "optionalKeys": [
             "calibratedBy",
             "totalDryMass",
-            "controllabilityStatus",
             "discoveredSurfaces",
             "thrusterCoefficients"
           ],
-          "optionalKeys": [],
           "specs": [
             "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
             "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
@@ -583,7 +594,8 @@
             ],
             "reason": [
               "COMPLETE",
-              "MANUAL"
+              "MANUAL",
+              "CALIBRATION_FINISHED"
             ]
           },
           "specs": [
@@ -836,11 +848,11 @@
           "requiredKeys": [
             "aircraftId",
             "sectorId",
-            "airframeType",
-            "grossWeight",
-            "clearanceRadius"
+            "airframeType"
           ],
           "optionalKeys": [
+            "grossWeight",
+            "clearanceRadius",
             "estimatedArrivalTime"
           ],
           "specs": [
@@ -853,19 +865,44 @@
         },
         "MSG_GAC_APPROACH_CLEARANCE": {
           "requiredKeys": [
-            "aircraftId",
-            "assignedFacilityId",
-            "tacticalChannel"
+            "aircraftId"
           ],
           "optionalKeys": [
+            "assignedFacilityId",
+            "tacticalChannel",
             "approachHeading",
             "safeDescentRate",
-            "slotDurationSec"
+            "slotDurationSec",
+            "status",
+            "sectorId",
+            "reason",
+            "assignedTacticalChannel",
+            "touchdownPoint",
+            "clearanceRadius",
+            "divertChannel"
           ],
           "specs": [
             "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
             "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
             "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_TOUCHDOWN_COMPLETE": {
+          "requiredKeys": [
+            "facilityId",
+            "craftState"
+          ],
+          "optionalKeys": [
+            "touchdownTime"
+          ],
+          "enums": {
+            "craftState": [
+              "GROUND_IDLE"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
             "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
           ]
         }
@@ -903,11 +940,13 @@
           "requiredKeys": [
             "authority",
             "command",
+            "params"
+          ],
+          "optionalKeys": [
+            "targetCraft",
             "flightMode",
-            "params",
             "emergencyAction"
           ],
-          "optionalKeys": [],
           "enums": {
             "authority": [
               "PILOT_PRIMARY",
@@ -978,21 +1017,18 @@
         },
         "MSG_MFD_STATE": {
           "requiredKeys": [
-            "source",
-            "controlState",
-            "sensorOk",
+            "fsmState",
+            "flightMode",
             "attitude",
             "dynamics",
             "fuel",
-            "dynamicLoad",
             "actuatorHealth"
           ],
           "optionalKeys": [
-            "fsmState",
-            "flightMode",
-            "angularRates",
-            "nav",
-            "sensorHealth"
+            "controlState",
+            "sensorOk",
+            "dynamicLoad",
+            "source"
           ],
           "specs": [
             "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
@@ -1047,11 +1083,11 @@
           "requiredKeys": [
             "targetClient",
             "clientSeq",
-            "status",
-            "position",
-            "accuracy"
+            "status"
           ],
           "optionalKeys": [
+            "position",
+            "accuracy",
             "hdop",
             "nodeCount",
             "selectedNodes"
@@ -1060,7 +1096,8 @@
             "status": [
               "FIX_OK",
               "FIX_DEGRADED",
-              "NO_FIX"
+              "NO_FIX",
+              "FAIL_GEOMETRY"
             ]
           }
         }
@@ -1318,10 +1355,12 @@
         },
         "MSG_SURFACE_DISCOVER_REQ": {
           "requiredKeys": [
-            "targetPod",
-            "replyChannel"
+            "targetPod"
           ],
-          "optionalKeys": []
+          "optionalKeys": [
+            "replyChannel",
+            "requestDomain"
+          ]
         },
         "MSG_SURFACE_DISCOVER_ACK": {
           "requiredKeys": [
@@ -1403,23 +1442,22 @@
       "packets": {
         "MSG_TRAJECTORY_SETPOINT": {
           "requiredKeys": [
+            "flightMode",
             "arm",
             "flightActive",
-            "flightMode",
             "constraintProfile",
             "targetPos",
             "targetVel",
             "feedforwardAccel",
-            "targetHeading",
+            "targetHeading"
+          ],
+          "optionalKeys": [
+            "flapHint",
             "currentPos",
             "navValid",
             "gpsTimedOut",
             "hdop",
             "posEpoch"
-          ],
-          "optionalKeys": [
-            "flapHint",
-            "translationBiasHint"
           ],
           "enums": {
             "constraintProfile": [

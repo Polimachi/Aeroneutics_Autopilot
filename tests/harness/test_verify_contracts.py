@@ -413,8 +413,12 @@ class TestContractsVerification(unittest.TestCase):
             diag_file.write_text("# Diagram\n\nEmpty diagram without canonical packets.\n", encoding="utf-8")
 
             errs = verify_specs_against_contracts(td_path, contracts, spec_paths=[diagram_rel])
-            # Exactly 45 canonical packets (all 46 except MSG_ATC_APPROACH_CLEARANCE) must be reported missing
-            self.assertEqual(len(errs), 45)
+            expected_diag_missing = sum(
+                1 for i in contracts.get("interfaces", [])
+                for p in i.get("packets", {}).values()
+                if p.get("diagramRequired", True)
+            )
+            self.assertEqual(len(errs), expected_diag_missing)
             self.assertTrue(any("MSG_FLIGHT_TELEMETRY" in e for e in errs))
             self.assertFalse(any("MSG_ATC_APPROACH_CLEARANCE" in e for e in errs))
 
