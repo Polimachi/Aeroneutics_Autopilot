@@ -158,6 +158,31 @@ class TestVerifyRuntimeWiring(unittest.TestCase):
         # 3. Overall violations must be 0 (known exemptions are tracked with documented rationale)
         self.assertEqual(violations, [], f"Live repo wiring violations: {violations}")
 
+    def test_strict_wiring_verification_flags_all_known_exemptions(self) -> None:
+        violations = verify_all_wiring(WORKSPACE_ROOT, strict=True)
+        self.assertEqual(
+            len(violations),
+            4,
+            f"Expected exactly 4 strict violations matching KNOWN_EXEMPTIONS, got {len(violations)}: {violations}",
+        )
+
+        violation_keys = {
+            (Path(v.file_path).resolve().relative_to(WORKSPACE_ROOT.resolve()).as_posix(), v.code)
+            for v in violations
+        }
+        self.assertEqual(violation_keys, set(KNOWN_EXEMPTIONS.keys()))
+
+        # Verify each of the 4 specific documented exemptions
+        self.assertIn(("src/1_control/vas/modules/vec3.lua", "ORPHAN_MODULE"), violation_keys)
+        self.assertIn(("src/0_infra/gac/config.lua", "ORPHAN_MODULE"), violation_keys)
+        self.assertIn(("src/0_infra/landing_pad/config.lua", "ORPHAN_MODULE"), violation_keys)
+        self.assertIn(("src/0_infra/landing_pad/main.lua", "DEAD_IMPORT"), violation_keys)
+
+        # Ensure the landing_pad main.lua DEAD_IMPORT specifically refers to setup_wizard
+        dead_imports = [v for v in violations if v.code == "DEAD_IMPORT"]
+        self.assertEqual(len(dead_imports), 1)
+        self.assertIn("setup_wizard", dead_imports[0].message)
+
     def test_cli_execution_and_json_output(self) -> None:
         cli_path = WORKSPACE_ROOT / "tools" / "verify_runtime_wiring.py"
         res = subprocess.run(

@@ -4,10 +4,15 @@ Tests for tools/run_boot_smoke.py — CraftOS-PC boot smoke runner for active su
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(WORKSPACE_ROOT) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_ROOT))
 
 from harness.unit.config import CraftOSPaths
 from harness.unit.session import CraftOSSessionResult
@@ -18,8 +23,6 @@ from tools.run_boot_smoke import (
     run_boot_smoke_cli,
     run_target_boot_smoke,
 )
-
-WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class TestBootSmokeRunner(unittest.TestCase):
