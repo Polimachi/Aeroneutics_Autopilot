@@ -14,7 +14,9 @@ if str(WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_ROOT))
 
 from tools.verify_contracts import (
+    has_deprecation_marker,
     load_contracts,
+    strip_lua_comments,
     strip_revision_history,
     verify_code_against_contracts,
     verify_specs_against_contracts,
@@ -205,6 +207,20 @@ class TestContractsVerification(unittest.TestCase):
         self.assertNotIn("MSG_REBIND_ACK", stripped)
         self.assertIn("Active specification body line.", stripped)
 
+    def test_has_deprecation_marker_word_boundaries(self) -> None:
+        # Non-deprecated sentences with Korean words ending in 구/기존 must NOT match
+        self.assertFalse(has_deprecation_marker("복구 완료 MSG_REBIND_ACK"))
+        self.assertFalse(has_deprecation_marker("요구 사항 MSG_REBIND_ACK"))
+        self.assertFalse(has_deprecation_marker("도구 모음 MSG_REBIND_ACK"))
+        self.assertFalse(has_deprecation_marker("연구 결과 MSG_REBIND_ACK"))
+
+        # Valid deprecation markers must match
+        self.assertTrue(has_deprecation_marker("구 Base+6 채널 대신 Base+10 사용"))
+        self.assertTrue(has_deprecation_marker("(구 Base+6 [DEPRECATED])"))
+        self.assertTrue(has_deprecation_marker("구형 20채널"))
+        self.assertTrue(has_deprecation_marker("기존 oldBase + 11"))
+        self.assertTrue(has_deprecation_marker("MSG_REBIND_ACK [DEPRECATED]"))
+
     def test_revision_history_and_deprecated_lines_do_not_trigger_false_positives(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
@@ -251,7 +267,14 @@ class TestContractsVerification(unittest.TestCase):
             errors = verify_specs_against_contracts(td_path, contracts, spec_paths=[spec_rel])
             self.assertEqual(errors, [])
 
-            # Now add an unannotated deprecated token in the body
+            # Korean word ending in 구 (복구 완료) must NOT exempt MSG_REBIND_ACK from failing
+            bogus_content = spec_content + "\n복구 완료 MSG_REBIND_ACK 수신.\n"
+            spec_file.write_text(bogus_content, encoding="utf-8")
+            errors_bogus = verify_specs_against_contracts(td_path, contracts, spec_paths=[spec_rel])
+            self.assertEqual(len(errors_bogus), 1)
+            self.assertIn("MSG_REBIND_ACK", errors_bogus[0])
+
+            # Unannotated deprecated token in the body must fail
             unannotated_content = spec_content + "\nUnannotated usage of MSG_REBIND_ACK in body text.\n"
             spec_file.write_text(unannotated_content, encoding="utf-8")
             errors2 = verify_specs_against_contracts(td_path, contracts, spec_paths=[spec_rel])
@@ -298,12 +321,15 @@ class TestContractsVerification(unittest.TestCase):
     def test_static_code_detects_dual_key_fallback_and_deprecated_packet_literal(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
-            # Active subsystem with dual-key fallback and deprecated literal
+            # Active subsystem with dot and bracket dual-key fallbacks and deprecated literal
             bad_lua = td_path / "src" / "0_infra" / "test_node" / "main.lua"
             bad_lua.parent.mkdir(parents=True, exist_ok=True)
             bad_lua.write_text(
                 'local base = p.oldBase or p.newBaseChannel\n'
-                'local p_type = "MSG_REBIND_ACK"\n',
+                'local p_type = "MSG_REBIND_ACK"\n'
+                'local bracket_double = p["oldBase"] or p["newBaseChannel"]\n'
+                'local bracket_single = p[\'oldBase\'] or p[\'newBaseChannel\']\n'
+                '-- local commented = p["oldBase"] or p["newBaseChannel"]\n',
                 encoding="utf-8",
             )
 
@@ -312,7 +338,8 @@ class TestContractsVerification(unittest.TestCase):
             clean_lua.parent.mkdir(parents=True, exist_ok=True)
             clean_lua.write_text(
                 'local base = p.newBaseChannel\n'
-                'local p_type = "MSG_CHANNEL_REBIND_ACK"\n',
+                'local p_type = "MSG_CHANNEL_REBIND_ACK"\n'
+                'local bracket_clean = p["newBaseChannel"]\n',
                 encoding="utf-8",
             )
 
@@ -351,9 +378,15 @@ class TestContractsVerification(unittest.TestCase):
 
             # By default (include_deferred=False), deferredSubsystems (asa) are skipped
             errors = verify_code_against_contracts(td_path, contracts, include_deferred=False)
-            self.assertEqual(len(errors), 2)
-            self.assertTrue(any("oldBase" in e for e in errors))
+            self.assertEqual(len(errors), 4)
+            # Dot dual-key fallback
+            self.assertTrue(any("p.oldBase or p.newBaseChannel" in e for e in errors))
+            # Deprecated literal
             self.assertTrue(any("MSG_REBIND_ACK" in e for e in errors))
+            # Bracket double quote dual-key fallback
+            self.assertTrue(any('p["oldBase"] or p["newBaseChannel"]' in e for e in errors))
+            # Bracket single quote dual-key fallback
+            self.assertTrue(any("p['oldBase'] or p['newBaseChannel']" in e for e in errors))
             # Verify clean_node had no errors
             self.assertFalse(any("clean_node" in e for e in errors))
             # Verify asa was skipped
@@ -361,8 +394,29 @@ class TestContractsVerification(unittest.TestCase):
 
             # With include_deferred=True, asa is checked and flagged
             errors_deferred = verify_code_against_contracts(td_path, contracts, include_deferred=True)
-            self.assertEqual(len(errors_deferred), 3)
+            self.assertEqual(len(errors_deferred), 5)
             self.assertTrue(any("1_control/asa" in e.replace("\\", "/") for e in errors_deferred))
+
+    def test_diagram_spec_verifies_all_canonical_packets_except_explicitly_excluded(self) -> None:
+        contracts_path = WORKSPACE_ROOT / "config" / "protocol_contracts.json"
+        contracts = load_contracts(contracts_path)
+
+        diagram_rel = "docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md"
+        diagram_errors = verify_specs_against_contracts(WORKSPACE_ROOT, contracts, spec_paths=[diagram_rel])
+        self.assertEqual(diagram_errors, [], f"Live Diagram spec errors: {diagram_errors}")
+
+        # Assert that if canonical packets are missing in a synthetic diagram, all required are flagged
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            diag_file = td_path / diagram_rel
+            diag_file.parent.mkdir(parents=True, exist_ok=True)
+            diag_file.write_text("# Diagram\n\nEmpty diagram without canonical packets.\n", encoding="utf-8")
+
+            errs = verify_specs_against_contracts(td_path, contracts, spec_paths=[diagram_rel])
+            # Exactly 45 canonical packets (all 46 except MSG_ATC_APPROACH_CLEARANCE) must be reported missing
+            self.assertEqual(len(errs), 45)
+            self.assertTrue(any("MSG_FLIGHT_TELEMETRY" in e for e in errs))
+            self.assertFalse(any("MSG_ATC_APPROACH_CLEARANCE" in e for e in errs))
 
     def test_invalid_config_json_and_legacy_config_key_fails(self) -> None:
         with tempfile.TemporaryDirectory() as td:

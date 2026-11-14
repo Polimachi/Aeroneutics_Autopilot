@@ -56,14 +56,17 @@ REQUIRED_MISSION_SCHEMA_KEYS: tuple[str, ...] = (
     "conditionTypes",
 )
 
-DEPRECATION_MARKERS: tuple[str, ...] = (
-    "[DEPRECATED]",
-    "DEPRECATED",
-    "deprecated",
-    "구 ",
-    "구형",
-    "기존 ",
+DEPRECATION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\[DEPRECATED\]", re.IGNORECASE),
+    re.compile(r"\bDEPRECATED\b", re.IGNORECASE),
+    re.compile(r"(?:^|[\s`(\[<*~])구(?:형)?\s+"),
+    re.compile(r"(?:^|[\s`(\[<*~])기존\s+"),
 )
+
+
+def has_deprecation_marker(line: str) -> bool:
+    """Check if a line contains a valid deprecation annotation with proper word boundaries."""
+    return any(pat.search(line) for pat in DEPRECATION_PATTERNS)
 
 LEGACY_SURFACE_KEYS: tuple[str, ...] = (
     "elevator",
@@ -198,6 +201,98 @@ def strip_revision_history(markdown: str) -> str:
     return "\n".join(out)
 
 
+def strip_lua_comments(source: str) -> str:
+    """
+    Strips single-line (--) and multi-line (--[[ ]]) comments from Lua source,
+    replacing comment characters with spaces to preserve line numbers and columns.
+    String literals ('...', "...", and [=[...]=]) are preserved intact so that
+    bracket indexing expressions like t["keyA"] or t['keyB'] can be statically analyzed.
+    """
+    n = len(source)
+    out: list[str] = []
+    i = 0
+
+    while i < n:
+        c = source[i]
+        c2 = source[i : i + 2]
+
+        if c == "\n":
+            out.append(c)
+            i += 1
+            continue
+
+        # Single-line or multi-line comment: --
+        if c2 == "--":
+            i += 2
+            long_match = re.match(r"^\[(=*)\[", source[i:])
+            if long_match:
+                eqs = long_match.group(1)
+                closer = f"]{eqs}]"
+                i += len(long_match.group(0))
+                closer_idx = source.find(closer, i)
+                if closer_idx == -1:
+                    closer_idx = n
+                else:
+                    closer_idx += len(closer)
+                comment_body = source[i - len(long_match.group(0)) - 2 : closer_idx]
+                for ch in comment_body:
+                    if ch == "\n":
+                        out.append("\n")
+                    else:
+                        out.append(" ")
+                i = closer_idx
+            else:
+                out.extend([" ", " "])
+                while i < n and source[i] != "\n":
+                    out.append(" ")
+                    i += 1
+            continue
+
+        # Long string literal: [(=*)[
+        long_str_match = re.match(r"^\[(=*)\[", source[i:])
+        if long_str_match:
+            eqs = long_str_match.group(1)
+            closer = f"]{eqs}]"
+            content_start = i + len(long_str_match.group(0))
+            closer_idx = source.find(closer, content_start)
+            if closer_idx == -1:
+                closer_idx = n
+            else:
+                closer_idx += len(closer)
+            out.append(source[i:closer_idx])
+            i = closer_idx
+            continue
+
+        # Quoted string literal: ' or "
+        if c in ("'", '"'):
+            delim = c
+            out.append(delim)
+            i += 1
+            while i < n:
+                cur = source[i]
+                if cur == "\n":
+                    out.append("\n")
+                    i += 1
+                    break
+                if cur == "\\":
+                    out.append(cur)
+                    i += 1
+                    if i < n:
+                        out.append(source[i])
+                        i += 1
+                    continue
+                out.append(cur)
+                i += 1
+                if cur == delim:
+                    break
+            continue
+
+        out.append(c)
+        i += 1
+
+    return "".join(out)
+
+
 def _collect_deprecated_spec_tokens(contracts: dict[str, Any]) -> set[str]:
     """Collect unambiguous deprecated token names that must not appear in specs without annotation."""
     tokens: set[str] = set()
@@ -254,7 +349,7 @@ def verify_specs_against_contracts(
                 continue
 
             is_comment = stripped_line.startswith("--") or stripped_line.startswith("//")
-            has_marker = any(marker in line for marker in DEPRECATION_MARKERS)
+            has_marker = has_deprecation_marker(line)
 
             if is_comment and has_marker:
                 in_deprecated_comment_block = True
@@ -284,16 +379,15 @@ def verify_specs_against_contracts(
 
             for pkt_name, pkt_data in iface.get("packets", {}).items():
                 pkt_specs = pkt_data.get("specs") if isinstance(pkt_data, dict) else None
+                diagram_req = pkt_data.get("diagramRequired", True) if isinstance(pkt_data, dict) else True
 
                 should_check = False
                 if is_master_icd:
                     should_check = True
                 elif is_diagram:
-                    # Diagram covers all canonical packets unless explicitly scoped to a different file
-                    if pkt_specs is not None:
-                        should_check = diagram_rel in [s.replace("\\", "/") for s in pkt_specs]
-                    else:
-                        should_check = True
+                    # Diagram covers all canonical packets across all 12 interfaces
+                    # unless explicitly excluded via diagramRequired: false
+                    should_check = diagram_req
                 elif pkt_specs is not None:
                     should_check = norm_rel in [s.replace("\\", "/") for s in pkt_specs]
                 elif norm_rel in iface_specs:
@@ -366,6 +460,7 @@ def verify_code_against_contracts(
 
         source = lua_path.read_text(encoding="utf-8", errors="replace")
         stripped_code, literals = strip_lua_comments_and_strings(source)
+        comments_stripped = strip_lua_comments(source)
 
         # 1. Check prohibited string literals
         for line_no, lit in literals:
@@ -374,8 +469,8 @@ def verify_code_against_contracts(
                     f"{rel}:{line_no}: Prohibited deprecated packet or mode literal '{lit}' detected"
                 )
 
-        # 2. Check dual-key fallback on stripped code
-        for line_idx, line in enumerate(stripped_code.splitlines(), 1):
+        # 2. Check dual-key fallback on comments-stripped code (preserves string keys in brackets)
+        for line_idx, line in enumerate(comments_stripped.splitlines(), 1):
             for pat in DUAL_KEY_FALLBACK_PATTERNS:
                 for match in pat.finditer(line):
                     k1, k2 = match.group(2), match.group(3)

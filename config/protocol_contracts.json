@@ -806,6 +806,8 @@
           ]
         },
         "MSG_ATC_APPROACH_CLEARANCE": {
+          "diagramRequired": false,
+          "diagramExclusionReason": "Diagram uses MSG_ATC_HANDOFF_CLEARANCE and MSG_GAC_APPROACH_CLEARANCE for approach handoff sequence",
           "requiredKeys": [
             "aircraftId",
             "targetFacilityId",
