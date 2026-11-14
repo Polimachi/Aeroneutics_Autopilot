@@ -5,13 +5,19 @@ local facility_client = {}
 
 function facility_client.init(config)
     local cfg = config or {}
+    local sys = cfg.system or {}
     local safe = cfg.safety or {}
     local traj = cfg.trajectory or {}
     local dockCfg = traj.docking or {}
     return {
+        domainId = sys.domainId or cfg.domainId or "AIRCRAFT_01",
+        sectorId = cfg.sectorId or "SECTOR_01",
+        airframeType = sys.airframeType or cfg.airframeType or "VECTORED_VTOL",
+        reqSeq = 0,
         beacons = {},
         runways = {},
         activePadId = nil,
+        gacChannel = nil,
         padMobility = "STATIC",
         padChannel = nil,
         atcStatus = "NONE",
@@ -81,43 +87,55 @@ function facility_client.find_nearest_free_facility(state, craft_pos)
     return facility_client.find_nearest_free_landing_facility(state, craft_pos)
 end
 
-function facility_client.build_checkin_req(state, aircraftInfo, sectorId)
-    local info = aircraftInfo or {}
-    local craftId = info.aircraftId or (state and state.domainId) or "AIRCRAFT_01"
-    local secId = sectorId or info.sectorId or (state and state.sectorId) or "SECTOR_01"
+local function next_envelope(state, pktType, now_ms, payload)
+    local seq = 1
+    if state then
+        state.reqSeq = (state.reqSeq or 0) + 1
+        seq = state.reqSeq
+    end
+    local now = now_ms or (os and os.epoch and os.epoch("utc")) or (os and os.clock and math.floor(os.clock() * 1000)) or 0
     return {
         ver = "1.9.5",
-        type = "MSG_GAC_CHECKIN_REQ",
-        payload = {
-            sectorId = secId,
-            aircraftId = craftId,
-            craftWeight = info.craftWeight or 1000.0,
-            craftRadius = info.craftRadius or 5.0,
-            airframeType = info.airframeType or "VECTORED_VTOL",
-            preferredFacilityId = info.preferredFacilityId or (state and state.activePadId),
-            isEmergency = (info.isEmergency == true),
-        }
+        domainId = (state and state.domainId) or "AIRCRAFT_01",
+        seq = seq,
+        time = now,
+        type = pktType,
+        payload = payload,
     }
 end
 
+function facility_client.build_checkin_req(state, aircraftInfo, sectorId, now_ms)
+    local info = aircraftInfo or {}
+    local craftId = info.aircraftId or (state and state.domainId) or "AIRCRAFT_01"
+    local secId = sectorId or info.sectorId or (state and state.sectorId) or "SECTOR_01"
+    return next_envelope(state, "MSG_GAC_CHECKIN_REQ", now_ms, {
+        sectorId = secId,
+        aircraftId = craftId,
+        grossWeight = info.grossWeight or 1000.0,
+        clearanceRadius = info.clearanceRadius or 5.0,
+        airframeType = info.airframeType or (state and state.airframeType) or "VECTORED_VTOL",
+        preferredFacilityId = info.preferredFacilityId or (state and state.activePadId),
+        isEmergency = (info.isEmergency == true),
+    })
+end
+
 function facility_client.request_approach(state, pad_id, craft_cfg, fuel_pct, now_ms)
-    if craft_cfg and craft_cfg.facilityType == "DOCKING_ARM" then
-        return false, "DEFERRED_FACILITY_TYPE"
+    local cfg = craft_cfg or {}
+    local fType = cfg.facilityType or "LANDING_PAD"
+    if fType ~= "LANDING_PAD" and fType ~= "RUNWAY" and fType ~= "DOCKING_ARM" then
+        return false, "INVALID_FACILITY_TYPE"
     end
     if state then
         state.activePadId = pad_id
         state.atcStatus = "REQUESTED"
     end
-    return true, {
-        ver = "1.9.5",
-        type = "MSG_ATC_APPROACH_REQ",
-        payload = {
-            targetFacilityId = pad_id,
-            facilityType = "LANDING_PAD",
-            fuelPercent = fuel_pct or 1.0,
-            timestamp = now_ms or 0,
-        },
-    }
+    return true, next_envelope(state, "MSG_ATC_APPROACH_REQ", now_ms, {
+        aircraftId = (state and state.domainId) or cfg.domainId or "AIRCRAFT_01",
+        targetFacilityId = pad_id,
+        facilityType = fType,
+        fuelPercent = fuel_pct or 1.0,
+        timestamp = now_ms or 0,
+    })
 end
 
 function facility_client.on_atc_clearance(state, clrPayload, currentPos, now_ms)
@@ -126,11 +144,17 @@ function facility_client.on_atc_clearance(state, clrPayload, currentPos, now_ms)
     local status = p.status or "DENIED"
     state.atcStatus = status
     local now = now_ms or 0
+    if p.gacChannel then state.gacChannel = p.gacChannel end
+    if p.sectorId then state.sectorId = p.sectorId end
 
     if status == "CLEARED" then
-        state.activePadId = p.assignedFacilityId or state.activePadId
-        state.padMobility = p.padMobility or "STATIC"
-        state.padChannel = p.assignedTacticalChannel
+        state.activePadId = p.assignedFacilityId or p.targetFacilityId or state.activePadId
+        state.padMobility = p.padMobility or state.padMobility or "STATIC"
+        if clrPayload.type == "MSG_ATC_APPROACH_CLEARANCE" then
+            state.padChannel = p.assignedGuidanceChannel or state.padChannel
+        else
+            state.padChannel = p.assignedTacticalChannel or state.padChannel
+        end
         state.approachRetryCount = 0
         state.retryCount = 0
         state.atcDeniedCount = 0
@@ -147,6 +171,34 @@ function facility_client.on_atc_clearance(state, clrPayload, currentPos, now_ms)
     end
 end
 
+local function extract_common_guide(p, now)
+    local pos = p.touchdownPoint or { x = 0.0, y = 64.0, z = 0.0 }
+    local att = p.attitude or { pitch = 0.0, roll = 0.0, yaw = 0.0 }
+    return {
+        facilityId = p.facilityId,
+        facilityType = p.facilityType or "LANDING_PAD",
+        targetAircraft = p.targetAircraft,
+        pos = { x = pos.x or 0.0, y = pos.y or 64.0, z = pos.z or 0.0 },
+        attitude = { pitch = att.pitch or 0.0, roll = att.roll or 0.0, yaw = att.yaw or 0.0 },
+        approachDirection = p.approachDirection,
+        deckStatus = p.deckStatus or "STABLE",
+        landingPermitted = (p.landingPermitted ~= false),
+        abortAlert = (p.abortAlert == true),
+        lastUpdateMs = now,
+        approachHeading = att.yaw or 0.0,
+        clearanceRadius = p.clearanceRadius,
+        safeDescentRate = p.safeDescentRate,
+        tiltAngleDeg = p.tiltAngleDeg,
+        heaveRateMps = p.heaveRateMps,
+        endPoint = p.endPoint,
+        glideSlopeAngle = p.glideSlopeAngle,
+        touchdownZoneLength = p.touchdownZoneLength,
+        dockingCorridor = p.dockingCorridor,
+        captureLatchReady = p.captureLatchReady,
+        armState = p.armState,
+    }
+end
+
 function facility_client.on_tactical_guide(state, pkt, now_ms)
     if not state or not pkt then return end
     local p = pkt.payload or pkt
@@ -156,29 +208,37 @@ function facility_client.on_tactical_guide(state, pkt, now_ms)
     if msgType == "MSG_FACILITY_DYNAMIC_GUIDE" then
         state.padMobility = "DYNAMIC"
         state.lastDynamicGuideMs = now
-        local pos = p.touchdownPoint or { x = 0.0, y = 64.0, z = 0.0 }
         local vel = p.velocity or { vx = 0.0, vy = 0.0, vz = 0.0 }
         local acc = p.acceleration or { ax = 0.0, ay = 0.0, az = 0.0 }
-        local att = p.attitude or { pitch = 0.0, roll = 0.0, yaw = 0.0 }
-        state.dynamicGuide = {
-            pos = { x = pos.x or 0.0, y = pos.y or 64.0, z = pos.z or 0.0 },
-            vel = { vx = vel.vx or 0.0, vy = vel.vy or 0.0, vz = vel.vz or 0.0 },
-            accel = { ax = acc.ax or 0.0, ay = acc.ay or 0.0, az = acc.az or 0.0 },
-            attitude = { pitch = att.pitch or 0.0, roll = att.roll or 0.0, yaw = att.yaw or 0.0 },
-            lastUpdateMs = now,
-            approachHeading = att.yaw or 0.0,
-            deckStatus = p.deckStatus or "STABLE",
-            abortAlert = (p.abortAlert == true),
-            landingPermitted = (p.landingPermitted ~= false),
-        }
+        local guide = extract_common_guide(p, now)
+        guide.vel = { vx = vel.vx or 0.0, vy = vel.vy or 0.0, vz = vel.vz or 0.0 }
+        guide.accel = { ax = acc.ax or 0.0, ay = acc.ay or 0.0, az = acc.az or 0.0 }
+        guide.angularRates = p.angularRates
+        state.dynamicGuide = guide
     elseif msgType == "MSG_FACILITY_STATIC_GUIDE" then
         state.padMobility = "STATIC"
-        state.staticGuide = p
+        state.staticGuide = extract_common_guide(p, now)
         state.lastStaticGuideMs = now
     end
-    if p.abortAlert == true or msgType == "MSG_ABORT_APPROACH" then
+    if p.abortAlert == true or msgType == "MSG_ABORT_APPROACH" or p.deckStatus == "DANGEROUS" or p.landingPermitted == false then
         state.touchdownAborted = true
     end
+end
+
+function facility_client.on_gac_abort_clear(state, pkt, now_ms)
+    if not state or not pkt then return end
+    local p = pkt.payload or pkt
+    state.touchdownAborted = false
+    state.dockingAborted = false
+    state.approachRetryCount = 0
+    state.retryCount = 0
+    if p.reassignedFacilityId or p.assignedFacilityId then
+        state.activePadId = p.reassignedFacilityId or p.assignedFacilityId
+    end
+    if p.assignedTacticalChannel then
+        state.padChannel = p.assignedTacticalChannel
+    end
+    state.lastAtcDeniedMs = now_ms or state.lastAtcDeniedMs
 end
 
 function facility_client.extrapolate_dynamic_deck(state, now_ms)
@@ -234,7 +294,7 @@ function facility_client.evaluate_guide_watchdog(state, now_ms)
     local now = now_ms or 0
 
     if state.atcStatus == "DENIED" or state.atcStatus == "HOLD" then
-        if state.atcDeniedCount > state.maxAtcDeniedRetries then
+        if (state.atcDeniedCount or 0) >= (state.maxAtcDeniedRetries or 10) then
             res.retriesExhausted = true
             res.action = "RTH"
             return res

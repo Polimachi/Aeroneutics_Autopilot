@@ -29,6 +29,7 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
   - 저장소 내 실제 프로덕션 코드 파일 수정 직전에만 `test-driven-development` + `ponytail` 호출 (단, Phase 0 테스트 러너 최초 부트스트랩 시 TDD Red-Green 대신 셀프 스모크 실행 적용).
   - 사양서 기반 구현 시 대상 사양서의 상단 메타데이터 표 상태가 `Approved`인지 선행 확인하며, 코드 작성을 위한 사양서 **읽기 전용 참조 시 `specification-lifecycle-manager`를 호출하지 않는다**.
   - `.lua` 작업 시 역할 분담: CC:Tweaked API·페리페럴·이벤트 연동은 `computercraft-lua`(필요한 `references/` 파일만 선별 열람), 순수 Lua 구조·메타테이블·최적화는 `lua` 호출. Python(`.py`) 작업 시 두 Lua 스킬 호출 금지.
+  - **WebUI 미션 에디터 HTML 작업 한정 (`tools/amm_mission_editor.html` / `AMM_MISSION_EDITOR_SPECIFICATION.md` 전용)**: `frontend-design`(레이아웃·시각 설계·CSS/Canvas 정제) 및 `web-design-guidelines`(접근성·포커스·폼·키보드 UI 감사)는 **오직 `tools/amm_mission_editor.html` 및 그 상세 규격서(`AMM_MISSION_EDITOR_SPECIFICATION.md`) 작업 시에만** 호출한다. 그 외 `.lua`, `.py`, 타 도메인 사양서 및 일반 문서 작업에서는 호출을 **영구 금지**한다.
   - 초기 작성(Red/Green) 중에는 `code-simplifier`, `pr-review-toolkit` 동시 호출 금지.
 - **리팩토링 및 코드 리뷰 (Refactor & Review)**:
   - 동작 통과(Green) 직후 구조 정제 또는 리팩토링 요청 시: `code-simplifier` + `ponytail`(가지치기).

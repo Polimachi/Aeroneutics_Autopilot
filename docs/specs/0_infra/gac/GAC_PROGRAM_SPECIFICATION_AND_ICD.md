@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.4.2` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.5.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/gac/` |
 | **주관 도메인 (Domain)** | 국지 에이프런 총괄 관제사 (Ground Apron Controller / GAC) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.5.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `CH 50003` / `Base_sec+2` `MSG_FACILITY_BEACON` 집약 송출 내 `facilitiesSummary`(`totalDockingArms`, `freeDockingArms`) 통합 및 `clearanceRadius` 필드명 정렬, 이륙 허가 패킷 역할 분리(`GAC` `Base_sec+0` `MSG_GAC_DEPARTURE_CLEARANCE` vs `Tower ATC` `CH 50001` `MSG_ATC_DEPARTURE_CLEARANCE`) 명시 및 연관 문서 버전(`ICD v1.30.0`, `Diagram v2.15.0`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Landing Pad v2.5.0`, `Runway v1.11.0`, `Docking Arm v1.12.0`, `GPS v2.3.3`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 섹터 비콘/출발 관제 및 시설물 공통 스키마 정렬 |
 | `v1.4.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0)에 따른 기체 외부 교신 주체 용어 정렬(`FCP (Node 04)` $\to$ `AMM (Node 03)`, `FCP`는 `Base+4` 경유 궤적 수신) 및 연관 규격서 버전 동기화 (`src/0_infra/gac/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·항법 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.4.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.4.0` | 2026-11-08 | 특정 VTOL/DRONE 전속 전용(Dedicated) 착륙패드 및 도킹암 지원, 다속성 2단계 분배 수치 모델 확장, 비인가 기체 거절 사유(`FACILITY_DEDICATED`) 명시, 비상 시 최후 수단 징발 허용 및 TUI 콘솔 표출 규격 신설 | 전용 기체 상시 대기 및 독점 정박 자원 보호 인터록 표준화 |
@@ -23,15 +24,15 @@
 | `v1.1.4` | 2026-11-07 | 40채널 규격 및 영구 단일 경로 반영 | 지상 인프라 및 전역 통신 규격 일원화 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.14.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.4)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.7)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.2)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.15.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 
 ---
 
@@ -153,6 +154,8 @@ GAC 노드가 관할하는 지상 시설물들의 상태를 집약하여 광역 
             freeLandingPads = 3,             -- 일반 공용 가용 패드 수 (전용 패드는 오인 진입 방지를 위해 FREE 상태여도 제외)
             totalRunways = 0,                -- 관할 내 총 활주로 수
             freeRunways = 0,                 -- 일반 공용 가용 활주로 수 (전용 활주로 제외)
+            totalDockingArms = 2,            -- 관할 내 총 도킹암 수
+            freeDockingArms = 1,             -- 일반 공용 가용 도킹암 수
             maxSupportWeight = 40000.0,      -- 수용 가능 최대 이륙 중량 (kg)
             maxSupportRadius = 12.0          -- 수용 가능 최대 패드 반경 (m)
         },
@@ -297,7 +300,7 @@ GAC가 다속성 알고리즘으로 선정한 최적 패드 ID와 전술 유도 
         assignedTacticalChannel = 50211,     -- 패드 전술 채널 (Base_sec + 10 + PadID)
         touchdownPoint = { x = 1250.0, y = 65.0, z = -820.0 },
         safeDescentRate = 1.0,
-        clearanceZoneRadius = 5.0,
+        clearanceRadius = 5.0,               -- (구 clearanceZoneRadius [DEPRECATED])
         holdingArea = nil,                   -- HOLD 시 선회 중심점 및 고도
         reason = nil                         -- DENIED 시 거절 사유 ("SECTOR_ALL_OCCUPIED", "OVERWEIGHT", "FACILITY_DEDICATED")
     }
@@ -396,14 +399,14 @@ GAC가 낙점된 개별 패드 노드에 슬롯을 배정합니다.
 }
 ```
 
-#### 2. 복행 안전 고도 도달 통보 (`MSG_ATC_ABORT_CLEAR`, AMM $\to$ GAC, $Base_{\text{sec}}+0$)
+#### 2. 복행 안전 고도 도달 통보 (`MSG_GAC_ABORT_CLEAR`, AMM $\to$ GAC, $Base_{\text{sec}}+0$; 구 `MSG_ATC_ABORT_CLEAR` `[DEPRECATED]`)
 기체가 안전 복행 고도(+30m)에 도달하여 패드 상공을 벗어났음을 `AMM (Node 03)`이 GAC에 보고합니다.
 ```lua
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
     seq = 725,
-    type = "MSG_ATC_ABORT_CLEAR",
+    type = "MSG_GAC_ABORT_CLEAR",
     time = 1729850024000,
     payload = {
         sectorId = "BASE_ALPHA_SECTOR_01",
@@ -437,6 +440,8 @@ GAC가 낙점된 개별 패드 노드에 슬롯을 배정합니다.
 ```
 
 #### 2. 이륙 인가 (`MSG_GAC_DEPARTURE_CLEARANCE`, GAC $\to$ AMM, $Base_{\text{sec}}+0$)
+> [!NOTE]
+> **출발 허가 패킷 분리 원칙**: GAC 관할 섹터 출항 인가는 `Base_sec+0`에서 `MSG_GAC_DEPARTURE_CLEARANCE`로 발행하며, Tower ATC 광역 공역 출발 허가는 `CH 50001`에서 `MSG_ATC_DEPARTURE_CLEARANCE`로 분리 운영합니다.
 ```lua
 {
     ver = "1.9.5",
@@ -515,7 +520,7 @@ stateDiagram-v2
     APPROACH_MONITORING --> BERTHED_OCCUPIED : 패드 점유 보고 수신 (MSG_ATC_FACILITY_UPDATE, OCCUPIED)
     APPROACH_MONITORING --> LOCAL_GO_AROUND : 패드 복행 통보 수신 (MSG_ABORT_APPROACH)
     
-    LOCAL_GO_AROUND --> ALLOCATING_FACILITY : 기체 안전고도 도달 보고 수신 (MSG_ATC_ABORT_CLEAR) & 타 FREE 패드 탐색
+    LOCAL_GO_AROUND --> ALLOCATING_FACILITY : 기체 안전고도 도달 보고 수신 (MSG_GAC_ABORT_CLEAR) & 타 FREE 패드 탐색
     LOCAL_GO_AROUND --> TOWER_DIVERT_HANDOFF : 관할 내 대체 패드 부재 시 Tower ATC로 회항 이양
     
     BERTHED_OCCUPIED --> DEPARTURE_HANDOFF : 이륙 요청 수신 (MSG_GAC_DEPARTURE_REQ)
@@ -576,7 +581,7 @@ sequenceDiagram
     Note over P1: PAD_01 GO_AROUND 격리
 
     Note over U: 급상승 복행 궤적 하달 (+30m 안전고도 도달)
-    U->>G: MSG_ATC_ABORT_CLEAR (CH 50201) [aircraftId: AIRCRAFT_01, alt: 100m]
+    U->>G: MSG_GAC_ABORT_CLEAR (CH 50201) [aircraftId: AIRCRAFT_01, alt: 100m]
     G->>P1: MSG_ATC_FACILITY_UPDATE (CH 50202) [PAD_01 status: FREE]
     Note over G: 로컬 LOITER 지시 및 대체 패드 탐색 -> PAD_02 선정
     G->>P2: MSG_ATC_SLOT_ASSIGN (CH 50202) [aircraftId: AIRCRAFT_01, slotSec: 120]

@@ -145,7 +145,7 @@ function gac_fsm.create(config, inventory, allocator)
                     assignedTacticalChannel = payload.tacticalChannel,
                     touchdownPoint = coords,
                     safeDescentRate = 1.0,
-                    clearanceZoneRadius = radius
+                    clearanceRadius = radius
                 }
             }
         end
@@ -170,6 +170,17 @@ function gac_fsm.create(config, inventory, allocator)
         end
 
         local summary = inv:get_summary()
+        local occupiedPads = 0
+        local maintenancePads = 0
+        for _, fac in ipairs(inv:get_all_facilities()) do
+            if (fac.type or "LANDING_PAD") == "LANDING_PAD" then
+                if fac.status == "RESERVED" or fac.status == "OCCUPIED" then
+                    occupiedPads = occupiedPads + 1
+                elseif fac.status == "MAINTENANCE" or fac.status == "GO_AROUND" then
+                    maintenancePads = maintenancePads + 1
+                end
+            end
+        end
         return {
             ver = PROTOCOL_VER,
             domainId = cfg.sectorId or "GAC_NODE",
@@ -180,11 +191,30 @@ function gac_fsm.create(config, inventory, allocator)
                 sectorId = cfg.sectorId,
                 totalPads = summary.totalLandingPads,
                 freePads = summary.freeLandingPads,
-                occupiedPads = summary.totalLandingPads - summary.freeLandingPads,
-                maintenancePads = 0,
+                occupiedPads = occupiedPads,
+                maintenancePads = maintenancePads,
                 sectorStatus = inv:is_emergency_lockdown() and "DECK_DANGEROUS" or "OPERATIONAL"
             }
         }
+    end
+
+    function fsm:get_traffic()
+        local list = {}
+        for facId, slot in pairs(state.activeSlots) do
+            table.insert(list, {
+                facilityId = facId,
+                aircraftId = slot.aircraftId,
+                status = "ACTIVE"
+            })
+        end
+        for craftId, info in pairs(state.goAroundQueue) do
+            table.insert(list, {
+                facilityId = info.failedFacilityId or "-",
+                aircraftId = craftId,
+                status = "GO_AROUND"
+            })
+        end
+        return list
     end
 
     function fsm:handle_abort_approach(packet)

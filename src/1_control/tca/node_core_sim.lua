@@ -13,7 +13,7 @@ local discoverReq = packet_protocol.encode_envelope(
     "AIRCRAFT_01",
     "MSG_ACTUATOR_DISCOVER_REQ",
     1,
-    { requestDomain = "AIRCRAFT_01", targetThrusterId = "ALL" }
+    { requestDomain = "AIRCRAFT_01", targetGroup = "ALL" }
 )
 modem.transmit(CH_ACTUATION, CH_ACTUATION, discoverReq)
 

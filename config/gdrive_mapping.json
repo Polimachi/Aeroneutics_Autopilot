@@ -2,15 +2,15 @@
   "version": "1.0.0",
   "folderId": "1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
   "folderUrl": "https://drive.google.com/drive/folders/1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
-  "lastSync": "2026-11-09T23:30:00Z",
+  "lastSync": "2026-11-14T05:56:39Z",
   "files": {
     "src/0_development/installer/installer_app.lua": {
       "id": "1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx",
       "name": "installer_app.lua",
       "repoPath": "src/0_development/installer/installer_app.lua",
       "category": "bootstrap",
-      "sizeBytes": 22794,
-      "sha256": "b92da7ab5b87d1d70b8b94c0a1047a0ea6de68e2741d331ddc481efceae58efa",
+      "sizeBytes": 22797,
+      "sha256": "53b48807332d681d8089bb4d4bd2d9a15436b0697a71fdf54d717624c49a35ca",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx&export=download&confirm=t"
     },
     "src/0_development/installer/modules/manifest.lua": {
@@ -18,8 +18,8 @@
       "name": "manifest.lua",
       "repoPath": "src/0_development/installer/modules/manifest.lua",
       "category": "bootstrap",
-      "sizeBytes": 35098,
-      "sha256": "ccb766dd893606dcb9fe64a221a5fa62b01bb60430e78629fddac34bc78ab505",
+      "sizeBytes": 36144,
+      "sha256": "376a1a2d1810bbb1c5d1988757da20297d5c7bcfa7e2915b87f3c2e7d3cd3cd7",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX&export=download&confirm=t"
     },
     "src/0_development/installer/modules/version_registry.lua": {
@@ -72,8 +72,8 @@
       "name": "installer.lua",
       "repoPath": "installer.lua",
       "category": "installer",
-      "sizeBytes": 15588,
-      "sha256": "a10cd3a5a889daf733c5866d540063838c88b42d3e9ca00bd4b6e5481d896f3a",
+      "sizeBytes": 17676,
+      "sha256": "8b4983de2787786845c7d143c385bb3499a0278c363cc9905b8ebd17fbbb6870",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1FSk8Fya18HXyPdL8lhhfBGqIV500D5UN&export=download&confirm=t"
     },
     "src/0_development/sensors/avionics_sensors.lua": {

@@ -2,14 +2,17 @@
 -- VAS Base+2 velocity integration, AMM posEpoch bounded merge, and navStale monitoring (ICD v1.28.0)
 local state_propagator = {}
 
-local function clamp_dt(dt)
+local function clamp_dt(dt, max_dt)
+    local lim = tonumber(max_dt) or 0.1
     if dt < 0.0 then return 0.0 end
-    if dt > 0.1 then return 0.1 end
+    if dt > lim then return lim end
     return dt
 end
 
 function state_propagator.init(cfg)
     local c = cfg or {}
+    local ol = c.outerLoop or c
+    local safe = c.safety or c
     local initPos = c.initialPos or {}
     return {
         pos = {
@@ -34,8 +37,9 @@ function state_propagator.init(cfg)
         gpsTimedOut = false,
         hdop = 1.0,
         navStale = false,
-        posMergeMaxStepM = tonumber(c.posMergeMaxStepM) or 2.0,
-        navStaleEpochMs = tonumber(c.navStaleEpochMs) or 500,
+        dtPropMaxSec = tonumber(ol.dtPropMaxSec) or 0.1,
+        posMergeMaxStepM = tonumber(ol.posMergeMaxStepM) or 2.0,
+        navStaleTimeoutMs = tonumber(safe.navStaleTimeoutMs) or 500,
     }
 end
 
@@ -53,8 +57,9 @@ local function apply_orientation(state, att, ar)
     if att then
         state.attitude.pitch = tonumber(att.pitch) or 0.0
         state.attitude.roll = tonumber(att.roll) or 0.0
-        state.attitude.heading = tonumber(att.heading or att.yaw) or 0.0
-        state.attitude.yaw = state.attitude.heading
+        local yaw = tonumber(att.yaw) or 0.0
+        state.attitude.yaw = yaw
+        state.attitude.heading = yaw
     end
     if ar then
         state.angularRates.pitchRate = tonumber(ar.pitchRate) or 0.0
@@ -67,8 +72,17 @@ function state_propagator.on_telemetry(state, telemPayload, now_ms)
     if not state or type(telemPayload) ~= "table" then return end
     apply_velocity(state, telemPayload.dynamics)
     apply_orientation(state, telemPayload.attitude, telemPayload.angularRates)
-    if telemPayload.actuatorHealth then
-        state.actuatorHealth = telemPayload.actuatorHealth
+    if type(telemPayload.actuatorHealth) == "table" then
+        local ah = telemPayload.actuatorHealth
+        local tap = (ah.tap ~= false)
+        local asa = (ah.asa ~= false)
+        local allOk = (ah.allOk ~= nil) and (ah.allOk == true) or (tap and asa)
+        state.actuatorHealth = {
+            tca = ah.tca,
+            tap = tap,
+            asa = asa,
+            allOk = allOk,
+        }
     end
     if telemPayload.activeSource then
         state.activeSource = telemPayload.activeSource
@@ -110,9 +124,11 @@ function state_propagator.on_setpoint_epoch(state, setpointPayload, now_ms)
 
     local epoch = tonumber(setpointPayload.posEpoch)
     local curPos = setpointPayload.currentPos
-    if epoch and epoch > state.lastSyncedEpoch and type(curPos) == "table" then
-        local maxStep = state.posMergeMaxStepM or 2.0
-        merge_current_pos(state, curPos, maxStep)
+    if epoch and epoch > state.lastSyncedEpoch then
+        if type(curPos) == "table" then
+            local maxStep = state.posMergeMaxStepM or 2.0
+            merge_current_pos(state, curPos, maxStep)
+        end
         state.posEpoch = epoch
         state.lastSyncedEpoch = epoch
         state.lastSetpointMs = now_ms or (os.epoch and os.epoch("utc") or 0)
@@ -121,16 +137,18 @@ end
 
 function state_propagator.propagate(state, now_ms)
     local now = now_ms or (os.epoch and os.epoch("utc") or 0)
-    local last = state.lastPropagateMs or now
-    local dt = clamp_dt((now - last) / 1000.0)
+    local last = (state.lastPropagateMs and state.lastPropagateMs > 0) and state.lastPropagateMs or now
+    local dt = clamp_dt((now - last) / 1000.0, state.dtPropMaxSec)
     state.lastPropagateMs = now
 
     state.pos.x = state.pos.x + state.vel.vx * dt
     state.pos.y = state.pos.y + state.vel.vy * dt
     state.pos.z = state.pos.z + state.vel.vz * dt
 
-    local telemAge = now - (state.lastTelemMs or 0)
-    state.navStale = (telemAge > (state.navStaleEpochMs or 500)) or (state.navValid == false)
+    local timeoutMs = state.navStaleTimeoutMs or 500
+    local telemStale = (state.lastTelemMs > 0) and ((now - state.lastTelemMs) > timeoutMs)
+    local epochStale = (state.lastSetpointMs > 0) and ((now - state.lastSetpointMs) > timeoutMs)
+    state.navStale = telemStale or epochStale or (state.navValid == false)
 
     return {
         pos = state.pos,

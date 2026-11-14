@@ -449,7 +449,11 @@ function mission_engine.new(opts)
     return setmetatable({
         net = o.net, hook_runner = runner, config = cfg, baseChannel = base_ch,
         redstone = o.redstone, colors = o.colors, on_notify = o.on_notify,
-        guard = chattering_guard.init(cfg),
+        guard = o.guard or chattering_guard.init(cfg),
+        sentinel = o.sentinel,
+        fac = o.fac,
+        precondCtx = o.precondCtx,
+        geofenceMarginM = o.geofenceMarginM,
         authority = "PILOT_PRIMARY",
         defaults = {
             cruiseSpeed = cfg.defaultSpeed or 18.0,
@@ -470,6 +474,7 @@ function mission_engine.new(opts)
         touchdownArmed = false,
         waitingHumanAuth = false,
         emconActive = false,
+        activeRoi = nil,
         currentGoal = nil,
         fallbackGoal = nil,
     }, mission_engine)
@@ -484,6 +489,7 @@ function mission_engine:load_table(tbl)
         defaultSpeed = self.defaults.cruiseSpeed,
         arrivalRadius = self.defaults.acceptanceRadius,
         system = self.config and self.config.system,
+        safety = self.config and self.config.safety,
     })
     if not ok_m then
         local code = (res and res.error) or "SCHEMA_INVALID"
@@ -503,6 +509,7 @@ function mission_engine:load_table(tbl)
     self.state = "IDLE"
     self.waitingHumanAuth = false
     self.emconActive = false
+    self.activeRoi = nil
     self.currentGoal = nil
     self.fallbackGoal = nil
     return true, nil
@@ -553,30 +560,19 @@ local function set_cruise_goal(self, cp)
         targetPos = tgt,
         targetAlt = alt,
         targetSpeed = spd,
+        poiPos = self.activeRoi,
         headingMode = p.headingMode or "AUTO",
         fixedHeadingDeg = p.targetHeading or p.headingDeg,
         acceptanceRadius = p.acceptanceRadius,
     }
-    if self.net then
-        self.net:send_operator_cmd("CRUISE", "CRUISE", {
-            targetWaypoint = tgt, targetAlt = alt, cruiseSpeed = spd,
-        }, "NONE", self.authority)
-    end
     return true
 end
 
 local function set_takeoff_goal(self, cp)
     local p = cp.params or {}
-    local fsm = (self.lastMfd and self.lastMfd.fsmState) or "DISARMED"
-    if fsm == "DISARMED" and self.net then
-        self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", self.authority)
-    end
     local alt = p.targetAlt or self.defaults.targetAlt
     local fac = p.facilityId or p.designatedFacilityId
     self.currentGoal = { flightMode = "TAKEOFF", arm = true, flightActive = true, targetAlt = alt, facilityId = fac }
-    if self.net then
-        self.net:send_operator_cmd("TAKEOFF", "TAKEOFF", { targetAlt = alt, designatedFacilityId = fac }, "NONE", self.authority)
-    end
     return true
 end
 
@@ -587,14 +583,9 @@ local function set_loiter_goal(self, cp)
     self.currentGoal = {
         flightMode = "LOITER", arm = true, flightActive = true,
         targetPos = p.targetPos, targetAlt = alt, targetSpeed = spd,
+        poiPos = self.activeRoi,
         loiterRadius = p.radius, loiterDirection = p.direction,
     }
-    if self.net then
-        self.net:send_operator_cmd("LOITER", "LOITER", {
-            targetWaypoint = p.targetPos, targetAlt = alt, cruiseSpeed = spd,
-            loiterRadius = p.radius, loiterDirection = p.direction,
-        }, "NONE", self.authority)
-    end
     return true
 end
 
@@ -604,13 +595,8 @@ local function set_poi_goal(self, cp)
     local spd = p.cruiseSpeed or self.defaults.cruiseSpeed
     self.currentGoal = {
         flightMode = "POI_HOLD", arm = true, flightActive = true,
-        targetPos = p.targetPos, poiPos = p.poiPos, targetAlt = alt, targetSpeed = spd,
+        targetPos = p.targetPos, poiPos = p.poiPos or self.activeRoi, targetAlt = alt, targetSpeed = spd,
     }
-    if self.net then
-        self.net:send_operator_cmd("POI_HOLD", "POI_HOLD", {
-            targetWaypoint = p.targetPos, poiTarget = p.poiPos, targetAlt = alt, cruiseSpeed = spd,
-        }, "NONE", self.authority)
-    end
     return true
 end
 
@@ -621,35 +607,39 @@ local function set_land_goal(self, cp)
         flightMode = "LANDING", arm = true, flightActive = true,
         facilityId = fac, targetPos = p.targetPos, targetAlt = p.targetAlt,
     }
-    if self.net then
-        self.net:send_operator_cmd("LANDING", "LANDING", {
-            designatedFacilityId = fac, targetWaypoint = p.targetPos, targetAlt = p.targetAlt,
-        }, "NONE", self.authority)
-    end
     return true
 end
 
-local function dispatch_failsafe_cmd(self, mode, em_act)
+local function dispatch_failsafe_cmd(self, mode)
     self.currentGoal = { flightMode = mode, arm = true, flightActive = true }
-    if self.net then
-        local cmd = (mode == "HOVER_HOLD") and "HOVER_HOLD" or "CRUISE"
-        self.net:send_operator_cmd(cmd, cmd, {}, em_act, self.authority)
-    end
     return true
 end
 
 local FCP_DISPATCHERS = {
+    ACT_SYS_LOAD = function(self)
+        self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
+        return true
+    end,
+    ACT_SYS_PREFLIGHT = function(self)
+        self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
+        return true
+    end,
+    ACT_SYS_SET_HOME = function(self, cp)
+        local p = cp.params or {}
+        local nav_pos = self.lastMfd and self.lastMfd.navigation and self.lastMfd.navigation.currentPos
+        self.homePos = p.targetPos or nav_pos
+        return true
+    end,
     ACT_SYS_ARM = function(self)
-        self.currentGoal = { flightMode = "IDLE", arm = true, flightActive = false }
-        if self.net then self.net:send_operator_cmd("ARM", "CRUISE", {}, "NONE", self.authority) end
+        self.currentGoal = { flightMode = "IDLE_ARMED", arm = true, flightActive = false }
         return true
     end,
     ACT_SYS_DISARM = function(self)
-        self.currentGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+        self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
         return true
     end,
     ACT_SYS_TERMINATE = function(self)
-        self.currentGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+        self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
         if self.net and self.net.send_emergency_override then
             self.net:send_emergency_override("E_STOP", "MISSION_TERMINATE", "ESTOP_CONFIRM_KEY", "AMM")
         end
@@ -658,6 +648,23 @@ local FCP_DISPATCHERS = {
     ACT_TKL_TAKEOFF_VERT = set_takeoff_goal,
     ACT_MOB_MOVING_TKOFF = set_takeoff_goal,
     ACT_TKL_ABORT_LAND = set_takeoff_goal,
+    ACT_TKL_TRANS_MC2FW = function(self, cp)
+        local p = cp.params or {}
+        self.currentGoal = {
+            flightMode = "CRUISE", arm = true, flightActive = true, transitionMode = "MC2FW",
+            targetAlt = p.targetAlt or self.defaults.targetAlt,
+            targetSpeed = p.targetSpeed or p.cruiseSpeed or self.defaults.cruiseSpeed,
+        }
+        return true
+    end,
+    ACT_TKL_TRANS_FW2MC = function(self, cp)
+        local p = cp.params or {}
+        self.currentGoal = {
+            flightMode = "HOVER_HOLD", arm = true, flightActive = true, transitionMode = "FW2MC",
+            targetAlt = p.targetAlt or self.defaults.targetAlt,
+        }
+        return true
+    end,
     ACT_NAV_SPLINE_WP = set_cruise_goal,
     ACT_NAV_GOTO_WP = set_cruise_goal,
     ACT_NAV_CORRIDOR = set_cruise_goal,
@@ -676,11 +683,22 @@ local FCP_DISPATCHERS = {
     ACT_MOB_DECK_SYNC = set_land_goal,
     ACT_PAY_BUS_CMD = function(self, cp, now_ms) return self.hook_runner:start_action(cp, now_ms) end,
     ACT_PAY_REDSTONE = function(self, cp, now_ms) return self.hook_runner:start_action(cp, now_ms) end,
-    ACT_FS_RTL_HOME = function(self) return dispatch_failsafe_cmd(self, "FAILSAFE_RTH", "RTH") end,
-    ACT_FS_GOTO_RALLY = function(self) return dispatch_failsafe_cmd(self, "FAILSAFE_RTH", "RTH") end,
-    ACT_FS_HOVER_HOLD = function(self) return dispatch_failsafe_cmd(self, "HOVER_HOLD", "HOVER_HOLD") end,
-    ACT_FS_FENCE_BRAKE = function(self) return dispatch_failsafe_cmd(self, "HOVER_HOLD", "HOVER_HOLD") end,
-    ACT_FS_EMERG_LAND = function(self) return dispatch_failsafe_cmd(self, "EMERGENCY_LAND", "EMERGENCY_LAND") end,
+    ACT_PAY_SET_ROI = function(self, cp, now_ms)
+        local p = cp.params or {}
+        self.activeRoi = p.poiPos or p.targetPos
+        if self.currentGoal then self.currentGoal.poiPos = self.activeRoi end
+        return self.hook_runner:start_action(cp, now_ms)
+    end,
+    ACT_PAY_CLEAR_ROI = function(self, cp, now_ms)
+        self.activeRoi = nil
+        if self.currentGoal then self.currentGoal.poiPos = nil end
+        return self.hook_runner:start_action(cp, now_ms)
+    end,
+    ACT_FS_RTL_HOME = function(self) return dispatch_failsafe_cmd(self, "FAILSAFE_RTH") end,
+    ACT_FS_GOTO_RALLY = function(self) return dispatch_failsafe_cmd(self, "FAILSAFE_RTH") end,
+    ACT_FS_HOVER_HOLD = function(self) return dispatch_failsafe_cmd(self, "HOVER_HOLD") end,
+    ACT_FS_FENCE_BRAKE = function(self) return dispatch_failsafe_cmd(self, "HOVER_HOLD") end,
+    ACT_FS_EMERG_LAND = function(self) return dispatch_failsafe_cmd(self, "EMERGENCY_LAND") end,
 }
 
 local function build_loiter_fallback(self, cp)
@@ -708,26 +726,42 @@ local FALLBACK_HANDLERS = {
         cp.status = "ABORTED"
         self.state = "ABORTED"
         self.fallbackGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
-        if self.net then self.net:send_operator_cmd("CRUISE", "CRUISE", {}, "RTH", self.authority) end
         return "ABORTED"
     end,
     HOVER_HOLD = function(self, cp)
         cp.status = "ABORTED"
         self.state = "ABORTED"
         self.fallbackGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true }
-        if self.net then self.net:send_operator_cmd("HOVER_HOLD", "HOVER_HOLD", {}, "HOVER_HOLD", self.authority) end
         return "ABORTED"
     end,
     LOITER = function(self, cp)
         cp.status = "ABORTED"
         self.state = "ABORTED"
         self.fallbackGoal = build_loiter_fallback(self, cp)
-        if self.net then self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority) end
         return "ABORTED"
     end,
 }
 
+local function find_decorator(cp, decorator_id)
+    for _, d in ipairs((cp and cp.decorators) or {}) do
+        if d.decoratorId == decorator_id then return d end
+    end
+    return nil
+end
+
 function mission_engine:apply_abort(cp, now_ms)
+    local retry_dec = find_decorator(cp, "DEC_RETRY_N")
+    if retry_dec then
+        local ov = type(retry_dec.overrideParams) == "table" and retry_dec.overrideParams or {}
+        local max_att = math.max(1, math.floor(tonumber(ov.maxAttempts) or 3))
+        if (cp._attempt or 1) < max_att then
+            cp._attempt = (cp._attempt or 1) + 1
+            self.hook_runner:cleanup()
+            self.waitingHumanAuth = false
+            local ok_r = self:enter_checkpoint(self.active_index, now_ms, true)
+            if ok_r then return "RETRYING" end
+        end
+    end
     local policy = cp.fallbackPolicy or self.fallbackPolicy or "RTH"
     self.hook_runner:cleanup()
     self.waitingHumanAuth = false
@@ -737,7 +771,6 @@ function mission_engine:apply_abort(cp, now_ms)
     cp.status = "ABORTED"
     self.state = "ABORTED"
     self.fallbackGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
-    if self.net then self.net:send_operator_cmd("CRUISE", "CRUISE", {}, policy, self.authority) end
     return "ABORTED"
 end
 
@@ -755,16 +788,45 @@ local function apply_runtime_decorators(self, cp)
     self.emconActive = false
     if type(self.currentGoal) ~= "table" then return end
     for _, d in ipairs(cp.decorators or {}) do
+        local ov = type(d.overrideParams) == "table" and d.overrideParams or {}
         if d.decoratorId == "DEC_EMCON" then
             self.currentGoal.emconActive = true
             self.emconActive = true
         elseif d.decoratorId == "DEC_ENERGY_ECO" then
             local spd = self.currentGoal.targetSpeed or self.defaults.cruiseSpeed or 18.0
-            self.currentGoal.targetSpeed = spd * 0.75
+            self.currentGoal.targetSpeed = (type(ov.ecoCruiseSpeed) == "number" and ov.ecoCruiseSpeed > 0) and ov.ecoCruiseSpeed or (spd * 0.75)
         elseif d.decoratorId == "DEC_SMOOTH_TRAJ" then
             self.currentGoal.constraintProfile = "STRICT_LEVEL"
+            if type(ov.maxYawRateDegS) == "number" and ov.maxYawRateDegS > 0 then
+                self.currentGoal.maxYawRateDegPerSec = ov.maxYawRateDegS
+            end
         end
     end
+end
+
+local function build_precond_ctx(self)
+    local pctx = type(self.precondCtx) == "table" and self.precondCtx or {}
+    local ch_bound = pctx.channelBound
+    if ch_bound == nil then
+        ch_bound = (self.sentinel == nil) or (self.sentinel.status == "ACQUIRED" and not self.sentinel.locked)
+    end
+    local atc_ok = pctx.atcCleared
+    if atc_ok == nil then
+        atc_ok = (self.fac == nil) or (self.fac.atcStatus == "CLEARED")
+    end
+    local z3_ok = pctx.zone3Available
+    if z3_ok == nil then z3_ok = true end
+    local gf = pctx.geofenceMarginM
+    if gf == nil then
+        gf = (type(self.geofenceMarginM) == "number") and self.geofenceMarginM or 100.0
+    end
+    return {
+        mfd = self.lastMfd,
+        channelBound = ch_bound,
+        atcCleared = atc_ok,
+        zone3Available = z3_ok,
+        geofenceMarginM = gf,
+    }
 end
 
 local function dispatch_checkpoint(self, cp, t_ms)
@@ -774,7 +836,7 @@ local function dispatch_checkpoint(self, cp, t_ms)
     apply_runtime_decorators(self, cp)
 end
 
-function mission_engine:enter_checkpoint(index, now_ms)
+function mission_engine:enter_checkpoint(index, now_ms, is_retry)
     local cp = self.checkpoints[index]
     if not cp then return false, "INVALID_INDEX" end
     if action_registry.is_action_deferred(cp.action) then
@@ -786,7 +848,7 @@ function mission_engine:enter_checkpoint(index, now_ms)
         self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
         return false, err_dec
     end
-    local pre_ctx = { mfd = self.lastMfd, channelBound = true, atcCleared = true, zone3Available = true, geofenceMarginM = 100.0 }
+    local pre_ctx = build_precond_ctx(self)
     local ok_dyn, err_dyn = action_registry.check_dynamic_preconditions(cp, pre_ctx)
     if not ok_dyn then
         self:apply_abort(cp, get_time_ms(now_ms))
@@ -797,6 +859,8 @@ function mission_engine:enter_checkpoint(index, now_ms)
     self.enteredAtMs = get_time_ms(now_ms)
     cp.status = "ACTIVE"
     cp.settleState = {}
+    cp._orbitState = nil
+    if not is_retry then cp._attempt = 1 end
     if has_human then
         self.waitingHumanAuth = true
         self.currentGoal = build_loiter_fallback(self, cp)
@@ -831,7 +895,11 @@ function mission_engine:advance(now_ms)
         return "ADVANCED"
     end
     if self.executionMode == "REPEAT" then
-        for _, c in ipairs(self.checkpoints) do c.status = nil end
+        for _, c in ipairs(self.checkpoints) do
+            c.status = nil
+            c._attempt = nil
+            c._orbitState = nil
+        end
         local wrap_idx = 1
         while wrap_idx < #self.checkpoints and chattering_guard.should_skip_on_repeat(self.checkpoints[wrap_idx].action) do
             wrap_idx = wrap_idx + 1
@@ -849,6 +917,14 @@ function mission_engine:evaluate_active(now_ms)
     if self.waitingHumanAuth then return "WAITING_AUTH" end
     local cp = self:get_active()
     if not cp then return "IDLE" end
+    local t_dec = find_decorator(cp, "DEC_TIMEOUT_GUARD")
+    if t_dec and type(now_ms) == "number" then
+        local ov = type(t_dec.overrideParams) == "table" and t_dec.overrideParams or {}
+        local lim = ov.maxDurationSec or ov.timeoutSec or ov.timeout
+        if type(lim) == "number" and lim > 0 and (now_ms - self.enteredAtMs) >= (lim * 1000) then
+            return self:apply_abort(cp, now_ms)
+        end
+    end
     local ctx = {
         mfd = self.lastMfd, enteredAtMs = self.enteredAtMs, nowMs = now_ms,
         touchdownArmed = self.touchdownArmed, payloadAck = self.hook_runner:get_last_payload_ack(),
@@ -895,9 +971,14 @@ function mission_engine:start(execution_mode, now_ms)
     if execution_mode then
         self.executionMode = (execution_mode == "LOOP") and "REPEAT" or execution_mode
     end
-    for _, cp in ipairs(self.checkpoints) do cp.status = nil end
+    for _, cp in ipairs(self.checkpoints) do
+        cp.status = nil
+        cp._attempt = nil
+        cp._orbitState = nil
+    end
     self.touchdownArmed = false
     self.waitingHumanAuth = false
+    self.activeRoi = nil
     self.currentGoal = nil
     self.fallbackGoal = nil
     self.state = "EN_ROUTE"
@@ -916,9 +997,8 @@ function mission_engine:stop(now_ms)
     if (prev_state == "EN_ROUTE" or prev_state == "SUSPENDED") and not is_disarmed then
         self.fallbackGoal = build_loiter_fallback(self, cp)
     else
-        self.fallbackGoal = { flightMode = "IDLE", arm = false, flightActive = false }
+        self.fallbackGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
     end
-    if self.net then self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority) end
     return true
 end
 
@@ -927,7 +1007,6 @@ function mission_engine:pause()
     self.hook_runner:cleanup()
     self.state = "SUSPENDED"
     self.fallbackGoal = build_loiter_fallback(self, self:get_active())
-    if self.net then self.net:send_operator_cmd("LOITER", "LOITER", {}, "NONE", self.authority) end
     return true
 end
 

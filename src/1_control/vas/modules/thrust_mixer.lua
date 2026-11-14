@@ -44,10 +44,10 @@ function thrust_mixer.init(profileOrConfig)
     local p = parse_profile(profileOrConfig)
     local coeffs = extract_coefficients(p)
 
-    local isVector = (p.isVectorVtol == true) or (p.airframeType == "ADVANCED_VTOL") or (p.vehicleType == "ADVANCED_VTOL")
+    local isVector = (p.isVectorVtol == true) or (p.airframeType == "ADVANCED_VTOL")
     local pseudoInv = p.pseudoInverseMatrix
     local ctrlEff = p.controlEffectivenessMatrix
-    local vecGroupOrder = p.vectorGroupOrder or p.groupOrder or p.vectorGroups
+    local vecGroupOrder = p.vectorGroupOrder
     local axesOrder = p.axesOrder or DEFAULT_AXES
 
     return {
@@ -277,13 +277,13 @@ function thrust_mixer.update_actuator_feedback(state, payload)
         return false
     end
     state.groupStatus[payload.groupId] = {
-        saturated = payload.saturated == true or payload.isSaturated == true,
+        saturated = payload.isSaturated == true,
         gimbalSaturated = payload.gimbalSaturated == true,
         appliedGimbal = payload.appliedGimbal,
         activeCount = payload.activeCount or 0,
-        healthStatus = payload.healthStatus or "NOMINAL"
+        healthStatus = payload.healthStatus or "API_NOMINAL"
     }
-    return payload.healthStatus == "TOTAL_LOSS" or payload.healthStatus == "API_TOTAL_LOSS"
+    return payload.healthStatus == "API_TOTAL_LOSS"
 end
 
 return thrust_mixer

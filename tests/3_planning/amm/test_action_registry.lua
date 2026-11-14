@@ -97,10 +97,18 @@ describe("AMM v2.0.0 3-Tier Action Registry, Macros, Decorators, and Preconditio
                     durationSec = 180,
                     facilityId = "PAD_BRAVO_01",
                 },
+                onEnter = { { type = "NOTIFY_OPERATOR", message = "ENTER_RECON" } },
+                onExit = { { type = "NOTIFY_OPERATOR", message = "EXIT_RECON" } },
+                onAbort = { { type = "NOTIFY_OPERATOR", message = "ABORT_RECON" } },
             },
         }, "VECTORED_VTOL")
         assert_nil(err1)
         assert_eq(#recon, 6)
+        assert_eq(recon[1].onEnter[1].message, "ENTER_RECON")
+        assert_nil(recon[2].onEnter)
+        assert_eq(recon[6].onExit[1].message, "EXIT_RECON")
+        assert_nil(recon[1].onExit)
+        assert_eq(recon[3].onAbort[1].message, "ABORT_RECON")
         assert_eq(recon[1].action, "ACT_NAV_GOTO_WP")
         assert_eq(recon[1].params.tangentEntryOffsetM, 40)
         assert_eq(recon[2].action, "ACT_PAY_SET_ROI")
@@ -219,5 +227,13 @@ describe("AMM v2.0.0 3-Tier Action Registry, Macros, Decorators, and Preconditio
         assert_false(ok_fail)
         assert_eq(code_fail, "PRECONDITION_FAILED")
         assert_true(string.find(tostring(det_fail), "minFuel", 1, true) ~= nil)
+
+        -- maxSpeed rejects missing or NaN speed telemetry (no silent pass on nil)
+        local ok_nil_spd, code_nil_spd = action_registry.check_dynamic_preconditions({
+            action = "ACT_NAV_GOTO_WP",
+            preconditions = { maxSpeed = 25.0 },
+        }, { mfd = { dynamics = {} } })
+        assert_false(ok_nil_spd)
+        assert_eq(code_nil_spd, "PRECONDITION_FAILED")
     end)
 end)

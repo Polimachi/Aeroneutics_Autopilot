@@ -111,7 +111,7 @@ describe("GAC sector FSM and multi-tier handoff protocols", function()
         
         -- Aircraft reports safe altitude reached
         local abortClear = {
-            type = "MSG_ATC_ABORT_CLEAR",
+            type = "MSG_GAC_ABORT_CLEAR",
             payload = {
                 sectorId = "BASE_ALPHA_SECTOR_01",
                 facilityId = "PAD_01",
@@ -122,6 +122,12 @@ describe("GAC sector FSM and multi-tier handoff protocols", function()
         local newSlotAssign, divertClearance = fsm:handle_abort_clear(abortClear)
         assert_not_nil(newSlotAssign)
         assert_eq(newSlotAssign.payload.facilityId, "PAD_02") -- Redirected to PAD_02!
+
+        local statusMsg = fsm:handle_facility_update({
+            payload = { facilityId = "PAD_02", status = "MAINTENANCE", faultCode = "SENSOR_UNAVAILABLE" }
+        })
+        assert_eq(statusMsg.payload.maintenancePads, 1)
+        assert_eq(statusMsg.payload.occupiedPads, 0)
     end)
 
     it("Slot timeout triggers pad FREE reset after 120 seconds", function()

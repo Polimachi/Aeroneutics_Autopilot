@@ -72,6 +72,139 @@ class TestStaticGuard(unittest.TestCase):
         issues = scan_lua_source(safe_code, "modules/safe_mode.lua", self.checker)
         self.assertEqual(issues, [])
 
+    def test_extended_domain_tokens_and_prefixes_blocked(self) -> None:
+        blocked_cases = [
+            'local p = require("valkyrien_pirates")\n',
+            'local t = peripheral.find("vs_trackwork")\n',
+            'local inf = peripheral.find("physics_infuser")\n',
+            'local flap = peripheral.find("flap_bearing")\n',
+            'local grav = peripheral.find("gravitron")\n',
+            'local pb = peripheral.find("phys_bearing")\n',
+            'local rr = peripheral.find("redstone_resistor")\n',
+            'local helm = peripheral.find("ship_helm")\n',
+            'local pt = peripheral.find("phys_track")\n',
+            'local st = peripheral.find("suspension_track")\n',
+            'local c = peripheral.find("vs_clockwork:bearing")\n',
+            'local e = peripheral.find("vs_eureka:helm")\n',
+            'local tr = peripheral.find("trackwork:wheel")\n',
+            'local tour = peripheral.find("vs_tournament:cannon")\n',
+            'local add = peripheral.find("vs_addition:prop")\n',
+            'local val = peripheral.find("valkyrien:ship")\n',
+            'local cc = peripheral.find("cc_vs:reader")\n',
+        ]
+        for snippet in blocked_cases:
+            issues = scan_lua_source(snippet, "modules/flight_block.lua", self.checker)
+            self.assertTrue(
+                any(i.code == "PROHIBITED_MOD_VIOLATION" for i in issues),
+                f"Failed to detect violation in: {snippet}",
+            )
+
+    def test_trackwork_matches_vs_trackwork(self) -> None:
+        code = 'local tw = peripheral.find("vs_trackwork")\n'
+        issues = scan_lua_source(code, "modules/track.lua", self.checker)
+        self.assertTrue(any(i.code == "PROHIBITED_MOD_VIOLATION" for i in issues))
+
+    def test_wrapped_ship_methods_blocked(self) -> None:
+        wrapped_calls = [
+            'local s = peripheral.wrap("some_dev")\nlocal q = s.getQuaternion()\n',
+            'local obj = peripheral.wrap("dev")\nlocal o = obj:getOmega()\n',
+            'local p = peripheral.wrap("x")\nlocal m = p.getMomentOfInertiaTensor()\n',
+            'local dev = get_dev()\ndev.applyInvariantForce(1, 2, 3)\n',
+        ]
+        for snippet in wrapped_calls:
+            issues = scan_lua_source(snippet, "modules/wrapped.lua", self.checker)
+            self.assertTrue(
+                any(i.code == "PROHIBITED_MOD_VIOLATION" for i in issues),
+                f"Failed to catch wrapped ship method in: {snippet}",
+            )
+
+    def test_legacy_arg_table_access_blocked_but_declared_arg_allowed(self) -> None:
+        bad_arg_snippets = [
+            "local function run()\n    return arg[1]\nend\n",
+            "local function get_count()\n    return #arg\nend\n",
+            "local function iterate()\n    for k, v in ipairs(arg) do end\nend\n",
+            "local val = arg.n\n",
+        ]
+        for snippet in bad_arg_snippets:
+            issues = scan_lua_source(snippet, "modules/arg_bad.lua", self.checker)
+            self.assertTrue(
+                any(i.code == "PROHIBITED_LUA51_ARG_API" for i in issues),
+                f"Failed to catch legacy arg in: {snippet}",
+            )
+
+        good_arg_snippets = [
+            "local function run(arg)\n    return arg[1]\nend\n",
+            "local arg = { ... }\nlocal first = arg[1]\n",
+            "local args = { ... }\nlocal first = args[1]\n",
+            "local function f(...)\n    local args = { ... }\n    return #args\nend\n",
+            'local arg = "flag"\nif arg == "--source" then end\n',
+        ]
+        for snippet in good_arg_snippets:
+            issues = scan_lua_source(snippet, "modules/arg_good.lua", self.checker)
+            self.assertFalse(
+                any(i.code == "PROHIBITED_LUA51_ARG_API" for i in issues),
+                f"False positive on valid arg in: {snippet}",
+            )
+
+    def test_infinite_loop_without_yield_blocked(self) -> None:
+        bad_loops = [
+            "while true do\n    local a = 1\nend\n",
+            "while 1 do\n    local b = 2\nend\n",
+            "repeat\n    local c = 3\nuntil false\n",
+            "repeat\n    local d = 4\nuntil nil\n",
+        ]
+        for snippet in bad_loops:
+            issues = scan_lua_source(snippet, "modules/loop_bad.lua", self.checker)
+            self.assertTrue(
+                any(i.code == "INFINITE_LOOP_WITHOUT_YIELD" for i in issues),
+                f"Failed to catch infinite loop in: {snippet}",
+            )
+
+        good_loops = [
+            "while true do\n    sleep(0.05)\nend\n",
+            "while true do\n    os.pullEvent()\nend\n",
+            "while true do\n    if done then break end\nend\n",
+            "while true do\n    return 42\nend\n",
+            "while true do\n    local ev = rednet.receive()\nend\n",
+            "while true do\n    local line = read()\nend\n",
+            "repeat\n    coroutine.yield()\nuntil false\n",
+            "while true do\n    http.get('http://example.com')\nend\n",
+        ]
+        for snippet in good_loops:
+            issues = scan_lua_source(snippet, "modules/loop_good.lua", self.checker)
+            self.assertFalse(
+                any(i.code == "INFINITE_LOOP_WITHOUT_YIELD" for i in issues),
+                f"False positive on yielding loop in: {snippet}",
+            )
+
+    def test_cross_subsystem_require_blocked_in_src(self) -> None:
+        bad_requires = [
+            ('src/1_control/vas/modules/core_daemon.lua', 'local gps = require("src.0_infra.gps.protocol")\n'),
+            ('src/1_control/vas/modules/core_daemon.lua', 'local fcp = require("fcp.modules.flight_fsm")\n'),
+            ('src/2_guidance/fcp/modules/flight_fsm.lua', 'local amm = require("src.3_planning.amm.main")\n'),
+        ]
+        for rel_path, snippet in bad_requires:
+            issues = scan_lua_source(snippet, rel_path, self.checker)
+            self.assertTrue(
+                any(i.code == "CROSS_SUBSYSTEM_REQUIRE" for i in issues),
+                f"Failed to catch cross-subsystem require in: {snippet}",
+            )
+
+        good_requires = [
+            ('src/1_control/vas/modules/core_daemon.lua', 'local quat = require("modules.quat")\n'),
+            ('src/1_control/vas/modules/core_daemon.lua', 'local sensors = require("avionics_sensors")\n'),
+            ('src/1_control/vas/modules/core_daemon.lua', 'local sensors = require("/lib/avionics_sensors.lua")\n'),
+            ('src/1_control/vas/modules/core_daemon.lua', '-- local gps = require("src.0_infra.gps.protocol")\n'),
+            ('src/0_infra/landing_pad/main.lua', 'local gps_client = require("modules.gps_client")\n'),
+            ('tests/1_control/vas/test_vas_core.lua', 'local vas = require("vas_core")\n'),
+        ]
+        for rel_path, snippet in good_requires:
+            issues = scan_lua_source(snippet, rel_path, self.checker)
+            self.assertFalse(
+                any(i.code == "CROSS_SUBSYSTEM_REQUIRE" for i in issues),
+                f"False positive on valid require in: {snippet}",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

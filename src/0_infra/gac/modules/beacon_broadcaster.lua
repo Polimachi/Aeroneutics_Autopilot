@@ -28,6 +28,8 @@ function beacon_broadcaster.create(config)
             freeLandingPads = 0,
             totalRunways = 0,
             freeRunways = 0,
+            totalDockingArms = 0,
+            freeDockingArms = 0,
             maxSupportWeight = 0,
             maxSupportRadius = 0
         }

@@ -148,12 +148,6 @@ local function main(cfgPathOrTable)
         end
     end
 
-    local migrated = cfg.migratedLegacyBase
-    cfg.migratedLegacyBase = nil
-    if migrated and type(cfgPathOrTable) ~= "table" then
-        pcall(config_manager.save, cfgPathOrTable or "config.json", cfg)
-    end
-
     local modem = select_modem(cfg.ports)
     if modem and cfg.channels and cfg.channels.thrustActuation then
         pcall(modem.open, cfg.channels.thrustActuation)
@@ -162,9 +156,6 @@ local function main(cfgPathOrTable)
     local daemon = tca_daemon.init(cfg, modem)
     daemon.running = true
     daemon.sentinel:start_timer((cfg.watchdogTimeoutMs or 300) / 1000.0)
-    if migrated then
-        daemon:push_log(string.format("[MIGRATE] Base -> %d (ICD N-1)", cfg.baseChannel))
-    end
 
     local isDebug = not (cfg.debug == false)
 

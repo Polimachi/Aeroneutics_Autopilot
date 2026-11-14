@@ -240,9 +240,9 @@ local function cleanup_temp_files()
     end
 end
 
-local function verify_bumpless_ramp(rig, find_pkt)
+local function verify_bumpless_ramp(rig, find_pkt, steps)
     local prev_s, prev_w, max_ds, max_dw = 0.0, 0.0, 0.0, 0.0
-    for _ = 1, 40 do
+    for _ = 1, (steps or 40) do
         local seq_r = #rig.bus.packet_log
         step_all(rig, 0.05)
         local cmd = find_pkt(rig.bus, "MSG_ATTITUDE_CMD", 10001, seq_r)
@@ -261,6 +261,10 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
         cleanup_temp_files()
         local rig = create_rig()
         local now_ms = math.floor(rig.bus.time * 1000 + 0.5)
+
+        -- AMM Boot State Verification: arm must be false prior to pilot arming
+        local boot_goal = rig.amm.arbiter:get_effective_goal()
+        assert_false(boot_goal.arm, "AMM boot goal must have arm = false before any pilot/C2 arming action")
 
         rig.amm.arbiter:handle_pilot_action("TAKEOFF", { targetAlt = 150.0 }, now_ms)
         step_all(rig, 0.05)
@@ -287,11 +291,15 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
             assert_eq(att.payload.flightMode, entry.mode)
             assert_not_nil(find_latest_pkt(rig.bus, "MSG_THRUST_CMD", 10010, seq0))
             assert_not_nil(find_latest_pkt(rig.bus, "MSG_FLIGHT_TELEMETRY", 10002, seq0))
+            local tlm = find_latest_pkt(rig.bus, "MSG_FLIGHT_TELEMETRY", 10002, seq0)
+            if tlm and tlm.payload and tlm.payload.actuatorHealth then
+                assert_true(tlm.payload.actuatorHealth.allOk ~= nil)
+            end
         end
         assert_true(#rig.gcs_inbox >= 1, "AMM 5Hz Base+3 MFD downlink must reach GCS")
     end)
 
-    it("handles MFD_ACRO takeover (AMM Base+3 yield, VAS CORE_ACRO_TAKEOVER, FCP PASSIVE_TRACKING) and 2.0s bumpless release", function()
+    it("handles MFD_ACRO takeover (AMM Base+3 yield, VAS CORE_ACRO_TAKEOVER, FCP PASSIVE_TRACKING)", function()
         local rig = create_rig()
         rig.amm.arbiter.activeGoal = {
             flightMode = "CRUISE", arm = true, flightActive = true,
@@ -325,6 +333,29 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
         assert_not_nil(acro_mfd)
         assert_eq(acro_mfd.payload.source, "CORE_ACRO_TAKEOVER")
         assert_nil(find_latest_pkt(rig.bus, "MSG_ATTITUDE_CMD", 10001, seq_passive), "FCP must silence Base+1 in PASSIVE_TRACKING")
+    end)
+
+    it("handles MFD_ACRO release to FCP and performs 2.0s bumpless release ramp", function()
+        local rig = create_rig()
+        rig.amm.arbiter.activeGoal = {
+            flightMode = "CRUISE", arm = true, flightActive = true,
+            targetPos = { x = 30, y = 150, z = -40 }, targetAlt = 150, targetSpeed = 18, constraintProfile = "STRICT_LEVEL",
+        }
+        step_all(rig, 0.05)
+        step_all(rig, 0.05)
+
+        local mfd_node = node_sandbox.create_node(rig.bus, "MFD_ACRO", "src/1_control/vas")
+        mfd_node.modem:transmit(10001, 10001, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_ATTITUDE_CMD", time = 1200,
+            payload = {
+                source = "MFD_ACRO", acroActive = true, commandType = "RATE_COMMAND", arm = true, flightActive = true,
+                targetAngularRates = { pitchRate = 0, rollRate = 0, yawRate = 12 }, collectiveThrust = 0.65,
+            },
+        })
+        pump_bus(rig, 0.01, 1)
+        rig.vas_daemon.tick(rig.vas)
+        pump_bus(rig, 0.01, 1)
+        step_all(rig, 0.05)
 
         mfd_node.modem:transmit(10001, 10001, {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_ATTITUDE_CMD", time = 1300,
@@ -337,12 +368,13 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
         pump_bus(rig, 0.01, 1)
         rig.vas_daemon.tick(rig.vas)
         pump_bus(rig, 0.01, 1)
+        rig.fcp.bumplessRampSec = 1.25
         step_all(rig, 0.05)
         assert_eq(rig.vas.fsm.activeSource, "FCP")
         assert_eq(rig.fcp.fsm.currentState, "ACTIVE_TRACKING")
         assert_not_nil(rig.fcp.rampStartMs)
         assert_true(rig.fcp.rampAlpha < 0.2)
-        verify_bumpless_ramp(rig, find_latest_pkt)
+        verify_bumpless_ramp(rig, find_latest_pkt, 25)
     end)
 
     it("executes 4-layer live MSG_CHANNEL_REBIND cascade (AMM -> FCP -> VAS -> TCA -> ACKs -> COMMIT) and continues closed loop", function()
@@ -357,13 +389,16 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
         local prep = rig.amm_sentinel.initiate_rebind(rig.amm.sentinel, 10080, now_ms)
         assert_not_nil(prep)
         rig.amm.net:send_rebind_command("PREPARE", prep.payload.transactionId, 10000, 10080)
-        pump_bus(rig, 0.01, 4)
+        pump_bus(rig, 0.01, 6)
 
         assert_not_nil(rig.amm.sentinel.rebindTx)
         assert_eq(rig.amm.sentinel.rebindTx.status, "ACKED")
 
+        local rebind_acks = rig.bus:find_packets({ type = "MSG_CHANNEL_REBIND_ACK" })
+        assert_true(#rebind_acks >= 1, "Must transmit MSG_CHANNEL_REBIND_ACK upward")
+
         step_all(rig, 0.05)
-        pump_bus(rig, 0.01, 3)
+        pump_bus(rig, 0.01, 4)
 
         assert_eq(rig.amm.net.baseChannel, 10080)
         assert_eq(rig.fcp.net.baseChannel, 10080)

@@ -6,7 +6,7 @@ local state_machine = require("state_machine")
 
 describe("vas vehicle_policy zero-fallback quaternion_rate parsing", function()
     it("parses targetQuaternion cleanly and rejects legacy orientation and throttle", function()
-        local pol = vehicle_policy.init({ vehicleType = "WINGED_VTOL", vFe = 15.0 })
+        local pol = vehicle_policy.init({ vehicleType = "WINGED_VTOL", stallGuard = { flapVfeLimit = 15.0 } })
 
         local cmd = {
             commandType = "QUATERNION_RATE",
@@ -39,7 +39,7 @@ describe("vas vehicle_policy zero-fallback quaternion_rate parsing", function()
     end)
 
     it("pre-processes guidance command with zero-fallback output schema", function()
-        local pol = vehicle_policy.init({ vehicleType = "WINGED_VTOL", vFe = 15.0 })
+        local pol = vehicle_policy.init({ vehicleType = "WINGED_VTOL", stallGuard = { flapVfeLimit = 15.0 } })
         local telem = {
             airspeed = 12.0,
             sensorHealth = { isAttitudeValid = true, isVelocityValid = true, isAirspeedValid = true }
@@ -80,7 +80,8 @@ describe("vas vehicle_policy zero-fallback quaternion_rate parsing", function()
     end)
 
     it("applies stall guard to collectiveThrust and nose-down targetQuaternion", function()
-        local pol = vehicle_policy.init({ vehicleType = "FIXED_WING", minThrottle = 0.60 })
+        local pol = vehicle_policy.init({ vehicleType = "FIXED_WING", stallGuard = { minStallThrottle = 0.40 } })
+        assert_near(pol.minStallThrottle, 0.40, 1e-6)
         local telem = {
             airspeed = 8.0,
             sensorHealth = { velocity = true, isVelocityValid = true, isAirspeedValid = true }
@@ -91,7 +92,7 @@ describe("vas vehicle_policy zero-fallback quaternion_rate parsing", function()
         }
         vehicle_policy.apply_stall_guard(pol, telem, cond)
 
-        assert_true(cond.collectiveThrust >= 0.60)
+        assert_true(cond.collectiveThrust >= 0.40)
         local eul = quat.to_euler(cond.targetQuaternion)
         assert_true(eul.pitch <= -5.0 + 1e-3)
     end)

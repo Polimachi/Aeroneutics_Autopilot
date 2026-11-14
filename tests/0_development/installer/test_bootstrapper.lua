@@ -273,4 +273,43 @@ describe("bootstrapper local core resolution and execution", function()
         assert_eq(capturedOverrides["src/0_development/installer/installer_app.lua"], "TEST_STRUCTURED_ID_01")
         assert_eq(capturedOverrides["src/0_development/installer/modules/manifest.lua"], "TEST_STRUCTURED_ID_02")
     end)
+
+    it("retries GDrive HTML interstitial with confirm/uuid tokens during bootstrap", function()
+        local pcRoot = sdk.temp_path("pc_root_gdrive_interstitial")
+        fs.makeDir(pcRoot)
+
+        local calls = {}
+        local mockHttp = {
+            get = function(url)
+                table.insert(calls, url)
+                if url:find("confirm=t") and not url:find("uuid=") then
+                    local html = '<!DOCTYPE html><html><input name="confirm" value="tok123"><input name="uuid" value="uid456"></html>'
+                    return {
+                        getResponseCode = function() return 200 end,
+                        readAll = function() return html end,
+                        close = function() end
+                    }
+                end
+                return {
+                    getResponseCode = function() return 200 end,
+                    readAll = function() return "return {}" end,
+                    close = function() end
+                }
+            end
+        }
+
+        local ok, err = bootstrapper.bootstrapAndRun({
+            runningProgram = "/installer.lua",
+            targetRoot = pcRoot,
+            source = "gdrive",
+            http = mockHttp,
+            fs = fs,
+            localCoreDir = false,
+            appRunner = function() return true, nil end,
+        })
+
+        assert_true(ok)
+        assert_nil(err)
+        assert_true(#calls > 7)
+    end)
 end)

@@ -19,47 +19,7 @@ local function parse_coefficients(profileOrConfig)
     return {}
 end
 
-function actuator_adapter_tca.init(profileOrConfig)
-    local coeffs = parse_coefficients(profileOrConfig)
-    local isFallback = true
-    local isVector = false
-    local pseudoInv = nil
-    local ctrlEff = nil
-    local vecGroupOrder = nil
-    local axesOrder = nil
-
-    if type(profileOrConfig) == "table" then
-        if profileOrConfig.isStaticFallback ~= nil then
-            isFallback = profileOrConfig.isStaticFallback == true
-        end
-        isVector = (profileOrConfig.isVectorVtol == true) or (profileOrConfig.airframeType == "ADVANCED_VTOL") or (profileOrConfig.vehicleType == "ADVANCED_VTOL")
-        pseudoInv = profileOrConfig.pseudoInverseMatrix
-        ctrlEff = profileOrConfig.controlEffectivenessMatrix
-        vecGroupOrder = profileOrConfig.vectorGroupOrder or profileOrConfig.groupOrder or profileOrConfig.vectorGroups
-        axesOrder = profileOrConfig.axesOrder
-    end
-
-    local adapter = {
-        coefficients = coeffs,
-        groupStatus = {},
-        registeredNodes = {},
-        tcaConnected = false,
-        lastFeedbackMs = 0,
-        healthStatus = "API_NOMINAL",
-        dynamicLoad = 0.0,
-        isStaticFallback = isFallback,
-        isVectorVtol = isVector,
-        pseudoInverseMatrix = pseudoInv,
-        controlEffectivenessMatrix = ctrlEff,
-        vectorGroupOrder = vecGroupOrder,
-        axesOrder = axesOrder,
-        hasGimbalSaturation = false,
-        saturationStatus = {
-            axisSaturatedPos = { surge = false, sway = false, heave = false, roll = false, pitch = false, yaw = false },
-            axisSaturatedNeg = { surge = false, sway = false, heave = false, roll = false, pitch = false, yaw = false }
-        }
-    }
-
+local function attach_adapter_methods(adapter)
     adapter.register_actuator_node = function(self, payload)
         return actuator_adapter_tca.register_actuator_node(self, payload)
     end
@@ -70,6 +30,34 @@ function actuator_adapter_tca.init(profileOrConfig)
         return actuator_adapter_tca.reload_coefficients(self, p, isFb)
     end
     return adapter
+end
+
+function actuator_adapter_tca.init(profileOrConfig)
+    local coeffs = parse_coefficients(profileOrConfig)
+    local cfg = (type(profileOrConfig) == "table") and profileOrConfig or {}
+    local isFallback = (cfg.isStaticFallback ~= nil) and (cfg.isStaticFallback == true) or true
+    if cfg.isStaticFallback == false then isFallback = false end
+    local adapter = {
+        coefficients = coeffs,
+        groupStatus = {},
+        registeredNodes = {},
+        tcaConnected = false,
+        lastFeedbackMs = 0,
+        healthStatus = "API_NOMINAL",
+        dynamicLoad = 0.0,
+        isStaticFallback = isFallback,
+        isVectorVtol = (cfg.isVectorVtol == true) or (cfg.airframeType == "ADVANCED_VTOL"),
+        pseudoInverseMatrix = cfg.pseudoInverseMatrix,
+        controlEffectivenessMatrix = cfg.controlEffectivenessMatrix,
+        vectorGroupOrder = cfg.vectorGroupOrder,
+        axesOrder = cfg.axesOrder,
+        hasGimbalSaturation = false,
+        saturationStatus = {
+            axisSaturatedPos = { surge = false, sway = false, heave = false, roll = false, pitch = false, yaw = false },
+            axisSaturatedNeg = { surge = false, sway = false, heave = false, roll = false, pitch = false, yaw = false },
+        },
+    }
+    return attach_adapter_methods(adapter)
 end
 
 function actuator_adapter_tca.reload_coefficients(state, profileOrCoeffs, isFallback)
@@ -86,11 +74,11 @@ function actuator_adapter_tca.reload_coefficients(state, profileOrCoeffs, isFall
         end
         if profileOrCoeffs.isVectorVtol ~= nil then
             state.isVectorVtol = (profileOrCoeffs.isVectorVtol == true)
-        elseif profileOrCoeffs.airframeType == "ADVANCED_VTOL" or profileOrCoeffs.vehicleType == "ADVANCED_VTOL" then
+        elseif profileOrCoeffs.airframeType == "ADVANCED_VTOL" then
             state.isVectorVtol = true
         end
-        if profileOrCoeffs.vectorGroupOrder or profileOrCoeffs.groupOrder or profileOrCoeffs.vectorGroups then
-            state.vectorGroupOrder = profileOrCoeffs.vectorGroupOrder or profileOrCoeffs.groupOrder or profileOrCoeffs.vectorGroups
+        if profileOrCoeffs.vectorGroupOrder then
+            state.vectorGroupOrder = profileOrCoeffs.vectorGroupOrder
         end
         if profileOrCoeffs.axesOrder then
             state.axesOrder = profileOrCoeffs.axesOrder
@@ -196,13 +184,14 @@ function actuator_adapter_tca.update_actuator_feedback(state, payload)
     if not payload or not payload.groupId then return false end
     local sig = payload.appliedSignal
     local isGimbalSat = (payload.gimbalSaturated == true)
+    local ratio = payload.appliedRatio or (sig and (sig / 15.0)) or 0.0
     state.groupStatus[payload.groupId] = {
         interactionMode = payload.interactionMode or "API",
         isSaturated = (payload.isSaturated == true),
         gimbalSaturated = isGimbalSat,
         appliedSignal = sig,
         appliedGimbal = payload.appliedGimbal,
-        appliedRatio = payload.appliedRatio or (sig and (sig / 15.0)),
+        appliedRatio = ratio,
         activeCount = payload.activeCount or 0,
         totalCount = payload.totalCount or 0,
         healthStatus = payload.healthStatus or "API_NOMINAL"
@@ -212,11 +201,17 @@ function actuator_adapter_tca.update_actuator_feedback(state, payload)
     end
     state.tcaConnected = true
     state.lastFeedbackMs = (os.epoch and os.epoch("utc")) or 0
-    state.healthStatus = payload.healthStatus or "API_NOMINAL"
-    if payload.appliedRatio then
-        state.dynamicLoad = payload.appliedRatio
-    elseif sig then
-        state.dynamicLoad = math.min(1.0, sig / 15.0)
+    local hasLoss, hasDegraded = false, false
+    local sumRatio, groupCount = 0.0, 0
+    for _, gst in pairs(state.groupStatus) do
+        if gst.healthStatus == "API_TOTAL_LOSS" then hasLoss = true
+        elseif gst.healthStatus == "API_DEGRADED" then hasDegraded = true end
+        sumRatio = sumRatio + (tonumber(gst.appliedRatio) or 0.0)
+        groupCount = groupCount + 1
+    end
+    state.healthStatus = hasLoss and "API_TOTAL_LOSS" or (hasDegraded and "API_DEGRADED" or "API_NOMINAL")
+    if groupCount > 0 then
+        state.dynamicLoad = math.max(0.0, math.min(1.0, sumRatio / groupCount))
     end
     return payload.healthStatus == "API_TOTAL_LOSS"
 end

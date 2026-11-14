@@ -62,7 +62,7 @@ function fcp_main.create_context(config, modemResolver)
     local net = network_manager.init(cfg, modemResolver)
     local fsm = flight_fsm.init(cfg, safe)
     local ctrl = outer_loop_controller.init(cfg)
-    local nav = state_propagator.init(cfg.propagation)
+    local nav = state_propagator.init(cfg)
 
     return {
         config = cfg,
@@ -110,9 +110,9 @@ local function compute_tracking_errors(nav, sp)
     local dy = (tp.y or p.y) - p.y
     local dz = (tp.z or p.z) - p.z
     local posErr = math.sqrt(dx * dx + dy * dy + dz * dz)
-    local dvx = (tv.vx or tv.x or 0.0) - (v.vx or v.x or 0.0)
-    local dvy = (tv.vy or tv.y or 0.0) - (v.vy or v.y or 0.0)
-    local dvz = (tv.vz or tv.z or 0.0) - (v.vz or v.z or 0.0)
+    local dvx = (tv.vx or 0.0) - (v.vx or 0.0)
+    local dvy = (tv.vy or 0.0) - (v.vy or 0.0)
+    local dvz = (tv.vz or 0.0) - (v.vz or 0.0)
     local velErr = math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz)
     return posErr, velErr
 end
@@ -175,9 +175,9 @@ local function dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp)
         fsmState = currState,
         posError = posErr,
         velError = velErr,
-        saturated = false,
+        saturated = (ctx.ctrl and ctx.ctrl.saturated == true),
         navStale = ctx.nav.navStale or false,
-        activeConstraintProfile = sp.constraintProfile or "STRICT_LEVEL",
+        activeConstraintProfile = (ctx.ctrl and ctx.ctrl.activeConstraintProfile) or sp.constraintProfile or "STRICT_LEVEL",
         commandedCollectiveThrust = cmd.collectiveThrust or 0.0,
     }
     network_manager.send_outer_loop_status(ctx.net, status_payload)
@@ -270,7 +270,9 @@ local function run_ui_loop(ctx)
                 ui_renderer.render(term, ctx)
             end
             ui_timer = os.startTimer(0.20)
-        elseif ev == "key" or ev == "char" or ev == "terminate" then
+        elseif ev == "char" and (event_data[2] == "q" or event_data[2] == "Q") then
+            ctx.running = false
+        elseif ev == "terminate" then
             ctx.running = false
         end
     end

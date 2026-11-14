@@ -1,6 +1,10 @@
 -- src/0_infra/gcs/main.lua
 -- Ground Control Station & RF Channel Manager (CH 50000 / Node 08)
--- UAFS Ecosystem GCS v1.0.0
+-- UAFS Ecosystem GCS v1.1.0
+
+if package and package.path and not string.find(package.path, "modules/%?%.lua", 1, true) then
+    package.path = "modules/?.lua;./modules/?.lua;" .. package.path
+end
 
 local channel_manager = require("channel_manager")
 local network_manager = require("network_manager")
@@ -97,7 +101,7 @@ function main:process_modem_message(channel, replyChannel, raw_msg)
         if msg.type == "MSG_BLOCK_REQUEST" then
             local p = msg.payload
             local res = channel_manager.allocate_block(self.channel_mgr, p.domainId, p.hardwareUuid, p.requestedBandwidth)
-            channel_manager.save_registry(self.registry_path, self.channel_mgr)
+            channel_manager.save_registry(self.channel_mgr)
             if res.status == "ASSIGNED" then
                 fleet_tracker.register_craft(self.fleet, p.domainId, res.baseChannel, res.blockId)
                 if not self.net_mgr.active_base then
@@ -166,6 +170,14 @@ function main:process_key(key_code, char_str)
         return
     end
 
+    if lower_char == "c" then
+        local count = 0
+        for _ in pairs(self.channel_mgr.allocations or {}) do count = count + 1 end
+        local ok = channel_manager.save_registry(self.channel_mgr)
+        self.status_msg = string.format("REG: %d crafts (%s)", count, ok and "SAVED" or "ERR")
+        return
+    end
+
     local active = fleet_tracker.get_active_craft(self.fleet)
     if active and lower_char then
         handle_c2_key(self, active, lower_char)
@@ -220,8 +232,9 @@ function main.main_loop(config_path)
     print("GCS terminated.")
 end
 
-if not ... or ... == "--daemon" or ... == "-d" then
-    pcall(main.main_loop, ...)
+local cli_arg = ...
+if not cli_arg or cli_arg == "--daemon" or cli_arg == "-d" then
+    pcall(main.main_loop, nil)
 end
 
 return main

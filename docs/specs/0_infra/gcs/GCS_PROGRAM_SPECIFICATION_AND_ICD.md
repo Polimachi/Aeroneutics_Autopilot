@@ -6,23 +6,24 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.0.2` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.1.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/gcs/` |
 | **주관 도메인 (Domain)** | 지상 인프라 및 전역 무선 채널 관리 (GCS / Node 08) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.1.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `MSG_BLOCK_ASSIGN.status` 열거형(`"ASSIGNED" \| "REASSIGNED" \| "REJECTED" \| "DENIED"`) 정렬, `MSG_OPERATOR_CMD` 필드(`command` 열거형, `flightMode`, `emergencyAction`) 및 `MSG_EMERGENCY_OVERRIDE` `authKey` 마스터 ICD v1.30.0 동기화, 연관 문서 버전 갱신 | 마스터 ICD v1.30.0 및 다이어그램 v2.15.0 C2/부트스트랩 규격 일원화 |
 | `v1.0.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: `CH 50000` 부트스트랩(`MSG_BLOCK_REQUEST`)·`Base+0` C2(`MSG_OPERATOR_CMD`/`MSG_MISSION_CMD`)·평시 `Base+3` 5Hz 텔레메트리 송신 주체를 `AMM (Node 03)`으로 정렬(`MFD_ACRO` 시 `VAS` 직접 인계), `Base+1` `E_STOP`은 `AMM`·`FCP`를 모두 바이패스해 `VAS (Node 01)`에 직결 송출 명시, 연관 규격서 버전 동기화 (`src/0_infra/gcs/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·C2 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.0.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.0.0` | 2026-11-08 | GCS 채널 관리자(`CH 50000`) 및 지상 비행 지휘 콘솔 규격 제정 및 구현 완료 (`Draft` $\to$ `Implemented`) | TASK-107 GCS 구현 완료 및 25개 단위/E2E 테스트 통과 |
@@ -81,7 +82,7 @@
         blockId = 1,
         baseChannel = 10000,
         bandwidth = 40,
-        status = "ASSIGNED", -- "ASSIGNED" | "DENIED"
+        status = "ASSIGNED", -- "ASSIGNED" | "REASSIGNED" | "REJECTED" | "DENIED"
         channelRange = { start = 10000, end = 10039 }
     }
 }
@@ -95,10 +96,12 @@
 - **발신 채널**: 관제 대상 기체의 `Base + 0`
 - **수신자**: 기체 온보드 `AMM` (Node 03, `c2_arbiter` 중재 후 `Base + 4`로 `FCP` 하달)
 - **페이로드 구조**:
-  - `targetCraft`: 대상 기체 `domainId`
+  - `targetCraft`: 대상 기체 `domainId` (선택)
   - `authority`: `"GCS_OVERRIDE"` 고정
-  - `command`: `"ARM"` | `"DISARM"` | `"TAKEOFF"` | `"CRUISE"` | `"HOLD"` | `"RTH"` | `"LAND"` | `"WAYPOINT"`
+  - `command`: `"ARM"` | `"DISARM"` | `"TAKEOFF"` | `"CRUISE"` | `"LOITER"` | `"POI_HOLD"` | `"LANDING"` | `"DOCKING"`
+  - `flightMode`: 목표 비행 모드 문자열 (예: `"AUTO_NAV"`, `"CRUISE_HOLD"`)
   - `params`: 세부 매개변수 (목표 고도, 속도, 좌표 등)
+  - `emergencyAction`: `"NONE"` | `"HOVER_HOLD"` | `"EMERGENCY_LAND"` | `"RTH"`
 
 ### 3.2 하드 비상차단 직결 지령 (`MSG_EMERGENCY_OVERRIDE`, Base + 1)
 - **발신 채널**: 관제 대상 기체의 `Base + 1`
@@ -107,6 +110,7 @@
   - `source`: `"GCS"`
   - `action`: `"E_STOP"`
   - `reason`: 사유 문자열 (예: `"OPERATOR_HARD_STOP"`)
+  - `authKey`: `"ESTOP_CONFIRM_KEY"` (인증 토큰)
 
 ---
 

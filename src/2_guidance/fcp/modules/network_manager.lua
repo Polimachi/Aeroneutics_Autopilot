@@ -44,9 +44,10 @@ local function persist_config(ctx)
     end
     if not cfg.channels then cfg.channels = {} end
     cfg.channels.baseChannel = ctx.baseChannel
-    cfg.channels.trajectoryCmd = ctx.channels.trajectory
-    cfg.channels.telemetry = ctx.channels.telemetry
-    cfg.channels.attitudeCmd = ctx.channels.guidance
+    cfg.channels.bandwidth = cfg.channels.bandwidth or 40
+    cfg.channels.trajectoryOffset = ctx.channels.trajectory - ctx.baseChannel
+    cfg.channels.telemetryOffset = ctx.channels.telemetry - ctx.baseChannel
+    cfg.channels.guidanceOffset = ctx.channels.guidance - ctx.baseChannel
     local ser = textutils and (textutils.serializeJSON or textutils.serialiseJSON)
     if not ser then return false end
     local ok, content = pcall(ser, cfg)
@@ -62,14 +63,14 @@ function network_manager.init(config, modem_lookup_fn)
     local cfg = config or {}
     local sys = cfg.system or {}
     local chs = cfg.channels or {}
-    local base_ch = chs.baseChannel or cfg.baseChannel or 10000
-    local primarySide = sys.primaryModemSide or cfg.primaryModemSide or "top"
+    local base_ch = chs.baseChannel or 10000
+    local primarySide = sys.primaryModemSide or "top"
     local m = resolve_modem(primarySide, modem_lookup_fn)
 
     local channels = {
-        trajectory = base_ch + 4,
-        telemetry = base_ch + 2,
-        guidance = base_ch + 1,
+        trajectory = base_ch + (chs.trajectoryOffset or 4),
+        telemetry = base_ch + (chs.telemetryOffset or 2),
+        guidance = base_ch + (chs.guidanceOffset or 1),
     }
 
     if m and m.open then
@@ -80,7 +81,7 @@ function network_manager.init(config, modem_lookup_fn)
 
     return {
         domainId = (type(sys.domainId) == "string" and sys.domainId ~= "" and sys.domainId) or "AIRCRAFT_01",
-        hardwareUuid = sys.hardwareUuid or "FCP-04",
+        hardwareUuid = sys.hardwareUuid or "FCP-NODE-04-UUID",
         baseChannel = base_ch,
         channels = channels,
         modem = m,
@@ -235,13 +236,25 @@ local function dispatch_guidance(ctx, pkt)
     local p = pkt.payload or {}
     if t == "MSG_CHANNEL_REBIND_ACK" then
         if ctx.rebindTx and p.transactionId == ctx.rebindTx.txId then
-            ctx.rebindTx.status = "ACKED"
+            local st = (p.status == "FAILED") and "FAILED" or "READY"
+            ctx.rebindTx.status = (st == "READY") and "ACKED" or "FAILED"
             local ackFwd = {
                 transactionId = p.transactionId,
-                status = "READY",
-                subNodesOk = true,
+                nodeId = "FCP",
+                action = p.action or "PREPARE",
+                status = st,
+                oldBaseChannel = ctx.rebindTx.oldBase,
+                newBaseChannel = ctx.rebindTx.newBase,
+                subNodesReady = p.subNodesReady,
             }
             transmit_packet(ctx, ctx.rebindTx.oldBase + 4, ctx.rebindTx.oldBase + 4, "MSG_CHANNEL_REBIND_ACK", ackFwd)
+            if st == "FAILED" then
+                handle_rebind_rollback(ctx, {
+                    transactionId = ctx.rebindTx.txId,
+                    oldBaseChannel = ctx.rebindTx.oldBase,
+                    newBaseChannel = ctx.rebindTx.newBase,
+                })
+            end
         end
         return true
     elseif t == "MSG_EMERGENCY_ALERT" then
@@ -296,6 +309,15 @@ function network_manager.step_rebind_watchdog(ctx, now_ms)
     if tx.status == "PREPARE" then
         local now = now_ms or (os.epoch and os.epoch("utc") or 0)
         if (now - tx.startMs) > 500 then
+            local failAck = {
+                transactionId = tx.txId,
+                nodeId = "FCP",
+                action = "PREPARE",
+                status = "FAILED",
+                oldBaseChannel = tx.oldBase,
+                newBaseChannel = tx.newBase,
+            }
+            transmit_packet(ctx, tx.oldBase + 4, tx.oldBase + 4, "MSG_CHANNEL_REBIND_ACK", failAck)
             handle_rebind_rollback(ctx, {
                 transactionId = tx.txId,
                 oldBaseChannel = tx.oldBase,

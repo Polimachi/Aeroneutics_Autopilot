@@ -102,7 +102,7 @@ function installer_app.installModule(moduleId, opts)
     if type(mod.defaultConfigs) == "table" then
         for cfgRelPath, defCfg in pairs(mod.defaultConfigs) do
             local fullCfgPath = startupGen.resolveTargetPath(targetRoot, cfgRelPath)
-            local okMig, migErr = migrationEng.migrateFile(fullCfgPath, defCfg, fsObj)
+            local okMig, _, migErr = migrationEng.migrateFile(fullCfgPath, defCfg, fsObj)
             if not okMig then
                 return false, nil, "CONFIG_MIGRATION_FAILED: " .. tostring(migErr)
             end

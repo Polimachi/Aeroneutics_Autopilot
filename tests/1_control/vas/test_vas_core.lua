@@ -176,6 +176,38 @@ describe("vas sensor pipeline sampling with peripheral registry", function()
         assert_near(comState.dynamics.altitudeY, 99.1318, 1e-2)
         assert_near(comState.dynamics.verticalSpeed, 2.0, 1e-4)
     end)
+
+    it("compensates 3D velocity lever-arm cross products with roll p, pitch q, yaw r rates", function()
+        local lastCom = {
+            attitude = { pitch = 0.0, roll = 0.0, yaw = 0.0 },
+            rates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            dynamics = { altitudeY = 0.0, verticalSpeed = 0.0, velocity = { vx = 0.0, vy = 0.0, vz = 0.0 } },
+            fuel = 1.0
+        }
+        local cfg = {
+            roles = {
+                velocity = { leverArmOffset = { dx = 2.0, dy = 1.0, dz = 3.0 } }
+            }
+        }
+        -- q = pitchRate = 90 deg/s, p = rollRate = 90 deg/s, r = yawRate = 0
+        local qRad = math.rad(90.0)
+        local pRad = math.rad(90.0)
+        local raw = {
+            gimbal = { pitch = 0.0, roll = 0.0, yaw = 0.0, pitchRate = 90.0, rollRate = 90.0, yawRate = 0.0 },
+            altitude = { altitude = 10.0, verticalSpeed = 0.0 },
+            velocity = { vx = 10.0, vy = 5.0, vz = 4.0 },
+            fuelOk = false
+        }
+        local com = sensor_pipeline.compensate_lever_arm(raw, lastCom, cfg, 0.05)
+        -- vxCoM = 10 - (q*dz - r*dy) = 10 - q*3
+        -- vyCoM = 5 - (q*dx - p*dy) = 5 - (q*2 - p*1)
+        -- vzCoM = 4 - (r*dx - p*dz) = 4 + p*3
+        assert_near(com.dynamics.velocity.vx, 10.0 - qRad * 3.0, 1e-4)
+        assert_near(com.dynamics.velocity.vy, 5.0 - (qRad * 2.0 - pRad * 1.0), 1e-4)
+        assert_near(com.dynamics.velocity.vz, 4.0 + pRad * 3.0, 1e-4)
+        assert_near(com.rates.pitchRate, 90.0, 1e-4)
+        assert_near(com.rates.rollRate, 90.0, 1e-4)
+    end)
 end)
 
 describe("vas 40-channel 4-zone layout and network manager initialization", function()
@@ -271,12 +303,16 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(acro10003, 3)
         assert_not_nil(lastAcroPkt)
         assert_eq(lastAcroPkt.payload.source, "CORE_ACRO_TAKEOVER")
+        assert_eq(lastAcroPkt.payload.controlState, "NORMAL")
         assert_eq(lastAcroPkt.payload.flightMode, "ACRO")
         assert_true(lastAcroPkt.payload.acroActive)
+        assert_true(lastAcroPkt.payload.sensorOk)
         assert_not_nil(lastAcroPkt.payload.attitude)
         assert_not_nil(lastAcroPkt.payload.angularRates)
         assert_not_nil(lastAcroPkt.payload.dynamics)
+        assert_not_nil(lastAcroPkt.payload.dynamics.groundSpeed)
         assert_not_nil(lastAcroPkt.payload.actuatorHealth)
+        assert_true(lastAcroPkt.payload.actuatorHealth.allOk)
 
         -- FAILSAFE_HOLD mode: transmits 1 every 4 ticks (5Hz)
         wirelessModem._transmitted = {}
@@ -351,6 +387,8 @@ describe("vas dynamic hangar bay binding and calibration lifecycle", function()
                 assert_eq(tx.pkt.payload.status, "READY")
                 assert_eq(tx.pkt.payload.bayId, 2)
                 assert_eq(tx.pkt.payload.baseChannel, 10000)
+                assert_not_nil(tx.pkt.payload.hardwareUuid)
+                assert_not_nil(tx.pkt.payload.airframeType)
             end
         end
         assert_true(bind10)
@@ -405,12 +443,18 @@ describe("vas dynamic hangar bay binding and calibration lifecycle", function()
 end)
 
 describe("vas two-phase channel rebind cascade", function()
-    it("handles PREPARE and COMMIT rebind cascade to actuation/aero and closes old channels", function()
+    it("awaits TCA and ASA ACKs on PREPARE, relays READY, and preserves subchannels on COMMIT", function()
+        local nowMs = 5000
+        sdk.patch(os, "epoch", function() return nowMs end)
         local wirelessModem = mock.modem({ wireless = true })
         mock.peripheral_registry({
             top = { type = "modem", dev = wirelessModem }
         })
-        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local net = network_manager.init({
+            aircraftDomainId = "AIRCRAFT_01",
+            vehicleType = "WINGED_VTOL",
+            subchannels = { c2Command = 0, guidance = 1, actuation = 10, asaActuation = 11 }
+        })
         local fsm = state_machine.init({}, true)
         local mixer = {}
 
@@ -431,8 +475,8 @@ describe("vas two-phase channel rebind cascade", function()
         assert_true(wirelessModem.isOpen(10050))
         assert_true(wirelessModem.isOpen(10051))
 
-        -- PREPARE relayed on 10010 and 10011, and ACK sent on 10001
-        local prepRelay10, prepRelay11, ack10001 = false, false, false
+        -- PREPARE relayed on 10010 and 10011, and NO premature ACK before sub-nodes respond
+        local prepRelay10, prepRelay11, prematureAck = false, false, false
         for _, tx in ipairs(wirelessModem._transmitted) do
             if tx.tx == 10010 and tx.pkt.type == "MSG_CHANNEL_REBIND" and tx.pkt.payload.action == "PREPARE" then
                 prepRelay10 = true
@@ -441,21 +485,45 @@ describe("vas two-phase channel rebind cascade", function()
                 prepRelay11 = true
             end
             if tx.tx == 10001 and tx.pkt.type == "MSG_CHANNEL_REBIND_ACK" then
-                ack10001 = true
-                assert_eq(tx.pkt.payload.transactionId, "TX-1")
-                assert_eq(tx.pkt.payload.nodeId, "01_core")
-                assert_eq(tx.pkt.payload.status, "READY")
-                assert_true(tx.pkt.payload.subNodesOk)
+                prematureAck = true
             end
         end
         assert_true(prepRelay10)
         assert_true(prepRelay11)
+        assert_false(prematureAck)
+
+        -- TCA ACKs READY on 10010, then ASA ACKs READY on 10011
+        network_manager.dispatch(net, fsm, nil, mixer, 10010, 10010, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 11,
+            type = "MSG_CHANNEL_REBIND_ACK", time = 5020,
+            payload = { transactionId = "TX-1", nodeId = "02_tca", action = "PREPARE", status = "READY" }
+        })
+        network_manager.dispatch(net, fsm, nil, mixer, 10011, 10011, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 12,
+            type = "MSG_CHANNEL_REBIND_ACK", time = 5030,
+            payload = { transactionId = "TX-1", nodeId = "06_asa", action = "PREPARE", status = "READY" }
+        })
+
+        local ack10001 = false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10001 and tx.pkt.type == "MSG_CHANNEL_REBIND_ACK" then
+                ack10001 = true
+                assert_eq(tx.pkt.payload.transactionId, "TX-1")
+                assert_eq(tx.pkt.payload.nodeId, "01_core")
+                assert_eq(tx.pkt.payload.action, "PREPARE")
+                assert_eq(tx.pkt.payload.status, "READY")
+                assert_eq(tx.pkt.payload.oldBaseChannel, 10000)
+                assert_eq(tx.pkt.payload.newBaseChannel, 10040)
+                assert_true(tx.pkt.payload.subNodesReady.tap)
+                assert_true(tx.pkt.payload.subNodesReady.asa)
+            end
+        end
         assert_true(ack10001)
 
         -- 2) Receive MSG_CHANNEL_REBIND (COMMIT) on Base+1 (10001)
         wirelessModem._transmitted = {}
         local commitPkt = {
-            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 11,
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 13,
             type = "MSG_CHANNEL_REBIND", time = 6000,
             payload = {
                 transactionId = "TX-1", action = "COMMIT",
@@ -489,6 +557,38 @@ describe("vas two-phase channel rebind cascade", function()
         assert_eq(net.channels.actuation, 10050)
         assert_eq(net.channels.aero, 10051)
         assert_nil(net.pendingRebind)
+    end)
+
+    it("times out after 500ms on PREPARE without sub-node ACKs and emits FAILED", function()
+        local nowMs = 10000
+        sdk.patch(os, "epoch", function() return nowMs end)
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem }
+        })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01", vehicleType = "WINGED_VTOL" })
+        local fsm = state_machine.init({}, true)
+
+        network_manager.dispatch(net, fsm, nil, {}, 10001, 10001, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 20,
+            type = "MSG_CHANNEL_REBIND", time = 10000,
+            payload = { transactionId = "TX-TO", action = "PREPARE", oldBaseChannel = 10000, newBaseChannel = 10040, bandwidth = 40 }
+        })
+        assert_true(wirelessModem.isOpen(10040))
+
+        nowMs = 10550
+        local timedOut = network_manager.step_rebind_watchdog(net, nowMs)
+        assert_true(timedOut)
+        assert_nil(net.pendingRebind)
+        assert_false(wirelessModem.isOpen(10040))
+
+        local failedSent = false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10001 and tx.pkt.type == "MSG_CHANNEL_REBIND_ACK" and tx.pkt.payload.status == "FAILED" then
+                failedSent = true
+            end
+        end
+        assert_true(failedSent)
     end)
 end)
 
@@ -553,7 +653,7 @@ describe("vas asa exclusion for vectored_vtol and drone", function()
         local daemonState = core_daemon.init({
             system = { vehicleType = "WINGED_VTOL", aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 },
             thrusters = {},
-            surfaces = { surfaceMix = { AIL_L = { pitch = 1.0 } } },
+            surfaces = { surfaceGeometry = { AIL_L = { axis = "pitch", sign = 1.0 } } },
             sensors = { roles = { altitude = { preferredSide = "bottom", peripheralType = "altitude_sensor" } } },
             pid = {}
         })
@@ -943,15 +1043,51 @@ describe("vas [I-10] surface discovery and attitude command type validation", fu
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
             type = "MSG_AERO_STATUS",
             payload = {
+                podId = "ASA_L",
                 surfaceId = "AIL_L",
-                appliedDeg = -12.5,
-                healthStatus = "API_NOMINAL"
+                boundSide = "left",
+                interactionMode = "API",
+                appliedDeflection = -0.5,
+                isSaturated = false,
+                isJammed = false,
+                healthStatus = "NOMINAL"
             }
         }
         local okStatus = network_manager.dispatch(net, nil, nil, nil, 10011, 10011, statusPacket)
         assert_true(okStatus)
         assert_not_nil(adapterAsa.surfacesFeedback["AIL_L"])
-        assert_eq(adapterAsa.surfacesFeedback["AIL_L"].appliedDeg, -12.5)
+        assert_near(adapterAsa.surfacesFeedback["AIL_L"].appliedDeflection, -0.5, 1e-6)
+        assert_eq(adapterAsa.surfacesFeedback["AIL_L"].interactionMode, "API")
+        assert_eq(adapterAsa.healthStatus, "NOMINAL")
+
+        local lossPacket = {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3,
+            type = "MSG_AERO_STATUS",
+            payload = { surfaceId = "RUDD", interactionMode = "REDSTONE", appliedDeflection = 0.0, healthStatus = "TOTAL_LOSS" }
+        }
+        network_manager.dispatch(net, nil, nil, nil, 10011, 10011, lossPacket)
+        assert_eq(adapterAsa.healthStatus, "TOTAL_LOSS")
+    end)
+
+    it("allocates normalized [-1,+1]/[0,1] surfaces and q-scaling with RUDD under VAS §9.5", function()
+        local asa = actuator_adapter_asa.init({
+            surfaceGeometry = {
+                AIL_L = { axis = "roll", sign = 1.0 },
+                RUDD = { axis = "yaw", sign = 1.0 },
+                FLAP_L = { axis = "lift", sign = 1.0 }
+            },
+            coefficients = { qScalingRefSpeed = 20.0, minQScale = 0.25, maxQScale = 2.50 }
+        })
+        assert_near(asa:compute_q_scaling(20.0), 1.0, 1e-4)
+        assert_near(asa:compute_q_scaling(5.0), 2.50, 1e-4)
+        assert_near(asa:compute_q_scaling(100.0), 0.25, 1e-4)
+
+        local outs, sat, qScale = asa:allocate({ rollTorque = 0.4, yawTorque = -0.2 }, 20.0, 0.5)
+        assert_near(qScale, 1.0, 1e-4)
+        assert_near(outs.AIL_L, 0.4, 1e-4)
+        assert_near(outs.RUDD, -0.2, 1e-4)
+        assert_near(outs.FLAP_L, 0.5, 1e-4)
+        assert_false(sat.axisSaturatedPos.roll)
     end)
 
     it("rejects MSG_ATTITUDE_CMD unless commandType is QUATERNION_RATE or RATE_COMMAND", function()
@@ -1055,5 +1191,80 @@ describe("vas main boot state without harness override", function()
         assert_not_nil(state)
         assert_not_nil(state.fsm)
         assert_eq(state.fsm.currentState, "DISARMED", "Boot FSM state must be DISARMED when uncalibrated and without harness override")
+    end)
+end)
+
+describe("vas wave 2 safety & actuator regression guards", function()
+    local state_machine = require("state_machine")
+    local actuator_adapter_tca = require("actuator_adapter_tca")
+    local core_daemon = require("core_daemon")
+
+    it("enforces sensorLossDebounceTicks=15, ARMING->IDLE_ARMED transition, and MFD_ACRO lock", function()
+        local nowMs = 1000
+        sdk.patch(os, "epoch", function() return nowMs end)
+        local fsm = state_machine.init({}, false)
+        assert_eq(fsm.sensorLossDebounceTicks, 15)
+
+        state_machine.handle_arm_command(fsm, { arm = true, flightActive = false })
+        assert_eq(fsm.currentState, "ARMING")
+        state_machine.update_watchdogs(fsm, nowMs, nil, nil, true, true)
+        assert_eq(fsm.currentState, "IDLE_ARMED")
+
+        -- Enter NORMAL and test MFD_ACRO blocking FCP until 250ms timeout
+        state_machine.handle_arm_command(fsm, { arm = true, flightActive = true })
+        assert_eq(fsm.currentState, "NORMAL")
+        local fcpCmd = { source = "FCP", commandType = "QUATERNION_RATE", targetQuaternion = { w = 1, x = 0, y = 0, z = 0 } }
+        state_machine.arbitrate_c2(fsm, fcpCmd)
+        assert_eq(fsm.activeSource, "FCP")
+
+        local acroCmd = { source = "MFD_ACRO", commandType = "RATE_COMMAND", acroActive = true, targetAngularRates = { pitchRate = 10 } }
+        assert_not_nil(state_machine.arbitrate_c2(fsm, acroCmd))
+        assert_eq(fsm.activeSource, "MFD_ACRO")
+
+        -- FCP packet without acroActive=false must be blocked while MFD_ACRO is active
+        assert_nil(state_machine.arbitrate_c2(fsm, fcpCmd))
+        assert_eq(fsm.activeSource, "MFD_ACRO")
+
+        -- After 250ms silence, MFD_ACRO reverts immediately to FCP
+        nowMs = 1300
+        state_machine.update_watchdogs(fsm, nowMs, nil, nil, true, true)
+        assert_eq(fsm.activeSource, "FCP")
+
+        -- 14 ticks of sensor loss must NOT trip FAILSAFE_HOLD; 15th tick does
+        for _ = 1, 14 do
+            state_machine.update_watchdogs(fsm, nowMs, nil, nil, false, true)
+            assert_eq(fsm.currentState, "NORMAL")
+        end
+        state_machine.update_watchdogs(fsm, nowMs, nil, nil, false, true)
+        assert_eq(fsm.currentState, "FAILSAFE_HOLD")
+    end)
+
+    it("aggregates dynamicLoad across all TCA actuator groups instead of overwriting", function()
+        local tca = actuator_adapter_tca.init({})
+        tca:update_actuator_feedback({ groupId = "G1", appliedRatio = 0.8, healthStatus = "API_NOMINAL" })
+        tca:update_actuator_feedback({ groupId = "G2", appliedRatio = 0.2, healthStatus = "API_NOMINAL" })
+        assert_near(tca.dynamicLoad, 0.5, 1e-4)
+    end)
+
+    it("emits non-empty airborne E_STOP cushion thrust on core_daemon.shutdown", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
+        local daemonState = core_daemon.init({
+            system = { vehicleType = "VTOL", aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 },
+            thrusters = { THR_1 = { heave = 1.0, deadband = 1.0, maxThrust = 15 } },
+            surfaces = {}, sensors = {}, pid = {}
+        })
+        daemonState.fsm.currentState = "E_STOP"
+        daemonState.fsm.isAirborne = true
+        wirelessModem._transmitted = {}
+        core_daemon.shutdown(daemonState, "UNIT_TEST")
+
+        local foundCushion = false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.pkt.type == "MSG_THRUST_CMD" and tx.pkt.payload.outputs.THR_1 then
+                foundCushion = (tx.pkt.payload.outputs.THR_1 > 0)
+            end
+        end
+        assert_true(foundCushion, "Airborne E_STOP shutdown must output cushion thrust to thruster groups")
     end)
 end)

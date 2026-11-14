@@ -147,7 +147,17 @@ local function render_hud_pane(buf, mfd, app)
     local fuel_col = fuel_pct < 20 and "e" or (fuel_pct < 40 and "1" or "5")
     draw_text(buf, 9, 2, fuel_str, fuel_col, "f")
     draw_text(buf, 10, 2, string.format("SRC  : %s", pad(mfd and mfd.activeSource or "FCP", 12)), "8", "f")
-    draw_text(buf, 11, 2, "ACTR : ALL_HEALTHY", "5", "f")
+    local actr = mfd and mfd.actuatorHealth
+    local actr_txt, actr_col = "ACTR : UNKNOWN", "8"
+    if type(actr) == "table" then
+        local ok = actr.allOk
+        if ok == nil then
+            ok = (actr.tap ~= false) and (actr.asa ~= false)
+        end
+        actr_txt = ok and "ACTR : OK" or "ACTR : FAULT"
+        actr_col = ok and "5" or "e"
+    end
+    draw_text(buf, 11, 2, pad(actr_txt, 24), actr_col, "f")
 
     local nav = mfd and mfd.navigation
     local is_stale = (app and app.gpsTimedOut == true) or (nav and nav.gpsTimedOut == true)

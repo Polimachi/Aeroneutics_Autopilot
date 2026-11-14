@@ -128,7 +128,7 @@ local function make_step(baseCp, idx, action, params, defaultDecorators, carryPr
         params = deep_copy(params or {}),
         preconditions = carryPreconditions and deep_copy(baseCp.preconditions) or nil,
         decorators = merge_decorators(defaultDecorators, baseCp.decorators),
-        hooks = idx == 1 and deep_copy(baseCp.hooks) or nil,
+        onAbort = baseCp.onAbort and deep_copy(baseCp.onAbort) or nil,
         complete = nil,
     }
 end
@@ -253,7 +253,12 @@ function action_registry.expand_macros(checkpoints, airframeType)
         end
         local fn = MACRO_EXPANDERS[act]
         if fn then
-            for _, step in ipairs(fn(cp, airframeType)) do
+            local steps = fn(cp, airframeType)
+            if #steps > 0 then
+                if cp.onEnter ~= nil then steps[1].onEnter = deep_copy(cp.onEnter) end
+                if cp.onExit ~= nil then steps[#steps].onExit = deep_copy(cp.onExit) end
+            end
+            for _, step in ipairs(steps) do
                 table.insert(out, step)
             end
         else
@@ -339,7 +344,9 @@ local function eval_single_precondition(k, expected, ctx)
         geofenceMarginM = function() return type(ctx.geofenceMarginM) == "number" and ctx.geofenceMarginM >= expected end,
         minAlt = function() return type(alt) == "number" and alt >= expected end,
         maxAlt = function() return type(alt) == "number" and alt <= expected end,
-        maxSpeed = function() return (type(spd) ~= "number") or spd <= expected end,
+        maxSpeed = function()
+            return type(spd) == "number" and spd == spd and spd > -math.huge and spd < math.huge and spd <= expected
+        end,
     }
     local fn = checks[k]
     return fn and fn() or false

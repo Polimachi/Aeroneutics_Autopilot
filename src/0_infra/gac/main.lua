@@ -111,7 +111,7 @@ local function main()
                 sectorStatus = sectorStatus,
                 summary = inventory:get_summary(),
                 facilities = inventory:get_all_facilities(),
-                traffic = {}
+                traffic = fsm:get_traffic()
             })
 
         elseif event == "modem_message" then
@@ -147,7 +147,7 @@ local function main()
                 elseif mType == "MSG_ABORT_APPROACH" then
                     fsm:handle_abort_approach(message)
                     tui:add_log(string.format("[ALERT] Abort on %s: %s", message.payload.facilityId or "?", message.payload.reason or "?"))
-                elseif mType == "MSG_ATC_ABORT_CLEAR" then
+                elseif mType == "MSG_GAC_ABORT_CLEAR" then
                     local slotAssign, divert = fsm:handle_abort_clear(message, cfg.surfaceWind)
                     if slotAssign and modem then
                         modem.transmit((cfg.baseSecChannel or 50201) + 1, cfg.baseSecChannel, slotAssign)
@@ -203,6 +203,9 @@ local function main()
         elseif event == "monitor_touch" then
             local side, x, y = eventData[2], eventData[3], eventData[4]
             tui:handle_touch(x, y, { facilities = inventory:get_all_facilities() })
+
+        elseif event == "peripheral" or event == "peripheral_detach" then
+            tui:set_monitor(peripheral.find("monitor"))
 
         elseif event == "terminate" then
             running = false

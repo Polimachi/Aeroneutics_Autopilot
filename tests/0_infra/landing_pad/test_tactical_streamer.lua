@@ -7,7 +7,7 @@ describe("Landing pad tactical guidance packet streamer", function()
         mode = "DYNAMIC",
         approachHeading = 180.0,
         safeDescentRate = 1.0,
-        clearanceZoneRadius = 5.0,
+        clearanceRadius = 5.0,
         channels = {
             tacticalChannel = 50211,
             sectorFacilityChannel = 50202
@@ -28,14 +28,24 @@ describe("Landing pad tactical guidance packet streamer", function()
 
         local p = pkt.payload
         assert_eq(p.facilityId, "PAD_BRAVO_01")
+        assert_eq(p.facilityType, "LANDING_PAD")
         assert_eq(p.targetAircraft, "AIRCRAFT_01")
         assert_eq(p.touchdownPoint.x, 1250.0)
         assert_eq(p.touchdownPoint.y, 65.0)
         assert_eq(p.touchdownPoint.z, -820.0)
-        assert_eq(p.approachHeading, 180.0)
+        assert_eq(p.attitude.pitch, 0.0)
+        assert_eq(p.attitude.roll, 0.0)
+        assert_eq(p.attitude.yaw, 180.0)
+        assert_eq(p.approachDirection, "DOWNWARD")
+        assert_eq(p.deckStatus, "STABLE")
+        assert_true(p.landingPermitted)
         assert_eq(p.safeDescentRate, 1.0)
-        assert_eq(p.clearanceZoneRadius, 5.0)
-        assert_eq(p.surfaceWind.speed, 2.4)
+        assert_eq(p.clearanceRadius, 5.0)
+        assert_eq(p.tiltAngleDeg, 0.0)
+        assert_eq(p.heaveRateMps, 0.0)
+        assert_nil(p.approachHeading)
+        assert_nil(p.clearanceZoneRadius)
+        assert_nil(p.surfaceWind)
         assert_false(p.abortAlert)
     end)
 
@@ -54,12 +64,16 @@ describe("Landing pad tactical guidance packet streamer", function()
         assert_eq(pkt.type, "MSG_FACILITY_DYNAMIC_GUIDE")
         local p = pkt.payload
         assert_eq(p.facilityId, "PAD_BRAVO_01")
+        assert_eq(p.facilityType, "LANDING_PAD")
         assert_eq(p.targetAircraft, "AIRCRAFT_01")
+        assert_eq(p.approachDirection, "DOWNWARD")
         assert_eq(p.velocity.vx, 6.20)
         assert_eq(p.velocity.vy, -0.15)
         assert_eq(p.attitude.pitch, 1.2)
         assert_eq(p.deckStatus, "STABLE")
         assert_true(p.landingPermitted)
+        assert_eq(p.clearanceRadius, 5.0)
+        assert_eq(p.safeDescentRate, 1.0)
         assert_near(p.tiltAngleDeg, 2.77, 1e-2)
         assert_near(p.heaveRateMps, -0.15, 1e-2)
         assert_false(p.abortAlert)
@@ -93,5 +107,10 @@ describe("Landing pad tactical guidance packet streamer", function()
         assert_eq(upd.payload.touchdownPoint.x, 840.25)
         assert_eq(upd.payload.heading, 85.0)
         assert_eq(upd.payload.velocity.vx, 6.20)
+
+        local idleUpd = streamer:build_facility_update(10453, "IDLE", nil, nil)
+        assert_eq(idleUpd.payload.status, "FREE")
+        local appUpd = streamer:build_facility_update(10454, "APPROACH_DYNAMIC", "AIRCRAFT_01", nil)
+        assert_eq(appUpd.payload.status, "RESERVED")
     end)
 end)

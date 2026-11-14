@@ -89,7 +89,7 @@ local function render_left_hud(buf, active_craft)
     local link_col = active_craft.isStale and "e" or "5"
     draw_text(buf, 13, 2, string.format("Link  : %-8s", link_str), link_col, "f")
 
-    local af = active_craft.airframeType or (telem and (telem.airframeType or telem.airframe or telem.mode))
+    local af = active_craft.airframeType or (telem and telem.airframeType)
     if af then
         local icon = (af == "ADVANCED_VTOL" and "^V^") or (af == "VECTORED_VTOL" and ">V<") or (af == "WINGED_VTOL" and "-V-") or "[A]"
         draw_text(buf, 14, 2, string.format("Type  : %s %-8s", icon, af), "b", "f")

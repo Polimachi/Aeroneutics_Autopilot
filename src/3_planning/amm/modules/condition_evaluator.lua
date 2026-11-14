@@ -190,6 +190,24 @@ local function eval_sys_armed(_cond, ctx)
         or mfd.fsmState == "CRUISE"
 end
 
+local function eval_orbit_turns(cond, ctx)
+    local turns = tonumber(cond.turns) or 1
+    if not is_finite(turns) or turns <= 0 then return true end
+    local cur = resolve_current_pos(ctx)
+    local tx, tz = resolve_target_xz(cond, ctx)
+    if not cur or not tx or type(ctx.checkpoint) ~= "table" then return false end
+    local angle = math.deg(math.atan2(cur.z - tz, cur.x - tx))
+    local os_st = ctx.checkpoint._orbitState
+    if not os_st then
+        ctx.checkpoint._orbitState = { prevAngle = angle, accumDeg = 0.0 }
+        return false
+    end
+    local delta = ((angle - os_st.prevAngle + 180.0) % 360.0) - 180.0
+    os_st.prevAngle = angle
+    os_st.accumDeg = os_st.accumDeg + math.abs(delta)
+    return os_st.accumDeg >= (turns * 360.0)
+end
+
 local EVALUATORS = {
     PROXIMITY_2D = eval_proximity_2d,
     PROXIMITY_3D = eval_proximity_3d,
@@ -205,6 +223,7 @@ local EVALUATORS = {
     ARM_RELEASED = function(cond, ctx) return eval_arm_state("released", cond, ctx) end,
     SYS_ARMED = eval_sys_armed,
     IMMEDIATE = function() return true end,
+    ORBIT_TURNS = eval_orbit_turns,
 }
 
 function condition_evaluator.should_arm_touchdown(fsm_state)
@@ -252,6 +271,31 @@ local function make_redstone(_cp, p)
     return { logic = "ALL", conditions = { { type = "REDSTONE_INPUT_HIGH", side = p.side, color = p.color, minLevel = p.minLevel or 1 } } }
 end
 
+local function make_immediate()
+    return { logic = "ANY", conditions = { { type = "IMMEDIATE" } } }
+end
+
+local function make_dur_default(default_sec)
+    return function(_cp, p)
+        local dur = is_finite(p.durationSec) and p.durationSec or default_sec
+        return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = dur } } }
+    end
+end
+
+local function make_roi(cp, p)
+    if p.channelOffset ~= nil and p.waitForAck ~= false and p.awaitAck ~= false then
+        return make_payload(cp, p)
+    end
+    return make_immediate()
+end
+
+local function make_loiter_turns(_cp, p)
+    if is_finite(p.durationSec) and p.turns == nil then
+        return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = p.durationSec } } }
+    end
+    return { logic = "ALL", conditions = { { type = "ORBIT_TURNS", turns = p.turns or 1, targetPos = p.targetPos } } }
+end
+
 local DEFAULT_RESOLVERS = {
     ACT_NAV_SPLINE_WP = make_prox2d, ACT_FS_RTL_HOME = make_prox2d, ACT_FS_GOTO_RALLY = make_prox2d,
     ACT_NAV_GOTO_WP = make_prox3d, ACT_NAV_CORRIDOR = make_prox3d, ACT_MOB_RV_TRACK = make_prox3d,
@@ -260,12 +304,17 @@ local DEFAULT_RESOLVERS = {
     ACT_TKL_LAND_PREC = make_touchdown, ACT_TKL_LAND_NORM = make_touchdown, ACT_FS_EMERG_LAND = make_touchdown,
     ACT_PAT_LOITER_TIME = make_hold_or_dur, ACT_PAT_POI_HOLD = make_hold_or_dur,
     ACT_PAT_HOLD_POS = make_hold_or_dur, ACT_COM_ATC_HOLD = make_hold_or_dur,
-    ACT_PAT_LOITER_TURNS = function(_cp, p) return { logic = "ALL", conditions = { { type = "DURATION_SEC", durationSec = p.durationSec or 30 } } } end,
+    ACT_PAT_LOITER_TURNS = make_loiter_turns,
     ACT_PAY_BUS_CMD = make_payload, ACT_PAY_REDSTONE = make_redstone,
+    ACT_PAY_SET_ROI = make_roi, ACT_PAY_CLEAR_ROI = make_roi,
     ACT_SYS_ARM = function() return { logic = "ANY", conditions = { { type = "SYS_ARMED" } } } end,
     ACT_SYS_LOAD = function() return { logic = "ALL", conditions = {} } end,
     ACT_SYS_PREFLIGHT = function() return { logic = "ALL", conditions = {} } end,
     ACT_FS_HOVER_HOLD = function() return { logic = "ALL", conditions = {} } end,
+    ACT_SYS_SET_HOME = make_immediate, ACT_SYS_DISARM = make_immediate, ACT_SYS_TERMINATE = make_immediate,
+    ACT_NAV_CHANGE_SPD = make_immediate, ACT_FS_FENCE_BRAKE = make_immediate,
+    ACT_TKL_TRANS_MC2FW = make_dur_default(0.5), ACT_TKL_TRANS_FW2MC = make_dur_default(0.5),
+    ACT_MOB_DECK_SYNC = make_dur_default(0.5), ACT_NAV_CHANGE_YAW = make_dur_default(1.0),
 }
 
 function condition_evaluator.resolve_default_complete(cp, defaults)
@@ -357,6 +406,9 @@ function condition_evaluator.format_progress(cp, ctx, defaults)
         s = "WAIT_RS_IN"
     elseif c.type == "TIMEOUT_SEC" then
         s = string.format("TIMEOUT %ds", math.floor(c.timeout or 0))
+    elseif c.type == "ORBIT_TURNS" then
+        local acc = (ctx and ctx.checkpoint and ctx.checkpoint._orbitState and ctx.checkpoint._orbitState.accumDeg) or 0
+        s = string.format("ORBIT %d/%d deg", math.floor(acc), math.floor((c.turns or 1) * 360))
     end
     return string.sub(s, 1, 25)
 end

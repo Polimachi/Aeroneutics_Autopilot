@@ -142,10 +142,6 @@ function actuator_adapter.toggle_interaction_mode(state)
     return state.interactionMode
 end
 
-function actuator_adapter.toggle_mode(state)
-    return actuator_adapter.toggle_interaction_mode(state)
-end
-
 local function dispatch_val(item, val)
     if not item or not item.wrapped or type(item.wrapped[item.method]) ~= "function" then return false end
     local m = item.method
@@ -225,7 +221,7 @@ function actuator_adapter.apply_vector_thrust(state, rawSignal, activeCount, tot
             if item.wrapped and type(item.wrapped.setPower) == "function" then
                 okThrust = pcall(item.wrapped.setPower, boosted)
             else
-                okThrust = dispatch_val(item, boosted)
+                okThrust = dispatch_val(item, state.lastRatio)
             end
             pcall(item.wrapped.setVector, clampedGx, clampedGy)
         else

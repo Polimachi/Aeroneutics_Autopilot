@@ -238,4 +238,46 @@ describe("Landing pad finite state machine and local backbone protocol", functio
         assert_eq(packets[1].payload.status, "REJECTED")
         assert_eq(packets[1].payload.rejectReason, "INCOMPATIBLE_AIRFRAME")
     end)
+
+    it("keeps GO_AROUND isolated until GAC sends MSG_ATC_FACILITY_UPDATE FREE", function()
+        local streamer = tactical_streamer.create(dummyCfg)
+        local fsm = pad_fsm.create(dummyCfg, streamer, true)
+
+        fsm:handle_backbone_message({
+            ver = "1.9.5",
+            type = "MSG_ATC_SLOT_ASSIGN",
+            domainId = "GAC_APRON_01",
+            seq = 504,
+            time = 1000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                aircraftId = "AIRCRAFT_01",
+                slotDurationSec = 120,
+                tacticalChannel = 50211
+            }
+        }, 10.0)
+        assert_near(fsm:get_slot_remaining_sec(40.0), 90.0, 1e-4)
+
+        fsm:tick(0.05, 11.0, "DANGEROUS", true)
+        fsm:tick(0.05, 14.5, "DANGEROUS", true)
+        assert_eq(fsm:get_state(), "GO_AROUND")
+
+        -- Even after 20s, GO_AROUND must remain until GAC releases it
+        fsm:tick(0.05, 35.0, "STABLE", true)
+        assert_eq(fsm:get_state(), "GO_AROUND")
+
+        fsm:handle_backbone_message({
+            ver = "1.9.5",
+            type = "MSG_ATC_FACILITY_UPDATE",
+            domainId = "GAC_APRON_01",
+            seq = 505,
+            time = 2000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                status = "FREE"
+            }
+        }, 36.0)
+        assert_eq(fsm:get_state(), "IDLE")
+        assert_nil(fsm:get_current_craft())
+    end)
 end)

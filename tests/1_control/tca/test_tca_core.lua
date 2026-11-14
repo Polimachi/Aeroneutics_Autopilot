@@ -68,7 +68,7 @@ describe("tca config and channel allocation", function()
     end)
 
 
-    it("validates compute_base bounds and migrates legacy 20-channel configs", function()
+    it("validates compute_base bounds without legacy 20-channel migration (Zero-Fallback)", function()
         assert_eq(config_manager.compute_base(1), 10000)
         assert_eq(config_manager.compute_base(1000), 49960)
 
@@ -80,25 +80,7 @@ describe("tca config and channel allocation", function()
         assert_nil(b1001)
         assert_eq(err1001, "ERR_INDEX_OUT_OF_RANGE")
 
-        -- Legacy 20-channel configuration migration
-        local legacyPath = sdk.temp_path("test_legacy_20ch.json")
-        local legacyCfg = {
-            groupId = "THR_MAIN_L",
-            aircraftIndexN = 2,
-            baseChannel = 10020,
-            channels = { thrustActuation = 10026, calibration = 10024 },
-            mode = "REDSTONE"
-        }
-        config_manager.save(legacyPath, legacyCfg)
-
-        local migrated, errLoad = config_manager.load(legacyPath)
-        assert_not_nil(migrated)
-        assert_eq(errLoad, "OK")
-        assert_eq(migrated.baseChannel, 10040)
-        assert_eq(migrated.channels.thrustActuation, 10050)
-        assert_nil(migrated.channels.calibration)
-        assert_nil(migrated.mode)
-        assert_eq(migrated.interactionMode, "REDSTONE")
+        assert_nil(config_manager.migrate_legacy_base)
     end)
 
     it("calculates API boosted signals with proportional compensation", function()
@@ -257,7 +239,10 @@ describe("tca daemon state machine and safing", function()
         assert_not_nil(ackRecord)
         assert_eq(ackRecord.pkt.type, "MSG_CHANNEL_REBIND_ACK")
         assert_eq(ackRecord.pkt.payload.transactionId, "REBIND-TX-10000-10080")
+        assert_eq(ackRecord.pkt.payload.action, "PREPARE")
         assert_eq(ackRecord.pkt.payload.status, "READY")
+        assert_eq(ackRecord.pkt.payload.oldBaseChannel, 10000)
+        assert_eq(ackRecord.pkt.payload.newBaseChannel, 10080)
 
         -- ROLLBACK test
         local rollPkt = {
@@ -268,11 +253,25 @@ describe("tca daemon state machine and safing", function()
             payload = {
                 action = "ROLLBACK",
                 transactionId = "REBIND-TX-10000-10080",
+                oldBaseChannel = 10000,
                 newBaseChannel = 10080
             }
         }
         daemon:dispatch_modem_message(10010, 10010, rollPkt)
         assert_false(mockModem:isOpen(10090))
+        local rbAck = mockModem._transmitted[#mockModem._transmitted]
+        assert_eq(rbAck.pkt.type, "MSG_CHANNEL_REBIND_ACK")
+        assert_eq(rbAck.pkt.payload.status, "ROLLED_BACK")
+
+        -- Prepare again and verify 500ms timeout auto-rollback
+        daemon:dispatch_modem_message(10010, 10010, prepPkt)
+        assert_true(mockModem:isOpen(10090))
+        local channel_rebind_handler = require("channel_rebind_handler")
+        local startMs = daemon.adapterState.preparedRebind.startMs or 0
+        assert_false(channel_rebind_handler.check_timeout(mockModem, cfg, daemon.adapterState, startMs + 400))
+        assert_true(channel_rebind_handler.check_timeout(mockModem, cfg, daemon.adapterState, startMs + 500))
+        assert_false(mockModem:isOpen(10090))
+        assert_nil(daemon.adapterState.preparedRebind)
 
         -- Prepare again for commit
         daemon:dispatch_modem_message(10010, 10010, prepPkt)
@@ -287,6 +286,7 @@ describe("tca daemon state machine and safing", function()
             payload = {
                 action = "COMMIT",
                 transactionId = "REBIND-TX-10000-10080",
+                oldBaseChannel = 10000,
                 newBaseChannel = 10080
             }
         }
@@ -295,6 +295,9 @@ describe("tca daemon state machine and safing", function()
         assert_eq(daemon.cfg.baseChannel, 10080)
         assert_eq(daemon.cfg.channels.thrustActuation, 10090)
         assert_eq(daemon.cfg.aircraftIndexN, 3)
+        local cAck = mockModem._transmitted[#mockModem._transmitted]
+        assert_eq(cAck.pkt.type, "MSG_CHANNEL_REBIND_ACK")
+        assert_eq(cAck.pkt.payload.status, "COMMITTED")
 
         local reloaded = config_manager.load(tempCfgPath)
         assert_not_nil(reloaded)
@@ -637,5 +640,13 @@ describe("tca mutation hardening invariants", function()
         assert_eq(extracted.thrust, 15)
         assert_near(extracted.gimbalX, -0.5, 1e-6)
         assert_near(extracted.gimbalY, 0.5, 1e-6)
+    end)
+
+    it("enforces single-key targetGroup in discovery_handler (Zero-Fallback)", function()
+        local discovery_handler = require("discovery_handler")
+        assert_true(discovery_handler.is_target_matched({ targetGroup = "THR_MAIN_L" }, "THR_MAIN_L"))
+        assert_false(discovery_handler.is_target_matched({ targetGroup = "THR_MAIN_R" }, "THR_MAIN_L"))
+        -- Legacy targetThrusterId without targetGroup does not override single-key matching
+        assert_true(discovery_handler.is_target_matched({ targetThrusterId = "OTHER_GROUP" }, "THR_MAIN_L"))
     end)
 end)

@@ -26,7 +26,7 @@ The user has ADHD; protect their attention by preventing both failure modes:
 2. Ordered multi-step instructions where terse fragments could scramble execution order.
 3. User questions or multiple-choice options (`ask_question` or clarifying questions).
 4. Explicit deep-dive requests ("자세히 설명해줘", "원리까지 전부 알려줘").
-5. Persisted artifacts outside chat: source code, code comments, git commit messages, `README.md`, `GEMINI.md`, `TASK.md`, `docs/**`, `reports/**`, `CHANGELOG.md`, `.agent/memory/*.md`, and plan/walkthrough artifacts.
+5. Persisted artifacts outside chat: source code, code comments, git commit messages, `README.md`, `GEMINI.md`, `TASK.md`, `docs/**`, `reports/**`, `CHANGELOG.md`, `.agent/{rules,skills,memory}/**`, and plan/walkthrough artifacts.
 <!-- attention-span:end -->
 
 <!-- no-overclaim:start -->
@@ -38,5 +38,5 @@ The user has ADHD; protect their attention by preventing both failure modes:
   "world-class", "best-in-class", "flawless", "zero-defect", "bulletproof", "guarantee(s)",
   측정 근거 없는 시간 주장("1ms 내 원복", "within 5 ms").
 - 대신 쓸 것: 실제 측정값과 측정 방법, 또는 검증 스크립트 실행 출력에 근거한 범위가 명확한 사실 서술.
-- 도구 출력 인용 시: 원문 문구 대신 수치형 결과(예: `0 Errors, 0 Warnings`, `294/294 PASS`)와 실행 명령을 함께 기재한다.
+- 도구 출력 인용 시: 추상적·정성적 요약 대신 실제 수치형 결과(예: `0 Errors, 0 Warnings`, `294/294 PASS`)와 실행 명령을 함께 기재한다.
 <!-- no-overclaim:end -->

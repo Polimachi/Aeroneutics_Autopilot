@@ -57,6 +57,7 @@ describe("GCS main application loop and event dispatcher", function()
 
         -- Active craft should be AIRCRAFT_01 and telemetry channel 10003 opened
         assert_true(modem:isOpen(10003))
+        assert_true(fs.exists("config/test_main_registry.json"), "registry must be persisted after allocation")
 
         if fs.exists("config/test_main_registry.json") then fs.delete("config/test_main_registry.json") end
     end)
@@ -83,6 +84,10 @@ describe("GCS main application loop and event dispatcher", function()
         assert_eq(modem.transmissions[2].channel, 10001) -- Base+1 direct to VAS
         assert_eq(modem.transmissions[2].payload.payload.action, "E_STOP")
         assert_eq(modem.transmissions[2].payload.payload.source, "GCS")
+
+        -- Press 'C' for ChannelReg status/save
+        app:process_key(nil, "c")
+        assert_true(string.find(app.status_msg, "REG:", 1, true) ~= nil)
 
         -- Press 'Q' to quit
         assert_true(app.running)

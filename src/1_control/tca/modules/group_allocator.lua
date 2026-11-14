@@ -57,11 +57,6 @@ function group_allocator.calculate_api_boosted_signal(reqSignal, activeCount, to
     return boostedSignal, ratio, isSaturated
 end
 
---- Backward-compatible alias for calculate_api_boosted_signal
-function group_allocator.calculate_boosted_signal(reqSignal, activeCount, totalCount)
-    return group_allocator.calculate_api_boosted_signal(reqSignal, activeCount, totalCount)
-end
-
 --- Check if requested signal saturates the actuator
 function group_allocator.is_saturated(reqSignal, mode, activeCount, totalCount)
     local raw = (type(reqSignal) == "table" and reqSignal.thrust) or reqSignal

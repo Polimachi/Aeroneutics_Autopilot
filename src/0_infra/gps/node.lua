@@ -31,11 +31,11 @@ local function runCountdown(fsm)
 end
 
 local function loadOrCommissionNode(args, modem)
-    local cfg = config_store.parseNodeCliArgs(args)
+    local compId = os.getComputerID and os.getComputerID() or 0
+    local cfg = config_store.parseNodeCliArgs(args, compId)
     if cfg then return cfg end
 
     cfg = storage_hal.readJson("/gps_data/node.json")
-    local compId = os.getComputerID and os.getComputerID() or 0
     local fsm = commissioning.newFSM({ hasConfig = (cfg ~= nil), computerId = compId })
 
     if fsm:getState() == "COUNTDOWN_3S" then
@@ -95,6 +95,33 @@ local function sendHeartbeat(modem, nodeCfg, state)
     if harness_set_state then harness_set_state("heartbeats_sent", state.heartbeatsSent) end
 end
 
+local function handleDiagMessage(modem, nodeCfg, channel, msg, distance, state)
+    if type(msg) ~= "table" then return end
+    local nowMs = os.epoch and os.epoch("utc") or 0
+    if channel == protocol.CH_GPS_MGMT and msg.type == protocol.MSG_DIAG_TRIGGER then
+        local ok = protocol.validatePacket(msg, protocol.MSG_DIAG_TRIGGER)
+        if not ok or msg.payload.targetNode ~= nodeCfg.nodeId then return end
+        state.reportSeq = (state.reportSeq or 0) + 1
+        local pingPkt = protocol.buildDiagPing(nodeCfg.nodeId, state.reportSeq, {
+            diagId = msg.payload.diagId,
+            originNode = nodeCfg.nodeId,
+            originPos = nodeCfg.position,
+        }, nowMs)
+        modem.transmit(protocol.CH_GPS_PING, protocol.CH_GPS_MGMT, pingPkt)
+    elseif channel == protocol.CH_GPS_PING and msg.type == protocol.MSG_DIAG_PING then
+        local ok = protocol.validatePacket(msg, protocol.MSG_DIAG_PING)
+        if not ok or msg.payload.originNode == nodeCfg.nodeId then return end
+        state.reportSeq = (state.reportSeq or 0) + 1
+        local repPkt = protocol.buildDiagReport(nodeCfg.nodeId, state.reportSeq, {
+            diagId = msg.payload.diagId,
+            senderNode = nodeCfg.nodeId,
+            targetNode = msg.payload.originNode,
+            measuredDistance = tonumber(distance) or 0.0,
+        }, nowMs)
+        modem.transmit(protocol.CH_GPS_NODE_IN, protocol.CH_GPS_PING, repPkt)
+    end
+end
+
 local function nodeEventLoop(modem, nodeCfg, state)
     local hbTimer = os.startTimer(10.0)
     while true do
@@ -109,6 +136,7 @@ local function nodeEventLoop(modem, nodeCfg, state)
             sendHeartbeat(modem, nodeCfg, state)
         elseif ev == "modem_message" then
             handlePingMessage(modem, nodeCfg, eventData[3], eventData[5], eventData[6], state)
+            handleDiagMessage(modem, nodeCfg, eventData[3], eventData[5], eventData[6], state)
             if harness_set_state and state.reportsSent >= 1 then
                 sleep(0.05)
                 break
@@ -122,6 +150,7 @@ local function main(...)
     local modem = peripheral.find("modem")
     if not modem then error("No modem attached for GPS node", 2) end
     modem.open(protocol.CH_GPS_PING)
+    modem.open(protocol.CH_GPS_MGMT)
 
     local nodeCfg = loadOrCommissionNode(args, modem)
 

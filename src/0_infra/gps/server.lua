@@ -46,6 +46,14 @@ local function refreshClientAges(state, nowMs)
     state.clientCount = #(state.clients or {})
 end
 
+local function attachMonitorIfValid(mon)
+    if not mon or (mon.isColor and not mon.isColor()) then return nil, nil end
+    pcall(mon.setTextScale, 0.5)
+    local w, h = mon.getSize and mon.getSize() or 0, 0
+    if w < 80 or h < 30 then return nil, nil end
+    return mon, monitor_ui.new({ width = w, height = h })
+end
+
 local function initServer()
     local modem = peripheral.find("modem")
     if modem then
@@ -56,16 +64,11 @@ local function initServer()
     local rawNodes = storage_hal.readJson("/gps_data/nodes.json")
     local registry = config_store.normalizeServerRegistry(rawNodes)
     local scheduler = session_scheduler.new({ windowMs = 50, tombstoneTtlMs = 1000 })
-    local mon = peripheral.find("monitor")
-    local ui = nil
-    if mon then
-        pcall(mon.setTextScale, 0.5)
-        ui = monitor_ui.new({ width = 79, height = 36 })
-    end
+    local mon, ui = attachMonitorIfValid(peripheral.find("monitor"))
     local state = {
         ticks = 0, solvedCount = 0, seq = 1,
         lastSolvedStatus = "NOMINAL", activeNodes = 0, clientCount = 0,
-        listenChan = protocol.CH_GPS_PING, dataChan = protocol.CH_GPS_SERVICE,
+        listenChan = protocol.CH_GPS_SERVICE, dataChan = protocol.CH_GPS_SERVICE,
         nodes = {}, clients = {}, totalSolves = 0
     }
     local nodeKeys = {}
@@ -155,6 +158,7 @@ local function handleHeartbeat(state, msg, registry)
     for _, n in ipairs(state.nodes) do
         if n.id == nid then
             n.status = nextStatus
+            n.lastHeartbeatMs = msg.time or (os.epoch and os.epoch("utc") or 0)
             if pos then
                 n.x = tonumber(pos.x) or n.x
                 n.y = tonumber(pos.y) or n.y
@@ -170,8 +174,28 @@ local function handleHeartbeat(state, msg, registry)
         y = pos and (tonumber(pos.y) or 0) or 0,
         z = pos and (tonumber(pos.z) or 0) or 0,
         status = nextStatus,
+        lastHeartbeatMs = msg.time or (os.epoch and os.epoch("utc") or 0),
         ping = 0,
     })
+    state.activeNodes = countOnlineNodes(state.nodes)
+end
+
+local function checkNodeWatchdog(state, registry, nowMs)
+    if not nowMs or nowMs <= 0 then return end
+    for _, n in ipairs(state.nodes or {}) do
+        local lastHb = n.lastHeartbeatMs
+        if not lastHb and registry and registry.nodes and registry.nodes[n.id] then
+            lastHb = registry.nodes[n.id].lastHeartbeat
+        end
+        if lastHb and lastHb > 0 then
+            local age = nowMs - lastHb
+            if age > 35000 then
+                n.status = "OFFLINE"
+            elseif age > 10000 and n.status == "ONLINE" then
+                n.status = "STALE"
+            end
+        end
+    end
     state.activeNodes = countOnlineNodes(state.nodes)
 end
 
@@ -216,9 +240,100 @@ local function flushTimerExpired(scheduler, registry, modem, state)
     end
 end
 
-local function handleUiAction(action, state)
+local function triggerCrossDiag(modem, state, nowMs)
+    if not modem or not state.nodes or #state.nodes == 0 then return end
+    local target = state.nodes[1]
+    if not target or not target.id then return end
+    state.seq = (state.seq or 0) + 1
+    local diagId = "DIAG-" .. tostring(nowMs or state.seq)
+    local pkt = protocol.buildDiagTrigger("GPS_BASE_NET", state.seq, {
+        diagId = diagId,
+        targetNode = target.id,
+    }, nowMs or 0)
+    modem.transmit(protocol.CH_GPS_MGMT, protocol.CH_GPS_SERVICE, pkt)
+end
+
+local function handleUiAction(action, state, modem, termDev)
     if (action == "ACTION_REFRESH" or action == "ACTION_REFIT") and #state.nodes > 0 then
         state.bounds = radar_math.computeCentroidSpan(state.nodes, 1.2)
+    elseif action == "ACTION_CALIBRATE" then
+        triggerCrossDiag(modem, state, os.epoch and os.epoch("utc") or 0)
+    elseif action == "ACTION_CLEAR" then
+        state.lastDiag = nil
+        if termDev and termDev.clear then termDev.clear() end
+    end
+end
+
+local function handleNodeHello(registry, modem, state, msg)
+    if not modem then return end
+    local pl = type(msg.payload) == "table" and msg.payload or {}
+    local compId = tonumber(pl.computerId) or 0
+    local assignedId = nil
+    local maxIdx = 0
+    for k, nd in pairs(registry.nodes or {}) do
+        if tonumber(nd.computerId) == compId and compId > 0 then assignedId = k end
+        local idx = tonumber(tostring(k):match("(%d+)$")) or 0
+        if idx > maxIdx then maxIdx = idx end
+    end
+    if not assignedId then
+        assignedId = string.format("NODE_%02d", maxIdx + 1)
+    end
+    state.seq = (state.seq or 0) + 1
+    local pkt = protocol.buildEnvelope("GPS_BASE_NET", state.seq, protocol.MSG_NODE_OFFER, {
+        computerId = compId,
+        nodeId = assignedId,
+    }, os.epoch and os.epoch("utc") or 0)
+    modem.transmit(protocol.CH_GPS_MGMT, protocol.CH_GPS_NODE_IN, pkt)
+end
+
+local function handleNodeVerifyReq(registry, modem, state, msg)
+    if not modem then return end
+    local pl = type(msg.payload) == "table" and msg.payload or {}
+    local pos = type(pl.pos) == "table" and pl.pos or {}
+    local residual = 0.0
+    local passed = true
+    if pl.nodeId and registry.nodes and next(registry.nodes) ~= nil then
+        local count = 0
+        for _, nd in pairs(registry.nodes) do
+            if nd.position and (nd.position.x == pos.x and nd.position.y == pos.y and nd.position.z == pos.z) then
+                residual = 999.0
+                passed = false
+            end
+            count = count + 1
+        end
+        if count == 0 then passed = true end
+    end
+    state.seq = (state.seq or 0) + 1
+    local pkt = protocol.buildEnvelope("GPS_BASE_NET", state.seq, protocol.MSG_NODE_VERIFY_RESP, {
+        nodeId = pl.nodeId,
+        passed = passed,
+        residual = residual,
+    }, os.epoch and os.epoch("utc") or 0)
+    modem.transmit(protocol.CH_GPS_MGMT, protocol.CH_GPS_NODE_IN, pkt)
+end
+
+local function handleNodeRegCommit(registry, modem, state, msg)
+    local pl = type(msg.payload) == "table" and msg.payload or {}
+    local nid = tostring(pl.nodeId or msg.domainId or "")
+    if nid == "" then return end
+    local pos = type(pl.pos) == "table" and pl.pos or { x = 0, y = 0, z = 0 }
+    registry.nodes = registry.nodes or {}
+    registry.nodes[nid] = {
+        nodeId = nid,
+        computerId = tonumber(pl.computerId) or 0,
+        position = { x = tonumber(pos.x) or 0, y = tonumber(pos.y) or 0, z = tonumber(pos.z) or 0 },
+        status = "ONLINE",
+        lastHeartbeat = os.epoch and os.epoch("utc") or 0,
+    }
+    pcall(storage_hal.writeJsonAtomic, "/gps_data/nodes.json", registry)
+    handleHeartbeat(state, { type = protocol.MSG_NODE_HEARTBEAT, domainId = nid, seq = 1, time = os.epoch and os.epoch("utc") or 0, payload = { nodeId = nid, pos = pos, status = "ONLINE" } }, registry)
+    if modem then
+        state.seq = (state.seq or 0) + 1
+        local pkt = protocol.buildEnvelope("GPS_BASE_NET", state.seq, protocol.MSG_NODE_REG_ACK, {
+            nodeId = nid,
+            status = "COMMITTED",
+        }, os.epoch and os.epoch("utc") or 0)
+        modem.transmit(protocol.CH_GPS_MGMT, protocol.CH_GPS_NODE_IN, pkt)
     end
 end
 
@@ -229,6 +344,14 @@ local function handleModemMsg(scheduler, registry, modem, state, evData)
             handleNodeReport(scheduler, registry, modem, state, msg)
         elseif msg.type == protocol.MSG_NODE_HEARTBEAT then
             handleHeartbeat(state, msg, registry)
+        elseif msg.type == protocol.MSG_NODE_HELLO then
+            handleNodeHello(registry, modem, state, msg)
+        elseif msg.type == protocol.MSG_NODE_VERIFY_REQ then
+            handleNodeVerifyReq(registry, modem, state, msg)
+        elseif msg.type == protocol.MSG_NODE_REG_COMMIT then
+            handleNodeRegCommit(registry, modem, state, msg)
+        elseif msg.type == protocol.MSG_DIAG_REPORT then
+            state.lastDiag = msg.payload
         end
     elseif channel == protocol.CH_GPS_SERVICE and type(msg) == "table" then
         if msg.type == protocol.MSG_STATUS_REQ then
@@ -237,36 +360,86 @@ local function handleModemMsg(scheduler, registry, modem, state, evData)
     end
 end
 
-local function serverEventLoop(modem, scheduler, registry, state, termDev, mon, ui)
-    local tickTimer = os.startTimer(0.05)
+local function supervisedLoop(name, loopFn, coolDown)
     while true do
-        local evData = { os.pullEvent() }
-        local ev = evData[1]
-        if ev == "terminate" then break
-        elseif ev == "timer" and evData[2] == tickTimer then
-            tickTimer = os.startTimer(0.05)
-            state.ticks = state.ticks + 1
-            flushTimerExpired(scheduler, registry, modem, state)
-            if state.ticks % 2 == 0 then
+        local ok, err = pcall(loopFn)
+        if ok then break end
+        if sleep then sleep(coolDown or 0.05) end
+    end
+end
+
+local function serverEventLoop(modem, scheduler, registry, state, termDev, mon, ui)
+    local running = true
+    local function networkLoop()
+        while running do
+            local evData = { os.pullEvent() }
+            local ev = evData[1]
+            if ev == "terminate" then
+                running = false
+                break
+            elseif ev == "modem_message" then
+                handleModemMsg(scheduler, registry, modem, state, evData)
+            end
+        end
+    end
+
+    local function timerLoop()
+        local tickTimer = os.startTimer(0.05)
+        while running do
+            local evData = { os.pullEvent() }
+            local ev = evData[1]
+            if ev == "terminate" then
+                running = false
+                break
+            elseif ev == "timer" and evData[2] == tickTimer then
+                tickTimer = os.startTimer(0.05)
+                state.ticks = state.ticks + 1
+                local nowMs = os.epoch and os.epoch("utc") or 0
+                flushTimerExpired(scheduler, registry, modem, state)
+                if state.ticks % 20 == 0 then
+                    checkNodeWatchdog(state, registry, nowMs)
+                end
+                if state.ticks % 1200 == 0 then
+                    triggerCrossDiag(modem, state, nowMs)
+                end
+                if harness_set_state and state.solvedCount >= 1 then
+                    running = false
+                    sleep(0.1)
+                    break
+                end
+            end
+        end
+    end
+
+    local function uiLoop()
+        local uiTimer = os.startTimer(0.5)
+        while running do
+            local evData = { os.pullEvent() }
+            local ev = evData[1]
+            if ev == "terminate" then
+                running = false
+                break
+            elseif ev == "timer" and evData[2] == uiTimer then
+                uiTimer = os.startTimer(0.5)
                 renderConsole(termDev, state)
                 refreshClientAges(state, os.epoch and os.epoch("utc") or 0)
                 if mon and ui then ui:render(mon, state) end
+            elseif ev == "monitor_touch" and ui then
+                local act = ui:handleTouch(evData[3], evData[4])
+                if act then handleUiAction(act, state, modem, termDev) end
+            elseif ev == "peripheral" and peripheral.getType(evData[2]) == "monitor" then
+                mon, ui = attachMonitorIfValid(peripheral.wrap(evData[2]))
+            elseif ev == "peripheral_detach" then
+                mon, ui = attachMonitorIfValid(peripheral.find("monitor"))
             end
-            if harness_set_state and state.solvedCount >= 1 then sleep(0.1); break end
-        elseif ev == "monitor_touch" and ui then
-            local act = ui:handleTouch(evData[3], evData[4])
-            if act then handleUiAction(act, state) end
-        elseif ev == "peripheral" and peripheral.getType(evData[2]) == "monitor" then
-            mon = peripheral.wrap(evData[2])
-            pcall(mon.setTextScale, 0.5)
-            ui = monitor_ui.new({ width = 79, height = 36 })
-        elseif ev == "peripheral_detach" then
-            mon = peripheral.find("monitor")
-            if not mon then ui = nil end
-        elseif ev == "modem_message" then
-            handleModemMsg(scheduler, registry, modem, state, evData)
         end
     end
+
+    parallel.waitForAll(
+        function() supervisedLoop("NETWORK", networkLoop, 0.05) end,
+        function() supervisedLoop("TIMER", timerLoop, 0.05) end,
+        function() supervisedLoop("UI", uiLoop, 0.5) end
+    )
 end
 
 local function main()
@@ -291,5 +464,7 @@ return {
     handleStatusRequest = handleStatusRequest,
     flushTimerExpired = flushTimerExpired,
     handleModemMsg = handleModemMsg,
+    handleUiAction = handleUiAction,
+    checkNodeWatchdog = checkNodeWatchdog,
     run = main,
 }

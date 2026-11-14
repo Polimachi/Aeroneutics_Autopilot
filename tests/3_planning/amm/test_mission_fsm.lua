@@ -118,11 +118,11 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_eq(st1, "ADVANCED")
         assert_eq(eng.active_index, 3)
         assert_true(rs.getOutput("top"))
-        local orb_cmd = m._transmitted[#m._transmitted].pkt.payload
-        assert_eq(orb_cmd.command, "LOITER")
-        assert_eq(orb_cmd.flightMode, "LOITER")
-        assert_eq(orb_cmd.params.loiterRadius, 40)
-        assert_eq(orb_cmd.params.loiterDirection, "CCW")
+        assert_eq(#m._transmitted, 0) -- Zero-Fallback: Base+4 goal only, no Base+0 CMD
+        local orb_goal = eng:get_trajectory_goal()
+        assert_eq(orb_goal.flightMode, "LOITER")
+        assert_eq(orb_goal.loiterRadius, 40)
+        assert_eq(orb_goal.loiterDirection, "CCW")
 
         -- Tick expires pulse at 2500ms; ORBIT duration (10s) completes at 12000ms -> advances to CP_POI (index 4)
         eng:tick(2500)
@@ -130,10 +130,9 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         local st2 = eng:step_telemetry({ fsmState = "LOITER", dynamics = { altitudeY = 140 }, navigation = { currentPos = { x = 500, z = -500 } } }, 12000)
         assert_eq(st2, "ADVANCED")
         assert_eq(eng.active_index, 4)
-        local poi_cmd = m._transmitted[#m._transmitted].pkt.payload
-        assert_eq(poi_cmd.command, "POI_HOLD")
-        assert_eq(poi_cmd.flightMode, "POI_HOLD")
-        assert_eq(poi_cmd.params.poiTarget.x, 650)
+        local poi_goal = eng:get_trajectory_goal()
+        assert_eq(poi_goal.flightMode, "POI_HOLD")
+        assert_eq(poi_goal.poiPos.x, 650)
 
         -- POI_HOLD completes at 17000ms -> REPEAT wraps to index 3 (skipping BOTH ACT_SYS_ARM and ACT_TKL_TAKEOFF_VERT!)
         local st3 = eng:step_telemetry({ fsmState = "POI_HOLD", dynamics = { altitudeY = 140 }, navigation = { currentPos = { x = 600, z = -600 } } }, 17000)
@@ -248,17 +247,17 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_eq(st_rth, "ABORTED")
         assert_eq(eng.state, "ABORTED")
         assert_true(rs.getOutput("right"))
-        assert_eq(m._transmitted[#m._transmitted].pkt.payload.emergencyAction, "RTH")
+        assert_eq(eng:get_fallback_goal().flightMode, "FAILSAFE_RTH")
 
         eng.checkpoints[2].fallbackPolicy = "HOVER_HOLD"
         eng:goto_index(2, 8000)
         eng:step_telemetry({ fsmState = "CRUISE", fuel = 0.20, dynamics = { altitudeY = 150 }, navigation = { currentPos = { x = 100, z = 100 } } }, 8100)
-        assert_eq(m._transmitted[#m._transmitted].pkt.payload.emergencyAction, "HOVER_HOLD")
+        assert_eq(eng:get_fallback_goal().flightMode, "HOVER_HOLD")
 
         eng.checkpoints[2].fallbackPolicy = "LOITER"
         eng:goto_index(2, 9000)
         eng:step_telemetry({ fsmState = "CRUISE", fuel = 0.20, dynamics = { altitudeY = 150 }, navigation = { currentPos = { x = 100, z = 100 } } }, 9100)
-        assert_eq(m._transmitted[#m._transmitted].pkt.payload.flightMode, "LOITER")
+        assert_eq(eng:get_fallback_goal().flightMode, "LOITER")
     end)
 
     it("transitions pause/resume through SUSPENDED, rejects deferred actions at runtime, and expires onAbort REDSTONE_PULSE", function()
@@ -281,12 +280,12 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_true(eng:pause())
         assert_eq(eng.state, "SUSPENDED")
         assert_false(eng:pause())
-        assert_eq(m._transmitted[#m._transmitted].pkt.payload.flightMode, "LOITER")
+        assert_eq(eng:get_fallback_goal().flightMode, "LOITER")
 
         assert_true(eng:resume(1500))
         assert_eq(eng.state, "EN_ROUTE")
         assert_false(eng:resume(1600))
-        assert_eq(m._transmitted[#m._transmitted].pkt.payload.flightMode, "CRUISE")
+        assert_eq(eng:get_trajectory_goal().flightMode, "CRUISE")
 
         table.insert(eng.checkpoints, { checkpointId = "CP_DEF_RUNWAY", action = "ACT_TKL_TAKEOFF_RWY", params = {} })
         local ok_goto, err_goto = eng:goto_index(2, 2000)
@@ -337,5 +336,59 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_true(eng_gps:start("SINGLE", 1000))
         local st_gps = eng_gps:step_telemetry({ fsmState = "CRUISE", navigation = { currentPos = {} } }, 1200)
         assert_eq(st_gps, "ACTIVE")
+    end)
+
+    it("executes DEC_TIMEOUT_GUARD, DEC_RETRY_N, eco/smooth overrides, and newly wired ACT_* handlers", function()
+        local eng = create_engine_fixture()
+        assert_true(eng:load_table({
+            missionId = "DECORATOR_AND_ACT_TEST",
+            version = "2.0.0",
+            fallbackPolicy = "HOVER_HOLD",
+            checkpoints = {
+                {
+                    checkpointId = "CP_HOME",
+                    action = "ACT_SYS_SET_HOME",
+                    params = { targetPos = { x = 10, z = 20 } },
+                },
+                {
+                    checkpointId = "CP_ROI",
+                    action = "ACT_PAY_SET_ROI",
+                    params = { poiPos = { x = 400, y = 70, z = 400 } },
+                },
+                {
+                    checkpointId = "CP_MC2FW",
+                    action = "ACT_TKL_TRANS_MC2FW",
+                    decorators = {
+                        { decoratorId = "DEC_ENERGY_ECO", overrideParams = { ecoCruiseSpeed = 11.5 } },
+                        { decoratorId = "DEC_SMOOTH_TRAJ", overrideParams = { maxYawRateDegS = 15.0 } },
+                        { decoratorId = "DEC_TIMEOUT_GUARD", overrideParams = { maxDurationSec = 4 } },
+                        { decoratorId = "DEC_RETRY_N", overrideParams = { maxAttempts = 2 } },
+                    },
+                    params = { targetAlt = 180 },
+                },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        -- ACT_SYS_SET_HOME immediate -> step_telemetry advances to ACT_PAY_SET_ROI then ACT_TKL_TRANS_MC2FW
+        assert_eq(eng.homePos.x, 10)
+        assert_eq(eng:step_telemetry({ fsmState = "IDLE_ARMED" }, 1100), "ADVANCED")
+        assert_eq(eng.activeRoi.x, 400)
+        assert_eq(eng:step_telemetry({ fsmState = "IDLE_ARMED" }, 1200), "ADVANCED")
+
+        local g = eng:get_trajectory_goal()
+        assert_eq(g.transitionMode, "MC2FW")
+        assert_eq(g.targetSpeed, 11.5)
+        assert_eq(g.maxYawRateDegPerSec, 15.0)
+
+        -- First timeout triggers DEC_RETRY_N attempt 2
+        local r1 = eng:tick(5200)
+        assert_eq(r1, "RETRYING")
+        assert_eq(eng.state, "EN_ROUTE")
+
+        -- Second timeout exceeds maxAttempts=2 -> ABORTED
+        local r2 = eng:tick(9200)
+        assert_eq(r2, "ABORTED")
+        assert_eq(eng.state, "ABORTED")
+        assert_eq(eng:get_fallback_goal().flightMode, "HOVER_HOLD")
     end)
 end)

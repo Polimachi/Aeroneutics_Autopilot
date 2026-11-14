@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 4계층 `SE(3)` 아키텍처 연동 구현(`TASK-207` `AMM v1.3.0`·`TASK-208` `FCP v2.0.0`·`TASK-209` `VAS v1.19.0`), FCP `SE(3)` 외루프 경량화 및 AMM 상위 이관 15대 사양서 개편(`TASK-206`), GPS ↔ 클라이언트 프로토콜 정합화(`TASK-122`), FCP 외루프 `LOITER`/`POI_HOLD` 유도 확장(`TASK-201`), AMM 3분할 미션 시퀀서 코어·FSM·헤드리스·51x19 TUI/리졸버/CLI 및 WebUI 에디터 사양(`TASK-202`), 컨텍스트 문서 드리프트 가드 및 Stop 훅(`TASK-121`), 통합 인스톨러 도메인 폴더 TUI 개편(`TASK-116`), ADVANCED_VTOL 짐벌 벡터 추진기 전계층 연동(`TASK-115`), GAC 전용 시설물(`TASK-114`), 매니페스트 3자 정합성 검증(`TASK-012`), E2E 다중노드 시뮬레이션·돌연변이 25종 확장(`TASK-111`, `TASK-118`), 구버전 용어 정비(`TASK-007`, `TASK-008`), GDrive 배포 체계(`TASK-009`), 지상 인프라(`Landing Pad`, `GCS`), 온보드 제어기 헤드리스(`TASK-113`) 및 임무 단말(`AMM`, `TASK-200`) 구현 완료. 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조.
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 전사 사양서·코드베이스·하네스 전수 감사 43건 교정 및 8대 사양서 `Implemented` 승격(`TASK-013`), `AMM v2.0.1` 표준 행동 체계(`ACT_*`/`DEC_*`/`MAC_*`)·채터링 방지 가드 통합(`TASK-124`, `TASK-204`), GPS 고부하·위상·채널 결함 수정(`TASK-123`), 4계층 `SE(3)` 아키텍처 연동(`TASK-207`~`209`: `AMM`·`FCP v2.1.0`·`VAS v1.20.0`), 사양서 역할 분리 개편(`TASK-206`) 및 미션 시퀀서·WebUI 에디터 사양(`TASK-202`, `v0.3.1 Approved`) 수립 완료 (`TASK-402` WebUI 구현 진행 중; 이전 기반 마일스톤 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm`·`ASA` 본 구현 일정 보류)
@@ -22,6 +22,7 @@
 - **CraftOS-PC (`CraftOS-PC_console.exe`)**: 헤드리스 CC:Tweaked 게스트 세션 실행 필수 의존성
   - 기본 설치 경로(`C:\Program Files\CraftOS-PC\` 등)를 자동 탐색하며, 비표준 경로 설치 시 `CRAFTOS_PC_EXE` 환경변수로 실행 파일 경로를 지정합니다.
 - **Git**: 버전 관리 및 `.worktrees/` 격리 브랜치 운용 (Windows PowerShell `PATH` 미등록 환경에서는 `"C:\Program Files\Git\cmd\git.exe"` 호출)
+- **gdrive CLI** *(선택, §10 배포 시)*: Google Drive 공식 폴더 동기화(`tools/sync_gdrive.py`) 실행 시 `PATH` 등록 필요
 - **인게임 대상 모드 스택**:
   - **지원 모드**: `CC:Tweaked` (Lua 5.2 Cobalt), `Create`, `Create: Aeronautics`, `Create: Avionics`, `Create: Radars`, `Create Propulsion: Simulated` (`ion_thruster` 포함), `Advanced Peripherals`
   - **비호환·차단 모드**: `Valkyrien Skies (VS2)` 계열 및 `kontraption:` 네임스페이스 페리페럴
@@ -54,8 +55,8 @@ Create_Aeroneutics/
 │       ├── 0_infra/                       # 기지 인프라 및 지상 설비 사양서 (docking_arm, gac, gcs, gps, landing_pad, runway)
 │       ├── 1_control/                     # 온보드 제어 사양서 (asa, tca, vas)
 │       ├── 2_guidance/fcp/                # 비행 제어 프로그램 및 외루프 유도 사양서 (FCP)
-│       ├── 3_planning/amm/                # 항공기 임무 관리자 및 Cockpit MFD 사양서 (AMM)
-│       └── 4_mission/                     # 편대 미션 오케스트레이터 사양서 (Phase 2)
+│       ├── 3_planning/amm/                # 항공기 임무 관리자(AMM) 및 WebUI 미션 에디터 사양서
+│       └── 4_mission/                     # 편대 미션 오케스트레이터 사양서 (Phase 2 예정 / 현재 빈 폴더)
 │
 ├── src/                                   # CC:Tweaked Lua 독립 완결형 멀티 코드베이스
 │   ├── 0_development/alignment/           # 지상 정렬 및 시스템 식별 프로그램
@@ -65,7 +66,7 @@ Create_Aeroneutics/
 │   ├── 1_control/                         # 실시간 온보드 제어 (asa, tca, vas)
 │   ├── 2_guidance/fcp/                    # 비행 제어 프로그램 및 외루프 유도 (FCP)
 │   ├── 3_planning/amm/                    # 항공기 임무 관리자 및 Cockpit MFD 통합 단말 (AMM)
-│   └── 4_mission/                         # 미션 분배기 (Phase 2)
+│   └── 4_mission/                         # 미션 분배기 (Phase 2 예정 / `.gitkeep` 플레이스홀더)
 │
 ├── harness/                               # CraftOS-PC 헤드리스 기반 전용 테스트 하네스
 │   ├── simulation/                        # 다중 노드 격리 가상 버스 및 게스트 샌드박스 (E2E)
@@ -78,11 +79,12 @@ Create_Aeroneutics/
 │   ├── 0_infra/{gac, gcs, gps, landing_pad}/ # 기지 인프라 단위 테스트 (GAC, GCS, GPS, Landing Pad)
 │   ├── 1_control/{asa, tca, vas}/         # 온보드 제어기 단위 테스트
 │   ├── 2_guidance/fcp/                    # FCP 단위 테스트
-│   ├── 3_planning/amm/                    # AMM 단위 테스트
+│   ├── 3_planning/amm/                    # AMM 및 WebUI 에디터(`test_amm_mission_editor.py`) 단위 테스트
 │   ├── e2e/                               # 멀티노드 종단간(E2E) 패킷 시뮬레이션 시나리오 슈트
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
 │
 ├── tools/                                 # 개발·검증 CLI 도구
+│   ├── amm_mission_editor.html            # 호스트 PC 오프라인 WebUI 미션 에디터 (`TASK-402` 구현 중)
 │   ├── run_e2e_tests.py                   # 멀티노드 E2E 패킷 시뮬레이션 러너
 │   ├── run_mutation_tests.py              # 테스트 실효성 검증용 돌연변이 테스터 (살상률 측정)
 │   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
@@ -153,7 +155,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 8개 통합 시뮬레이션 스위트(12개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 8개 통합 시뮬레이션 스위트(13개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```
@@ -181,7 +183,7 @@ python tools/verify_all_specs.py
   ```
 
 ### 6. 사양서 상태 분포 검증
-15대 활성 사양서의 상태 분포(`Implemented` / `Approved`)를 검사합니다 (현행 분포는 [GEMINI.md](GEMINI.md) §3 참조):
+코어 15대 활성 사양서의 상태 분포(`Implemented` / `Approved`)를 검사합니다 (에디터 사양서 포함 전체 16종 분포는 [GEMINI.md](GEMINI.md) §3 참조):
 ```bash
 python tools/verify_spec_status.py
 ```

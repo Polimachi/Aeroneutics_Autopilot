@@ -39,24 +39,9 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(err3, "NON_TABLE_PACKET")
     end)
 
-    it("builds and sends MSG_OPERATOR_CMD onto Base+0", function()
+    it("enforces Zero-Fallback by removing outbound Base+0 send_operator_cmd", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
-        local transmitted = {}
-        local mock_modem = {
-            transmit = function(chan, reply_chan, payload)
-                table.insert(transmitted, { chan = chan, reply_chan = reply_chan, payload = payload })
-            end
-        }
-        net.modem = mock_modem
-
-        local ok = net:send_operator_cmd("CRUISE", "CRUISE", { targetWaypoint = { x = 100, z = 200 }, targetAlt = 150 }, "NONE", "PILOT_PRIMARY")
-        assert_true(ok)
-        assert_eq(#transmitted, 1)
-        assert_eq(transmitted[1].chan, 10000) -- Base+0
-        assert_eq(transmitted[1].payload.type, "MSG_OPERATOR_CMD")
-        assert_eq(transmitted[1].payload.payload.command, "CRUISE")
-        assert_eq(transmitted[1].payload.payload.params.targetAlt, 150)
-        assert_eq(transmitted[1].payload.payload.authority, "PILOT_PRIMARY")
+        assert_nil(net.send_operator_cmd)
     end)
 
     it("builds and sends MSG_EMERGENCY_OVERRIDE onto Base+1 with E_STOP and ESTOP_CONFIRM_KEY", function()
@@ -80,7 +65,7 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(transmitted[1].payload.payload.source, "AMM")
     end)
 
-    it("binds dual modems opening onboard Base+0,2,3,4,5 and infra 50000,50001,50003,50004,60002", function()
+    it("binds dual modems opening onboard Base+0,1,2,3,4 and infra Base+5,50000,50001,50003,50004,60002", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local top_m = mock.modem({ wireless = true })
         local back_m = mock.modem({ wireless = true })
@@ -88,12 +73,14 @@ describe("AMM Network Manager and Packet Protocol", function()
         net:bind_modems(top_m, back_m, 10000)
         assert_false(net.modemFallbackActive)
         assert_true(top_m.isOpen(10000))
+        assert_true(top_m.isOpen(10001))
         assert_true(top_m.isOpen(10002))
         assert_true(top_m.isOpen(10003))
         assert_true(top_m.isOpen(10004))
-        assert_true(top_m.isOpen(10005))
+        assert_false(top_m.isOpen(10005))
         assert_false(top_m.isOpen(50000))
 
+        assert_true(back_m.isOpen(10005))
         assert_true(back_m.isOpen(50000))
         assert_true(back_m.isOpen(50001))
         assert_true(back_m.isOpen(50003))
@@ -109,7 +96,9 @@ describe("AMM Network Manager and Packet Protocol", function()
         net:bind_modems(single_m, nil, 10000)
         assert_true(net.modemFallbackActive)
         assert_true(single_m.isOpen(10000))
+        assert_true(single_m.isOpen(10001))
         assert_true(single_m.isOpen(10004))
+        assert_true(single_m.isOpen(10005))
         assert_true(single_m.isOpen(50000))
         assert_true(single_m.isOpen(60002))
     end)
@@ -148,9 +137,12 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(net.baseChannel, 10040)
         assert_false(top_m.isOpen(10000))
         assert_false(top_m.isOpen(10004))
+        assert_false(back_m.isOpen(10005))
         assert_true(top_m.isOpen(10040))
         assert_true(top_m.isOpen(10044))
-        assert_true(top_m.isOpen(10020)) -- Zone 3 payload channel preserved
+        assert_true(back_m.isOpen(10045))
+        assert_false(top_m.isOpen(10020)) -- Old Zone 3 channel closed
+        assert_true(top_m.isOpen(10060)) -- Zone 3 offset 20 migrated to new base 10040+20
     end)
 
     it("suppresses MSG_MFD_STATE transmission when activeSource is MFD_ACRO", function()

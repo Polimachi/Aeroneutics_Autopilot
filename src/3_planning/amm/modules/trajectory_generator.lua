@@ -6,7 +6,6 @@ local facility_client = require("facility_client")
 local trajectory_generator = {}
 
 trajectory_generator.MODES = {
-    IDLE = "IDLE",
     IDLE_ARMED = "IDLE_ARMED",
     TAKEOFF = "TAKEOFF",
     CRUISE = "CRUISE",
@@ -86,7 +85,7 @@ local function generate_takeoff(state, nav, fac, goal, dt, now_ms)
     end
 
     local anchor = state.takeoffAnchorPos or nav.pos
-    local targetY = state.takeoffOriginY + clearanceAlt
+    local targetY = sanitize_num(goal and goal.targetAlt, state.takeoffOriginY + clearanceAlt)
     local distRemaining = math.max(0.0, targetY - nav.pos.y)
 
     local isAero = (state.airframeType == "FIXED_WING" or state.airframeType == "WINGED_VTOL")
@@ -111,7 +110,7 @@ local function generate_cruise(state, nav, fac, goal, dt, now_ms)
     local targetSpeed = sanitize_num(goal and goal.targetSpeed, cfgDefSpeed)
     local tgt = (goal and goal.targetPos) or nav.pos
     local targetAlt = sanitize_num(goal and goal.targetAlt, tgt.y or nav.pos.y)
-    local targetY = tgt.y or targetAlt
+    local targetY = (goal and goal.targetPos) and sanitize_num(goal.targetPos.y, targetAlt) or targetAlt
 
     local dx = tgt.x - nav.pos.x
     local dy = targetY - nav.pos.y
@@ -189,13 +188,16 @@ local function generate_loiter(state, nav, fac, goal, dt, now_ms)
 
     local tan_hdg = (math.deg(math.atan2(tx, -tz)) + 360.0) % 360.0
     local heading = apply_yaw_rate_limit(state.prevHeading or (nav.attitude and nav.attitude.heading) or 0.0, tan_hdg, maxRate, dt)
+    local maxVert = tonumber(goal and goal.maxVertSpeedMps) or cfgTraj.loiterVertSpeedMps or 3.0
+    local alt_err = targetAlt - nav.pos.y
+    local vy = (math.abs(alt_err) > 0.1) and clamp(alt_err * 0.5, -maxVert, maxVert) or 0.0
 
     return {
         arm = true,
         flightActive = true,
         constraintProfile = (goal and goal.constraintProfile) or "STANDARD",
         targetPos = { x = center.x + ux * R, y = targetAlt, z = center.z + uz * R },
-        targetVel = { vx = v_tan_x + v_rad_x, vy = 0.0, vz = v_tan_z + v_rad_z },
+        targetVel = { vx = v_tan_x + v_rad_x, vy = vy, vz = v_tan_z + v_rad_z },
         feedforwardAccel = { ax = ax_in, ay = 0.0, az = az_in },
         targetHeading = heading,
         headingMode = (goal and goal.headingMode) or "AUTO",
@@ -472,7 +474,6 @@ local function generate_emergency_land(state, nav, fac, goal, dt, now_ms)
 end
 
 local MODE_GENERATORS = {
-    IDLE = generate_idle,
     IDLE_ARMED = generate_idle,
     TAKEOFF = generate_takeoff,
     CRUISE = generate_cruise,
@@ -549,7 +550,7 @@ function trajectory_generator.compute(state, navState, facilityState, goal, dt, 
         attitude = nav.attitude or { pitch = 0.0, roll = 0.0, heading = st.prevHeading or 0.0 },
     }
 
-    local mode = (goal and goal.flightMode) or "IDLE"
+    local mode = (goal and goal.flightMode) or "IDLE_ARMED"
     if mode ~= "TAKEOFF" then
         st.takeoffOriginY = nil
         st.takeoffAnchorPos = nil

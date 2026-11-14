@@ -174,4 +174,38 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
         }, 5300)
         assert_true(ok_w)
     end)
+
+    it("drives ACT_PAY_SET_ROI and ACT_PAY_CLEAR_ROI with optional Zone 3 gimbal bus dispatch", function()
+        local net_m = mock.modem({ wireless = true })
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        net:bind_modem(net_m)
+        local runner = hook_runner.new({ net = net })
+
+        -- Without channelOffset: succeeds cleanly for AMM/FCP-level POI tracking
+        local ok_fcp, err_fcp = runner:start_action({
+            checkpointId = "CP_ROI_1",
+            action = "ACT_PAY_SET_ROI",
+            params = { poiPos = { x = 100, y = 64, z = 200 } },
+        }, 6000)
+        assert_true(ok_fcp)
+        assert_nil(err_fcp)
+
+        -- With channelOffset: dispatches Zone 3 SET_ROI / CLEAR_ROI payload commands
+        local ok_z3 = runner:start_action({
+            checkpointId = "CP_ROI_2",
+            action = "ACT_PAY_SET_ROI",
+            params = { channelOffset = 22, poiPos = { x = 100, y = 64, z = 200 }, waitForAck = false },
+        }, 6100)
+        assert_true(ok_z3)
+        assert_eq(net_m._transmitted[1].tx, 10022)
+        assert_eq(net_m._transmitted[1].pkt.payload.command, "SET_ROI")
+
+        local ok_clr = runner:start_action({
+            checkpointId = "CP_ROI_3",
+            action = "ACT_PAY_CLEAR_ROI",
+            params = { channelOffset = 22, waitForAck = false },
+        }, 6200)
+        assert_true(ok_clr)
+        assert_eq(net_m._transmitted[2].pkt.payload.command, "CLEAR_ROI")
+    end)
 end)

@@ -97,6 +97,8 @@ describe("Scenario 3: GPS Closed-Loop Swarm Triangulation, Service Status & Mult
             bandwidth = 40,
         })
         amm_net.modem = amm.modem
+        amm_net.primaryModem = amm.modem
+        amm_net.infraModem = amm.modem
         local nav_state = nav_engine.init({
             system = { domainId = "AIRCRAFT_01" },
             channels = { baseChannel = 10000, bandwidth = 40 },

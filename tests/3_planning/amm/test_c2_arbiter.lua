@@ -17,13 +17,17 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         return q, net, arb, transmitted
     end
 
-    it("initializes with PILOT_PRIMARY authority and idle state", function()
+    it("initializes with PILOT_PRIMARY authority, idle state, and disarmed IDLE_ARMED goal", function()
         local q, net, arb = create_fixture()
         assert_eq(arb.authority, "PILOT_PRIMARY")
         assert_eq(q.state, "IDLE")
+        local g = arb:get_effective_goal()
+        assert_eq(g.flightMode, "IDLE_ARMED")
+        assert_false(g.arm)
+        assert_false(g.flightActive)
     end)
 
-    it("suspends queue and adopts GCS_OVERRIDE without retransmitting on Base+0", function()
+    it("suspends queue and adopts GCS_OVERRIDE into Base+4 effective goal without Base+0 retransmit", function()
         local q, net, arb, tx = create_fixture()
         q:add(100, 200)
         assert_eq(q.state, "EN_ROUTE")
@@ -41,82 +45,86 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         arb:handle_gcs_packet(gcs_packet)
         assert_eq(arb.authority, "GCS_OVERRIDE")
         assert_eq(q.state, "SUSPENDED")
-        -- Non-loopback check: tx must remain empty!
+        assert_eq(arb:get_effective_goal().flightMode, "LOITER")
+        -- Zero-Fallback: no outbound Base+0 MSG_OPERATOR_CMD retransmit
         assert_eq(#tx, 0)
     end)
 
-    it("restores PILOT_PRIMARY and dispatches command upon pilot action", function()
+    it("restores PILOT_PRIMARY and updates effective goal to HOVER_HOLD on HOLD without Base+0 tx", function()
         local q, net, arb, tx = create_fixture()
         arb.authority = "GCS_OVERRIDE"
 
         arb:handle_pilot_action("HOLD")
         assert_eq(arb.authority, "PILOT_PRIMARY")
         assert_eq(q.state, "SUSPENDED")
-        assert_eq(#tx, 1)
-        assert_eq(tx[1].payload.payload.emergencyAction, "HOVER_HOLD")
-        assert_eq(tx[1].payload.payload.authority, "PILOT_PRIMARY")
+        assert_eq(#tx, 0)
+        local g = arb:get_effective_goal()
+        assert_eq(g.flightMode, "HOVER_HOLD")
+        assert_true(g.arm)
+        assert_true(g.flightActive)
     end)
 
-    it("coordinates ground-to-air handover waiting for FCP CRUISE state", function()
+    it("coordinates ground-to-air handover waiting for FCP CRUISE state via Base+4 goal", function()
         local q, net, arb, tx = create_fixture()
         q:add(500, 500, 150, 20)
 
         -- Pilot commands TAKEOFF
         arb:handle_pilot_action("TAKEOFF", { targetAlt = 150 })
-        assert_eq(#tx, 1)
-        assert_eq(tx[1].payload.payload.command, "TAKEOFF")
+        assert_eq(#tx, 0)
+        assert_eq(arb:get_effective_goal().flightMode, "TAKEOFF")
         assert_true(arb.fcpTakeoffActive)
 
         -- FCP still taking off
-        arb:handle_mfd_state({
+        arb:handle_flight_telemetry({
             payload = {
                 fsmState = "TAKEOFF",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
-        assert_eq(#tx, 1) -- WP1 not dispatched yet
+        assert_eq(arb:get_effective_goal().flightMode, "TAKEOFF")
 
         -- FCP reaches clearance altitude and transitions to CRUISE
-        arb:handle_mfd_state({
+        arb:handle_flight_telemetry({
             payload = {
                 fsmState = "CRUISE",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
         assert_false(arb.fcpTakeoffActive)
-        assert_eq(#tx, 2)
-        assert_eq(tx[2].payload.payload.command, "CRUISE")
-        assert_eq(tx[2].payload.payload.params.targetWaypoint.x, 500)
+        local g = arb:get_effective_goal()
+        assert_eq(g.flightMode, "CRUISE")
+        assert_eq(g.targetPos.x, 500)
+        assert_eq(#tx, 0)
     end)
 
-    it("handles waypoint arrival and final landing/loiter transitions", function()
+    it("handles waypoint arrival via MSG_FLIGHT_TELEMETRY and final landing/loiter goal transitions", function()
         local q, net, arb, tx = create_fixture()
         q:add(100, 100)
         q:add(200, 200, 120, 15, "PAD_BRAVO_01")
 
         -- Craft arrives at WP1
-        arb:handle_mfd_state({
+        arb:handle_flight_telemetry({
             payload = {
                 fsmState = "CRUISE",
                 navigation = { currentPos = { x = 100, z = 100 } }
             }
         })
-        -- Should advance and transmit WP2
-        assert_true(#tx >= 1)
-        local last_tx = tx[#tx].payload.payload
-        assert_eq(last_tx.params.targetWaypoint.x, 200)
+        local g2 = arb:get_effective_goal()
+        assert_eq(g2.flightMode, "CRUISE")
+        assert_eq(g2.targetPos.x, 200)
 
         -- Craft arrives at WP2 (final waypoint with facilityId)
-        arb:handle_mfd_state({
+        arb:handle_flight_telemetry({
             payload = {
                 fsmState = "CRUISE",
                 navigation = { currentPos = { x = 200, z = 200 } }
             }
         })
         assert_eq(q.state, "COMPLETED")
-        local final_tx = tx[#tx].payload.payload
-        assert_eq(final_tx.flightMode, "LANDING")
-        assert_eq(final_tx.params.designatedFacilityId, "PAD_BRAVO_01")
+        local g_final = arb:get_effective_goal()
+        assert_eq(g_final.flightMode, "LANDING")
+        assert_eq(g_final.designatedFacilityId, "PAD_BRAVO_01")
+        assert_eq(#tx, 0)
     end)
 
     it("arbitrates Base+0 MSG_MISSION_CMD (RUN, BUSY_REJECTED, forceRestart, FILE_NOT_FOUND, DEFERRED, STOP/PAUSE/RESUME/NEXT) and sends MSG_MISSION_ACK", function()
@@ -312,11 +320,11 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_eq(tx[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")
         assert_eq(tx[1].payload.payload.source, "AMM")
         local goal = arb:get_effective_goal()
-        assert_eq(goal.flightMode, "IDLE")
+        assert_eq(goal.flightMode, "IDLE_ARMED")
         assert_false(goal.arm)
     end)
 
-    it("triggers FCP 500ms timeout raising alert banner and HOVER_HOLD fallback", function()
+    it("triggers FCP 500ms timeout raising alert banner and clears timeout emergencyGoal on recovery", function()
         local q, net, arb, tx = create_fixture()
         arb:handle_outer_loop_status({
             type = "MSG_OUTER_LOOP_STATUS",
@@ -332,32 +340,65 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_true(string.find(arb.lastBanner, "FCP TIMEOUT") ~= nil)
         local goal = arb:get_effective_goal()
         assert_eq(goal.flightMode, "HOVER_HOLD")
+
+        -- Recovery clears _fcpTimeout emergencyGoal
+        arb:handle_outer_loop_status({
+            type = "MSG_OUTER_LOOP_STATUS",
+            payload = { trackingStatus = "TRACKING", flightMode = "CRUISE" }
+        }, 1700)
+        assert_false(arb.fcpTimedOut)
+        assert_nil(arb.emergencyGoal)
     end)
 
-    it("enforces fuel failsafe thresholds with FAILSAFE_RTH and EMERGENCY_LAND", function()
+    it("enforces debounced & unilaterally latched fuel failsafes via chattering_guard", function()
         local q, net, arb, tx = create_fixture()
         arb:handle_flight_telemetry({
             type = "MSG_FLIGHT_TELEMETRY",
-            payload = { fuel = 0.25, activeSource = "FCP" }
+            payload = { fuel = 0.25, controlState = "CRUISE", activeSource = "FCP" }
         }, 1000)
         assert_nil(arb.emergencyGoal)
 
-        -- Fuel drops below 0.20 -> FAILSAFE_RTH
+        -- 59 ticks below 0.20 must NOT latch yet (default lowFuelDebounceTicks = 60)
+        for i = 1, 59 do
+            arb:handle_flight_telemetry({
+                type = "MSG_FLIGHT_TELEMETRY",
+                payload = { fuel = 0.18, controlState = "CRUISE", activeSource = "FCP" }
+            }, 1000 + i * 50)
+        end
+        assert_nil(arb.emergencyGoal)
+
+        -- 60th tick latches FAILSAFE_RTH
         arb:handle_flight_telemetry({
             type = "MSG_FLIGHT_TELEMETRY",
-            payload = { fuel = 0.18, activeSource = "FCP" }
-        }, 1100)
+            payload = { fuel = 0.18, controlState = "CRUISE", activeSource = "FCP" }
+        }, 4000)
         assert_not_nil(arb.emergencyGoal)
         assert_eq(arb.emergencyGoal.flightMode, "FAILSAFE_RTH")
         assert_true(string.find(arb.lastBanner, "LOW FUEL") ~= nil)
 
-        -- Fuel drops below 0.10 -> EMERGENCY_LAND
-        arb:handle_flight_telemetry({
-            type = "MSG_FLIGHT_TELEMETRY",
-            payload = { fuel = 0.08, activeSource = "FCP" }
-        }, 1200)
+        -- 30 ticks below 0.10 latches EMERGENCY_LAND (default emergFuelDebounceTicks = 30)
+        for i = 1, 30 do
+            arb:handle_flight_telemetry({
+                type = "MSG_FLIGHT_TELEMETRY",
+                payload = { fuel = 0.08, controlState = "CRUISE", activeSource = "FCP" }
+            }, 4000 + i * 50)
+        end
         assert_eq(arb.emergencyGoal.flightMode, "EMERGENCY_LAND")
         assert_true(string.find(arb.lastBanner, "CRITICAL FUEL") ~= nil)
+
+        -- Unilateral latch stays active while armed even if fuel fluctuates upward
+        arb:handle_flight_telemetry({
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { fuel = 0.30, controlState = "CRUISE", activeSource = "FCP" }
+        }, 6000)
+        assert_eq(arb.emergencyGoal.flightMode, "EMERGENCY_LAND")
+
+        -- Disarmed + above reset margin unlatches
+        arb:handle_flight_telemetry({
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { fuel = 0.30, controlState = "DISARMED", activeSource = "FCP" }
+        }, 6100)
+        assert_nil(arb.emergencyGoal)
     end)
 
     it("propagates mission pause and abort fallbackPolicy goals through c2_arbiter:get_effective_goal for [I-12]", function()
@@ -433,12 +474,12 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_true(g_loiter.arm)
         assert_true(g_loiter.flightActive)
 
-        -- 5. Deliberate stop while DISARMED on ground -> IDLE with arm=false, flightActive=false
+        -- 5. Deliberate stop while DISARMED on ground -> IDLE_ARMED with arm=false, flightActive=false
         assert_true(eng:start("SINGLE", 23000))
         eng:step_telemetry({ fsmState = "DISARMED", navigation = { currentPos = { x = 0, y = 64, z = 0 } } }, 23050)
         assert_true(eng:stop(23100))
         local g_stop = arb:get_effective_goal()
-        assert_eq(g_stop.flightMode, "IDLE")
+        assert_eq(g_stop.flightMode, "IDLE_ARMED")
         assert_false(g_stop.arm)
         assert_false(g_stop.flightActive)
     end)
@@ -500,5 +541,49 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
 
         fs.delete("missions/auth_sortie.json")
         fs.delete("missions/precond_fail.json")
+    end)
+
+    it("ignores AMM_INTEGRATED self-echo and isolates Base+3 handle_mfd_state from driving mission_engine", function()
+        local mission_engine = require("mission_engine")
+        local q, net, arb = create_fixture()
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        assert_true(eng:load_table({
+            version = "2.0.0",
+            missionId = "MFD_ISO",
+            checkpoints = {
+                { checkpointId = "CP_1", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 100, y = 100, z = 0 }, targetAlt = 100 } },
+                { checkpointId = "CP_2", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 200, y = 100, z = 0 }, targetAlt = 100 } },
+            },
+        }))
+        assert_true(eng:start("SINGLE", 1000))
+        assert_eq(eng.active_index, 1)
+
+        -- Self-echo (AMM_INTEGRATED) must be dropped completely
+        arb:handle_mfd_state({
+            payload = { source = "AMM_INTEGRATED", fsmState = "CRUISE", activeSource = "MFD_ACRO", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
+        }, 1050)
+        assert_nil(arb.latest_mfd_payload)
+        assert_eq(arb.activeSource, "FCP")
+        assert_eq(eng.active_index, 1)
+
+        -- Genuine external Base+3 (e.g. VAS MFD_ACRO) updates state/activeSource but never drives mission_engine (even across 4+ ticks)
+        for i = 1, 4 do
+            arb:handle_mfd_state({
+                payload = { source = "VAS_ACRO", fsmState = "CRUISE", activeSource = "MFD_ACRO", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
+            }, 1100 + (i - 1) * 50)
+        end
+        assert_not_nil(arb.latest_mfd_payload)
+        assert_eq(arb.activeSource, "MFD_ACRO")
+        assert_eq(eng.active_index, 1)
+
+        -- Base+2 MSG_FLIGHT_TELEMETRY drives mission_engine progression (4 ticks satisfy PROXIMITY_3D settleTicks = 4)
+        for i = 1, 4 do
+            arb:handle_flight_telemetry({
+                payload = { fsmState = "CRUISE", activeSource = "FCP", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
+            }, 1300 + (i - 1) * 50)
+        end
+        assert_eq(eng.active_index, 2)
     end)
 end)

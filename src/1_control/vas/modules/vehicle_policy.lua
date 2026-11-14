@@ -13,9 +13,9 @@ function vehicle_policy.init(policyConfig)
         vehicleType = cfg.vehicleType or "WINGED_VTOL",
         maxTiltDeg = env.maxTiltDeg or 35.0,
         stallSpeed = stall.stallSpeed or 10.0,
-        minStallThrottle = stall.minThrottle or 0.60,
+        minStallThrottle = (stall.minStallThrottle ~= nil) and stall.minStallThrottle or 0.40,
         stallNoseDownPitchDeg = stall.stallNoseDownPitchDeg or -5.0,
-        vFe = (stall.flapVfeLimit) or cfg.vFe or 15.0,
+        vFe = (stall.flapVfeLimit ~= nil) and stall.flapVfeLimit or 15.0,
         antiTorqueCoeff = trim.antiTorqueCoeff or 0.0,
         pitchTrim = trim.pitchTrim or 0.0,
         transitionAlpha = 0.0
@@ -51,7 +51,7 @@ function vehicle_policy.resolve_flap_target(policy, rawCmd, airspeed, health)
     end
     local flap = tonumber(rawCmd and rawCmd.flapTarget) or 0.0
     local v = tonumber(airspeed) or 0.0
-    local isVValid = (health and health.velocity ~= false) and (health and health.isVelocityValid ~= false)
+    local isVValid = (health and health.isVelocityValid ~= false)
     if isVValid and v > (policy.vFe or 15.0) then
         return 0.0
     end
@@ -61,10 +61,10 @@ end
 function vehicle_policy.apply_stall_guard(policy, telem, conditionedCmd)
     local health = telem.sensorHealth or {}
     local airspeed = telem.airspeed or 0.0
-    local isVValid = (health.velocity ~= false) and (health.isVelocityValid ~= false) and (health.isAirspeedValid ~= false)
+    local isVValid = (health.isAirspeedValid == true)
     local isAero = vehicle_policy.is_aerodynamic(policy)
     if isVValid and isAero and airspeed < policy.stallSpeed then
-        local minThrust = math.max(0.0, math.min(1.0, tonumber(policy.minStallThrottle) or 0.60))
+        local minThrust = math.max(0.0, math.min(1.0, tonumber(policy.minStallThrottle) or 0.40))
         conditionedCmd.collectiveThrust = math.max(conditionedCmd.collectiveThrust or 0.0, minThrust)
         local eul = quat.to_euler(conditionedCmd.targetQuaternion)
         local noseDown = policy.stallNoseDownPitchDeg or -5.0

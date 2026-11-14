@@ -38,9 +38,9 @@ end
 local function build_channel_map(baseCh, sub)
     local s = sub or {}
     local zo = network_manager.ZONE_OFFSETS
-    local aeroOff = s.asaActuation or s.aero or zo.asaActuation or zo.aero
+    local aeroOff = s.asaActuation or zo.asaActuation
     return {
-        c2 = baseCh + (s.c2 or zo.c2),
+        c2 = baseCh + (s.c2Command or zo.c2),
         guidance = baseCh + (s.guidance or zo.guidance),
         telemetry = baseCh + (s.telemetry or zo.telemetry),
         mfd = baseCh + (s.mfd or zo.mfd),
@@ -109,11 +109,17 @@ function network_manager.init(systemConfig)
         topM.open(ch.aero)
     end
 
+    local vType = cfg.vehicleType or "WINGED_VTOL"
+    local isAero = (vType == "FIXED_WING" or vType == "WINGED_VTOL")
+    local hwUuid = cfg.hardwareUuid or (os and os.getComputerLabel and os.getComputerLabel()) or "cc-core-01-uuid"
+
     return {
         wirelessModem = topM, wiredModem = botM,
         aircraftDomainId = cfg.aircraftDomainId or "AIRCRAFT_01",
+        airframeType = vType, isAero = isAero, hardwareUuid = hwUuid,
+        subchannels = sub, configPath = cfg.configPath or "config/system.json",
         baseChannel = baseCh, channels = ch, txSeq = 0, latestCommand = nil, adapterAsa = nil,
-        hangarChannels = nil, pendingRebind = nil
+        hangarChannels = nil, pendingRebind = nil, rebindTimerId = nil
     }
 end
 
@@ -140,10 +146,10 @@ function network_manager.broadcast_discovery(state)
     if not state or not state.channels then return false end
     if state.channels.actuation then
         network_manager.send_packet(state, state.channels.actuation, "MSG_ACTUATOR_DISCOVER_REQ", {
-            targetGroup = "ALL", targetThrusterId = "ALL", requestDomain = state.aircraftDomainId
+            targetGroup = "ALL", requestDomain = state.aircraftDomainId
         })
     end
-    local aeroCh = state.channels.asaActuation or state.channels.aero
+    local aeroCh = state.channels.asaActuation
     if aeroCh then
         network_manager.send_packet(state, aeroCh, "MSG_SURFACE_DISCOVER_REQ", {
             targetPod = "ALL", requestDomain = state.aircraftDomainId
@@ -188,18 +194,20 @@ local function handle_calibration_init(state, fsm, payload)
 
     local bindPayload = {
         action = "OPEN", stationId = state.hangarChannels.stationId, bayId = bayId,
-        baseHangarChannel = baseHangar, bayCalibrationTap = tapCh, bayCalibrationCmd = cmdCh
+        baseHangarChannel = baseHangar, bayCalibrationTap = tapCh, bayCalibrationCmd = cmdCh,
+        timeoutSec = tonumber(payload.timeoutSec) or 120
     }
     if state.channels and state.channels.actuation then
         network_manager.send_packet(state, state.channels.actuation, "MSG_CALIB_BAY_BIND", bindPayload)
     end
-    local aeroCh = state.channels and (state.channels.asaActuation or state.channels.aero)
+    local aeroCh = state.channels and state.channels.asaActuation
     if aeroCh then
         network_manager.send_packet(state, aeroCh, "MSG_CALIB_BAY_BIND", bindPayload)
     end
 
     network_manager.send_packet(state, telemCh, "MSG_CALIBRATION_INIT_ACK", {
-        status = "READY", bayId = bayId, aircraftDomainId = state.aircraftDomainId, baseChannel = state.baseChannel
+        aircraftDomainId = state.aircraftDomainId, hardwareUuid = state.hardwareUuid,
+        bayId = bayId, status = "READY", airframeType = state.airframeType, baseChannel = state.baseChannel
     })
     return true
 end
@@ -207,12 +215,14 @@ end
 local function handle_calib_close(state, fsm, rawPacket)
     local bayId = (rawPacket.payload and rawPacket.payload.bayId) or (state.hangarChannels and state.hangarChannels.bayId) or 1
     local closePayload = {
-        action = "CLOSE", bayId = bayId, stationId = (state.hangarChannels and state.hangarChannels.stationId) or "UNKNOWN"
+        action = "CLOSE", bayId = bayId,
+        stationId = (state.hangarChannels and state.hangarChannels.stationId) or "UNKNOWN",
+        baseHangarChannel = state.hangarChannels and state.hangarChannels.base
     }
     if state.channels and state.channels.actuation then
         network_manager.send_packet(state, state.channels.actuation, "MSG_CALIB_BAY_BIND", closePayload)
     end
-    local aeroCh = state.channels and (state.channels.asaActuation or state.channels.aero)
+    local aeroCh = state.channels and state.channels.asaActuation
     if aeroCh then
         network_manager.send_packet(state, aeroCh, "MSG_CALIB_BAY_BIND", closePayload)
     end
@@ -254,33 +264,101 @@ local function handle_calibration_packet(state, fsm, mixer, rawPacket)
     return true
 end
 
+local REBIND_TIMEOUT_MS = 500
+
 local function relay_rebind(state, rebindPayload)
     if state.channels and state.channels.actuation then
         network_manager.send_packet(state, state.channels.actuation, "MSG_CHANNEL_REBIND", rebindPayload)
     end
-    local aeroCh = state.channels and (state.channels.asaActuation or state.channels.aero)
+    local aeroCh = state.channels and state.channels.asaActuation
     if aeroCh then
         network_manager.send_packet(state, aeroCh, "MSG_CHANNEL_REBIND", rebindPayload)
     end
 end
 
+local function set_rebind_channels(state, baseCh, isOpen)
+    if not state.wirelessModem or not baseCh then return end
+    local chMap = build_channel_map(baseCh, state.subchannels)
+    local fn = isOpen and state.wirelessModem.open or state.wirelessModem.close
+    if not fn then return end
+    fn(chMap.c2)
+    fn(chMap.guidance)
+    fn(chMap.actuation)
+    fn(chMap.asaActuation)
+end
+
+local function persist_system_base(state, newBase)
+    if state.on_rebind_commit then state.on_rebind_commit(newBase) end
+    local path = state.configPath
+    if not (path and fs and fs.exists and fs.exists(path) and textutils) then return end
+    local rf = fs.open(path, "r")
+    if not rf then return end
+    local decoded = textutils.unserialiseJSON and textutils.unserialiseJSON(rf.readAll()) or {}
+    rf.close()
+    decoded.baseChannel = newBase
+    local ser = textutils.serializeJSON or textutils.serialiseJSON
+    local wf = ser and fs.open(path, "w")
+    if wf then
+        wf.write(ser(decoded))
+        wf.close()
+    end
+end
+
+local function emit_rebind_ack(state, txId, action, status, oldBase, newBase, subNodes)
+    local oldCh = build_channel_map(oldBase, state.subchannels)
+    network_manager.send_packet(state, oldCh.guidance, "MSG_CHANNEL_REBIND_ACK", {
+        transactionId = txId, nodeId = "01_core", action = action, status = status,
+        oldBaseChannel = oldBase, newBaseChannel = newBase, subNodesReady = subNodes
+    })
+end
+
 local function handle_rebind_prepare(state, p, newBase)
     if not network_manager.is_valid_base(newBase) then return false, "ERR_INVALID_NEW_BASE" end
-    if state.wirelessModem and state.wirelessModem.open then
-        state.wirelessModem.open(newBase + 0)
-        state.wirelessModem.open(newBase + 1)
-        state.wirelessModem.open(newBase + 10)
-        state.wirelessModem.open(newBase + 11)
-    end
-    state.pendingRebind = { transactionId = p.transactionId, oldBase = state.baseChannel, newBase = newBase }
+    local nowMs = (os.epoch and os.epoch("utc")) or 0
+    set_rebind_channels(state, newBase, true)
+    state.pendingRebind = {
+        transactionId = p.transactionId, oldBase = state.baseChannel, newBase = newBase,
+        startMs = nowMs, subNodesReady = { tap = false, asa = (not state.isAero) }, ackSent = false
+    }
     relay_rebind(state, {
         transactionId = p.transactionId, action = "PREPARE",
         oldBaseChannel = state.baseChannel, newBaseChannel = newBase, bandwidth = 40
     })
-    local ackCh = (state.channels and state.channels.guidance) or (state.baseChannel + 1)
-    network_manager.send_packet(state, ackCh, "MSG_CHANNEL_REBIND_ACK", {
-        transactionId = p.transactionId, nodeId = "01_core", status = "READY", subNodesOk = true
-    })
+    if os and os.startTimer then state.rebindTimerId = os.startTimer(0.55) end
+    return true
+end
+
+local function handle_rebind_ack(state, channel, p)
+    local pr = state.pendingRebind
+    if not pr or not p or p.transactionId ~= pr.transactionId then return false end
+    local actCh = state.channels and state.channels.actuation
+    local asaCh = state.channels and state.channels.asaActuation
+    if channel == actCh or p.nodeId == "02_tca" or p.nodeId == "TCA" then
+        pr.subNodesReady.tap = (p.status == "READY")
+    elseif channel == asaCh or p.nodeId == "06_asa" or p.nodeId == "ASA" then
+        pr.subNodesReady.asa = (p.status == "READY")
+    end
+    if p.status == "FAILED" and not pr.ackSent then
+        pr.ackSent = true
+        emit_rebind_ack(state, pr.transactionId, "PREPARE", "FAILED", pr.oldBase, pr.newBase, pr.subNodesReady)
+        set_rebind_channels(state, pr.newBase, false)
+        state.pendingRebind = nil
+    elseif pr.subNodesReady.tap and pr.subNodesReady.asa and not pr.ackSent then
+        pr.ackSent = true
+        emit_rebind_ack(state, pr.transactionId, "PREPARE", "READY", pr.oldBase, pr.newBase, pr.subNodesReady)
+    end
+    return true
+end
+
+function network_manager.step_rebind_watchdog(state, nowMs)
+    local pr = state and state.pendingRebind
+    if not pr or pr.ackSent then return false end
+    local now = nowMs or ((os.epoch and os.epoch("utc")) or 0)
+    if (now - (pr.startMs or 0)) < REBIND_TIMEOUT_MS then return false end
+    pr.ackSent = true
+    emit_rebind_ack(state, pr.transactionId, "PREPARE", "FAILED", pr.oldBase, pr.newBase, pr.subNodesReady)
+    set_rebind_channels(state, pr.newBase, false)
+    state.pendingRebind = nil
     return true
 end
 
@@ -292,14 +370,10 @@ local function handle_rebind_commit(state, p, newBase)
         transactionId = p.transactionId, action = "COMMIT",
         oldBaseChannel = oldBase, newBaseChannel = targetNewBase, bandwidth = 40
     })
-    if state.wirelessModem and state.wirelessModem.close then
-        state.wirelessModem.close(oldBase + 0)
-        state.wirelessModem.close(oldBase + 1)
-        state.wirelessModem.close(oldBase + 10)
-        state.wirelessModem.close(oldBase + 11)
-    end
+    set_rebind_channels(state, oldBase, false)
     state.baseChannel = targetNewBase
-    state.channels = build_channel_map(targetNewBase, {})
+    state.channels = build_channel_map(targetNewBase, state.subchannels)
+    persist_system_base(state, targetNewBase)
     state.pendingRebind = nil
     return true
 end
@@ -310,12 +384,7 @@ local function handle_rebind_rollback(state, p, newBase)
         transactionId = p.transactionId, action = "ROLLBACK",
         oldBaseChannel = state.baseChannel, newBaseChannel = targetNewBase, bandwidth = 40
     })
-    if targetNewBase and state.wirelessModem and state.wirelessModem.close then
-        state.wirelessModem.close(targetNewBase + 0)
-        state.wirelessModem.close(targetNewBase + 1)
-        state.wirelessModem.close(targetNewBase + 10)
-        state.wirelessModem.close(targetNewBase + 11)
-    end
+    set_rebind_channels(state, targetNewBase, false)
     state.pendingRebind = nil
     return true
 end
@@ -332,19 +401,28 @@ local function handle_channel_rebind(state, rawPacket)
 end
 
 local function handle_guidance_cmd(state, fsm, msgType, rawPacket)
+    local p = rawPacket.payload
     if msgType == "MSG_ATTITUDE_CMD" then
-        local cmdType = rawPacket.payload and rawPacket.payload.commandType
+        local cmdType = p and p.commandType
         if cmdType ~= "QUATERNION_RATE" and cmdType ~= "RATE_COMMAND" then
             return false
         end
     end
-    state.latestCommand = rawPacket.payload
+    local now = (os.epoch and os.epoch("utc")) or 0
+    local accepted = true
+    if fsm and fsm.arbitrate_c2 then
+        accepted = fsm.arbitrate_c2(fsm, p) ~= nil
+    end
+    if not accepted then
+        fsm.lastFcpCmdMs = now
+        return true
+    end
+    state.latestCommand = p
     if fsm then
-        fsm.lastFcpCmdMs = (os.epoch and os.epoch("utc")) or 0
-        fsm.lastFcpCmd = rawPacket.payload
-        if fsm.arbitrate_c2 then fsm.arbitrate_c2(fsm, rawPacket.payload) end
-        if fsm.handle_arm_command then fsm.handle_arm_command(fsm, rawPacket.payload)
-        elseif (fsm.currentState == "IDLE_ARMED" or fsm.currentState == "DISARMED") and rawPacket.payload.arm == true then
+        fsm.lastFcpCmdMs = now
+        fsm.lastFcpCmd = p
+        if fsm.handle_arm_command then fsm.handle_arm_command(fsm, p)
+        elseif (fsm.currentState == "IDLE_ARMED" or fsm.currentState == "DISARMED") and p.arm == true then
             fsm.currentState = "NORMAL"
         end
     end
@@ -365,11 +443,7 @@ function network_manager.dispatch(state, fsm, controller, mixer, channel, replyC
     elseif msgType == "MSG_CHANNEL_REBIND" then
         return handle_channel_rebind(state, rawPacket)
     elseif msgType == "MSG_CHANNEL_REBIND_ACK" then
-        if state.pendingRebind then
-            state.pendingRebind.acks = state.pendingRebind.acks or {}
-            table.insert(state.pendingRebind.acks, rawPacket.payload)
-        end
-        return true
+        return handle_rebind_ack(state, channel, rawPacket.payload)
     elseif channel == (state.channels and state.channels.guidance) or msgType == "MSG_ATTITUDE_CMD" then
         return handle_guidance_cmd(state, fsm, msgType, rawPacket)
     elseif msgType == "MSG_ACTUATOR_DISCOVER_ACK" then
@@ -386,7 +460,7 @@ function network_manager.dispatch(state, fsm, controller, mixer, channel, replyC
             if isLoss and fsm and fsm.transition_to then fsm.transition_to(fsm, "EMERGENCY_LAND", "TAP_TOTAL_LOSS") end
         end
         return true
-    elseif channel == (state.channels and (state.channels.asaActuation or state.channels.aero)) or msgType == "MSG_AERO_STATUS" then
+    elseif channel == (state.channels and state.channels.asaActuation) or msgType == "MSG_AERO_STATUS" then
         if state.adapterAsa and state.adapterAsa.update_feedback then
             state.adapterAsa:update_feedback(rawPacket.payload)
         end

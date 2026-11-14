@@ -6,14 +6,14 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.1.0` |
-| **최종 수정일 (Date)** | `2026-11-10` |
+| **문서 버전 (Version)** | `v1.1.1` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_development/installer/` |
 | **주관 도메인 (Domain)** | 통합 코드베이스 배포 및 계층형 패키지 매니저 (`0_development/installer`) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.25.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.11.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 §9 통합 인스톨러 연계)
 > - [GDRIVE_DEPLOYMENT_GUIDE.md](../../../guides/GDRIVE_DEPLOYMENT_GUIDE.md) (Google Drive 배포 운영 가이드)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 프로젝트 컨텍스트 및 불변 규칙)
@@ -22,6 +22,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.1.1` | 2026-11-14 | 연관 마스터 ICD(`v1.30.0`) 및 전체 구조도(`v2.15.0`) 버전 배지 동기화 (`Implemented` 유지, 코드 변경 없음) | Wave 1 전역 사양서 참조 배지 일괄 정합화 |
 | `v1.1.0` | 2026-11-10 | 역할/도메인별 2계층 TUI 폴더 탐색(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU`), 12행 뷰포트 스크롤링(`computeViewport`), `manifest.CATEGORY_ORDER`·`CATEGORIES`·조회 API(`getCategory`, `listCategories`, `listModulesByCategory`) 규격 추가 | 12개 이상 모듈 확장에 따른 `51x19` TUI 메뉴 행 포화 해소 (`TASK-116`) |
 | `v1.0.0` | 2026-11-08 | 통합 코드베이스 인스톨러 제정: 3종 배포 경로(`/installer.lua`, `/disk/installer.lua`, `wget run`), GitHub/GDrive 이중 소스, 스테이징 원자적 다운로드, Deep-Merge 설정 마이그레이션, 멀티부트 `/startup/00_<id>.lua` 후크 및 `/.version.json` 고아 파일 정리 (`TASK-005`) | 개별 서브시스템 배포 일원화 및 구 `gps/installer.lua` `[DEPRECATED]` 대체 |
 

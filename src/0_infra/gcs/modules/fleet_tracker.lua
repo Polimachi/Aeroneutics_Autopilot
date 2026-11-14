@@ -131,8 +131,8 @@ function fleet_tracker.update_telemetry(state, domain_id, mfd_state_payload, now
     if not craft then return false end
 
     craft.telemetry = mfd_state_payload
-    if mfd_state_payload and (mfd_state_payload.airframeType or mfd_state_payload.airframe or mfd_state_payload.mode) then
-        craft.airframeType = mfd_state_payload.airframeType or mfd_state_payload.airframe or mfd_state_payload.mode
+    if mfd_state_payload and mfd_state_payload.airframeType then
+        craft.airframeType = mfd_state_payload.airframeType
     end
     craft.lastSeenMs = now_ms or 0
     craft.isStale = false
@@ -156,7 +156,7 @@ function fleet_tracker.get_fleet_summary(state)
     for _, id in ipairs(state.craft_order) do
         local c = state.crafts[id]
         if c then
-            local af = c.airframeType or (c.telemetry and (c.telemetry.airframeType or c.telemetry.airframe or c.telemetry.mode)) or "UNKNOWN"
+            local af = c.airframeType or (c.telemetry and c.telemetry.airframeType) or "UNKNOWN"
             table.insert(list, {
                 domainId = c.domainId,
                 baseChannel = c.baseChannel,

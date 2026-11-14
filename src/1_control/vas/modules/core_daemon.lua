@@ -55,8 +55,6 @@ local function load_configs(configDir)
     }
 end
 
-pcall(load_configs, "config")
-
 local function resolve_debug_flag(cfg)
     if cfg.system.debug == nil and cfg.debug ~= nil then cfg.system.debug = cfg.debug end
     if cfg.system.debug == nil and fs and fs.exists and fs.exists("config.json") then
@@ -69,13 +67,15 @@ end
 
 local function resolve_thruster_config(cfg)
     local thrusterCfg = cfg.thrusters or {}
-    if (cfg.system and (cfg.system.vehicleType == "ADVANCED_VTOL" or cfg.system.airframeType == "ADVANCED_VTOL" or cfg.system.isVectorVtol)) then
+    local sys = cfg.system or {}
+    if sys.vehicleType == "ADVANCED_VTOL" or sys.isVectorVtol
+        or thrusterCfg.airframeType == "ADVANCED_VTOL" or thrusterCfg.isVectorVtol then
         thrusterCfg.isVectorVtol = true
         thrusterCfg.airframeType = "ADVANCED_VTOL"
     end
-    if cfg.system and cfg.system.pseudoInverseMatrix and not thrusterCfg.pseudoInverseMatrix then
-        thrusterCfg.pseudoInverseMatrix = cfg.system.pseudoInverseMatrix
-        thrusterCfg.controlEffectivenessMatrix = cfg.system.controlEffectivenessMatrix
+    if sys.pseudoInverseMatrix and not thrusterCfg.pseudoInverseMatrix then
+        thrusterCfg.pseudoInverseMatrix = sys.pseudoInverseMatrix
+        thrusterCfg.controlEffectivenessMatrix = sys.controlEffectivenessMatrix
     end
     return thrusterCfg
 end
@@ -91,6 +91,7 @@ function core_daemon.init(configDirOrTable)
     end
     cfg = cfg or {}
     cfg.system = cfg.system or {}
+    cfg.system.configPath = cfg.system.configPath or (dir .. "/system.json")
     resolve_debug_flag(cfg)
 
     local sensors = sensor_pipeline.init(cfg.sensors)
@@ -118,6 +119,7 @@ function core_daemon.init(configDirOrTable)
         cfg = cfg, sensors = sensors, fsm = fsm, net = net, fdCore = fdCore,
         policy = policy, adapter = adapter, adapterAsa = adapterAsa,
         controller = fdCore, mixer = adapter, feeder = feeder,
+        lastTapOutputs = nil, lastAsaOutputs = nil,
         running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil
     }
 end
@@ -132,7 +134,13 @@ local function step_kinematics(state, dt, nowMs)
     if not (state.adapter and state.adapter.tcaConnected) and (state.tickCount <= 5 or state.tickCount % rTicks == 0) and network_manager.broadcast_discovery then
         network_manager.broadcast_discovery(state.net)
     end
-    state_machine.update_watchdogs(state.fsm, nowMs, comState, healthMap, sensorOk)
+    local isAero = vehicle_policy.is_aerodynamic(state.policy)
+    local asaReady = (not isAero) or (state.adapterAsa and state.adapterAsa.discoveredPods and next(state.adapterAsa.discoveredPods) ~= nil)
+    local actuatorsReady = (state.adapter and state.adapter.tcaConnected == true) and asaReady
+    state_machine.update_watchdogs(state.fsm, nowMs, comState, healthMap, sensorOk, actuatorsReady)
+    if network_manager.step_rebind_watchdog then
+        network_manager.step_rebind_watchdog(state.net, nowMs)
+    end
     return comState, healthMap, sensorOk
 end
 
@@ -182,6 +190,8 @@ local function step_actuation(state, comState, dt)
     local safeTap = state_machine.apply_output_safety_rule(state.fsm, rawTap, false)
     local safeAsa = (isAero and rawAsa) and state_machine.apply_output_safety_rule(state.fsm, rawAsa, true) or nil
     local dynLoad = actuator_adapter_tca.compute_dynamic_load(state.adapter, safeTap)
+    state.lastTapOutputs = safeTap
+    state.lastAsaOutputs = safeAsa
 
     state.fdCore.lastDemands = { pitch = compWrench.pitchTorque, roll = compWrench.rollTorque, yaw = compWrench.yawTorque }
     state.fdCore.saturationFreeze = combSat.axisSaturatedPos.pitch or combSat.axisSaturatedNeg.pitch
@@ -204,18 +214,29 @@ function core_daemon.tick(state)
     })
     local isAero = vehicle_policy.is_aerodynamic(state.policy)
     if isAero and safeAsa then
-        network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
-            watchdogSeq = state.tickCount, controlState = state.fsm.currentState, surfaces = safeAsa
+        network_manager.send_packet(state.net, state.net.channels.asaActuation, "MSG_AERO_CMD", {
+            watchdogSeq = state.tickCount, controlState = state.fsm.currentState,
+            surfaces = safeAsa, dynamicPressureFactor = state.adapterAsa and state.adapterAsa.lastQScale or 1.0
         })
     end
 
     local tapOk = (state.adapter.healthStatus ~= "API_TOTAL_LOSS")
-    local asaOk = isAero and (state.adapterAsa.healthStatus ~= "API_TOTAL_LOSS") or true
+    local asaOk = (not isAero) or (state.adapterAsa.healthStatus ~= "TOTAL_LOSS")
     telemetry_feeder.tick(state.feeder, state.net, comState, state.fsm, state.mixer, {
         sensorOk = sensorOk, sensorHealth = healthMap,
-        actuatorHealth = { tap = tapOk, asa = asaOk }
+        actuatorHealth = { tap = tapOk, asa = asaOk, allOk = (tapOk and asaOk) }
     })
     return true
+end
+
+local function build_shutdown_tap_keys(state)
+    if state.lastTapOutputs and next(state.lastTapOutputs) ~= nil then return state.lastTapOutputs end
+    local keys = {}
+    for gId, _ in pairs((state.adapter and state.adapter.coefficients) or {}) do keys[gId] = 0 end
+    for _, gId in ipairs((state.adapter and state.adapter.vectorGroupOrder) or {}) do
+        keys[gId] = { thrust = 0, gimbalX = 0.0, gimbalY = 0.0 }
+    end
+    return keys
 end
 
 function core_daemon.shutdown(state, reason)
@@ -229,13 +250,13 @@ function core_daemon.shutdown(state, reason)
         })
     end
     local isAero = vehicle_policy.is_aerodynamic(state.policy)
-    local safeTap = state_machine.apply_output_safety_rule(fsm, {}, false)
-    local safeAsa = isAero and state_machine.apply_output_safety_rule(fsm, {}, true) or nil
+    local safeTap = state_machine.apply_output_safety_rule(fsm, build_shutdown_tap_keys(state), false)
+    local safeAsa = isAero and state_machine.apply_output_safety_rule(fsm, state.lastAsaOutputs or {}, true) or nil
     network_manager.send_packet(state.net, state.net.channels.actuation, "MSG_THRUST_CMD", {
         watchdogSeq = 0, controlState = "E_STOP", outputs = safeTap
     })
     if isAero and safeAsa then
-        network_manager.send_packet(state.net, state.net.channels.aero, "MSG_AERO_CMD", {
+        network_manager.send_packet(state.net, state.net.channels.asaActuation, "MSG_AERO_CMD", {
             watchdogSeq = 0, controlState = "E_STOP", surfaces = safeAsa
         })
     end
@@ -246,9 +267,12 @@ function core_daemon.handle_event(state, event, p1, p2, p3, p4)
         local ok, err = pcall(core_daemon.tick, state)
         if not ok then
             local nextSt = (state.fsm and state.fsm.isAirborne) and "AIRBORNE_EMERGENCY" or "E_STOP"
-            state_machine.transition_to(state, nextSt, "PANIC: " .. tostring(err))
+            state_machine.transition_to(state.fsm, nextSt, "PANIC: " .. tostring(err))
         end
         if state.running and os.startTimer then state.timerId = os.startTimer(0.05) end
+        return true
+    elseif event == "timer" and state.net and p1 == state.net.rebindTimerId then
+        network_manager.step_rebind_watchdog(state.net)
         return true
     elseif event == "modem_message" then
         return network_manager.dispatch(state.net, state.fsm, state.controller, state.mixer, p2, p3, p4)

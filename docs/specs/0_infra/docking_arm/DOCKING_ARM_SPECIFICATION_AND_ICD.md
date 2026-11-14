@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.11.2` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.12.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/docking_arm/` |
 | **주관 도메인 (Domain)** | 지상 인프라 도킹암 메커니즘 제어 (Ground Docking Arm) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.12.0` | 2026-11-14 | Wave 1 전역 사양 동기화: `[I-5]` `MSG_FACILITY_STATIC_GUIDE`·`MSG_FACILITY_DYNAMIC_GUIDE` 시설물 3종 대칭 공통 스키마(`facilityType = "DOCKING_ARM"`, `touchdownPoint`, `attitude`, `approachDirection = "FRONT" \| "BACK" \| "LEFT" \| "RIGHT" \| "UPWARD" \| "DOWNWARD"`, `deckStatus`, `landingPermitted`, `abortAlert`, 동적 `velocity`/`acceleration`/`angularRates`, 보조 `dockingCorridor`·`captureLatchReady`·`armState`) 정합 및 `portTargetPoint`·`portAttitude`·`boresightVector` 제거, `CH 50003` GAC 집약 비콘 단일 송출 명시(Arm Node 직접 송출 제거), `MSG_DOCKING_ARM_CMD` Zero-Fallback `[DEPRECATED]` 표기 정리 및 연관 문서 버전(`ICD v1.30.0`, `GAC v1.5.0`, `Diagram v2.15.0`, `GPS v2.3.3`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Landing Pad v2.5.0`, `Runway v1.11.0`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 시설물 3종 가이드 패킷 대칭 스키마 및 Zero-Fallback 준수 |
 | `v1.11.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 외부 공중 RF 교신 상대(`CH 50001`, `50003`, `Base_sec+0`, `Base_sec+10+Idx`, `Base+5`, `MSG_DOCK_CAPTURE_STAGE` `HARD_LOCKED` / `MSG_DOCKING_ARM_CMD` 알리아스)를 `기체 AMM (Node 03)`으로 일원화하고 `AMM`이 4단계 도킹 궤적 및 `-0.8` Abort 트리거를 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 하달·`HARD_LOCKED` 시 즉각 무장 해제하는 계층 분담 명시, `AMM v1.3.0` 의존성 및 연관 규격서 버전 동기화 | AMM 외부 게이트웨이·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.11.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.11.0` | 2026-11-08 | 특정 VTOL/DRONE 전속 전용 도킹암 운영 및 GAC 슬롯 배정 연동 원칙 신설 | GAC v1.4.0 전용 시설물 아키텍처 상호 동기화 |
@@ -23,15 +24,15 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.14.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.4)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.7)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.15.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
 
 ---
 
@@ -87,7 +88,8 @@
 ```mermaid
 flowchart TD
     ATC["기지/모선 관제탑 (ATC Node)<br/>[무선 CH 50001 / 50002]"]
-    ARM["도킹암 제어 컴퓨터 (Docking Arm Node)<br/>[무선 CH 50003 / Base_sec+1 / Base_sec+10+Idx]"]
+    GAC["지상 구역 관제사 (GAC Node)<br/>[무선 CH 50003 / Base_sec+0 / Base_sec+1]"]
+    ARM["도킹암 제어 컴퓨터 (Docking Arm Node)<br/>[무선 Base_sec+1 / Base_sec+10+Idx / Base+5]"]
     AMM["기체 AMM (Node 03)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
 
     subgraph WIRED_MECH["도킹암 유선 모뎀 구동망 (Wired Peripheral Network)"]
@@ -98,8 +100,8 @@ flowchart TD
         UMBILICAL["엄빌리컬 커플러 유닛 (dock_umbilical_unit)<br/>* Create Hose Pulley & Fluid Pump<br/>* CC Wired Modem Cable Coupler"]
     end
 
-    ARM -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| AMM
-    ARM <==>|"무선 Base_sec + 1 (로컬 백본)<br/>도킹암 전개/상태 보고"| ATC
+    GAC -.->|"무선 CH 50003 (1Hz 집약 비콘)<br/>MSG_FACILITY_BEACON"| AMM
+    ARM <==>|"무선 Base_sec + 1 (로컬 백본)<br/>도킹암 전개/상태 보고"| GAC
     AMM <==>|"무선 CH 50001 (ATC 관제)<br/>도킹 허가 및 언도킹 인가"| ATC
     AMM <==>|"무선 Base_sec + 10 + Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| ARM
     AMM <==>|"CH Base + 5 (결합 핸드셰이크)<br/>포획/엄빌리컬 상태 교환"| ARM
@@ -110,12 +112,12 @@ flowchart TD
 ### 2.1 무선 채널 할당 표
 | 채널 번호 | 채널 식별자 | 송신자 | 수신자 | 전송 주기 | 통신 목적 및 내용 |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`50003`** | `CH_FACILITY_BEACON` | Arm Node | All (AMM, GCS) | 1Hz | 도킹 포트 규격 (포트 직경, 어댑터 타입, 가용 상태, 이동성 플래그) (구버전 `30000` [DEPRECATED]) |
+| **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (AMM, GCS) | 1Hz | 섹터 집약 비콘(`facilitiesSummary` 포함; Arm Node 직접 송출 금지, `Base_sec+1`로 GAC 보고) (구버전 `30000` [DEPRECATED]) |
 | **`50001`** | `CH_ATC_COMM` | AMM / ATC | ATC / AMM | 이벤트 기반 | 도킹 진입 인가(`DOCK_APPROACH_REQ`), 언도킹 분리 허가 교신 (구버전 `30001` [DEPRECATED]) |
 | **`50002`** | `CH_ATC_FACILITY` | Tower ATC / GAC | GAC / Tower ATC | 1Hz / 이벤트 | 광역 관제탑과 GAC 간 섹터 관제 이양 및 상태 동기화 (구버전 `30002` [DEPRECATED]) |
 | **`Base_sec + 0`** | `CH_GAC_COMM` | AMM / GAC | GAC / AMM | 이벤트 | 도킹 섹터 체크인(`MSG_GAC_CHECKIN_REQ`), 도킹암 인가(`MSG_GAC_APPROACH_CLEARANCE`), 언도킹 허가 (구버전 `30100 + S` [DEPRECATED]) |
 | **`Base_sec + 1`** | `CH_SECTOR_FACILITY` | Arm Node / GAC | GAC / Arm Node | 1Hz / 이벤트 | 도킹암 노드와 직속 GAC 간 슬롯 배정(`MSG_ATC_SLOT_ASSIGN`), 전개/인입 상태 보고 (구버전 `30200 + S` [DEPRECATED]) |
-| **`Base_sec + 10 + Idx`** | `CH_TACTICAL_GUIDANCE` | Arm Node | AMM (Node 03) | 1Hz (정적)<br/>20Hz (동적) | 포트 중심 좌표, 조준선 벡터($\vec{n}_{bore}$), 동적 속도/가속도 스트리밍 (예: 50230, 구버전 `31000 + ID` [DEPRECATED]) |
+| **`Base_sec + 10 + Idx`** | `CH_TACTICAL_GUIDANCE` | Arm Node | AMM (Node 03) | 1Hz (정적)<br/>20Hz (동적) | 포트 중심 좌표(`touchdownPoint`), 자세(`attitude`), 진입 방향(`approachDirection`), 동적 속도/가속도 스트리밍 (예: 50230, 구버전 `31000 + ID` [DEPRECATED]) |
 | **`Base + 5`** | `CH_EXTERNAL_COMM` | Arm / AMM | AMM / Arm | 이벤트 | 래치 포획(`MSG_DOCK_CAPTURE_STAGE`), 엄빌리컬 서비스 상태 교환 |
 
 ### 2.2 유선 모뎀 주변기기 매핑 표 (Wired Modem Peripherals)
@@ -132,30 +134,36 @@ flowchart TD
 
 ## 3. 통신 패킷 상세 규격 (Message Envelope & Payload Specification)
 
-### 3.1 광역 상태 비콘 (`MSG_FACILITY_BEACON`, CH 50003, 1Hz)
+### 3.1 광역 상태 비콘 (`MSG_FACILITY_BEACON`, CH 50003 / $Base_{\text{sec}}+2$, 1Hz — GAC 집약 송출)
+> [!NOTE]
+> **GAC 집약 송출 원칙**: 개별 도킹암 노드는 `CH 50003`을 직접 송출하지 않고 `Base_sec+1`(`MSG_ATC_FACILITY_UPDATE`)로 관할 GAC에 가용 상태(`facilityId`, `status`, `dockingCorridor`, `umbilicalSupported`)를 보고하며, GAC가 `facilitiesSummary`(`totalDockingArms`, `freeDockingArms`)를 집약해 `CH 50003` / `Base_sec+2`로 송출합니다(구 개별 도킹암의 직접 `CH 50003` `MSG_FACILITY_BEACON` 송출 포맷은 `[DEPRECATED]`, 상세 스키마 정본은 [`GAC_PROGRAM_SPECIFICATION_AND_ICD.md`](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) §3.1 참조).
 ```lua
+-- GAC가 CH 50003 / Base_sec+2로 집약 송출하는 표준 비콘 계약 (GAC_PROGRAM_SPECIFICATION_AND_ICD.md §3.1)
 {
     ver = "1.9.5",
-    domainId = "DOCK_ARM_ALPHA_01",
+    domainId = "GAC_ALPHA_01",
     seq = 30015,
     type = "MSG_FACILITY_BEACON",
     time = 1729850000000,
     payload = {
-        facilityId = "DOCK_ARM_ALPHA_01",
-        facilityType = "DOCKING_ARM",
+        sectorId = "BASE_ALPHA_SECTOR_01",
+        sectorName = "Mothership Docking Bay Sector 01",
+        sectorType = "CARRIER_DECK",
+        towerAtcChannel = 50001,
+        gacChannel = 50201,                  -- 해당 섹터 관제 채널 (Base_sec + 0)
+        facilitiesSummary = {
+            totalLandingPads = 2,
+            freeLandingPads = 1,
+            totalRunways = 0,
+            freeRunways = 0,
+            totalDockingArms = 2,
+            freeDockingArms = 1,
+            maxSupportWeight = 40000.0,
+            maxSupportRadius = 12.0
+        },
+        surfaceWind = { speed = 2.4, direction = 195.0 },
         mobility = "DYNAMIC",                -- "STATIC" (지상 타워) | "DYNAMIC" (모선 붐)
-        atcChannel = 50001,
-        tacticalChannel = 50230,             -- 전술 채널 (Base_sec + 10 + 19)
-        status = "FREE",                     -- "FREE", "DEPLOYING", "LOCKED", "BERTHED", "MAINTENANCE"
-        portStandard = "PROBE_DROGUE_V2",    -- 도킹 포트 규격
-        corridorLength = 15.0,               -- 진입 정렬 회랑 길이 (m)
-        maxApproachSpeed = 0.5,              -- 최종 결합 허용 상대속도 (m/s)
-        standoffDistanceM = 18.0,            -- 모선 선체 기준 원거리 전개 거리 (m)
-        umbilicalSupported = {
-            dataSync = true,
-            liquidFuel = true,
-            highVoltage = true
-        }
+        status = "OPERATIONAL"
     }
 }
 ```
@@ -163,7 +171,7 @@ flowchart TD
 ---
 
 ### 3.2 고정 도킹암 정밀 가이드 패킷 (`MSG_FACILITY_STATIC_GUIDE`, Base_sec + 10 + Idx, 1Hz)
-지상 기지 갠트리 도킹암 전용 패킷입니다(예: CH 50230). 원거리 전개 대기 상태(`EXTENDED_WAIT`)의 포트 좌표와 진입 조준선 벡터를 제공합니다.
+지상 기지 갠트리 도킹암 전용 패킷입니다(예: CH 50230). 원거리 전개 대기 상태(`EXTENDED_WAIT`)의 포트 좌표(`touchdownPoint`), 3축 자세(`attitude`), 진입 방향(`approachDirection`)을 포함해 시설물 3종 대칭 공통 필수 스키마를 준수합니다.
 ```lua
 {
     ver = "1.9.5",
@@ -173,17 +181,23 @@ flowchart TD
     time = 1729850010000,
     payload = {
         facilityId = "DOCK_ARM_ALPHA_01",
+        facilityType = "DOCKING_ARM",
         targetAircraft = "AIRCRAFT_01",
-        portTargetPoint = {                  -- 원거리 전개된 도킹 포트 중심 3D 좌표 (Minecraft World Coordinates: X_MC, Y_MC, Z_MC)
+        touchdownPoint = {                   -- 원거리 전개된 도킹 포트 중심 3D 좌표 (구 portTargetPoint [DEPRECATED])
             x = 540.0,
             y = 110.5,
             z = -320.0
         },
-        boresightVector = {                  -- 진입 정렬 중심선 법선 단위 벡터
-            nx = 0.0,
-            ny = 0.0,
-            nz = 1.0
+        attitude = {                         -- 도킹 포트 정렬 3축 자세각 (deg, 구 boresightVector/portAttitude [DEPRECATED])
+            pitch = 0.0,
+            roll = 0.0,
+            yaw = 0.0
         },
+        approachDirection = "FRONT",         -- "FRONT" | "BACK" | "LEFT" | "RIGHT" | "UPWARD" | "DOWNWARD"
+        deckStatus = "STABLE",               -- "STABLE" | "DANGEROUS"
+        landingPermitted = true,             -- 도킹 포획 허용 여부
+        abortAlert = false,
+        -- DOCKING_ARM 대칭 보조 필드
         dockingCorridor = {
             lateralTolerance = 0.15,         -- 초정밀 수평 허용 공차 (m, VECTORED_VTOL 정합)
             verticalTolerance = 0.15,        -- 초정밀 수직 허용 공차 (m, VECTORED_VTOL 정합)
@@ -191,8 +205,8 @@ flowchart TD
             approachMaxSpeedMps = 0.4,       -- 최종 크립 최대 전진 속도 (m/s)
             abortToleranceLimit = 0.30       -- 300ms 초과 시 비상 이탈(Abort) 임계치 (m)
         },
-        armState = "EXTENDED_WAIT",          -- 원거리 전개 완료 대기 상태
-        abortAlert = false
+        captureLatchReady = true,            -- 기계식 래치 포획 준비 완료 여부
+        armState = "EXTENDED_WAIT"           -- 원거리 전개 완료 대기 상태
     }
 }
 ```
@@ -200,7 +214,7 @@ flowchart TD
 ---
 
 ### 3.3 동적 모선 도킹암 실시간 동역학 스트리밍 (`MSG_FACILITY_DYNAMIC_GUIDE`, Base_sec + 10 + Idx, 20Hz)
-비행선 모선, 공중 항공모함 등 이동 플랫폼 붐 전용 패킷입니다(예: CH 50230). 모선 동역학과 원거리 전개 포트의 6-DoF 상태를 20Hz로 스트리밍합니다.
+비행선 모선, 공중 항공모함 등 이동 플랫폼 붐 전용 패킷입니다(예: CH 50230). 시설물 3종 대칭 공통 필수 필드, 동적 운동학(`velocity`, `acceleration`, `angularRates`) 및 `DOCKING_ARM` 대칭 보조 필드를 20Hz로 스트리밍합니다.
 ```lua
 {
     ver = "1.9.5",
@@ -210,12 +224,23 @@ flowchart TD
     time = 1729850020050,
     payload = {
         facilityId = "MOTHERSHIP_BOOM_02",
+        facilityType = "DOCKING_ARM",
         targetAircraft = "AIRCRAFT_01",
-        portTargetPoint = {                  -- 시각 t에서의 원거리 전개 포트 중심 3D 좌표
+        touchdownPoint = {                   -- 시각 t에서의 원거리 전개 포트 중심 3D 좌표 (구 portTargetPoint [DEPRECATED])
             x = 1845.20,
             y = 280.40,
             z = -950.15
         },
+        attitude = {                         -- 포트 3축 자세 (deg, 구 portAttitude/boresightVector [DEPRECATED])
+            pitch = 0.5,
+            roll = 0.0,
+            yaw = 273.6
+        },
+        approachDirection = "FRONT",         -- "FRONT" | "BACK" | "LEFT" | "RIGHT" | "UPWARD" | "DOWNWARD"
+        deckStatus = "STABLE",               -- "STABLE" | "DANGEROUS"
+        landingPermitted = true,             -- 도킹 포획 허용 여부
+        abortAlert = false,                  -- 상대 거리 급감 등 비상 이탈 신호
+        -- 동적 시설물 공통 운동학 필드
         velocity = {                         -- 포트 3축 이동 속도 벡터 (m/s)
             vx = 15.2,
             vy = 0.0,
@@ -226,18 +251,21 @@ flowchart TD
             ay = 0.05,
             az = 0.00
         },
-        boresightVector = {                  -- 진입 조준 벡터
-            nx = -0.998,
-            ny = 0.0,
-            nz = -0.063
+        angularRates = {                     -- 3축 각속도 (deg/s)
+            pitchRate = 0.1,
+            rollRate = 0.0,
+            yawRate = 0.02
         },
-        portAttitude = {                     -- 포트 3축 자세 (deg)
-            pitch = 0.5,
-            roll = 0.0,
-            yaw = 273.6
+        -- DOCKING_ARM 대칭 보조 필드
+        dockingCorridor = {
+            lateralTolerance = 0.15,
+            verticalTolerance = 0.15,
+            angularToleranceDeg = 2.0,
+            approachMaxSpeedMps = 0.4,
+            abortToleranceLimit = 0.30
         },
         captureLatchReady = true,            -- 기계식 래치 포획 준비 완료 여부
-        abortAlert = false                   -- 상대 거리 급감 등 비상 이탈 신호
+        armState = "EXTENDED_WAIT"           -- 현재 도킹암 FSM 상태
     }
 }
 ```
@@ -248,15 +276,15 @@ flowchart TD
 
 #### 1. 도킹 체결 단계 갱신 패킷 (`MSG_DOCK_CAPTURE_STAGE`, Base_sec + 10 + Idx $\leftrightarrow$ Base+5)
 > [!IMPORTANT]
-> **도킹 결합 FSM 정합성 확정 (감사 결함 #1 해소)**:
+> **도킹 결합 FSM 정합성 확정 및 Zero-Fallback 단일화**:
 > 도킹 체결 확인 시 발신하는 공식 와이어 패킷 식별자는 `MSG_DOCK_CAPTURE_STAGE`이며, `stage = "HARD_LOCKED"`를 기체 `AMM (Node 03)`으로 전달하면 `AMM`이 즉시 `Base+4`(`CH_TRAJECTORY_CMD`)를 통해 `FCP (Node 04)` 및 `VAS (Node 01)`의 추진기 셧다운 및 `DISARMED` 전이를 완수합니다.
-> 비행 소프트웨어의 상호 호환성을 위해 `AMM (Node 03)` 및 도킹암 노드는 `MSG_DOCKING_ARM_CMD` (`ACTION = "CAPTURE_CLOSE"`) 식별자를 동등한 체결 완료 이벤트로 상호 수용(Aliasing)하여 FSM 교착 위험을 배제합니다.
+> 구버전 식별자 `MSG_DOCKING_ARM_CMD`는 `[DEPRECATED]`이며, Zero-Fallback 원칙에 따라 런타임 코드베이스는 `MSG_DOCK_CAPTURE_STAGE`만을 단일 채택합니다.
 
 ```lua
 {
     ver = "1.9.5",
     domainId = "DOCK_ARM_ALPHA_01",
-    type = "MSG_DOCK_CAPTURE_STAGE",         -- 공식 와이어 식별자 (알리아스: MSG_DOCKING_ARM_CMD 지원)
+    type = "MSG_DOCK_CAPTURE_STAGE",         -- 공식 와이어 식별자 (구 MSG_DOCKING_ARM_CMD [DEPRECATED])
     time = 1729850025100,
     payload = {
         facilityId = "DOCK_ARM_ALPHA_01",
@@ -381,7 +409,7 @@ sequenceDiagram
 
     Note over A,D: 전술 채널 (CH 50230) 핸드오버 및 정렬 진입
     loop 20Hz 동역학 스트리밍
-        D->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50230)<br/>[portPos(t), vel, accel, boresightVector]
+        D->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50230)<br/>[touchdownPoint(t), vel, accel, attitude, angularRates, approachDirection, captureLatchReady]
     end
 
     Note over A,W: 2단계: 물리 접촉 및 하드 락
@@ -419,11 +447,11 @@ sequenceDiagram
 
 ## 5. 정밀 도킹 유도 알고리즘 및 인터록 (Algorithms & Interlocks)
 
-### 5.1 조준선(Boresight) 프레임 기반 상대 오차 분해
-원거리 전개된 도킹 포트 개구면의 단위 조준선 벡터 $\vec{n}_{bore}$, 상방 벡터 $\vec{n}_{up}$, 횡방 벡터 $\vec{n}_{cross} = \vec{n}_{bore} \times \vec{n}_{up}$를 기준으로 기체 프로브의 상대 위치 $\vec{r}_{rel} = \vec{p}_{probe} - \vec{p}_{port}$를 분해합니다.
+### 5.1 접근 방향(`approachDirection`) 및 자세(`attitude`) 프레임 기반 상대 오차 분해
+원거리 전개된 도킹 포트 개구면의 자세(`attitude`) 및 `approachDirection`으로부터 유도되는 단위 접근 벡터 $\vec{n}_{approach}$, 상방 벡터 $\vec{n}_{up}$, 횡방 벡터 $\vec{n}_{cross} = \vec{n}_{approach} \times \vec{n}_{up}$를 기준으로 기체 프로브의 상대 위치 $\vec{r}_{rel} = \vec{p}_{probe} - \vec{p}_{touchdown}$를 분해합니다.
 
 - **진입 축 잔여 거리 (Axial Distance)**:
-  $$d_{axial} = \vec{r}_{rel} \cdot \vec{n}_{bore}$$
+  $$d_{axial} = \vec{r}_{rel} \cdot \vec{n}_{approach}$$
 - **수평 오차 (Lateral Error)**:
   $$e_{lat} = \vec{r}_{rel} \cdot \vec{n}_{cross} \quad (|e_{lat}| \le 0.15\text{ m})$$
 - **수직 오차 (Vertical Error)**:

@@ -113,4 +113,33 @@ describe("AMM nav_engine GPS+DR complementary filter, monotonic seq and epoch sy
         assert_false(nav_engine.should_query_gps(st1, 1200))
         assert_true(nav_engine.should_query_gps(st1, 1250))
     end)
+
+    it("guards zero/non-finite gpsRequestRateHz, NaN DR/HDOP inputs, and degrades alpha when accuracy > 2.0", function()
+        local nan = 0 / 0
+        local st0 = nav_engine.init({ navigation = { gpsRequestRateHz = 0 } })
+        local q, seq = nav_engine.should_query_gps(st0, 1000)
+        assert_false(q)
+        assert_nil(seq)
+
+        local st = nav_engine.init({ navigation = { gpsRequestRateHz = 10, maxAllowedAccuracyM = 2.0, drComplementaryAlpha = 0.35, degradedAlpha = 0.10 } })
+        nav_engine.integrate_dr(st, {
+            dynamics = { velocity = { x = nan, y = 2.0, z = math.huge }, altitudeY = 20.0, heading = nan },
+            attitude = { pitch = nan, roll = 0.1 },
+            fuel = nan,
+        }, 0.05, 1000)
+        assert_eq(st.pos.x, 0.0)
+        assert_eq(st.pos.z, 0.0)
+        assert_eq(st.pos.y, 20.0)
+        assert_eq(st.fuel, 1.0)
+        assert_eq(st.attitude.pitch, 0.0)
+
+        -- NaN HDOP / accuracy rejected
+        local _, s1 = nav_engine.should_query_gps(st, 1100)
+        assert_false(nav_engine.filter_gps(st, { targetClient = "AIRCRAFT_01", clientSeq = s1, status = "FIX_OK", position = { x = 1.0, z = 0.0 }, hdop = nan }, 0.05, 1100))
+        assert_false(nav_engine.filter_gps(st, { targetClient = "AIRCRAFT_01", clientSeq = s1, status = "FIX_OK", position = { x = 1.0, z = 0.0 }, hdop = 1.0, accuracy = nan }, 0.05, 1100))
+
+        -- Low accuracy (> 2.0m) degrades complementary filter alpha to <= 0.10
+        assert_true(nav_engine.filter_gps(st, { targetClient = "AIRCRAFT_01", clientSeq = s1, status = "FIX_OK", position = { x = 10.0, z = 0.0 }, hdop = 1.0, accuracy = 3.5 }, 0.05, 1100))
+        assert_near(st.pos.x, 1.0, 0.01)
+    end)
 end)

@@ -12,7 +12,7 @@ end
 
 local function find_peripheral_typed(role, roleCfg)
     local prefSide = type(roleCfg) == "table" and roleCfg.preferredSide or nil
-    local pType = type(roleCfg) == "table" and (roleCfg.peripheralType or roleCfg.type) or tostring(roleCfg or "")
+    local pType = type(roleCfg) == "table" and roleCfg.peripheralType or tostring(roleCfg or "")
 
     if sensors and sensors[role] and sensors[role].find then
         local dev = sensors[role].find({ preferred_side = prefSide })
@@ -56,115 +56,84 @@ function sensor_pipeline.init(sensorsConfig)
     }
 end
 
+local function sample_gimbal(dev)
+    local angles = sensors and sensors.gimbal and sensors.gimbal.get_angles(dev)
+    if not angles then
+        local a = dev.getAngles and dev.getAngles()
+        angles = (type(a) == "table") and { pitch = a.pitch or a[1] or 0.0, roll = a.roll or a[2] or 0.0, yaw = a.yaw or a[3] or 0.0 } or { pitch = 0.0, roll = 0.0, yaw = 0.0 }
+    end
+    local rates = sensors and sensors.gimbal and sensors.gimbal.get_angular_rates(dev)
+    if not rates then
+        local rt = dev.getAngularRates and dev.getAngularRates()
+        rates = (type(rt) == "table") and {
+            pitch_rate = rt.pitchRate or rt.pitch_rate or rt.wx or rt[1] or 0.0,
+            roll_rate = rt.rollRate or rt.roll_rate or rt.wz or rt[2] or 0.0,
+            yaw_rate = rt.yawRate or rt.yaw_rate or rt.wy or rt[3] or 0.0,
+        } or { pitch_rate = 0.0, roll_rate = 0.0, yaw_rate = 0.0 }
+    end
+    return {
+        pitch = angles.pitch or 0.0,
+        roll = angles.roll or 0.0,
+        yaw = angles.yaw or 0.0,
+        pitchRate = rates.pitch_rate or rates.wx or 0.0,
+        rollRate = rates.roll_rate or rates.wz or 0.0,
+        yawRate = rates.yaw_rate or rates.wy or 0.0,
+    }
+end
+
+local function sample_altitude(dev)
+    local alt = sensors and sensors.altitude and sensors.altitude.get_height(dev)
+    if alt == nil then
+        alt = (dev.getHeight and dev.getHeight()) or (dev.getAltitude and dev.getAltitude()) or 0.0
+    end
+    local vy = sensors and sensors.altitude and sensors.altitude.get_vertical_speed(dev)
+    if vy == nil then
+        vy = (dev.getVerticalSpeed and dev.getVerticalSpeed()) or 0.0
+    end
+    return { altitude = alt, verticalSpeed = vy }
+end
+
+local function sample_velocity(dev, roleCfg)
+    local pref = roleCfg and (type(roleCfg) == "table" and roleCfg.preferredSide or nil)
+    local v3 = sensors and sensors.velocity and sensors.velocity.read_vector3({ preferred_side = pref })
+    if v3 then
+        return { vx = v3.vx or 0.0, vy = v3.vy or 0.0, vz = v3.vz or 0.0 }
+    end
+    local v = (sensors and sensors.velocity and sensors.velocity.get_velocity(dev)) or (dev.getVelocity and dev.getVelocity())
+    if type(v) == "table" then
+        return { vx = v.x or v.vx or v[1] or 0.0, vy = v.y or v.vy or v[2] or 0.0, vz = v.z or v.vz or v[3] or 0.0 }
+    elseif type(v) == "number" then
+        local axis = (sensors and sensors.velocity and sensors.velocity.get_axis and sensors.velocity.get_axis(dev))
+            or (dev.getAxis and dev.getAxis()) or "x"
+        axis = string.lower(tostring(axis))
+        return { vx = (axis == "x") and v or 0.0, vy = (axis == "y") and v or 0.0, vz = (axis == "z") and v or 0.0 }
+    end
+    return { vx = 0.0, vy = 0.0, vz = 0.0 }
+end
+
+local function sample_fuel(dev)
+    if dev.tanks then
+        local t = dev.tanks()
+        local t0 = (type(t) == "table" and t[1]) or {}
+        local amt, cap = t0.amount or 1000, t0.capacity or 1000
+        return { amount = amt, capacity = cap, fuelRatio = (cap > 0) and (amt / cap) or 1.0 }
+    elseif dev.getFluidAmount and dev.getCapacity then
+        local amt, cap = dev.getFluidAmount() or 0, dev.getCapacity() or 1
+        return { amount = amt, capacity = cap, fuelRatio = (cap > 0) and (amt / cap) or 1.0 }
+    elseif dev.getEnergyStored and dev.getMaxEnergyStored then
+        local amt, cap = dev.getEnergyStored() or 0, dev.getMaxEnergyStored() or 1
+        return { amount = amt, capacity = cap, fuelRatio = (cap > 0) and (amt / cap) or 1.0 }
+    end
+    return { amount = 1000, capacity = 1000, fuelRatio = 1.0 }
+end
+
 local function sample_device_role(role, dev, roleCfg)
     if not dev then return nil end
-
-    if role == "gimbal" then
-        local angles = sensors and sensors.gimbal and sensors.gimbal.get_angles(dev)
-        if not angles then
-            local a = dev.getAngles and dev.getAngles()
-            if type(a) == "table" then
-                angles = {
-                    pitch = a.pitch or a[1] or 0.0,
-                    roll = a.roll or a[2] or 0.0,
-                    yaw = a.yaw or a[3] or 0.0
-                }
-            else
-                angles = { pitch = 0.0, roll = 0.0, yaw = 0.0 }
-            end
-        end
-
-        local rates = sensors and sensors.gimbal and sensors.gimbal.get_angular_rates(dev)
-        if not rates then
-            local rt = dev.getAngularRates and dev.getAngularRates()
-            if type(rt) == "table" then
-                rates = {
-                    pitch_rate = rt.pitchRate or rt.pitch_rate or rt.wx or rt[1] or 0.0,
-                    roll_rate = rt.rollRate or rt.roll_rate or rt.wz or rt[2] or 0.0,
-                    yaw_rate = rt.yawRate or rt.yaw_rate or rt.wy or rt[3] or 0.0
-                }
-            else
-                rates = { pitch_rate = 0.0, roll_rate = 0.0, yaw_rate = 0.0 }
-            end
-        end
-
-        return {
-            pitch = angles.pitch or 0.0,
-            roll = angles.roll or 0.0,
-            yaw = angles.yaw or 0.0,
-            pitchRate = rates.pitch_rate or rates.wx or 0.0,
-            rollRate = rates.roll_rate or rates.wz or 0.0,
-            yawRate = rates.yaw_rate or rates.wy or 0.0
-        }
-
-    elseif role == "altitude" then
-        local alt = sensors and sensors.altitude and sensors.altitude.get_height(dev)
-        if alt == nil then
-            alt = (dev.getHeight and dev.getHeight()) or (dev.getAltitude and dev.getAltitude()) or (dev.getYCoordinate and dev.getYCoordinate()) or 0.0
-        end
-
-        local vy = sensors and sensors.altitude and sensors.altitude.get_vertical_speed(dev)
-        if vy == nil then
-            vy = (dev.getVerticalSpeed and dev.getVerticalSpeed()) or 0.0
-        end
-
-        return { altitude = alt, verticalSpeed = vy }
-
-    elseif role == "velocity" then
-        local pref = roleCfg and (type(roleCfg) == "table" and roleCfg.preferredSide or nil)
-        local v3 = sensors and sensors.velocity and sensors.velocity.read_vector3({ preferred_side = pref })
-        if v3 then
-            return { vx = v3.vx or 0.0, vy = v3.vy or 0.0, vz = v3.vz or 0.0 }
-        else
-            local v = (sensors and sensors.velocity and sensors.velocity.get_velocity(dev))
-            if v == nil and dev.getVelocity then
-                v = dev.getVelocity()
-            end
-
-            if type(v) == "table" then
-                return {
-                    vx = v.x or v.vx or v[1] or 0.0,
-                    vy = v.y or v.vy or v[2] or 0.0,
-                    vz = v.z or v.vz or v[3] or 0.0
-                }
-            elseif type(v) == "number" then
-                local axis = "x"
-                if sensors and sensors.velocity and sensors.velocity.get_axis then
-                    axis = sensors.velocity.get_axis(dev) or "x"
-                elseif dev.getAxis then
-                    axis = dev.getAxis() or "x"
-                end
-                axis = string.lower(tostring(axis))
-
-                local vx, vy, vz = 0.0, 0.0, 0.0
-                if axis == "x" then vx = v
-                elseif axis == "y" then vy = v
-                elseif axis == "z" then vz = v
-                end
-                return { vx = vx, vy = vy, vz = vz }
-            end
-            return { vx = 0.0, vy = 0.0, vz = 0.0 }
-        end
-
-    elseif role == "fuel" then
-        if dev.tanks then
-            local t = dev.tanks()
-            local t0 = (type(t) == "table" and t[1]) or {}
-            local amt = t0.amount or 1000
-            local cap = t0.capacity or 1000
-            return { amount = amt, capacity = cap, fuelRatio = (cap > 0) and (amt / cap) or 1.0 }
-        elseif dev.getFluidAmount and dev.getCapacity then
-            local amt = dev.getFluidAmount() or 0
-            local cap = dev.getCapacity() or 1
-            return { amount = amt, capacity = cap, fuelRatio = (cap > 0) and (amt / cap) or 1.0 }
-        elseif dev.getEnergyStored and dev.getMaxEnergyStored then
-            local amt = dev.getEnergyStored() or 0
-            local cap = dev.getMaxEnergyStored() or 1
-            return { amount = amt, capacity = cap, fuelRatio = (cap > 0) and (amt / cap) or 1.0 }
-        end
-        return { amount = 1000, capacity = 1000, fuelRatio = 1.0 }
+    if role == "gimbal" then return sample_gimbal(dev)
+    elseif role == "altitude" then return sample_altitude(dev)
+    elseif role == "velocity" then return sample_velocity(dev, roleCfg)
+    elseif role == "fuel" then return sample_fuel(dev)
     end
-
     return dev
 end
 
@@ -227,15 +196,15 @@ function sensor_pipeline.evaluate_health(raw, roles)
 end
 
 local function compute_lever_offsets(g, alt, vel, lastCom, cfg)
-    local pDeg = g.pitchRate or (lastCom.rates and lastCom.rates.pitchRate) or 0.0
-    local qDeg = g.rollRate or (lastCom.rates and lastCom.rates.rollRate) or 0.0
-    local rDeg = g.yawRate or (lastCom.rates and lastCom.rates.yawRate) or 0.0
-    local pRad, qRad, rRad = math.rad(pDeg), math.rad(qDeg), math.rad(rDeg)
+    local rollDeg = g.rollRate or (lastCom.rates and lastCom.rates.rollRate) or 0.0
+    local pitchDeg = g.pitchRate or (lastCom.rates and lastCom.rates.pitchRate) or 0.0
+    local yawDeg = g.yawRate or (lastCom.rates and lastCom.rates.yawRate) or 0.0
+    local pRad, qRad, rRad = math.rad(rollDeg), math.rad(pitchDeg), math.rad(yawDeg)
     local thDeg = g.pitch or (lastCom.attitude and lastCom.attitude.pitch) or 0.0
     local phiDeg = g.roll or (lastCom.attitude and lastCom.attitude.roll) or 0.0
     local thRad, phiRad = math.rad(thDeg), math.rad(phiDeg)
 
-    local altCfg = (cfg and cfg.roles and cfg.roles.altitude) or (cfg and cfg.altitude) or {}
+    local altCfg = (cfg and cfg.roles and cfg.roles.altitude) or {}
     local rA = altCfg.leverArmOffset or {}
     local ra_dx = rA.dx or 0.0
     local ra_dy = rA.dy or 0.0
@@ -245,7 +214,7 @@ local function compute_lever_offsets(g, alt, vel, lastCom, cfg)
     local rawAlt = alt.altitude or (lastCom.dynamics and lastCom.dynamics.altitudeY) or 0.0
     local altCoM = rawAlt - dh - (altCfg.zeroBias or 0.0)
 
-    local velCfg = (cfg and cfg.roles and cfg.roles.velocity) or (cfg and cfg.velocity) or {}
+    local velCfg = (cfg and cfg.roles and cfg.roles.velocity) or {}
     local rV = velCfg.leverArmOffset or {}
     local rv_dx = rV.dx or 0.0
     local rv_dy = rV.dy or 0.0
@@ -256,14 +225,14 @@ local function compute_lever_offsets(g, alt, vel, lastCom, cfg)
     if (rawVy == nil or rawVy == 0.0) and (alt.verticalSpeed and alt.verticalSpeed ~= 0.0) then
         rawVy = alt.verticalSpeed
     elseif rawVy == nil then
-        rawVy = (dVel and dVel.verticalSpeed) or 0.0
+        rawVy = (dVel and dVel.vy) or 0.0
     end
     local rawVz = vel.vz or (dVel and dVel.vz) or 0.0
-    local vxCoM = rawVx - (rRad * rv_dz - pRad * rv_dy)
-    local vyCoM = rawVy - (pRad * rv_dx - qRad * rv_dz)
-    local vzCoM = rawVz - (rRad * rv_dx - qRad * rv_dy)
+    local vxCoM = rawVx - (qRad * rv_dz - rRad * rv_dy)
+    local vyCoM = rawVy - (qRad * rv_dx - pRad * rv_dy)
+    local vzCoM = rawVz - (rRad * rv_dx - pRad * rv_dz)
 
-    return pDeg, qDeg, rDeg, altCoM, vyCoM, vxCoM, vzCoM
+    return pitchDeg, rollDeg, yawDeg, altCoM, vyCoM, vxCoM, vzCoM
 end
 
 function sensor_pipeline.compensate_lever_arm(raw, lastCom, cfg, dt)

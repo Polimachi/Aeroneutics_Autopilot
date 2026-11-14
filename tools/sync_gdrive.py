@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -291,7 +292,7 @@ def cmd_sync(
         }
         mapping.setdefault("bootstrapMap", {})[repo_p] = file_id
 
-    mapping["lastSync"] = "2026-11-09T23:30:00Z"
+    mapping["lastSync"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     mapping_file.parent.mkdir(parents=True, exist_ok=True)
     mapping_file.write_text(json.dumps(mapping, indent=2), encoding="utf-8")
 

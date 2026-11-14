@@ -6,31 +6,32 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.0.0` |
-| **최종 수정일 (Date)** | `2026-11-13` |
+| **문서 버전 (Version)** | `v2.1.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 순수 온보드 SE(3) 외루프 유도 제어기 (FCP / Node 04) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.7.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.11.1)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.1)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.3.2)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.7)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.4)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.2)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.0.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.0.1)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.8.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.12.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.3.3)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.1.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.1.0` | `2026-11-14` | **Wave 1 `[I-9]` 채널 재바인딩 ACK 표준화 및 교차참조 동기화 (`Implemented` $\to$ `Approved`)**: ① §1·§2·§8.3.3·§10.1의 `MSG_REBIND_ACK`를 `MSG_CHANNEL_REBIND_ACK` (`MSG_REBIND_ACK [DEPRECATED]`)로 단일화하고 ACK 페이로드 스키마(`transactionId`, `nodeId`, `action`, `status = "READY" \| "COMMITTED" \| "ROLLED_BACK" \| "FAILED"`, `oldBaseChannel`, `newBaseChannel`, `subNodesReady?`) 명시, ② 연관 문서 버전 배지(`ICD v1.30.0`, `VAS v1.20.0`, `AMM v2.0.1` 등) 동기화 및 메타데이터 일자(`2026-11-14`) 정합 | Q1 Option A 사용자 확정 결정 반영 (`src/2_guidance/fcp/` Wave 2 반영 후 `Implemented` 재승격 예정) |
 | `v2.0.0` | 2026-11-12 | **FCP-AMM 역할 분리 및 순수 온보드 SE(3) 외루프 제어기 전면 개편 (`Implemented`, 구현 과제 `TASK-208` 완료 · 2026-11-13 승격)**: 외부 인프라(`CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+5`), 오퍼레이터 C2(`Base+0`), 평시 MFD 다운링크(`Base+3`), GPS/DR 항법 융합(`nav_engine`), 3-Tier ATC/GAC/시설물 핸드오프(`facility_client`), 채널 부트스트랩/프로브(`channel_sentinel`) 및 전략 궤적 합성을 `AMM (Node 03, v1.3.0)`으로 이관(`[DEPRECATED]`); FCP를 단일 `top` 모뎀(`Base+4`, `Base+2`, `Base+1` 3채널 전용) 기반 5대 모듈 파이프라인, 통합 SE(3) 외루프 법칙($g=11.0\text{ m/s}^2$, 6대 기체 `QUATERNION_RATE` 투영), 6-State 외루프 FSM(`PASSIVE_TRACKING` 2.0s 범프리스 복귀, `AMM_TIMEOUT_HOLD` 500ms $\to$ 10s $\to$ `EMERGENCY_LAND`)으로 축소 정립; 구 로컬 추진기 프로파일 직접 참조 및 `ATTITUDE_ANGLE`/`angleTargets`/`targetClimbRate`/`targetThrottle`/`translationBias.heave` 폐기(`[DEPRECATED]`) | AMM-FCP-VAS 계층 직교성 확립 및 순수 외루프 실시간 제어기 경량화 |
 | `v1.16.0` | 2026-11-11 | 외루프 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 관심점 지속 조준 호버) 확장, 3종 통합 기수 지향 모드(`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`) 및 `Base+0` `MSG_OPERATOR_CMD` 확장 파라미터(`loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 수신·범프리스 전환 인터록 명세 반영 (`Implemented` $\to$ `Approved`) | TASK-201 FCP 외루프 유도 프리미티브 확장 및 AMM v1.1.0 연동 |
 | `v1.15.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 전용 외루프 유도 제어기(advanced_vtol_driver.lua) 명세 신설: 3축 독립 병진 제어(Surge/Sway/Heave 완전 PID + Anti-windup), STRICT_LEVEL(θ=φ=0°) 무경사 기동 및 TILT_ASSISTED 모드, 짐벌 물리 슬루율 제한, 안전고도 기반 수직 이륙 및 패드 0.5m 정렬 2단계 감속 터치다운 시퀀스, flapTarget=0.0 고정 | 2D 짐벌 벡터 추진 VTOL 외루프 유도 알고리즘 표준화 |
@@ -67,14 +68,14 @@
    - `AMM`이 `Base+4`로 개시한 4계층 채널 재바인딩(`MSG_CHANNEL_REBIND`) 트랜잭션을 `Base+1`을 통해 `VAS`로 중계하고 하위 ACK를 취합해 `Base+4`로 회신합니다.
 5. **구버전 이관 책임 명시 (`[DEPRECATED — Migrated to AMM v1.3.0]`)**:
    - 고유 40채널 블록($Base = 10000 + (N - 1) \times 40$, $N=1\sim 1000$) 부트스트랩(`CH 50000`), `Base+0` 충돌 프로브 및 C2 중재, `Base+3` 5Hz MFD 다운링크, `CH 60001/60002` 및 `Base+5` GPS/DR 융합(`nav_engine`), `CH 50001~50004` / $Base_{\text{sec}}+*$ 3-Tier ATC/GAC/시설물 핸드오프(`facility_client`), `LOITER`/`POI_HOLD`/도킹/활주로 궤적 합성은 모두 **`AMM (Node 03, v1.3.0)`**으로 이관되었습니다(`FCP v2.0.0`에서는 `[DEPRECATED]`).
-   - 공력 조종면 구동계 `ASA` (`Base+11`, 구 `Base+7 [DEPRECATED]`) 및 추진기 구동계 `TCA` (`Base+10`, 구 `Base+6 [DEPRECATED]`), 동적압 스케줄링, 실속 가드 및 기체별 추진기 프로파일 기반 6-DoF 믹싱은 **`VAS (Node 01, v1.19.0)`**가 전담합니다.
+   - 공력 조종면 구동계 `ASA` (`Base+11`, 구 `Base+7 [DEPRECATED]`) 및 추진기 구동계 `TCA` (`Base+10`, 구 `Base+6 [DEPRECATED]`), 동적압 스케줄링, 실속 가드 및 기체별 추진기 프로파일 기반 6-DoF 믹싱은 **`VAS (Node 01, v1.20.0)`**가 전담합니다.
 
 ### 1.3 서브시스템 간 상호작용 아키텍처
 
 ```mermaid
 flowchart TD
     subgraph AMM_LAYER["[Layer 3: AMM 임무·항법·궤적 생성기 (Node 03)]"]
-        AMM["AMM (v2.0.0)<br/>* 외부 게이트웨이(50000~50004, 60001/60002, Base_sec+*)<br/>* C2(Base+0), MFD(Base+3), GPS/DR(nav_engine), 궤적 생성"]
+        AMM["AMM (v2.0.1)<br/>* 외부 게이트웨이(50000~50004, 60001/60002, Base_sec+*)<br/>* C2(Base+0), MFD(Base+3), GPS/DR(nav_engine), 궤적 생성"]
     end
 
     subgraph FCP_NODE["[Layer 2: FCP 순수 SE(3) 외루프 제어기 (Node 04, 단일 top 모뎀)]"]
@@ -91,13 +92,13 @@ flowchart TD
     end
 
     subgraph ACTUATION_SUBSYSTEM["[Layer 1 & 0: 내루프 비행 제어 및 분산 구동계]"]
-        CORE["비행 제어 코어 VAS (Node 01, v1.19.0)<br/>* SO(3) 내루프, 스톨 가드, TCA/ASA 믹싱"]
+        CORE["비행 제어 코어 VAS (Node 01, v1.20.0)<br/>* SO(3) 내루프, 스톨 가드, TCA/ASA 믹싱"]
         TCA["TCA 클러스터 (Node 02-xx)<br/>* Base+10 (구 Base+6 [DEPRECATED])"]
         ASA["ASA 클러스터 (Node 06-xx)<br/>* Base+11 (구 Base+7 [DEPRECATED])"]
     end
 
     AMM ==>|"Base+4 [I-12] (20Hz)<br/>MSG_TRAJECTORY_SETPOINT / MSG_CHANNEL_REBIND"| NET_MGR
-    NET_MGR ==>|"Base+4 [I-12] (20Hz/Event)<br/>MSG_OUTER_LOOP_STATUS / MSG_REBIND_ACK"| AMM
+    NET_MGR ==>|"Base+4 [I-12] (20Hz/Event)<br/>MSG_OUTER_LOOP_STATUS / MSG_CHANNEL_REBIND_ACK"| AMM
     NET_MGR ==>|"Base+1 [I-2] (20Hz)<br/>MSG_ATTITUDE_CMD (QUATERNION_RATE)"| CORE
     CORE -.->|"Base+1 [I-2] (비상 이벤트)<br/>MSG_EMERGENCY_ALERT"| NET_MGR
     CORE ==>|"Base+2 [I-1] (20Hz)<br/>MSG_FLIGHT_TELEMETRY"| NET_MGR
@@ -137,9 +138,9 @@ flowchart TD
 ```
 
 - **활성 개방 채널 (Active Opened Channels — 3개 전용)**:
-  - **`Base + 4` (`CH_TRAJECTORY_CMD`, `[I-12]`)**: `AMM`으로부터 `MSG_TRAJECTORY_SETPOINT` 및 `MSG_CHANNEL_REBIND` 수신, `AMM`으로 `MSG_OUTER_LOOP_STATUS` 및 `MSG_REBIND_ACK` 송신.
+  - **`Base + 4` (`CH_TRAJECTORY_CMD`, `[I-12]`)**: `AMM`으로부터 `MSG_TRAJECTORY_SETPOINT` 및 `MSG_CHANNEL_REBIND` 수신, `AMM`으로 `MSG_OUTER_LOOP_STATUS` 및 `MSG_CHANNEL_REBIND_ACK` 송신.
   - **`Base + 2` (`CH_TELEMETRY`, `[I-1]`)**: `VAS`로부터 `MSG_FLIGHT_TELEMETRY` 20Hz 수신.
-  - **`Base + 1` (`CH_FLIGHT_GUIDANCE`, `[I-2]`)**: `VAS`로 `MSG_ATTITUDE_CMD` (`QUATERNION_RATE`) 20Hz 송신 및 `MSG_CHANNEL_REBIND` 중계, `VAS`로부터 `MSG_EMERGENCY_ALERT` 및 `MSG_REBIND_ACK` 수신.
+  - **`Base + 1` (`CH_FLIGHT_GUIDANCE`, `[I-2]`)**: `VAS`로 `MSG_ATTITUDE_CMD` (`QUATERNION_RATE`) 20Hz 송신 및 `MSG_CHANNEL_REBIND` 중계, `VAS`로부터 `MSG_EMERGENCY_ALERT` 및 `MSG_CHANNEL_REBIND_ACK` 수신.
 - **이관 및 폐기 채널 (`[DEPRECATED — Migrated to AMM v1.3.0]`)**:
   - `CH 50000`, `CH 50001~50004`, `CH 60001/60002`, $Base_{\text{sec}}+*$, `Base + 0`, `Base + 3`, `Base + 5`는 `AMM (Node 03)`이 전담하며, FCP `network_manager`는 해당 채널을 일체 `modem.open()` 하지 않습니다. 이를 통해 FCP 이벤트 큐에 외부/인프라 패킷이 유입되는 경로를 구조적으로 분리합니다.
 
@@ -201,7 +202,7 @@ src/2_guidance/fcp/
 | 모듈 명칭 | 주관 인터페이스 | 실행 주기 / 조건 | 핵심 역할 및 기능 |
 | :--- | :---: | :---: | :--- |
 | **`main.lua`** | 시스템 루프 | 20Hz (50ms) / 선택적 5Hz | 20Hz 틱 스케줄러 가동, 5단계 외루프 파이프라인 순차 실행; `debug: false` 헤드리스 기본, `debug: true` 시 `parallel.waitForAny`로 `ui_renderer.lua` 비동기 격리 구동 |
-| **`network_manager.lua`** | I-1, I-2, I-12 | 매 틱 / 이벤트 | 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1` 3개 채널만 개방, `ver = "1.9.5"` 엔벨로프 직렬화/역직렬화, `MSG_CHANNEL_REBIND` (`Base+4` $\to$ `Base+1`) 중계 및 `MSG_REBIND_ACK` 취합 |
+| **`network_manager.lua`** | I-1, I-2, I-12 | 매 틱 / 이벤트 | 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1` 3개 채널만 개방, `ver = "1.9.5"` 엔벨로프 직렬화/역직렬화, `MSG_CHANNEL_REBIND` (`Base+4` $\to$ `Base+1`) 중계 및 `MSG_CHANNEL_REBIND_ACK` 취합 |
 | **`state_propagator.lua`** | I-1, I-12 | 20Hz | `AMM Base+4` `posEpoch` 갱신 사이 `VAS Base+2` 속도로 로컬 위치 적분(`dt <= 0.1s` 가드), 에포크 증가 시 유계 오프셋 병합, `navStale` 판정 |
 | **`outer_loop_controller.lua`** | I-2, I-12 | 20Hz | `SE(3)` 목표 가속도/비력($g=11.0\text{ m/s}^2$) 산출, 6대 기체별 `QUATERNION_RATE` 투영, `constraintProfile` · 스웨이 손실 폴백, 2.0초 범프리스 램핑 및 방향성 안티와인드업 |
 | **`flight_fsm.lua`** | I-1, I-2, I-12 | 20Hz | 6-State 외루프 FSM(`BOOT`, `IDLE_ARMED`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD`, `EMERGENCY_LAND`), `AMM_TIMEOUT`(500ms) · `VAS_TIMEOUT`(500ms) 감시 |
@@ -661,7 +662,7 @@ stateDiagram-v2
 
 ### 8.3 [Interface I-12] 궤적 세트포인트 및 외루프 상태 피드백 (`AMM` $\leftrightarrow$ `FCP`, `Base+4`)
 - **통신 채널**: `CH_TRAJECTORY_CMD` (`Base + 4`, Zone 1 코어 대역; 구 `CH_NAV_SENSOR` `[DEPRECATED]`, 구 교정채널 `[DEPRECATED]`)
-- **전송 주기**: `MSG_TRAJECTORY_SETPOINT` 20Hz (`AMM` $\rightarrow$ `FCP`), `MSG_OUTER_LOOP_STATUS` 20Hz / On-Change (`FCP` $\rightarrow$ `AMM`), `MSG_CHANNEL_REBIND` / `MSG_REBIND_ACK` 이벤트(`AMM` $\leftrightarrow$ `FCP`)
+- **전송 주기**: `MSG_TRAJECTORY_SETPOINT` 20Hz (`AMM` $\rightarrow$ `FCP`), `MSG_OUTER_LOOP_STATUS` 20Hz / On-Change (`FCP` $\rightarrow$ `AMM`), `MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK` 이벤트(`AMM` $\leftrightarrow$ `FCP`)
 - **계약 원칙**: `AMM`은 미션·시설물·C2 의도를 실시간 3D 목표 궤적 및 융합 위치로 변환해 하달하고, `FCP`는 이를 `SE(3)` 법칙으로 추종한 결과와 외루프 건전성 상태를 상향 보고합니다.
 
 #### 8.3.1 [수신] 20Hz 궤적 세트포인트 (`MSG_TRAJECTORY_SETPOINT`, AMM $\rightarrow$ FCP on Base+4)
@@ -741,16 +742,16 @@ stateDiagram-v2
 }
 ```
 
-#### 8.3.3 [중계] 4계층 동적 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND` / `MSG_REBIND_ACK`, AMM $\leftrightarrow$ FCP $\leftrightarrow$ VAS)
+#### 8.3.3 [중계] 4계층 동적 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK`, AMM $\leftrightarrow$ FCP $\leftrightarrow$ VAS)
 - **통신 경로**: `AMM (Base_old + 4)` $\leftrightarrow$ `FCP (Base_old + 4 / Base_old + 1)` $\leftrightarrow$ `VAS (Base_old + 1)` $\leftrightarrow$ `TCA / ASA (Base_old + 10 / Base_old + 11, 구 Base_old + 6/+7 [DEPRECATED])`
 - **캐스케이드 전파 규약**:
   1. **Phase 1 (`PREPARE`)**: `AMM`이 `Base_old + 4`로 `action = "PREPARE"`, `newBaseChannel`, `bandwidth = 40`을 하달하면, `FCP`는 즉시 `Base_old + 1`을 통해 `VAS`로 중계하고 `VAS`는 하위 `TCA (Base_old + 10)` 및 `ASA (Base_old + 11, 구 Base_old + 7 [DEPRECATED])`로 전파합니다.
-  2. **Phase 2 (`ACK` 취합)**: 하위 `VAS`가 `Base_old + 1`로 `MSG_REBIND_ACK` (`status = "READY"`)를 회신하면, `FCP`는 이를 취합해 `Base_old + 4`로 `AMM`에 상향 회신합니다.
-  3. **Phase 3 (`COMMIT`)**: `AMM`이 `action = "COMMIT"`을 하달하면 `FCP`는 `VAS`에 중계한 직후 단일 `top` 모뎀 채널을 `newBase + 4`, `newBase + 2`, `newBase + 1`로 절체하고 `config/fcp_config.json`의 `baseChannel`을 영구 갱신합니다.
-  4. **타임아웃 롤백 (`ROLLBACK`)**: `500ms` 이내 하위 `ACK`가 누락될 경우 `FCP`는 `VAS`에 `action = "ROLLBACK"`을 전파하고 `AMM`에 실패 `MSG_REBIND_ACK`를 회신하여 `oldBaseChannel`을 유지합니다.
+  2. **Phase 2 (`ACK` 취합)**: 하위 `VAS`가 `Base_old + 1`로 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`status = "READY"`)를 회신하면, `FCP`는 이를 취합해 `Base_old + 4`로 `AMM`에 상향 회신합니다.
+  3. **Phase 3 (`COMMIT`)**: `AMM`이 `action = "COMMIT"`을 하달하면 `FCP`는 `VAS`에 중계한 직후 단일 `top` 모뎀 채널을 `newBase + 4`, `newBase + 2`, `newBase + 1`로 절체하고 `config/fcp_config.json`의 `baseChannel`을 영구 갱신한 뒤 `MSG_CHANNEL_REBIND_ACK` (`status = "COMMITTED"`)를 회신합니다.
+  4. **타임아웃 롤백 (`ROLLBACK`)**: `500ms` 이내 하위 `ACK`가 누락될 경우 `FCP`는 `VAS`에 `action = "ROLLBACK"`을 전파하고 `AMM`에 `MSG_CHANNEL_REBIND_ACK` (`status = "ROLLED_BACK"` 또는 `"FAILED"`)를 회신하여 `oldBaseChannel`을 유지합니다.
 
 ```lua
--- AMM -> FCP (Base_old+4) 및 FCP -> VAS (Base_old+1) 재바인딩 지령 패킷
+-- 1. AMM -> FCP (Base_old+4) 및 FCP -> VAS (Base_old+1) 재바인딩 지령 패킷
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -763,6 +764,24 @@ stateDiagram-v2
         oldBaseChannel = 10000,
         newBaseChannel = 10080,
         bandwidth = 40
+    }
+}
+
+-- 2. FCP -> AMM (Base_old+4) 재바인딩 응답 패킷 (MSG_CHANNEL_REBIND_ACK, 구 MSG_REBIND_ACK [DEPRECATED])
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_01",
+    seq = 902,
+    type = "MSG_CHANNEL_REBIND_ACK",
+    time = 1729845010030,
+    payload = {
+        transactionId = "REBIND-TX-10000-10080",
+        nodeId = "FCP",
+        action = "PREPARE",
+        status = "READY", -- "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"
+        oldBaseChannel = 10000,
+        newBaseChannel = 10080,
+        subNodesReady = { vas = true, tca = true, asa = true }
     }
 }
 ```
@@ -899,7 +918,7 @@ stateDiagram-v2
 | **I-2 / I-1: 비상 경보 / `E_STOP` (`Base+1`/`Base+2`)** | **이벤트 즉시** | `FCP` (`flight_fsm`) | `MSG_EMERGENCY_ALERT` 또는 `activeSource == "EMERGENCY_DIRECT"` 감지 시 즉시 적분기 초기화 및 **`IDLE_ARMED`** 복귀 |
 | **I-1 / I-10 / I-3: 구동계 헬스 (`Base+2`)** | **20Hz 감시** (`actuatorHealth`) | `FCP` (`outer_loop_controller`) | `tap == false` 감지 시 `STRICT_LEVEL` 대신 **틸트 폴백(`TILT_ASSISTED`)** 전환 및 포화 축 적분 동결; `asa == false` 감지 시 `Base+4` 상태 보고 (ASA 로컬 300ms 타임아웃은 `VAS`가 직접 완결) |
 | **I-12: `AMM` 항법 정체 (`navValid`/`posEpoch`)** | **500ms** (`navStaleEpochMs`) | `FCP` (`state_propagator`) | `navStale = true` 판정 후 `MSG_OUTER_LOOP_STATUS`로 `AMM`에 상향 보고하고 장기화 시 적분기 와인드업 동결 |
-| **I-12 / I-9: 채널 재바인딩 ACK** | **500ms** (`rebindAckTimeoutMs`) | `FCP` (`network_manager`) | 하위 `VAS`/`TCA`/`ASA` `MSG_REBIND_ACK` 누락 시 `action = "ROLLBACK"` 전파 및 `oldBaseChannel` 유지 |
+| **I-12 / I-9: 채널 재바인딩 ACK** | **500ms** (`rebindAckTimeoutMs`) | `FCP` (`network_manager`) | 하위 `VAS`/`TCA`/`ASA` `MSG_CHANNEL_REBIND_ACK` 누락 시 `action = "ROLLBACK"` 전파 및 `oldBaseChannel` 유지 |
 
 ### 10.2 이관된 구버전 외부 인프라 워치독 (`[DEPRECATED — Migrated to AMM v1.3.0]`)
 - 종래 `FCP` §10.2에 정의되어 있던 **`[I-7]` GPS 5,000ms 타임아웃(`LOITER`)**, **`[I-5]` 동적 시설물 300ms 타임아웃(`GO_AROUND`) 및 3회 복행 초과 `FAILSAFE_RTH`**, **`[I-5]` `ATC DENIED` 15초×10회 재시도/우회**, **`[I-8]` GCS 1,000ms 부트스트랩 폴백**은 모두 **`AMM (Node 03, v1.3.0)`**의 `nav_engine`, `facility_client`, `mission_engine` 및 `channel_sentinel`로 이관되었습니다.
@@ -1241,4 +1260,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack 내 순수 온보드 `SE(3)` 외루프 유도 제어기(`FCP`)의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.29.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.14.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.19.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.11.1), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.7.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.6.1), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.4.2), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.2), RUNWAY 규격서([RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) v1.10.7), LANDING_PAD 규격서([LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) v2.4.4), DOCKING_ARM 규격서([DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) v1.11.2) 및 GCS 규격서([GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) v1.0.2)와 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack 내 순수 온보드 `SE(3)` 외루프 유도 제어기(`FCP`)의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.30.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.15.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.1), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.20.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.7.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.5.0), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3), RUNWAY 규격서([RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) v1.11.0), LANDING_PAD 규격서([LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) v2.5.0), DOCKING_ARM 규격서([DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) v1.12.0) 및 GCS 규격서([GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) v1.1.0)와 정합성을 유지합니다.*

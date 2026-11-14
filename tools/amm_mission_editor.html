@@ -1,0 +1,3277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0f17">
+  <title>AMM Mission Editor</title>
+  <style>
+    :root {
+      --bg-app: #0b0f17;
+      --bg-panel: #111827;
+      --bg-elevated: #1b2434;
+      --bg-input: #0e1420;
+      --border-default: #2b394e;
+      --border-strong: #3b4d68;
+      --text-primary: #e5edf7;
+      --text-muted: #94a3b8;
+      --accent: #22d3ee;
+      --accent-cyan: #22d3ee;
+      --accent-amber: #f59e0b;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-violet: #a78bfa;
+      --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+      --focus-ring: 0 0 0 2px #0b0f17, 0 0 0 4px var(--accent);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html {
+      color-scheme: dark;
+      background: var(--bg-app);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: var(--bg-app);
+      color: var(--text-primary);
+    }
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    button, input, select, textarea {
+      font: inherit;
+      color: var(--text-primary);
+    }
+    button {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      user-select: none;
+      touch-action: manipulation;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+    button:hover:not(:disabled) {
+      background: #233044;
+      border-color: var(--border-strong);
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    button.btn-primary {
+      background: #0e7490;
+      border-color: #22d3ee;
+      color: #f0fdff;
+      font-weight: 600;
+    }
+    button.btn-primary:hover:not(:disabled) { background: #0891b2; }
+    button.btn-danger {
+      background: #451a1d;
+      border-color: #ef4444;
+      color: #fecaca;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      background: var(--bg-input);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 5px 8px;
+      color: var(--text-primary);
+      min-width: 0;
+    }
+    select {
+      appearance: none;
+      background-color: var(--bg-input);
+      padding-right: 24px;
+      color-scheme: dark;
+    }
+    select option {
+      background: var(--bg-panel);
+      color: var(--text-primary);
+    }
+    .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .top-header {
+      height: 52px;
+      flex: 0 0 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-default);
+      user-select: none;
+      min-width: 0;
+    }
+    .brand-pill {
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: #0e749033;
+      border: 1px solid #22d3ee66;
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+    .segmented {
+      display: inline-flex;
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .segmented button {
+      border: 0;
+      border-radius: 0;
+      padding: 4px 10px;
+      background: var(--bg-input);
+    }
+    .segmented button[aria-pressed="true"], .segmented button.active {
+      background: #0e7490;
+      color: #f0fdff;
+      font-weight: 600;
+    }
+    .header-spacer { flex: 1 1 auto; min-width: 0; }
+    .toast-banner {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: #0f293a;
+      border: 1px solid var(--accent-cyan);
+      font-size: 12px;
+      max-width: 340px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .toast-banner.warn { background: #3b2608; border-color: var(--accent-amber); }
+    .toast-banner.error { background: #3d1216; border-color: var(--accent-red); }
+    .workspace-main {
+      flex: 1 1 auto;
+      display: flex;
+      min-height: 0;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    #leftRail {
+      width: 300px;
+      flex: 0 0 300px;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+    }
+    .rail-header {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .rail-title { font-weight: 700; font-size: 12px; flex: 1 1 auto; }
+    .cp-list {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cp-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 7px;
+      padding: 6px 8px;
+      min-width: 0;
+    }
+    .cp-row.selected {
+      border-color: var(--accent-amber);
+      background: #20293d;
+    }
+    .cp-row-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .cp-select-btn {
+      flex: 1 1 auto;
+      min-width: 0;
+      justify-content: flex-start;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      padding: 2px 4px;
+    }
+    .cp-select-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.04); }
+    .cp-actions-mini { display: flex; gap: 3px; }
+    .cp-actions-mini button { padding: 2px 5px; font-size: 11px; }
+    .cp-summary { font-size: 11px; color: var(--text-muted); padding-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 4px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      background: #1e293b;
+      border: 1px solid var(--border-default);
+      color: var(--text-primary);
+    }
+    .badge.warn { background: #3b2608; border-color: var(--accent-amber); color: #fde68a; }
+    .badge.err { background: #3d1216; border-color: var(--accent-red); color: #fecaca; }
+    .badge.mac { background: #2e1d47; border-color: var(--accent-violet); color: #e9d5ff; }
+    .popover-panel {
+      position: absolute;
+      top: 46px;
+      left: 8px;
+      right: 8px;
+      max-height: 75%;
+      z-index: 30;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .picker-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-default);
+    }
+    .picker-list {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .picker-item {
+      width: 100%;
+      justify-content: space-between;
+      text-align: left;
+      padding: 6px 8px;
+      background: var(--bg-elevated);
+    }
+    #centerColumn {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--bg-app);
+    }
+    .canvas-stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      position: relative;
+      user-select: none;
+    }
+    #missionCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      user-select: none;
+    }
+    .canvas-overlay-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: rgba(17, 24, 39, 0.88);
+      border: 1px solid var(--border-default);
+      border-radius: 7px;
+      padding: 4px 8px;
+      user-select: none;
+    }
+    .empty-cta {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 340px;
+      height: fit-content;
+      padding: 18px;
+      background: rgba(17, 24, 39, 0.94);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+    .empty-cta[hidden] { display: none; }
+    #altProfilePane {
+      height: 120px;
+      flex: 0 0 120px;
+      border-top: 1px solid var(--border-default);
+      background: #0f1522;
+      position: relative;
+      user-select: none;
+    }
+    #altProfilePane[hidden] { display: none; }
+    #altProfileCanvas { width: 100%; height: 100%; display: block; cursor: ns-resize; }
+    #rightInspector {
+      width: 420px;
+      flex: 0 0 420px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+    .inspector-head {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+    .inspector-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+    .inspector-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border-default);
+      padding-bottom: 6px;
+    }
+    .inspector-tabs button[aria-selected="true"] {
+      background: #0e7490;
+      border-color: var(--accent-cyan);
+      color: #f0fdff;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      min-width: 0;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .field-group.full { grid-column: 1 / -1; }
+    .field-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .section-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 7px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    details.precond-group summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 3px 0;
+      user-select: none;
+    }
+    #rawJsonDrawer {
+      position: fixed;
+      top: 52px;
+      right: 0;
+      bottom: 32px;
+      width: 460px;
+      max-width: 100vw;
+      z-index: 40;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 8px;
+      overscroll-behavior: contain;
+      box-shadow: -10px 0 28px rgba(0, 0, 0, 0.6);
+    }
+    #rawJsonDrawer[hidden] { display: none; }
+    #rawJsonTextarea {
+      flex: 1 1 auto;
+      width: 100%;
+      resize: none;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .bottom-validation-bar {
+      flex: 0 0 auto;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+    .validation-strip {
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+    }
+    .validation-list {
+      height: 133px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 6px 12px;
+      border-top: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .validation-list[hidden] { display: none; }
+    .val-issue-btn {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+    @media (pointer: fine) {
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+      ::-webkit-scrollbar-track { background: #0f172a; }
+    }
+    @media (max-width: 1150px) {
+      .workspace-main { flex-direction: column; overflow-y: auto; }
+      #leftRail, #rightInspector { width: 100%; flex: 0 0 auto; max-height: 40vh; border: 0; border-bottom: 1px solid var(--border-default); }
+      .canvas-stage { min-height: 320px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.001ms !important;
+        animation-duration: 0.001ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-header">
+      <span class="brand-pill">AMM v2.0.0</span>
+      <label for="missionIdInput" class="field-label">Mission ID</label>
+      <input id="missionIdInput" type="text" class="mono" style="width:150px" aria-label="Mission ID" data-field-path="missionId">
+      <div class="segmented" role="group" aria-label="Execution mode">
+        <button id="execModeSingle" type="button" aria-pressed="true">SINGLE</button>
+        <button id="execModeRepeat" type="button" aria-pressed="false">REPEAT</button>
+      </div>
+      <button id="btnUndo" type="button" title="Ctrl+Z">Undo</button>
+      <button id="btnRedo" type="button" title="Ctrl+Y">Redo</button>
+      <select id="presetSelect" aria-label="Load mission preset">
+        <option value="">Presets…</option>
+        <option value="MSN_RECON_001">MSN_RECON_001 (Recon Orbit)</option>
+        <option value="MSN_TRANSIT_CORRIDOR">MSN_TRANSIT_CORRIDOR (Corridor)</option>
+        <option value="MSN_PRECISION_DELIVERY">MSN_PRECISION_DELIVERY (Delivery)</option>
+      </select>
+      <input id="fileImportInput" type="file" accept=".json,application/json" hidden>
+      <button id="btnImportJson" type="button">Import .json</button>
+      <button id="btnRawJson" type="button" aria-expanded="false" aria-controls="rawJsonDrawer">Raw JSON</button>
+      <button id="btnCopyJson" type="button">Copy JSON</button>
+      <button id="btnExportJson" type="button" class="btn-primary">Export .json</button>
+      <div class="header-spacer"></div>
+      <div id="toastBanner" class="toast-banner" role="status" aria-live="polite" hidden></div>
+    </header>
+
+    <main class="workspace-main">
+      <aside id="leftRail" aria-label="Checkpoints">
+        <div class="rail-header">
+          <span class="rail-title">Checkpoints <span id="cpCountBadge" class="badge tabular">0</span></span>
+          <button id="btnOpenAddPicker" type="button" class="btn-primary">+ Add</button>
+          <button id="btnOpenMacroPicker" type="button">+ Macro</button>
+        </div>
+        <div id="actionPickerPopover" class="popover-panel" hidden>
+          <div class="rail-header">
+            <input id="pickerSearch" type="text" placeholder="Search ACT_*, MAC_*, keyword…" aria-label="Search actions" style="flex:1 1 auto">
+            <button id="btnClosePicker" type="button" aria-label="Close action picker">✕</button>
+          </div>
+          <div id="pickerDomainTabs" class="picker-tabs" role="tablist" aria-label="Action domains"></div>
+          <div id="pickerList" class="picker-list"></div>
+        </div>
+        <div id="cpList" class="cp-list"></div>
+      </aside>
+
+      <section id="centerColumn" aria-label="Mission 2D Map">
+        <div class="canvas-stage">
+          <canvas id="missionCanvas"></canvas>
+          <div class="canvas-overlay-bar">
+            <button id="btnToggleSnap" type="button" aria-pressed="true">Snap 10m</button>
+            <button id="btnFitView" type="button">Fit</button>
+            <button id="btnToggleAltProfile" type="button" aria-expanded="false" aria-controls="altProfilePane">Alt Profile</button>
+            <span id="zoomReadout" class="mono tabular" style="font-size:11px;color:var(--text-muted)">100%</span>
+          </div>
+          <div id="emptyCanvasCta" class="empty-cta">
+            <strong>Empty AMM v2.0.0 Draft</strong>
+            <span style="color:var(--text-muted);font-size:12px">Start from a sample sortie or place the first checkpoint.</span>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button id="btnEmptyPreset" type="button" class="btn-primary">Load MSN_RECON_001</button>
+              <button id="btnEmptyAdd" type="button">+ Add First Checkpoint</button>
+            </div>
+          </div>
+        </div>
+        <div id="altProfilePane" hidden>
+          <canvas id="altProfileCanvas"></canvas>
+        </div>
+      </section>
+
+      <aside id="rightInspector" aria-label="Inspector">
+        <div class="inspector-head">
+          <div class="segmented" role="group" aria-label="Inspector mode" style="width:100%">
+            <button id="modeCheckpointBtn" type="button" aria-pressed="true" style="flex:1 1 50%;justify-content:center">Checkpoint</button>
+            <button id="modeSettingsBtn" type="button" aria-pressed="false" style="flex:1 1 50%;justify-content:center">Mission Settings</button>
+          </div>
+        </div>
+        <div id="inspectorBody" class="inspector-body"></div>
+      </aside>
+    </main>
+
+    <aside id="rawJsonDrawer" aria-label="Raw JSON Drawer" hidden>
+      <div class="rail-header" style="padding:0 0 8px 0">
+        <strong style="flex:1 1 auto">Raw AMM v2.0.0 JSON</strong>
+        <button id="btnFormatJson" type="button">Format</button>
+        <button id="btnApplyJson" type="button" class="btn-primary">Apply JSON</button>
+        <button id="btnCloseRawJson" type="button">Close</button>
+      </div>
+      <textarea id="rawJsonTextarea" aria-label="Raw mission JSON"></textarea>
+    </aside>
+
+    <footer id="validationBar" class="bottom-validation-bar">
+      <div class="validation-strip">
+        <span id="validationSummary" class="mono tabular" style="flex:1 1 auto">0 Errors · 0 Warnings</span>
+        <div class="segmented" role="group" aria-label="Validation severity filter">
+          <button id="valFilterAll" type="button" aria-pressed="true">All</button>
+          <button id="valFilterErrors" type="button" aria-pressed="false">Errors</button>
+          <button id="valFilterWarnings" type="button" aria-pressed="false">Warnings</button>
+        </div>
+        <button id="btnToggleValidation" type="button" aria-expanded="false" aria-controls="validationList">Details</button>
+      </div>
+      <div id="validationList" class="validation-list" hidden></div>
+    </footer>
+  </div>
+  <script>
+    "use strict";
+    (() => {
+      const deepClone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+      const isFiniteNum = (n) => typeof n === "number" && Number.isFinite(n);
+      const isPosXZ = (p) => Boolean(p && typeof p === "object" && isFiniteNum(p.x) && isFiniteNum(p.z));
+
+      const SchemaConstants = (() => {
+        const DEFAULTS_BASELINE = {
+          cruiseSpeed: 18.0,
+          targetAlt: 150.0,
+          acceptanceRadius: 15.0,
+          headingMode: "AUTO",
+        };
+        const EXECUTION_MODES = ["SINGLE", "REPEAT"];
+        const FALLBACK_POLICIES = ["RTH", "HOVER_HOLD", "LOITER", "SKIP_NEXT"];
+        const HEADING_MODES = ["AUTO", "FIXED", "POI"];
+        const AIRFRAME_TYPES = ["WINGED_VTOL", "MULTICOPTER", "FIXED_WING"];
+        const REDSTONE_SIDES = ["top", "bottom", "left", "right", "front", "back"];
+        const BUNDLED_COLORS = [
+          { key: "white", hex: "#F0F0F0" },
+          { key: "orange", hex: "#F2B233" },
+          { key: "magenta", hex: "#E57FD8" },
+          { key: "lightBlue", hex: "#99B2F2" },
+          { key: "yellow", hex: "#DEDE6C" },
+          { key: "lime", hex: "#7FCC19" },
+          { key: "pink", hex: "#F2B2CC" },
+          { key: "gray", hex: "#4C4C4C" },
+          { key: "lightGray", hex: "#999999" },
+          { key: "cyan", hex: "#4C99B2" },
+          { key: "purple", hex: "#B266E5" },
+          { key: "blue", hex: "#3366CC" },
+          { key: "brown", hex: "#7F664C" },
+          { key: "green", hex: "#57A64E" },
+          { key: "red", hex: "#CC4C4C" },
+          { key: "black", hex: "#111111" },
+        ];
+
+        const ACTIVE_ACTIONS = {
+          ACT_SYS_LOAD: { domain: "SYS", label: "Load Mission", summary: "미션 적재 및 초기화 (MANUAL)", spatial: false },
+          ACT_SYS_PREFLIGHT: { domain: "SYS", label: "Preflight Check", summary: "비행 전 자가 점검 (MANUAL)", spatial: false },
+          ACT_SYS_SET_HOME: { domain: "SYS", label: "Set Home", summary: "현재/지정 위치를 귀환 원점으로 기록", spatial: false },
+          ACT_SYS_ARM: { domain: "SYS", label: "Arm Motors", summary: "추진 계통 시동 (IMMEDIATE)", spatial: false },
+          ACT_SYS_DISARM: { domain: "SYS", label: "Disarm Motors", summary: "추진 계통 정지 (IMMEDIATE)", spatial: false },
+          ACT_SYS_TERMINATE: { domain: "SYS", label: "Terminate Mission", summary: "임무 즉시 종료 (E-STOP)", spatial: false },
+
+          ACT_TKL_TAKEOFF_VERT: { domain: "TKL", label: "Vertical Takeoff", summary: "수직 이륙 (목표 고도 도달 시 완료)", spatial: true, optionalPos: true },
+          ACT_TKL_TRANS_MC2FW: { domain: "TKL", label: "Transition MC->FW", summary: "멀티콥터에서 고정익 천이", spatial: false },
+          ACT_TKL_TRANS_FW2MC: { domain: "TKL", label: "Transition FW->MC", summary: "고정익에서 멀티콥터 천이", spatial: false },
+          ACT_TKL_LAND_NORM: { domain: "TKL", label: "Normal Land", summary: "일반 착륙 (facilityId 또는 targetPos)", spatial: true, optionalPos: true },
+          ACT_TKL_LAND_PREC: { domain: "TKL", label: "Precision Land", summary: "정밀 착륙 패드 유도 착륙", spatial: true, optionalPos: true },
+          ACT_TKL_ABORT_LAND: { domain: "TKL", label: "Abort Land", summary: "착륙 중단 및 복행 상승", spatial: true, optionalPos: true },
+
+          ACT_NAV_GOTO_WP: { domain: "NAV", label: "Go-To Waypoint", summary: "정밀 정지 3D 경유점 (기본 반경 5.0m, settleTicks 4)", spatial: true },
+          ACT_NAV_SPLINE_WP: { domain: "NAV", label: "Spline Waypoint", summary: "무정지 스플라인 통과 (기본 반경 15.0m, settleTicks 0)", spatial: true },
+          ACT_NAV_CORRIDOR: { domain: "NAV", label: "Corridor Leg", summary: "startPos->endPos 회랑 추종 비행", spatial: true, corridor: true },
+          ACT_NAV_CHANGE_ALT: { domain: "NAV", label: "Change Altitude", summary: "목표 고도(targetAlt) 변경", spatial: false },
+          ACT_NAV_CHANGE_SPD: { domain: "NAV", label: "Change Speed", summary: "목표 순항 속도(cruiseSpeed) 변경", spatial: false },
+          ACT_NAV_CHANGE_YAW: { domain: "NAV", label: "Change Yaw", summary: "기수 방위각(targetYaw) 회전", spatial: false },
+
+          ACT_PAT_HOLD_POS: { domain: "PAT", label: "Hold Position", summary: "지정 위치 제자리 정지 체공", spatial: true, optionalPos: true },
+          ACT_PAT_POI_HOLD: { domain: "PAT", label: "POI Hold", summary: "targetPos에서 poiPos 조준 체공", spatial: true, hasPoi: true },
+          ACT_PAT_LOITER_TIME: { domain: "PAT", label: "Loiter Time", summary: "시간 기반 원형 선회 (CW/CCW)", spatial: true, loiter: true },
+          ACT_PAT_LOITER_TURNS: { domain: "PAT", label: "Loiter Turns", summary: "회전수 기반 원형 선회 (CW/CCW)", spatial: true, loiter: true },
+          ACT_PAT_LOITER_ALT: { domain: "PAT", label: "Loiter Altitude", summary: "선회 중 목표 고도 변경", spatial: true, loiter: true },
+
+          ACT_PAY_BUS_CMD: { domain: "PAY", label: "Zone 3 Bus Cmd", summary: "탑재체 버스(Zone 3 CH+20..29) 명령", spatial: false },
+          ACT_PAY_REDSTONE: { domain: "PAY", label: "Redstone I/O", summary: "온보드 6면 레드스톤 출력/입력 대기", spatial: false },
+          ACT_PAY_SET_ROI: { domain: "PAY", label: "Set Gimbal ROI", summary: "짐벌 관심 지점(poiPos) 고정", spatial: false, hasPoi: true },
+          ACT_PAY_CLEAR_ROI: { domain: "PAY", label: "Clear Gimbal ROI", summary: "짐벌 ROI 고정 해제", spatial: false },
+
+          ACT_COM_ATC_HOLD: { domain: "COM", label: "ATC Hold", summary: "관제(GAC/GCS) 대기 체공", spatial: true, optionalPos: true },
+
+          ACT_MOB_RV_TRACK: { domain: "MOB", label: "Rendezvous Track", summary: "이동 모함/목표 랑데부 추적", spatial: true, optionalPos: true },
+          ACT_MOB_DECK_SYNC: { domain: "MOB", label: "Deck Sync", summary: "이동 갑판 속도·위치 동기화", spatial: true, optionalPos: true },
+          ACT_MOB_MOVING_TKOFF: { domain: "MOB", label: "Moving Takeoff", summary: "이동 갑판 이륙", spatial: true, optionalPos: true },
+
+          ACT_FS_RTL_HOME: { domain: "FS", label: "Return To Home", summary: "홈 원점 안전 복귀", spatial: true, optionalPos: true },
+          ACT_FS_GOTO_RALLY: { domain: "FS", label: "Go To Rally", summary: "대체 집결지 이동", spatial: true, optionalPos: true },
+          ACT_FS_FENCE_BRAKE: { domain: "FS", label: "Fence Brake", summary: "지오펜스 경계 제동", spatial: false },
+          ACT_FS_HOVER_HOLD: { domain: "FS", label: "Failsafe Hover", summary: "비상 제자리 정지", spatial: false },
+          ACT_FS_EMERG_LAND: { domain: "FS", label: "Emergency Land", summary: "비상 즉시 착륙", spatial: true, optionalPos: true },
+        };
+
+        const DEFERRED_ACTIONS = {
+          ACT_TKL_TAKEOFF_RWY: { domain: "TKL", summary: "[예약] 활주로 이륙" },
+          ACT_TKL_LAND_RWY: { domain: "TKL", summary: "[예약] 활주로 착륙" },
+          ACT_NAV_TERRAIN_FLW: { domain: "NAV", summary: "[예약] 지형 추적 비행" },
+          ACT_PAT_FIG_EIGHT: { domain: "PAT", summary: "[예약] 8자 선회" },
+          ACT_PAT_GRID_SURVEY: { domain: "PAT", summary: "[예약] 격자 정찰" },
+          ACT_PAT_EXP_SPIRAL: { domain: "PAT", summary: "[예약] 확장 나선 탐색" },
+          ACT_PER_LOCAL_AVOID: { domain: "PER", summary: "[예약] 근거리 장애물 회피" },
+          ACT_PER_REPLAN_GLB: { domain: "PER", summary: "[예약] 전역 경로 재계획" },
+          ACT_PER_TRACK_TGT: { domain: "PER", summary: "[예약] 동적 표적 추적" },
+          ACT_PER_SENTRY_HOLD: { domain: "PER", summary: "[예약] 감시 대기" },
+          ACT_COM_SWARM_FOLLOW: { domain: "COM", summary: "[예약] 편대 추종" },
+          ACT_COM_HANDOVER: { domain: "COM", summary: "[예약] 관제권 인계" },
+          ACT_MOB_ARM_DOCK: { domain: "MOB", summary: "[예약] 도킹암 결합 (TASK-104)" },
+          ACT_MOB_ARM_UNDOCK: { domain: "MOB", summary: "[예약] 도킹암 분리 (TASK-104)" },
+          ACT_NRG_REFUEL_DOCK: { domain: "NRG", summary: "[예약] 연료 보급 도킹" },
+          ACT_NRG_HIBERNATE: { domain: "NRG", summary: "[예약] 저전력 동면" },
+          ACT_MUMT_WINGMAN: { domain: "MUMT", summary: "[예약] 유무인 윙맨 협동" },
+          ACT_MUMT_UGV_SCOUT: { domain: "MUMT", summary: "[예약] 지상 정찰 연동" },
+          ACT_MUMT_CROSS_CUE: { domain: "MUMT", summary: "[예약] 교차 표적 지시" },
+          ACT_PAY_CARGO_DROP: { domain: "PAY", summary: "[TASK-401] 화물 투하" },
+          ACT_PAY_FIRE_CTRL: { domain: "PAY", summary: "[TASK-401] 무장/방제 사격 제어" },
+          ACT_PAY_GEO_SCAN: { domain: "PAY", summary: "[TASK-401] 지형/광물 스캔" },
+        };
+
+        const LEGACY_ACTIONS = [
+          "FLY_OVER", "FLY_TO", "ORBIT", "PATROL", "POI_HOLD",
+          "TAKEOFF_LAUNCHPAD", "LAND_LAUNCHPAD", "PAYLOAD_ACTION", "REDSTONE_ACTION",
+          "TAKEOFF_RUNWAY", "LAND_RUNWAY", "DOCK_ARM", "UNDOCK_ARM",
+        ];
+
+        const ACTIVE_DECORATORS = [
+          "DEC_EMCON", "DEC_ENERGY_ECO", "DEC_SMOOTH_TRAJ",
+          "DEC_HUMAN_AUTH", "DEC_RETRY_N", "DEC_TIMEOUT_GUARD",
+        ];
+        const DEFERRED_DECORATORS = ["DEC_TIME_CRIT"];
+        const DECORATOR_META = {
+          DEC_EMCON: { label: "EMCON (RF 침묵)", summary: "GPS 핑·외부 발신 억제", overrideFields: [] },
+          DEC_ENERGY_ECO: { label: "Energy Eco", summary: "저전력 순항 프로파일", overrideFields: [] },
+          DEC_SMOOTH_TRAJ: { label: "Smooth Traj", summary: "부드러운 곡선 천이", overrideFields: [] },
+          DEC_HUMAN_AUTH: { label: "Human Auth", summary: "실행 전 조종사 CONFIRM 대기", overrideFields: [] },
+          DEC_RETRY_N: { label: "Retry N", summary: "실패 시 최대 N회 재시도", overrideFields: [{ key: "maxAttempts", label: "maxAttempts", type: "number", defaultVal: 3, min: 1, step: 1 }] },
+          DEC_TIMEOUT_GUARD: { label: "Timeout Guard", summary: "스텝 최대 제한시간 감시", overrideFields: [{ key: "timeoutSec", label: "timeoutSec (s)", type: "number", defaultVal: 30, min: 1, step: 1 }] },
+          DEC_TIME_CRIT: { label: "Time Critical [DEFERRED]", summary: "[예약] 실시간 마감 우선 스케줄링", deferred: true, overrideFields: [] },
+        };
+
+        const ACTIVE_MACROS = ["MAC_RECON_ORBIT", "MAC_SHIP_RECOVERY", "MAC_CARGO_SORTIE"];
+        const DEFERRED_MACROS = ["MAC_PATROL_RADAR", "MAC_ARM_RESUPPLY"];
+        const MACRO_META = {
+          MAC_RECON_ORBIT: { domain: "MAC", label: "Recon Orbit Macro", summary: "진입->ROI->선회->해제->RTL->착륙 6단계 전개", spatial: true },
+          MAC_SHIP_RECOVERY: { domain: "MAC", label: "Ship Recovery Macro", summary: "모함 추적->(VTOL 천이)->갑판 동기화->정밀 착함->시동 정지", spatial: true },
+          MAC_CARGO_SORTIE: { domain: "MAC", label: "Cargo Sortie Macro", summary: "이륙->이동->Zone 3 버스 명령->RTL->착륙 5단계 전개", spatial: true },
+          MAC_PATROL_RADAR: { domain: "MAC", label: "Radar Patrol Macro [DEFERRED]", summary: "[예약] 레이더 구역 초계", deferred: true },
+          MAC_ARM_RESUPPLY: { domain: "MAC", label: "Arm Resupply Macro [DEFERRED]", summary: "[예약] 도킹암 보급 시퀀스", deferred: true },
+        };
+
+        const PRECONDITION_CATEGORIES = {
+          stateFlag: {
+            title: "1. State Flag",
+            fields: [
+              { key: "controlState", kind: "string", label: "controlState", placeholder: "IDLE_ARMED…" },
+              { key: "activeSource", kind: "string", label: "activeSource", placeholder: "AMM…" },
+              { key: "fsmState", kind: "string_or_list", label: "fsmState (comma for list)", placeholder: "CRUISE, LOITER…" },
+              { key: "allowedAirframes", kind: "list", label: "allowedAirframes (comma)", placeholder: "WINGED_VTOL, MULTICOPTER…" },
+              { key: "disallowedAirframes", kind: "list", label: "disallowedAirframes (comma)", placeholder: "FIXED_WING…" },
+            ],
+          },
+          sensorEst: {
+            title: "2. Sensor & Est",
+            fields: [
+              { key: "sensorOk", kind: "boolean", label: "sensorOk" },
+              { key: "gpsValid", kind: "boolean", label: "gpsValid" },
+              { key: "maxHdop", kind: "number", label: "maxHdop", min: 0, step: 0.1 },
+              { key: "requireTap", kind: "boolean", label: "requireTap" },
+              { key: "requireAsa", kind: "boolean", label: "requireAsa" },
+              { key: "requireGimbal", kind: "boolean", label: "requireGimbal" },
+            ],
+          },
+          resource: {
+            title: "3. Resource",
+            fields: [
+              { key: "minFuel", kind: "number", label: "minFuel (0..1)", min: 0, max: 1, step: 0.05 },
+              { key: "channelBound", kind: "boolean", label: "channelBound" },
+              { key: "atcCleared", kind: "boolean", label: "atcCleared" },
+              { key: "zone3Available", kind: "boolean", label: "zone3Available" },
+            ],
+          },
+          spatialSafety: {
+            title: "4. Spatial & Safety",
+            fields: [
+              { key: "geofenceMarginM", kind: "number", label: "geofenceMarginM (m)", step: 1 },
+              { key: "minAlt", kind: "number", label: "minAlt (m)", step: 5 },
+              { key: "maxAlt", kind: "number", label: "maxAlt (m)", step: 5 },
+              { key: "maxSpeed", kind: "number", label: "maxSpeed (m/s)", min: 0, step: 0.5 },
+            ],
+          },
+        };
+
+        const CONDITION_TYPES = [
+          "PROXIMITY_2D", "PROXIMITY_3D", "ALTITUDE_REACHED", "DURATION_SEC", "TIMEOUT_SEC",
+          "FUEL_LEVEL_BELOW", "FACILITY_TOUCHDOWN", "PAYLOAD_RESP_MATCH", "REDSTONE_INPUT_HIGH",
+          "CROSS_TRACK_ERROR", "ARM_DOCKED", "ARM_RELEASED", "SYS_ARMED", "IMMEDIATE",
+        ];
+        const DEFERRED_CONDITIONS = ["ARM_DOCKED", "ARM_RELEASED"];
+        const CONDITION_META = {
+          PROXIMITY_2D: { fields: [{ key: "toleranceM", type: "number", label: "toleranceM (m)", opt: true }, { key: "settleTicks", type: "int", label: "settleTicks", opt: true }, { key: "targetPos", type: "pos", label: "targetPos", opt: true }] },
+          PROXIMITY_3D: { fields: [{ key: "toleranceM", type: "number", label: "toleranceM (m)", opt: true }, { key: "settleTicks", type: "int", label: "settleTicks", opt: true }, { key: "targetPos", type: "pos", label: "targetPos", opt: true }, { key: "targetAlt", type: "number", label: "targetAlt (m)", opt: true }] },
+          ALTITUDE_REACHED: { fields: [{ key: "toleranceM", type: "number", label: "toleranceM (m)", opt: true }, { key: "settleTicks", type: "int", label: "settleTicks", opt: true }, { key: "targetAlt", type: "number", label: "targetAlt (m)", opt: true }, { key: "allowFsmCruise", type: "boolean", label: "allowFsmCruise", opt: true }] },
+          DURATION_SEC: { fields: [{ key: "durationSec", type: "number", label: "durationSec (s)", min: 0 }] },
+          TIMEOUT_SEC: { fields: [{ key: "timeout", type: "number", label: "timeout (s)", min: 0 }] },
+          FUEL_LEVEL_BELOW: { fields: [{ key: "threshold", type: "number", label: "threshold (0..1)", min: 0, max: 1, step: 0.05 }] },
+          FACILITY_TOUCHDOWN: { fields: [{ key: "facilityId", type: "string", label: "facilityId", opt: true }] },
+          PAYLOAD_RESP_MATCH: { fields: [{ key: "expectedStatus", type: "string", label: "expectedStatus" }, { key: "command", type: "string", label: "command", opt: true }, { key: "checkpointId", type: "string", label: "checkpointId", opt: true }] },
+          REDSTONE_INPUT_HIGH: { fields: [{ key: "side", type: "side", label: "side" }, { key: "color", type: "color", label: "color", opt: true }, { key: "minLevel", type: "int", label: "minLevel (1..15)", min: 1, max: 15, opt: true }] },
+          CROSS_TRACK_ERROR: { fields: [{ key: "maxDevM", type: "number", label: "maxDevM (m)", min: 0 }] },
+          ARM_DOCKED: { deferred: true, fields: [{ key: "facilityId", type: "string", label: "facilityId", opt: true }] },
+          ARM_RELEASED: { deferred: true, fields: [{ key: "facilityId", type: "string", label: "facilityId", opt: true }] },
+          SYS_ARMED: { fields: [] },
+          IMMEDIATE: { fields: [] },
+        };
+
+        const HOOK_TYPES = ["REDSTONE_SET", "REDSTONE_PULSE", "ZONE3_PAYLOAD_CMD", "NOTIFY_OPERATOR"];
+        const HOOK_PHASES = ["onEnter", "onExit", "onAbort"];
+
+        return {
+          DEFAULTS_BASELINE,
+          EXECUTION_MODES,
+          FALLBACK_POLICIES,
+          HEADING_MODES,
+          AIRFRAME_TYPES,
+          REDSTONE_SIDES,
+          BUNDLED_COLORS,
+          ACTIVE_ACTIONS,
+          DEFERRED_ACTIONS,
+          LEGACY_ACTIONS,
+          ACTIVE_DECORATORS,
+          DEFERRED_DECORATORS,
+          DECORATOR_META,
+          ACTIVE_MACROS,
+          DEFERRED_MACROS,
+          MACRO_META,
+          PRECONDITION_CATEGORIES,
+          CONDITION_TYPES,
+          DEFERRED_CONDITIONS,
+          CONDITION_META,
+          HOOK_TYPES,
+          HOOK_PHASES,
+          isActionActive: (a) => Object.prototype.hasOwnProperty.call(ACTIVE_ACTIONS, a),
+          isActionDeferred: (a) => Object.prototype.hasOwnProperty.call(DEFERRED_ACTIONS, a),
+          isMacroActive: (a) => ACTIVE_MACROS.includes(a),
+          isMacroDeferred: (a) => DEFERRED_MACROS.includes(a),
+          isLegacyAction: (a) => LEGACY_ACTIONS.includes(a),
+          isDecoratorActive: (d) => ACTIVE_DECORATORS.includes(d),
+          isDecoratorDeferred: (d) => DEFERRED_DECORATORS.includes(d),
+        };
+      })();
+
+      const DefaultResolver = (() => {
+        const computeBaseChannel = (blockNum) => {
+          const n = Math.max(1, Math.min(1000, Math.floor(Number(blockNum) || 1)));
+          return 10000 + (n - 1) * 40;
+        };
+
+        const resolveZone3Channel = (offsetOrChannel, baseCh) => {
+          const val = Number(offsetOrChannel);
+          if (!Number.isInteger(val)) return null;
+          if (val >= 20 && val <= 29) return (baseCh || 10000) + val;
+          return val;
+        };
+
+        const resolveCheckpointDefaults = (cp, missionDefaults) => {
+          const def = Object.assign({}, SchemaConstants.DEFAULTS_BASELINE, missionDefaults || {});
+          const p = (cp && cp.params) || {};
+          const act = cp && cp.action;
+          const isGoto = act === "ACT_NAV_GOTO_WP" || act === "ACT_NAV_CORRIDOR";
+          return {
+            targetAlt: isFiniteNum(p.targetAlt) ? p.targetAlt : def.targetAlt,
+            cruiseSpeed: isFiniteNum(p.cruiseSpeed) ? p.cruiseSpeed : def.cruiseSpeed,
+            acceptanceRadius: isFiniteNum(p.acceptanceRadius)
+              ? p.acceptanceRadius
+              : (isGoto ? 5.0 : def.acceptanceRadius),
+            headingMode: p.headingMode || (act === "ACT_PAT_POI_HOLD" ? "POI" : def.headingMode),
+            settleTicks: act === "ACT_NAV_SPLINE_WP" ? 0 : 4,
+          };
+        };
+
+        const describeDefaultComplete = (cp, defaults) => {
+          if (!cp) return "";
+          const r = resolveCheckpointDefaults(cp, defaults);
+          const p = cp.params || {};
+          const a = cp.action;
+          if (a === "ACT_NAV_SPLINE_WP") return `PROXIMITY_2D (toleranceM: ${r.acceptanceRadius}m, settleTicks: 0)`;
+          if (a === "ACT_NAV_GOTO_WP" || a === "ACT_NAV_CORRIDOR") return `PROXIMITY_3D (toleranceM: ${r.acceptanceRadius}m, settleTicks: 4)`;
+          if (a === "ACT_TKL_TAKEOFF_VERT" || a === "ACT_NAV_CHANGE_ALT" || a === "ACT_PAT_LOITER_ALT") return "ALTITUDE_REACHED (toleranceM: 5.0m, settleTicks: 4)";
+          if (a === "ACT_TKL_LAND_NORM" || a === "ACT_TKL_LAND_PREC") return `FACILITY_TOUCHDOWN (${p.facilityId || "PAD"})`;
+          if (a === "ACT_PAT_LOITER_TIME" || a === "ACT_PAT_HOLD_POS" || a === "ACT_PAT_POI_HOLD") {
+            return isFiniteNum(p.durationSec) ? `DURATION_SEC (${p.durationSec}s)` : "Manual hold (next/stop)";
+          }
+          if (a === "ACT_PAY_BUS_CMD" || a === "ACT_PAY_SET_ROI" || a === "ACT_PAY_CLEAR_ROI") {
+            return p.waitForAck === false ? "IMMEDIATE (waitForAck=false)" : "PAYLOAD_RESP_MATCH (ACK)";
+          }
+          if (a === "ACT_PAY_REDSTONE") {
+            return p.mode === "WAIT_INPUT" ? "REDSTONE_INPUT_HIGH" : `DURATION_SEC (${((p.durationMs || 0) / 1000).toFixed(2)}s)`;
+          }
+          return "Runtime action lifecycle default";
+        };
+
+        return { computeBaseChannel, resolveZone3Channel, resolveCheckpointDefaults, describeDefaultComplete };
+      })();
+
+      const MacroExpander = (() => {
+        const normalizeShortcutCoords = (params) => {
+          if (!params || typeof params !== "object") return {};
+          const out = deepClone(params);
+          if (!out.targetPos && isFiniteNum(out.x) && isFiniteNum(out.z)) {
+            out.targetPos = { x: out.x, z: out.z };
+            delete out.x;
+            delete out.z;
+          }
+          return out;
+        };
+
+        const extractExtras = (obj, knownKeys) => {
+          if (!obj || typeof obj !== "object" || Array.isArray(obj)) return undefined;
+          const known = new Set(knownKeys);
+          const extra = {};
+          let count = 0;
+          for (const [k, v] of Object.entries(obj)) {
+            if (!known.has(k) && k !== "_extra") {
+              extra[k] = deepClone(v);
+              count += 1;
+            }
+          }
+          return count > 0 ? extra : undefined;
+        };
+
+        const mergeExtras = (target, extraMap) => {
+          if (!extraMap || typeof extraMap !== "object") return target;
+          const out = Object.assign({}, target);
+          for (const [k, v] of Object.entries(extraMap)) {
+            if (!(k in out)) out[k] = deepClone(v);
+          }
+          return out;
+        };
+
+        const SHARED_PARAM_KEYS = new Set(["targetPos", "targetAlt", "cruiseSpeed"]);
+        const cleanActionSwitchParams = (oldParams, nextAction) => {
+          const prev = oldParams && typeof oldParams === "object" ? oldParams : {};
+          const out = {};
+          const meta = SchemaConstants.ACTIVE_ACTIONS[nextAction] || SchemaConstants.MACRO_META[nextAction];
+          const allowSpatial = !meta || meta.spatial !== false || meta.optionalPos;
+          if (allowSpatial && isPosXZ(prev.targetPos)) out.targetPos = deepClone(prev.targetPos);
+          if (isFiniteNum(prev.targetAlt)) out.targetAlt = prev.targetAlt;
+          if (isFiniteNum(prev.cruiseSpeed)) out.cruiseSpeed = prev.cruiseSpeed;
+          if (nextAction === "ACT_NAV_CORRIDOR") {
+            out.startPos = isPosXZ(prev.startPos) ? deepClone(prev.startPos) : { x: 0, z: 0 };
+            out.endPos = isPosXZ(prev.endPos) ? deepClone(prev.endPos) : (out.targetPos ? deepClone(out.targetPos) : { x: 200, z: 0 });
+            out.maxCrossTrackM = isFiniteNum(prev.maxCrossTrackM) ? prev.maxCrossTrackM : 15.0;
+          } else if (nextAction && nextAction.startsWith("ACT_PAT_LOITER_")) {
+            out.radius = isFiniteNum(prev.radius) ? prev.radius : 30.0;
+            out.direction = prev.direction === "CCW" ? "CCW" : "CW";
+            if (nextAction === "ACT_PAT_LOITER_TURNS") out.turns = isFiniteNum(prev.turns) ? prev.turns : 2;
+          } else if (nextAction === "ACT_PAT_POI_HOLD" || nextAction === "ACT_PAY_SET_ROI") {
+            out.poiPos = isPosXZ(prev.poiPos) ? deepClone(prev.poiPos) : { x: 0, z: 0 };
+          } else if (nextAction === "ACT_PAY_BUS_CMD") {
+            out.channelOffset = Number.isInteger(prev.channelOffset) ? prev.channelOffset : 20;
+            out.command = typeof prev.command === "string" && prev.command ? prev.command : "CAPTURE";
+            out.commandPayload = prev.commandPayload && typeof prev.commandPayload === "object" ? deepClone(prev.commandPayload) : {};
+            out.waitForAck = prev.waitForAck !== false;
+            out.expectedStatus = typeof prev.expectedStatus === "string" && prev.expectedStatus ? prev.expectedStatus : "OK";
+          } else if (nextAction === "ACT_PAY_REDSTONE") {
+            out.mode = prev.mode === "WAIT_INPUT" ? "WAIT_INPUT" : "EMIT";
+            out.side = SchemaConstants.REDSTONE_SIDES.includes(prev.side) ? prev.side : "bottom";
+            out.state = prev.state !== false;
+            out.durationMs = isFiniteNum(prev.durationMs) ? prev.durationMs : 500;
+          } else if (nextAction === "MAC_RECON_ORBIT") {
+            out.radius = isFiniteNum(prev.radius) ? prev.radius : 40;
+            out.durationSec = isFiniteNum(prev.durationSec) ? prev.durationSec : 60;
+          } else if (nextAction === "MAC_CARGO_SORTIE") {
+            out.channelOffset = Number.isInteger(prev.channelOffset) ? prev.channelOffset : 20;
+            out.command = typeof prev.command === "string" && prev.command ? prev.command : "DROP_CARGO";
+            out.payload = prev.payload && typeof prev.payload === "object" ? deepClone(prev.payload) : {};
+            out.awaitAck = prev.awaitAck !== false;
+          }
+          for (const k of Object.keys(prev)) {
+            if (!SHARED_PARAM_KEYS.has(k) && k === "facilityId" && (nextAction.startsWith("ACT_TKL_") || nextAction.startsWith("ACT_MOB_") || nextAction.startsWith("MAC_"))) {
+              out.facilityId = prev.facilityId;
+            }
+          }
+          return out;
+        };
+
+        const mergeDecorators = (baseList, extraList) => {
+          const merged = [];
+          for (const d of baseList || []) merged.push(deepClone(d));
+          for (const d of extraList || []) merged.push(deepClone(d));
+          return merged.length > 0 ? merged : undefined;
+        };
+
+        const makeStep = (baseCp, idx, action, params, defaultDecs, carryPreconditions) => {
+          const idPrefix = String((baseCp && baseCp.checkpointId) || "CP");
+          const step = {
+            checkpointId: `${idPrefix}_${idx}`,
+            action,
+            params: deepClone(params || {}),
+          };
+          if (carryPreconditions && baseCp && baseCp.preconditions) {
+            step.preconditions = deepClone(baseCp.preconditions);
+          }
+          const decs = mergeDecorators(defaultDecs, baseCp && baseCp.decorators);
+          if (decs) step.decorators = decs;
+          if (idx === 1 && baseCp) {
+            if (Array.isArray(baseCp.onEnter) && baseCp.onEnter.length) step.onEnter = deepClone(baseCp.onEnter);
+            if (Array.isArray(baseCp.onExit) && baseCp.onExit.length) step.onExit = deepClone(baseCp.onExit);
+            if (Array.isArray(baseCp.onAbort) && baseCp.onAbort.length) step.onAbort = deepClone(baseCp.onAbort);
+          }
+          return step;
+        };
+
+        const expandMacroCheckpoint = (cp, airframeType) => {
+          if (!cp || typeof cp !== "object") return [];
+          const p = cp.params || {};
+          if (cp.action === "MAC_RECON_ORBIT") {
+            const radius = isFiniteNum(p.radius) ? p.radius : 40;
+            const poiPos = p.poiPos ? deepClone(p.poiPos) : deepClone(p.targetPos);
+            return [
+              makeStep(cp, 1, "ACT_NAV_GOTO_WP", { targetPos: p.targetPos, targetAlt: p.targetAlt, tangentEntryOffsetM: radius }, null, true),
+              makeStep(cp, 2, "ACT_PAY_SET_ROI", { poiPos }, null, false),
+              makeStep(cp, 3, "ACT_PAT_LOITER_TIME", { targetPos: p.targetPos, targetAlt: p.targetAlt, radius, durationSec: isFiniteNum(p.durationSec) ? p.durationSec : 60 }, [{ decoratorId: "DEC_SMOOTH_TRAJ" }], false),
+              makeStep(cp, 4, "ACT_PAY_CLEAR_ROI", {}, null, false),
+              makeStep(cp, 5, "ACT_FS_RTL_HOME", { targetAlt: p.targetAlt }, [{ decoratorId: "DEC_ENERGY_ECO" }], false),
+              makeStep(cp, 6, "ACT_TKL_LAND_PREC", { facilityId: p.facilityId, targetPos: p.targetPos }, null, false),
+            ];
+          }
+          if (cp.action === "MAC_SHIP_RECOVERY") {
+            const retryDec = [{ decoratorId: "DEC_RETRY_N", overrideParams: { maxAttempts: 3 } }];
+            const steps = [
+              makeStep(cp, 1, "ACT_MOB_RV_TRACK", { facilityId: p.facilityId, targetPos: p.targetPos }, null, true),
+            ];
+            if (airframeType === "WINGED_VTOL") {
+              steps.push(makeStep(cp, steps.length + 1, "ACT_TKL_TRANS_FW2MC", {}, null, false));
+            }
+            steps.push(makeStep(cp, steps.length + 1, "ACT_MOB_DECK_SYNC", { facilityId: p.facilityId, targetPos: p.targetPos }, null, false));
+            steps.push(makeStep(cp, steps.length + 1, "ACT_TKL_LAND_PREC", { facilityId: p.facilityId, targetPos: p.targetPos }, retryDec, false));
+            steps.push(makeStep(cp, steps.length + 1, "ACT_SYS_DISARM", {}, null, false));
+            return steps;
+          }
+          if (cp.action === "MAC_CARGO_SORTIE") {
+            return [
+              makeStep(cp, 1, "ACT_TKL_TAKEOFF_VERT", { facilityId: p.facilityId, targetAlt: p.targetAlt }, null, true),
+              makeStep(cp, 2, "ACT_NAV_GOTO_WP", { targetPos: p.targetPos, targetAlt: p.targetAlt }, null, false),
+              makeStep(cp, 3, "ACT_PAY_BUS_CMD", { channelOffset: p.channelOffset, command: p.command, payload: p.payload, awaitAck: p.awaitAck }, [{ decoratorId: "DEC_HUMAN_AUTH" }], false),
+              makeStep(cp, 4, "ACT_FS_RTL_HOME", { targetAlt: p.targetAlt }, null, false),
+              makeStep(cp, 5, "ACT_TKL_LAND_PREC", { facilityId: p.facilityId, targetPos: p.targetPos }, null, false),
+            ];
+          }
+          return [deepClone(cp)];
+        };
+
+        return { normalizeShortcutCoords, extractExtras, mergeExtras, cleanActionSwitchParams, expandMacroCheckpoint };
+      })();
+      const Validator = (() => {
+        const KNOWN_PRECOND_MAP = (() => {
+          const map = new Map();
+          for (const cat of Object.values(SchemaConstants.PRECONDITION_CATEGORIES)) {
+            for (const f of cat.fields) map.set(f.key, f.kind);
+          }
+          return map;
+        })();
+
+        const isValidZone3Value = (channelOffset, targetChannel) => {
+          if (Number.isInteger(channelOffset)) {
+            return channelOffset >= 20 && channelOffset <= 29;
+          }
+          if (Number.isInteger(targetChannel) && targetChannel >= 10000 && targetChannel <= 49999) {
+            const mod = (targetChannel - 10000) % 40;
+            return mod >= 20 && mod <= 29;
+          }
+          return false;
+        };
+
+        const hasDurationCondition = (node) => {
+          if (!node || typeof node !== "object") return false;
+          if (node.type === "DURATION_SEC") return true;
+          if (Array.isArray(node.conditions)) return node.conditions.some(hasDurationCondition);
+          if (Array.isArray(node.all)) return node.all.some(hasDurationCondition);
+          if (Array.isArray(node.any)) return node.any.some(hasDurationCondition);
+          if (node.not) return hasDurationCondition(node.not);
+          return false;
+        };
+
+        const pushIssue = (list, level, code, message, seq, fieldPath) => {
+          list.push({ level, code, message, seq: seq == null ? null : seq, fieldPath: fieldPath || "" });
+        };
+
+        const validatePreconditions = (pre, seq, basePath, errors, targetAf) => {
+          if (pre === undefined) return;
+          if (!pre || typeof pre !== "object" || Array.isArray(pre)) {
+            pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", "preconditions must be an object.", seq, basePath);
+            return;
+          }
+          for (const [key, val] of Object.entries(pre)) {
+            const kind = KNOWN_PRECOND_MAP.get(key);
+            if (!kind) {
+              pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `Unknown precondition key '${key}'.`, seq, `${basePath}.${key}`);
+              continue;
+            }
+            if (kind === "boolean" && typeof val !== "boolean") {
+              pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `Precondition '${key}' must be boolean.`, seq, `${basePath}.${key}`);
+            } else if (kind === "number" && !isFiniteNum(val)) {
+              pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `Precondition '${key}' must be finite number.`, seq, `${basePath}.${key}`);
+            } else if (kind === "list" && !Array.isArray(val)) {
+              pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `Precondition '${key}' must be array.`, seq, `${basePath}.${key}`);
+            }
+          }
+          if (isFiniteNum(pre.minAlt) && isFiniteNum(pre.maxAlt) && pre.minAlt > pre.maxAlt) {
+            pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `minAlt (${pre.minAlt}) exceeds maxAlt (${pre.maxAlt}).`, seq, `${basePath}.minAlt`);
+          }
+          if (isFiniteNum(pre.maxHdop) && pre.maxHdop < 0) {
+            pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", "maxHdop must be >= 0.", seq, `${basePath}.maxHdop`);
+          }
+          if (isFiniteNum(pre.minFuel) && (pre.minFuel < 0 || pre.minFuel > 1)) {
+            pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", "minFuel must be within 0..1.", seq, `${basePath}.minFuel`);
+          }
+          if (isFiniteNum(pre.maxSpeed) && pre.maxSpeed < 0) {
+            pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", "maxSpeed must be >= 0.", seq, `${basePath}.maxSpeed`);
+          }
+          const allowed = Array.isArray(pre.allowedAirframes) ? pre.allowedAirframes : null;
+          const disallowed = Array.isArray(pre.disallowedAirframes) ? pre.disallowedAirframes : null;
+          if (allowed && disallowed && allowed.some((a) => disallowed.includes(a))) {
+            pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", "allowedAirframes overlaps disallowedAirframes.", seq, `${basePath}.allowedAirframes`);
+          }
+          if (targetAf) {
+            if (allowed && allowed.length > 0 && !allowed.includes(targetAf)) {
+              pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `Target airframe '${targetAf}' excluded by allowedAirframes.`, seq, `${basePath}.allowedAirframes`);
+            }
+            if (disallowed && disallowed.includes(targetAf)) {
+              pushIssue(errors, "ERROR", "PRECONDITION_STATIC_INVALID", `Target airframe '${targetAf}' forbidden by disallowedAirframes.`, seq, `${basePath}.disallowedAirframes`);
+            }
+          }
+        };
+
+        const validateConditionNode = (node, seq, path, errors, warnings) => {
+          if (node === undefined || node === null) return;
+          if (typeof node !== "object" || Array.isArray(node)) {
+            pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", "Condition node must be an object.", seq, path);
+            return;
+          }
+          if ("logic" in node || "conditions" in node) {
+            const logic = String(node.logic || "").toUpperCase();
+            if (logic !== "ALL" && logic !== "ANY" && logic !== "NOT") {
+              pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", `Condition group logic '${node.logic || ""}' must be ALL, ANY, or NOT.`, seq, `${path}.logic`);
+              return;
+            }
+            const children = node.conditions;
+            if (!Array.isArray(children) || children.length === 0) {
+              pushIssue(errors, "ERROR", "EMPTY_CONDITION_GROUP", `Condition group '${logic}' must contain non-empty conditions array.`, seq, `${path}.conditions`);
+              return;
+            }
+            for (let k = 0; k < children.length; k++) {
+              validateConditionNode(children[k], seq, `${path}.conditions[${k}]`, errors, warnings);
+            }
+            return;
+          }
+          if ("all" in node || "any" in node) {
+            const key = "all" in node ? "all" : "any";
+            const children = node[key];
+            if (!Array.isArray(children) || children.length === 0) {
+              pushIssue(errors, "ERROR", "EMPTY_CONDITION_GROUP", `Condition group '${key}' must be a non-empty array.`, seq, `${path}.${key}`);
+              return;
+            }
+            for (let k = 0; k < children.length; k++) {
+              validateConditionNode(children[k], seq, `${path}.${key}[${k}]`, errors, warnings);
+            }
+            return;
+          }
+          if ("not" in node) {
+            if (!node.not || typeof node.not !== "object") {
+              pushIssue(errors, "ERROR", "EMPTY_CONDITION_GROUP", "Condition 'not' requires a child condition object.", seq, `${path}.not`);
+              return;
+            }
+            validateConditionNode(node.not, seq, `${path}.not`, errors, warnings);
+            return;
+          }
+          const t = node.type;
+          if (!SchemaConstants.CONDITION_TYPES.includes(t)) {
+            pushIssue(errors, "ERROR", "INVALID_CONDITION_TYPE", `Unknown condition type '${t || ""}'.`, seq, `${path}.type`);
+            return;
+          }
+          if (SchemaConstants.DEFERRED_CONDITIONS.includes(t)) {
+            pushIssue(warnings, "WARNING", "DEFERRED_CONDITION_UNSUPPORTED", `Deferred condition '${t}' requires later phase firmware.`, seq, `${path}.type`);
+          }
+          if (t === "TIMEOUT_SEC") {
+            if (!isFiniteNum(node.timeout) || node.timeout <= 0) {
+              pushIssue(errors, "ERROR", "INVALID_TIMEOUT_FIELD", "TIMEOUT_SEC requires positive numeric 'timeout' (not 'timeoutSec').", seq, `${path}.timeout`);
+            }
+          } else if (t === "DURATION_SEC") {
+            if (!isFiniteNum(node.durationSec) || node.durationSec < 0) {
+              pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", "DURATION_SEC requires non-negative 'durationSec'.", seq, `${path}.durationSec`);
+            }
+          } else if (t === "FUEL_LEVEL_BELOW") {
+            if (!isFiniteNum(node.threshold) || node.threshold < 0 || node.threshold > 1) {
+              pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", "FUEL_LEVEL_BELOW requires 'threshold' in 0..1.", seq, `${path}.threshold`);
+            }
+          } else if (t === "CROSS_TRACK_ERROR") {
+            if (!isFiniteNum(node.maxDevM) || node.maxDevM <= 0) {
+              pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", "CROSS_TRACK_ERROR requires positive 'maxDevM'.", seq, `${path}.maxDevM`);
+            }
+          } else if (t === "PAYLOAD_RESP_MATCH") {
+            if (typeof node.expectedStatus !== "string" || !node.expectedStatus.trim()) {
+              pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", "PAYLOAD_RESP_MATCH requires non-empty 'expectedStatus'.", seq, `${path}.expectedStatus`);
+            }
+          } else if (t === "REDSTONE_INPUT_HIGH") {
+            if (!SchemaConstants.REDSTONE_SIDES.includes(node.side)) {
+              pushIssue(errors, "ERROR", "INVALID_CONDITION_PARAM", "REDSTONE_INPUT_HIGH requires valid Redstone 'side'.", seq, `${path}.side`);
+            }
+          }
+        };
+
+        const validateHooksPhase = (list, phase, seq, basePath, errors) => {
+          if (list === undefined) return;
+          if (!Array.isArray(list)) {
+            pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", `${phase} must be an array.`, seq, basePath);
+            return;
+          }
+          for (let h = 0; h < list.length; h++) {
+            const hook = list[h];
+            const hp = `${basePath}[${h}]`;
+            if (!hook || typeof hook !== "object" || !SchemaConstants.HOOK_TYPES.includes(hook.type)) {
+              pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", `Invalid hook type in ${phase}[${h}].`, seq, `${hp}.type`);
+              continue;
+            }
+            if (hook.type === "REDSTONE_SET") {
+              if (!SchemaConstants.REDSTONE_SIDES.includes(hook.side)) {
+                pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", "REDSTONE_SET requires valid 'side'.", seq, `${hp}.side`);
+              }
+            } else if (hook.type === "REDSTONE_PULSE") {
+              if (!SchemaConstants.REDSTONE_SIDES.includes(hook.side)) {
+                pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", "REDSTONE_PULSE requires valid 'side'.", seq, `${hp}.side`);
+              }
+              if (!isFiniteNum(hook.durationMs) || hook.durationMs <= 0) {
+                pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", "REDSTONE_PULSE requires positive 'durationMs'.", seq, `${hp}.durationMs`);
+              }
+            } else if (hook.type === "ZONE3_PAYLOAD_CMD") {
+              if (!isValidZone3Value(hook.channelOffset, hook.targetChannel)) {
+                pushIssue(errors, "ERROR", "INVALID_ZONE3_CHANNEL", "ZONE3_PAYLOAD_CMD requires channelOffset (20..29) or Zone 3 targetChannel.", seq, `${hp}.channelOffset`);
+              }
+              if (typeof hook.command !== "string" || !hook.command.trim()) {
+                pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", "ZONE3_PAYLOAD_CMD requires non-empty 'command'.", seq, `${hp}.command`);
+              }
+            } else if (hook.type === "NOTIFY_OPERATOR") {
+              if (typeof hook.message !== "string" || !hook.message.trim()) {
+                pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", "NOTIFY_OPERATOR requires non-empty 'message'.", seq, `${hp}.message`);
+              }
+            }
+          }
+        };
+
+        const validateMission = (mission, opts) => {
+          const errors = [];
+          const warnings = [];
+          const targetAirframe = opts && opts.targetAirframe ? opts.targetAirframe : null;
+          if (!mission || typeof mission !== "object" || Array.isArray(mission)) {
+            pushIssue(errors, "ERROR", "INVALID_MISSION_OBJECT", "Mission payload must be a JSON object.", null, "");
+            return { valid: false, errors, warnings };
+          }
+          if (Array.isArray(mission.items)) {
+            pushIssue(errors, "ERROR", "LEGACY_MISSION_FORMAT", "Legacy v1.x 'items[]' format is unsupported in AMM v2.0.0.", null, "items");
+          }
+          if (typeof mission.missionId !== "string" || !mission.missionId.trim()) {
+            pushIssue(errors, "ERROR", "MISSING_MISSION_ID", "missionId is required.", null, "missionId");
+          }
+          if (mission.executionMode && !SchemaConstants.EXECUTION_MODES.includes(mission.executionMode)) {
+            pushIssue(errors, "ERROR", "INVALID_EXECUTION_MODE", `Invalid executionMode '${mission.executionMode}'.`, null, "executionMode");
+          }
+          if (mission.fallbackPolicy && !SchemaConstants.FALLBACK_POLICIES.includes(mission.fallbackPolicy)) {
+            pushIssue(errors, "ERROR", "INVALID_FALLBACK_POLICY", `Invalid fallbackPolicy '${mission.fallbackPolicy}'.`, null, "fallbackPolicy");
+          }
+          if (!Array.isArray(mission.checkpoints)) {
+            pushIssue(errors, "ERROR", "INVALID_CHECKPOINTS_ARRAY", "checkpoints must be an array.", null, "checkpoints");
+            return { valid: errors.length === 0, errors, warnings };
+          }
+          if (mission.checkpoints.length === 0) {
+            pushIssue(warnings, "WARNING", "EMPTY_DRAFT", "Mission has 0 checkpoints.", null, "checkpoints");
+          }
+          const seenIds = new Set();
+          for (let i = 0; i < mission.checkpoints.length; i++) {
+            const cp = mission.checkpoints[i];
+            const seq = i + 1;
+            const cpPath = `checkpoints[${i}]`;
+            if (!cp || typeof cp !== "object" || Array.isArray(cp)) {
+              pushIssue(errors, "ERROR", "INVALID_CHECKPOINT_OBJECT", `Checkpoint #${seq} must be an object.`, seq, cpPath);
+              continue;
+            }
+            const cpId = typeof cp.checkpointId === "string" ? cp.checkpointId.trim() : "";
+            if (!cpId) {
+              pushIssue(errors, "ERROR", "MISSING_CHECKPOINT_ID", `CP#${seq} requires a non-empty checkpointId.`, seq, `${cpPath}.checkpointId`);
+            } else if (seenIds.has(cpId)) {
+              pushIssue(errors, "ERROR", "DUPLICATE_CHECKPOINT_ID", `Duplicate checkpointId '${cpId}'.`, seq, `${cpPath}.checkpointId`);
+            } else {
+              seenIds.add(cpId);
+            }
+            const act = cp.action;
+            if (SchemaConstants.isLegacyAction(act)) {
+              pushIssue(errors, "ERROR", "LEGACY_ACTION_UNSUPPORTED", `Legacy action '${act}' is forbidden in v2.0.0.`, seq, `${cpPath}.action`);
+            } else if (SchemaConstants.isActionDeferred(act)) {
+              pushIssue(warnings, "WARNING", "DEFERRED_ACTION_UNSUPPORTED", `Deferred action '${act}' is not runnable in current firmware.`, seq, `${cpPath}.action`);
+            } else if (SchemaConstants.isMacroDeferred(act)) {
+              pushIssue(warnings, "WARNING", "DEFERRED_MACRO_UNSUPPORTED", `Deferred macro '${act}' is not runnable in current firmware.`, seq, `${cpPath}.action`);
+            } else if (!SchemaConstants.isActionActive(act) && !SchemaConstants.isMacroActive(act)) {
+              pushIssue(errors, "ERROR", "UNKNOWN_ACTION", `Unknown action '${act || ""}'.`, seq, `${cpPath}.action`);
+            }
+            const p = cp.params && typeof cp.params === "object" ? cp.params : {};
+            const meta = SchemaConstants.ACTIVE_ACTIONS[act] || SchemaConstants.MACRO_META[act];
+            if (act === "ACT_NAV_CORRIDOR") {
+              const sOk = isPosXZ(p.startPos);
+              const eOk = isPosXZ(p.endPos);
+              if (!sOk || !eOk || (p.startPos.x === p.endPos.x && p.startPos.z === p.endPos.z)) {
+                pushIssue(errors, "ERROR", "INVALID_CORRIDOR_BOUNDS", "ACT_NAV_CORRIDOR requires distinct valid startPos and endPos.", seq, !sOk ? `${cpPath}.params.startPos` : `${cpPath}.params.endPos`);
+              }
+            } else if (meta && meta.spatial && !meta.optionalPos && !isPosXZ(p.targetPos)) {
+              pushIssue(errors, "ERROR", "MISSING_TARGET_POS", `${act} requires valid targetPos {x, z}.`, seq, `${cpPath}.params.targetPos`);
+            }
+            if (meta && meta.hasPoi && !isPosXZ(p.poiPos)) {
+              pushIssue(errors, "ERROR", "MISSING_POI_POS", `${act} requires valid poiPos {x, z}.`, seq, `${cpPath}.params.poiPos`);
+            }
+            if (p.radius !== undefined) {
+              if (!isFiniteNum(p.radius) || p.radius <= 0) {
+                pushIssue(errors, "ERROR", "INVALID_PARAM_RANGE", "Orbit radius must be > 0.", seq, `${cpPath}.params.radius`);
+              } else if (p.radius < 20) {
+                pushIssue(warnings, "WARNING", "ORBIT_RADIUS_BELOW_FCP_MIN", `Orbit radius ${p.radius}m is below FCP 20m minimum.`, seq, `${cpPath}.params.radius`);
+              }
+            }
+            if (act === "ACT_PAT_HOLD_POS" || act === "ACT_PAT_POI_HOLD" || act === "ACT_PAT_LOITER_TIME") {
+              if (p.durationSec === undefined || p.durationSec === null || p.durationSec === "") {
+                if (!hasDurationCondition(cp.completeWhen)) {
+                  pushIssue(warnings, "WARNING", "MISSING_DURATION_HOLD_MANUAL", `${act} without durationSec holds until manual command.`, seq, `${cpPath}.params.durationSec`);
+                }
+              } else if (!isFiniteNum(p.durationSec) || p.durationSec <= 0) {
+                pushIssue(errors, "ERROR", "INVALID_PARAM_RANGE", "durationSec must be > 0.", seq, `${cpPath}.params.durationSec`);
+              }
+            }
+            if (act === "ACT_PAY_BUS_CMD") {
+              if (!isValidZone3Value(p.channelOffset, p.targetChannel)) {
+                pushIssue(errors, "ERROR", "INVALID_ZONE3_CHANNEL", "ACT_PAY_BUS_CMD requires Zone 3 channelOffset (20..29) or targetChannel.", seq, `${cpPath}.params.channelOffset`);
+              }
+              if (typeof p.command !== "string" || !p.command.trim()) {
+                pushIssue(errors, "ERROR", "INVALID_PARAM_RANGE", "ACT_PAY_BUS_CMD requires non-empty command.", seq, `${cpPath}.params.command`);
+              }
+            }
+            if (act === "ACT_PAY_REDSTONE" && p.side !== undefined && !SchemaConstants.REDSTONE_SIDES.includes(p.side)) {
+              pushIssue(errors, "ERROR", "INVALID_PARAM_RANGE", "ACT_PAY_REDSTONE requires valid Redstone side.", seq, `${cpPath}.params.side`);
+            }
+            if (isFiniteNum(p.targetAlt) && p.targetAlt < 0) {
+              pushIssue(warnings, "WARNING", "INVALID_PARAM_RANGE", `targetAlt (${p.targetAlt}m) is negative.`, seq, `${cpPath}.params.targetAlt`);
+            }
+            validatePreconditions(cp.preconditions, seq, `${cpPath}.preconditions`, errors, targetAirframe);
+            if (Array.isArray(cp.decorators)) {
+              for (let d = 0; d < cp.decorators.length; d++) {
+                const dec = cp.decorators[d];
+                const dId = dec && dec.decoratorId;
+                const dp = `${cpPath}.decorators[${d}]`;
+                if (SchemaConstants.isDecoratorDeferred(dId)) {
+                  pushIssue(warnings, "WARNING", "DEFERRED_DECORATOR_UNSUPPORTED", `Deferred decorator '${dId}' is not active in current firmware.`, seq, `${dp}.decoratorId`);
+                } else if (!SchemaConstants.isDecoratorActive(dId)) {
+                  pushIssue(errors, "ERROR", "UNKNOWN_DECORATOR", `Unknown decorator '${dId || ""}'.`, seq, `${dp}.decoratorId`);
+                } else {
+                  const ov = (dec && dec.overrideParams) || {};
+                  if (dId === "DEC_RETRY_N" && ov.maxAttempts !== undefined && (!Number.isInteger(ov.maxAttempts) || ov.maxAttempts < 1)) {
+                    pushIssue(errors, "ERROR", "INVALID_DECORATOR_PARAM", "DEC_RETRY_N requires integer maxAttempts >= 1.", seq, `${dp}.overrideParams.maxAttempts`);
+                  }
+                  if (dId === "DEC_TIMEOUT_GUARD" && ov.timeoutSec !== undefined && (!isFiniteNum(ov.timeoutSec) || ov.timeoutSec <= 0)) {
+                    pushIssue(errors, "ERROR", "INVALID_DECORATOR_PARAM", "DEC_TIMEOUT_GUARD requires timeoutSec > 0.", seq, `${dp}.overrideParams.timeoutSec`);
+                  }
+                }
+              }
+            }
+            validateConditionNode(cp.completeWhen, seq, `${cpPath}.completeWhen`, errors, warnings);
+            validateConditionNode(cp.abortWhen, seq, `${cpPath}.abortWhen`, errors, warnings);
+            if (cp.hooks && typeof cp.hooks === "object") {
+              pushIssue(errors, "ERROR", "INVALID_HOOK_PARAM", "Hooks must be placed directly on cp.onEnter / cp.onExit / cp.onAbort (not cp.hooks).", seq, `${cpPath}.hooks`);
+            }
+            for (const phase of SchemaConstants.HOOK_PHASES) {
+              validateHooksPhase(cp[phase], phase, seq, `${cpPath}.${phase}`, errors);
+            }
+          }
+          return { valid: errors.length === 0, errors, warnings };
+        };
+
+        return { validateMission };
+      })();
+      const Store = (() => {
+        const AUTOSAVE_KEY = "uafs_amm_editor_autosave_v1";
+        const MAX_UNDO = 50;
+        const listeners = new Set();
+
+        const makeEmptyMission = () => ({
+          missionId: "MSN_NEW_001",
+          version: "2.0.0",
+          description: "",
+          executionMode: "SINGLE",
+          fallbackPolicy: "RTH",
+          defaults: deepClone(SchemaConstants.DEFAULTS_BASELINE),
+          checkpoints: [],
+        });
+
+        const state = {
+          mission: makeEmptyMission(),
+          ui: {
+            selectedIndex: -1,
+            rightMode: "CHECKPOINT",
+            rightTab: "PARAMS",
+            aircraftNumber: 1,
+            targetAirframe: "WINGED_VTOL",
+            altProfileOpen: false,
+            rawJsonOpen: false,
+            validationOpen: false,
+            validationFilter: "ALL",
+            gridSnap: true,
+            gridStep: 10,
+            altSnapStep: 5,
+            viewOffset: { x: 0, z: 0 },
+            zoom: 1.0,
+            activePopover: null,
+            focusedFieldPath: "",
+          },
+          undoStack: [],
+          redoStack: [],
+          txSnapshot: null,
+          dirty: false,
+          lastValidation: { valid: true, errors: [], warnings: [] },
+        };
+
+        const makeSnapshot = () => ({
+          mission: deepClone(state.mission),
+          selectedIndex: state.ui.selectedIndex,
+        });
+
+        const pushUndoSnapshot = (snap) => {
+          state.undoStack.push(deepClone(snap));
+          if (state.undoStack.length > MAX_UNDO) {
+            state.undoStack.shift();
+          }
+          state.redoStack.length = 0;
+        };
+
+        const revalidate = () => {
+          state.lastValidation = Validator.validateMission(state.mission, {
+            targetAirframe: state.ui.targetAirframe,
+          });
+        };
+
+        const emit = (reason) => {
+          for (const fn of listeners) {
+            try { fn(state, reason || "change"); } catch (_) {}
+          }
+        };
+
+        const clampSelection = () => {
+          const len = state.mission.checkpoints.length;
+          if (len === 0) state.ui.selectedIndex = -1;
+          else if (state.ui.selectedIndex >= len) state.ui.selectedIndex = len - 1;
+          else if (state.ui.selectedIndex < 0) state.ui.selectedIndex = 0;
+        };
+
+        const subscribe = (fn) => {
+          listeners.add(fn);
+          return () => listeners.delete(fn);
+        };
+
+        const getState = () => state;
+
+        const beginUndoTransaction = () => {
+          if (!state.txSnapshot) {
+            state.txSnapshot = makeSnapshot();
+          }
+        };
+
+        const commitUndoTransaction = () => {
+          if (!state.txSnapshot) return false;
+          const before = JSON.stringify(state.txSnapshot.mission);
+          const after = JSON.stringify(state.mission);
+          if (before !== after) {
+            pushUndoSnapshot(state.txSnapshot);
+            state.dirty = true;
+          }
+          state.txSnapshot = null;
+          revalidate();
+          emit("tx_commit");
+          return before !== after;
+        };
+
+        const undo = () => {
+          if (state.undoStack.length === 0) return false;
+          state.redoStack.push(makeSnapshot());
+          const prev = state.undoStack.pop();
+          state.mission = deepClone(prev.mission);
+          state.ui.selectedIndex = prev.selectedIndex;
+          clampSelection();
+          state.dirty = true;
+          revalidate();
+          emit("undo");
+          return true;
+        };
+
+        const redo = () => {
+          if (state.redoStack.length === 0) return false;
+          state.undoStack.push(makeSnapshot());
+          const next = state.redoStack.pop();
+          state.mission = deepClone(next.mission);
+          state.ui.selectedIndex = next.selectedIndex;
+          clampSelection();
+          state.dirty = true;
+          revalidate();
+          emit("redo");
+          return true;
+        };
+
+        const resetToEmptyDraft = (opts) => {
+          if (opts && opts.clearUndo) {
+            state.undoStack.length = 0;
+            state.redoStack.length = 0;
+            state.txSnapshot = null;
+          } else {
+            pushUndoSnapshot(makeSnapshot());
+          }
+          state.mission = makeEmptyMission();
+          state.ui.selectedIndex = -1;
+          state.dirty = false;
+          revalidate();
+          emit("reset");
+        };
+
+        const setMission = (missionObj, opts) => {
+          const push = !opts || opts.pushUndo !== false;
+          if (push) pushUndoSnapshot(makeSnapshot());
+          state.mission = deepClone(missionObj);
+          if (!Array.isArray(state.mission.checkpoints)) state.mission.checkpoints = [];
+          clampSelection();
+          state.dirty = true;
+          revalidate();
+          emit((opts && opts.source) || "set_mission");
+        };
+
+        const mutateMission = (mutatorFn, opts) => {
+          const push = !opts || opts.pushUndo !== false;
+          if (push) pushUndoSnapshot(makeSnapshot());
+          mutatorFn(state.mission, state.ui);
+          clampSelection();
+          state.dirty = true;
+          revalidate();
+          emit("mutate");
+        };
+
+        const nextUniqueCpId = (prefix) => {
+          const used = new Set((state.mission.checkpoints || []).map((c) => c && c.checkpointId));
+          const base = prefix || "CP";
+          let idx = (state.mission.checkpoints || []).length + 1;
+          while (used.has(`${base}_${idx}`)) idx += 1;
+          return `${base}_${idx}`;
+        };
+
+        const addCheckpoint = (actionOrMacro, posOrParams, insertAt) => {
+          pushUndoSnapshot(makeSnapshot());
+          const rawParams = posOrParams && typeof posOrParams === "object" ? deepClone(posOrParams) : {};
+          const params = MacroExpander.cleanActionSwitchParams(rawParams, actionOrMacro);
+          const meta = SchemaConstants.ACTIVE_ACTIONS[actionOrMacro] || SchemaConstants.MACRO_META[actionOrMacro];
+          if (meta && meta.spatial && !meta.corridor && !isPosXZ(params.targetPos)) {
+            params.targetPos = { x: 0, z: 0 };
+          }
+          const cp = {
+            checkpointId: nextUniqueCpId(actionOrMacro.startsWith("MAC_") ? "MAC" : "CP"),
+            action: actionOrMacro,
+            params,
+          };
+          const list = state.mission.checkpoints;
+          const idx = Number.isInteger(insertAt) && insertAt >= 0 && insertAt <= list.length ? insertAt : list.length;
+          list.splice(idx, 0, cp);
+          state.ui.selectedIndex = idx;
+          state.ui.rightMode = "CHECKPOINT";
+          state.dirty = true;
+          revalidate();
+          emit("add_cp");
+          return idx;
+        };
+
+        const deleteCheckpoint = (index) => {
+          const list = state.mission.checkpoints;
+          if (index < 0 || index >= list.length) return false;
+          pushUndoSnapshot(makeSnapshot());
+          list.splice(index, 1);
+          clampSelection();
+          state.dirty = true;
+          revalidate();
+          emit("delete_cp");
+          return true;
+        };
+
+        const moveCheckpoint = (fromIdx, toIdx) => {
+          const list = state.mission.checkpoints;
+          if (fromIdx < 0 || fromIdx >= list.length || toIdx < 0 || toIdx >= list.length || fromIdx === toIdx) return false;
+          pushUndoSnapshot(makeSnapshot());
+          const [moved] = list.splice(fromIdx, 1);
+          list.splice(toIdx, 0, moved);
+          state.ui.selectedIndex = toIdx;
+          state.dirty = true;
+          revalidate();
+          emit("move_cp");
+          return true;
+        };
+
+        const duplicateCheckpoint = (index) => {
+          const list = state.mission.checkpoints;
+          if (index < 0 || index >= list.length) return false;
+          pushUndoSnapshot(makeSnapshot());
+          const copy = deepClone(list[index]);
+          copy.checkpointId = nextUniqueCpId(copy.checkpointId || "CP");
+          list.splice(index + 1, 0, copy);
+          state.ui.selectedIndex = index + 1;
+          state.dirty = true;
+          revalidate();
+          emit("duplicate_cp");
+          return true;
+        };
+
+        const expandSelectedMacro = (index) => {
+          const list = state.mission.checkpoints;
+          const idx = Number.isInteger(index) ? index : state.ui.selectedIndex;
+          if (idx < 0 || idx >= list.length) return false;
+          const cp = list[idx];
+          if (!SchemaConstants.isMacroActive(cp.action)) return false;
+          pushUndoSnapshot(makeSnapshot());
+          const expanded = MacroExpander.expandMacroCheckpoint(cp, state.ui.targetAirframe);
+          list.splice(idx, 1, ...expanded);
+          state.ui.selectedIndex = idx;
+          state.ui.rightMode = "CHECKPOINT";
+          state.dirty = true;
+          revalidate();
+          emit("expand_macro");
+          return true;
+        };
+
+        const selectCheckpoint = (index) => {
+          if (!Number.isInteger(index) || index < 0 || index >= state.mission.checkpoints.length) {
+            state.ui.selectedIndex = -1;
+          } else {
+            state.ui.selectedIndex = index;
+            state.ui.rightMode = "CHECKPOINT";
+          }
+          emit("select");
+        };
+
+        const setUi = (patch) => {
+          const prevAf = state.ui.targetAirframe;
+          Object.assign(state.ui, patch || {});
+          if (patch && patch.targetAirframe && patch.targetAirframe !== prevAf) {
+            revalidate();
+          }
+          emit("ui");
+        };
+
+        const loadPreset = (presetKey) => {
+          const preset = JsonIO.getPreset(presetKey);
+          if (!preset) return false;
+          setMission(preset, { pushUndo: true, source: "preset" });
+          state.ui.selectedIndex = state.mission.checkpoints.length > 0 ? 0 : -1;
+          state.ui.rightMode = "CHECKPOINT";
+          emit("preset_selected");
+          return true;
+        };
+
+        const focusFieldPath = (fieldPath) => {
+          const fp = String(fieldPath || "");
+          const cpMatch = fp.match(/^checkpoints\[(\d+)\](?:\.(.*))?$/);
+          if (cpMatch) {
+            const idx = Number(cpMatch[1]);
+            const sub = cpMatch[2] || "";
+            if (idx >= 0 && idx < state.mission.checkpoints.length) {
+              state.ui.selectedIndex = idx;
+            }
+            state.ui.rightMode = "CHECKPOINT";
+            if (/^(decorators|preconditions)/.test(sub)) {
+              state.ui.rightTab = "GUARDS";
+            } else if (/^(completeWhen|abortWhen)/.test(sub)) {
+              state.ui.rightTab = "CONDITIONS";
+            } else if (/^(onEnter|onExit|onAbort|hooks)/.test(sub)) {
+              state.ui.rightTab = "HOOKS";
+            } else {
+              state.ui.rightTab = "PARAMS";
+            }
+          } else if (fp) {
+            state.ui.rightMode = "MISSION_SETTINGS";
+          }
+          state.ui.focusedFieldPath = fp;
+          emit("focus_field");
+          return {
+            fieldPath: fp,
+            selectedIndex: state.ui.selectedIndex,
+            rightMode: state.ui.rightMode,
+            rightTab: state.ui.rightTab,
+          };
+        };
+
+        const saveAutosave = () => {
+          try {
+            if (typeof localStorage === "undefined") return false;
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+              mission: JsonIO.buildExportObject(state.mission),
+              aircraftNumber: state.ui.aircraftNumber,
+              targetAirframe: state.ui.targetAirframe,
+              savedAt: new Date().toISOString(),
+            }));
+            return true;
+          } catch (_) {
+            return false;
+          }
+        };
+
+        const loadAutosave = () => {
+          try {
+            if (typeof localStorage === "undefined") return { ok: false };
+            const raw = localStorage.getItem(AUTOSAVE_KEY);
+            if (!raw) return { ok: false };
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.mission || Array.isArray(parsed.mission.items)) {
+              return { ok: false };
+            }
+            return {
+              ok: true,
+              mission: parsed.mission,
+              aircraftNumber: parsed.aircraftNumber || 1,
+              targetAirframe: parsed.targetAirframe || "WINGED_VTOL",
+              savedAt: parsed.savedAt || "",
+            };
+          } catch (_) {
+            return { ok: false };
+          }
+        };
+
+        const clearAutosave = () => {
+          try {
+            if (typeof localStorage !== "undefined") localStorage.removeItem(AUTOSAVE_KEY);
+          } catch (_) {}
+        };
+
+        revalidate();
+        return {
+          AUTOSAVE_KEY,
+          subscribe,
+          getState,
+          beginUndoTransaction,
+          commitUndoTransaction,
+          undo,
+          redo,
+          canUndo: () => state.undoStack.length > 0,
+          canRedo: () => state.redoStack.length > 0,
+          resetToEmptyDraft,
+          loadPreset,
+          setMission,
+          mutateMission,
+          addCheckpoint,
+          deleteCheckpoint,
+          moveCheckpoint,
+          duplicateCheckpoint,
+          expandSelectedMacro,
+          selectCheckpoint,
+          setUi,
+          focusFieldPath,
+          revalidate,
+          saveAutosave,
+          loadAutosave,
+          clearAutosave,
+        };
+      })();
+      const CanvasRenderer = (() => {
+        const COLORS = {
+          bg: "#0b0f17",
+          gridMinor: "rgba(148, 163, 184, 0.08)",
+          gridMajor: "rgba(148, 163, 184, 0.18)",
+          axisX: "rgba(248, 113, 113, 0.45)",
+          axisZ: "rgba(56, 189, 248, 0.45)",
+          pathActive: "#38bdf8",
+          pathRepeat: "#a78bfa",
+          corridorFill: "rgba(56, 189, 248, 0.10)",
+          corridorStroke: "rgba(56, 189, 248, 0.65)",
+          loiterRing: "#fbbf24",
+          poiSight: "rgba(244, 114, 182, 0.70)",
+          poiNode: "#f472b6",
+          cpActive: "#38bdf8",
+          cpSelected: "#fbbf24",
+          cpError: "#f87171",
+          cpWarn: "#fb923c",
+          cpMacro: "#c084fc",
+          text: "#e2e8f0",
+          muted: "#94a3b8",
+        };
+
+        let mapCanvasEl = null;
+        let altCanvasEl = null;
+        let dragState = null;
+        let cursorWorld = null;
+        let boundTarget = new WeakSet();
+
+        const getViewRect = (canvasEl, view) => {
+          const st = Store.getState();
+          const v = view || {
+            offsetX: st.ui.viewOffset.x,
+            offsetZ: st.ui.viewOffset.z,
+            zoom: st.ui.zoom,
+            width: (canvasEl && (canvasEl.clientWidth || canvasEl.width)) || 800,
+            height: (canvasEl && (canvasEl.clientHeight || canvasEl.height)) || 600,
+          };
+          return v;
+        };
+
+        const worldToScreen = (wx, wz, view) => ({
+          sx: (view.width || 800) / 2 + (wx - (view.offsetX || 0)) * (view.zoom || 1),
+          sy: (view.height || 600) / 2 + (wz - (view.offsetZ || 0)) * (view.zoom || 1),
+        });
+
+        const screenToWorld = (sx, sy, view) => ({
+          x: (view.offsetX || 0) + (sx - (view.width || 800) / 2) / (view.zoom || 1),
+          z: (view.offsetZ || 0) + (sy - (view.height || 600) / 2) / (view.zoom || 1),
+        });
+
+        const snapCoord = (val, step, enabled) => {
+          if (!enabled) return Math.round(val * 10) / 10;
+          const s = step || 10;
+          return Math.round(val / s) * s;
+        };
+
+        const snapAlt = (val, altKey) => {
+          const s = altKey ? 1 : 5;
+          return Math.max(-64, Math.min(512, Math.round(val / s) * s));
+        };
+
+        const computeRepeatLoopTarget = (checkpoints) => {
+          if (!Array.isArray(checkpoints)) return -1;
+          for (let i = 0; i < checkpoints.length; i++) {
+            const act = (checkpoints[i] && checkpoints[i].action) || "";
+            if (act.startsWith("ACT_SYS_")) continue;
+            if (act.startsWith("ACT_TKL_TAKEOFF_")) continue;
+            if (act === "ACT_MOB_MOVING_TKOFF") continue;
+            return i;
+          }
+          return -1;
+        };
+
+        const computeLabelStackOffsets = (points, thresholdPx, offsetStepPx) => {
+          const thresh = thresholdPx || 18;
+          const step = offsetStepPx || 15;
+          const placed = [];
+          return (points || []).map((pt) => {
+            let tier = 0;
+            for (const prev of placed) {
+              const dx = pt.sx - prev.sx;
+              const dy = (pt.sy + tier * step) - prev.effY;
+              if (Math.hypot(dx, dy) < thresh) {
+                tier += 1;
+              }
+            }
+            placed.push({ sx: pt.sx, effY: pt.sy + tier * step });
+            return tier * step;
+          });
+        };
+
+        const getCheckpointPrimaryPos = (cp) => {
+          if (!cp || !cp.params) return null;
+          if (cp.action === "ACT_NAV_CORRIDOR" && isPosXZ(cp.params.startPos)) return cp.params.startPos;
+          if (isPosXZ(cp.params.targetPos)) return cp.params.targetPos;
+          return null;
+        };
+
+        const checkCpHandles = (cp, index, sx, sy, view, hitR) => {
+          if (!cp || !cp.params) return null;
+          const p = cp.params;
+          if (cp.action === "ACT_NAV_CORRIDOR" && isPosXZ(p.endPos)) {
+            const sEnd = worldToScreen(p.endPos.x, p.endPos.z, view);
+            const dEnd = Math.hypot(sx - sEnd.sx, sy - sEnd.sy);
+            if (dEnd <= hitR) return { kind: "CORRIDOR_END", index, screenDist: dEnd };
+          }
+          if (isPosXZ(p.poiPos)) {
+            const sPoi = worldToScreen(p.poiPos.x, p.poiPos.z, view);
+            const dPoi = Math.hypot(sx - sPoi.sx, sy - sPoi.sy);
+            if (dPoi <= hitR) return { kind: "POI", index, screenDist: dPoi };
+          }
+          const primary = getCheckpointPrimaryPos(cp);
+          if (primary) {
+            const sCp = worldToScreen(primary.x, primary.z, view);
+            const dCp = Math.hypot(sx - sCp.sx, sy - sCp.sy);
+            if (dCp <= hitR) return { kind: "CP", index, screenDist: dCp };
+          }
+          return null;
+        };
+
+        const hitTestCanvas = (checkpoints, sx, sy, view, selectedIndex) => {
+          if (!Array.isArray(checkpoints) || checkpoints.length === 0) return null;
+          const hitR = 14;
+          if (Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < checkpoints.length) {
+            const selHit = checkCpHandles(checkpoints[selectedIndex], selectedIndex, sx, sy, view, hitR);
+            if (selHit) return selHit;
+          }
+          for (let i = checkpoints.length - 1; i >= 0; i--) {
+            if (i === selectedIndex) continue;
+            const hit = checkCpHandles(checkpoints[i], i, sx, sy, view, hitR);
+            if (hit) return hit;
+          }
+          return null;
+        };
+
+        const getAltBounds = (checkpoints, defaults) => {
+          const alts = (checkpoints || []).map((cp) => DefaultResolver.resolveCheckpointDefaults(cp, defaults).targetAlt);
+          const minV = alts.length ? Math.min(0, ...alts) : 0;
+          const maxV = alts.length ? Math.max(260, ...alts) : 260;
+          return { altMin: minV, altMax: maxV > minV ? maxV + 20 : minV + 100 };
+        };
+
+        const getAltPointScreen = (index, width, height, boundsOverride) => {
+          const st = Store.getState();
+          const cps = st.mission.checkpoints || [];
+          const w = width || 800;
+          const h = height || 120;
+          const padX = 48;
+          const padY = 18;
+          const bounds = boundsOverride || getAltBounds(cps, st.mission.defaults);
+          const count = Math.max(1, cps.length);
+          const fracX = count === 1 ? 0.5 : index / (count - 1);
+          const sx = padX + fracX * Math.max(1, w - padX * 2);
+          const cp = cps[index];
+          const effAlt = cp ? DefaultResolver.resolveCheckpointDefaults(cp, st.mission.defaults).targetAlt : 150;
+          const fracY = (effAlt - bounds.altMin) / Math.max(1, bounds.altMax - bounds.altMin);
+          const sy = (h - padY) - fracY * Math.max(1, h - padY * 2);
+          return { sx, sy, effAlt, bounds };
+        };
+
+        const syncCanvasDpr = (canvasEl) => {
+          if (!canvasEl) return { width: 800, height: 600, dpr: 1 };
+          const w = canvasEl.clientWidth || canvasEl.width || 800;
+          const h = canvasEl.clientHeight || canvasEl.height || 600;
+          const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+          if (canvasEl.width !== Math.round(w * dpr) || canvasEl.height !== Math.round(h * dpr)) {
+            canvasEl.width = Math.round(w * dpr);
+            canvasEl.height = Math.round(h * dpr);
+          }
+          return { width: w, height: h, dpr };
+        };
+
+        const render = () => {
+          if (!mapCanvasEl) return;
+          const ctx = mapCanvasEl.getContext && mapCanvasEl.getContext("2d");
+          if (!ctx) return;
+          const { width, height, dpr } = syncCanvasDpr(mapCanvasEl);
+          const st = Store.getState();
+          const cps = st.mission.checkpoints || [];
+          const view = { offsetX: st.ui.viewOffset.x, offsetZ: st.ui.viewOffset.z, zoom: st.ui.zoom, width, height };
+          const issueBySeq = new Map();
+          for (const err of st.lastValidation.errors || []) {
+            if (err.seq) issueBySeq.set(err.seq, "ERROR");
+          }
+          for (const wrn of st.lastValidation.warnings || []) {
+            if (wrn.seq && !issueBySeq.has(wrn.seq)) issueBySeq.set(wrn.seq, "WARNING");
+          }
+
+          ctx.save();
+          if (typeof ctx.setTransform === "function") ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          // Layer 1: Background & Adaptive Grid
+          ctx.fillStyle = COLORS.bg;
+          ctx.fillRect(0, 0, width, height);
+          const stepWorld = view.zoom < 0.35 ? 200 : (view.zoom < 0.8 ? 100 : 50);
+          const topLeft = screenToWorld(0, 0, view);
+          const botRight = screenToWorld(width, height, view);
+          const startX = Math.floor(topLeft.x / stepWorld) * stepWorld;
+          const startZ = Math.floor(topLeft.z / stepWorld) * stepWorld;
+          ctx.lineWidth = 1;
+          for (let wx = startX; wx <= botRight.x; wx += stepWorld) {
+            const p = worldToScreen(wx, 0, view);
+            ctx.strokeStyle = wx % (stepWorld * 4) === 0 ? COLORS.gridMajor : COLORS.gridMinor;
+            ctx.beginPath();
+            ctx.moveTo(p.sx, 0);
+            ctx.lineTo(p.sx, height);
+            ctx.stroke();
+          }
+          for (let wz = startZ; wz <= botRight.z; wz += stepWorld) {
+            const p = worldToScreen(0, wz, view);
+            ctx.strokeStyle = wz % (stepWorld * 4) === 0 ? COLORS.gridMajor : COLORS.gridMinor;
+            ctx.beginPath();
+            ctx.moveTo(0, p.sy);
+            ctx.lineTo(width, p.sy);
+            ctx.stroke();
+          }
+          const origin = worldToScreen(0, 0, view);
+          ctx.strokeStyle = COLORS.axisX;
+          ctx.beginPath(); ctx.moveTo(0, origin.sy); ctx.lineTo(width, origin.sy); ctx.stroke();
+          ctx.strokeStyle = COLORS.axisZ;
+          ctx.beginPath(); ctx.moveTo(origin.sx, 0); ctx.lineTo(origin.sx, height); ctx.stroke();
+
+          // Layer 2: Corridors & Geofence
+          for (let i = 0; i < cps.length; i++) {
+            const cp = cps[i];
+            if (cp.action === "ACT_NAV_CORRIDOR" && isPosXZ(cp.params.startPos) && isPosXZ(cp.params.endPos)) {
+              const s1 = worldToScreen(cp.params.startPos.x, cp.params.startPos.z, view);
+              const s2 = worldToScreen(cp.params.endPos.x, cp.params.endPos.z, view);
+              ctx.strokeStyle = COLORS.corridorStroke;
+              ctx.lineWidth = Math.max(4, (cp.params.maxCrossTrackM || 15) * 2 * view.zoom);
+              ctx.globalAlpha = 0.16;
+              ctx.beginPath(); ctx.moveTo(s1.sx, s1.sy); ctx.lineTo(s2.sx, s2.sy); ctx.stroke();
+              ctx.globalAlpha = 1;
+            }
+          }
+
+          // Layer 3: Mission Path Polyline + REPEAT Loopback
+          const spatialPoints = [];
+          for (let i = 0; i < cps.length; i++) {
+            const cp = cps[i];
+            if (cp.action === "ACT_NAV_CORRIDOR" && isPosXZ(cp.params.startPos) && isPosXZ(cp.params.endPos)) {
+              spatialPoints.push({ idx: i, pos: cp.params.startPos });
+              spatialPoints.push({ idx: i, pos: cp.params.endPos });
+            } else {
+              const p = getCheckpointPrimaryPos(cp);
+              if (p) spatialPoints.push({ idx: i, pos: p });
+            }
+          }
+          if (spatialPoints.length >= 2) {
+            ctx.strokeStyle = COLORS.pathActive;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const firstS = worldToScreen(spatialPoints[0].pos.x, spatialPoints[0].pos.z, view);
+            ctx.moveTo(firstS.sx, firstS.sy);
+            for (let k = 1; k < spatialPoints.length; k++) {
+              const sk = worldToScreen(spatialPoints[k].pos.x, spatialPoints[k].pos.z, view);
+              ctx.lineTo(sk.sx, sk.sy);
+            }
+            ctx.stroke();
+          }
+          if (st.mission.executionMode === "REPEAT" && spatialPoints.length >= 2) {
+            const loopIdx = computeRepeatLoopTarget(cps);
+            const loopPt = spatialPoints.find((sp) => sp.idx >= loopIdx);
+            const lastPt = spatialPoints[spatialPoints.length - 1];
+            if (loopPt && lastPt && loopPt !== lastPt) {
+              const sa = worldToScreen(lastPt.pos.x, lastPt.pos.z, view);
+              const sb = worldToScreen(loopPt.pos.x, loopPt.pos.z, view);
+              ctx.setLineDash([6, 5]);
+              ctx.strokeStyle = COLORS.pathRepeat;
+              ctx.lineWidth = 2;
+              ctx.beginPath(); ctx.moveTo(sa.sx, sa.sy); ctx.lineTo(sb.sx, sb.sy); ctx.stroke();
+              ctx.setLineDash([]);
+            }
+          }
+
+          // Layer 4: Loiter Rings & POI Sightlines
+          for (let i = 0; i < cps.length; i++) {
+            const cp = cps[i];
+            const p = cp.params || {};
+            const primary = getCheckpointPrimaryPos(cp);
+            if (primary && isFiniteNum(p.radius) && (cp.action.startsWith("ACT_PAT_LOITER_") || cp.action === "MAC_RECON_ORBIT")) {
+              const sc = worldToScreen(primary.x, primary.z, view);
+              ctx.setLineDash([4, 4]);
+              ctx.strokeStyle = COLORS.loiterRing;
+              ctx.lineWidth = 1.5;
+              ctx.beginPath(); ctx.arc(sc.sx, sc.sy, Math.max(8, p.radius * view.zoom), 0, Math.PI * 2); ctx.stroke();
+              ctx.setLineDash([]);
+            }
+            if (primary && isPosXZ(p.poiPos)) {
+              const s1 = worldToScreen(primary.x, primary.z, view);
+              const s2 = worldToScreen(p.poiPos.x, p.poiPos.z, view);
+              ctx.setLineDash([3, 3]);
+              ctx.strokeStyle = COLORS.poiSight;
+              ctx.lineWidth = 1.2;
+              ctx.beginPath(); ctx.moveTo(s1.sx, s1.sy); ctx.lineTo(s2.sx, s2.sy); ctx.stroke();
+              ctx.setLineDash([]);
+            }
+          }
+
+          // Layer 5 & 6: Checkpoints + Secondary Handles
+          const labelCandidates = [];
+          for (let i = 0; i < cps.length; i++) {
+            const cp = cps[i];
+            const isSel = i === st.ui.selectedIndex;
+            const sev = issueBySeq.get(i + 1);
+            const nodeColor = sev === "ERROR" ? COLORS.cpError : (sev === "WARNING" ? COLORS.cpWarn : (SchemaConstants.isMacroActive(cp.action) ? COLORS.cpMacro : COLORS.cpActive));
+            const primary = getCheckpointPrimaryPos(cp);
+            if (primary) {
+              const sc = worldToScreen(primary.x, primary.z, view);
+              if (isSel) {
+                ctx.strokeStyle = COLORS.cpSelected;
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(sc.sx, sc.sy, 11, 0, Math.PI * 2); ctx.stroke();
+              }
+              ctx.fillStyle = nodeColor;
+              ctx.beginPath(); ctx.arc(sc.sx, sc.sy, 6.5, 0, Math.PI * 2); ctx.fill();
+              labelCandidates.push({ sx: sc.sx, sy: sc.sy, label: `#${i + 1} ${cp.checkpointId}` });
+            }
+            if (cp.action === "ACT_NAV_CORRIDOR" && isPosXZ(cp.params.endPos)) {
+              const sEnd = worldToScreen(cp.params.endPos.x, cp.params.endPos.z, view);
+              ctx.fillStyle = isSel ? COLORS.cpSelected : COLORS.corridorStroke;
+              ctx.fillRect(sEnd.sx - 5, sEnd.sy - 5, 10, 10);
+            }
+            if (isPosXZ(cp.params.poiPos)) {
+              const sPoi = worldToScreen(cp.params.poiPos.x, cp.params.poiPos.z, view);
+              ctx.fillStyle = COLORS.poiNode;
+              ctx.beginPath(); ctx.arc(sPoi.sx, sPoi.sy, 5, 0, Math.PI * 2); ctx.fill();
+            }
+          }
+
+          // Layer 7: Stacked Labels
+          const offsets = computeLabelStackOffsets(labelCandidates, 18, 15);
+          ctx.font = "11px monospace";
+          for (let i = 0; i < labelCandidates.length; i++) {
+            const c = labelCandidates[i];
+            const ly = c.sy - 12 - offsets[i];
+            ctx.fillStyle = COLORS.text;
+            ctx.fillText(c.label, c.sx + 10, ly);
+          }
+
+          // Layer 8: Cursor HUD
+          if (cursorWorld) {
+            ctx.fillStyle = COLORS.muted;
+            ctx.font = "11px monospace";
+            ctx.fillText(`X:${Math.round(cursorWorld.x)} Z:${Math.round(cursorWorld.z)} (${Math.round(view.zoom * 100)}%)`, 12, height - 12);
+          }
+          ctx.restore();
+        };
+
+        const renderAltProfile = () => {
+          if (!altCanvasEl) return;
+          const ctx = altCanvasEl.getContext && altCanvasEl.getContext("2d");
+          if (!ctx) return;
+          const { width, height, dpr } = syncCanvasDpr(altCanvasEl);
+          const st = Store.getState();
+          const cps = st.mission.checkpoints || [];
+          ctx.save();
+          if (typeof ctx.setTransform === "function") ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.fillStyle = "#0f1522";
+          ctx.fillRect(0, 0, width, height);
+          const bounds = getAltBounds(cps, st.mission.defaults);
+          if (cps.length === 0) {
+            ctx.fillStyle = COLORS.muted;
+            ctx.font = "11px sans-serif";
+            ctx.fillText("No checkpoints for altitude profile", 16, height / 2);
+            ctx.restore();
+            return;
+          }
+          ctx.strokeStyle = COLORS.pathActive;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i < cps.length; i++) {
+            const pt = getAltPointScreen(i, width, height, bounds);
+            if (i === 0) ctx.moveTo(pt.sx, pt.sy);
+            else ctx.lineTo(pt.sx, pt.sy);
+          }
+          ctx.stroke();
+          for (let i = 0; i < cps.length; i++) {
+            const pt = getAltPointScreen(i, width, height, bounds);
+            ctx.fillStyle = i === st.ui.selectedIndex ? COLORS.cpSelected : COLORS.cpActive;
+            ctx.beginPath(); ctx.arc(pt.sx, pt.sy, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = COLORS.text;
+            ctx.font = "10px monospace";
+            ctx.fillText(`#${i + 1} ${Math.round(pt.effAlt)}m`, pt.sx - 18, Math.max(12, pt.sy - 8));
+          }
+          ctx.restore();
+        };
+
+        const centerOnCheckpoint = (index) => {
+          const st = Store.getState();
+          const cp = st.mission.checkpoints[index];
+          const primary = getCheckpointPrimaryPos(cp);
+          if (!primary) return;
+          Store.setUi({ viewOffset: { x: primary.x, z: primary.z } });
+        };
+
+        const fitView = () => {
+          const st = Store.getState();
+          const pts = [];
+          for (const cp of st.mission.checkpoints || []) {
+            const p = getCheckpointPrimaryPos(cp);
+            if (p) pts.push(p);
+            if (cp && cp.params && isPosXZ(cp.params.endPos)) pts.push(cp.params.endPos);
+          }
+          if (pts.length === 0) {
+            Store.setUi({ viewOffset: { x: 0, z: 0 }, zoom: 1.0 });
+            return;
+          }
+          let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+          for (const p of pts) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.z < minZ) minZ = p.z;
+            if (p.z > maxZ) maxZ = p.z;
+          }
+          const spanX = Math.max(100, maxX - minX);
+          const spanZ = Math.max(100, maxZ - minZ);
+          const w = (mapCanvasEl && (mapCanvasEl.clientWidth || mapCanvasEl.width)) || 800;
+          const h = (mapCanvasEl && (mapCanvasEl.clientHeight || mapCanvasEl.height)) || 600;
+          const zoom = Math.max(0.15, Math.min(3.0, Math.min((w * 0.72) / spanX, (h * 0.72) / spanZ)));
+          Store.setUi({ viewOffset: { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2 }, zoom });
+        };
+
+        const bindMapEvents = (el) => {
+          if (!el || boundTarget.has(el)) return;
+          boundTarget.add(el);
+          const localPt = (e) => {
+            const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
+            return {
+              sx: (e.clientX || 0) - rect.left,
+              sy: (e.clientY || 0) - rect.top,
+              width: rect.width || el.clientWidth || el.width || 800,
+              height: rect.height || el.clientHeight || el.height || 600,
+            };
+          };
+          el.addEventListener("mousedown", (e) => {
+            const st = Store.getState();
+            const pt = localPt(e);
+            const view = { offsetX: st.ui.viewOffset.x, offsetZ: st.ui.viewOffset.z, zoom: st.ui.zoom, width: pt.width, height: pt.height };
+            if (e.button === 0) {
+              const hit = hitTestCanvas(st.mission.checkpoints, pt.sx, pt.sy, view, st.ui.selectedIndex);
+              if (hit) {
+                Store.selectCheckpoint(hit.index);
+                Store.beginUndoTransaction();
+                dragState = { target: "MAP", kind: hit.kind, index: hit.index };
+                return;
+              }
+            }
+            if (e.button === 0 || e.button === 1 || e.button === 2) {
+              dragState = { target: "PAN", startSx: pt.sx, startSy: pt.sy, origOffset: deepClone(st.ui.viewOffset) };
+            }
+          });
+          el.addEventListener("mousemove", (e) => {
+            const st = Store.getState();
+            const pt = localPt(e);
+            const view = { offsetX: st.ui.viewOffset.x, offsetZ: st.ui.viewOffset.z, zoom: st.ui.zoom, width: pt.width, height: pt.height };
+            cursorWorld = screenToWorld(pt.sx, pt.sy, view);
+            if (!dragState) { render(); return; }
+            if (dragState.target === "PAN") {
+              const dx = (pt.sx - dragState.startSx) / (st.ui.zoom || 1);
+              const dz = (pt.sy - dragState.startSy) / (st.ui.zoom || 1);
+              Store.setUi({ viewOffset: { x: dragState.origOffset.x - dx, z: dragState.origOffset.z - dz } });
+              return;
+            }
+            if (dragState.target === "MAP") {
+              const snapOn = e.altKey ? false : st.ui.gridSnap;
+              const wx = snapCoord(cursorWorld.x, st.ui.gridStep, snapOn);
+              const wz = snapCoord(cursorWorld.z, st.ui.gridStep, snapOn);
+              const dIdx = dragState.index;
+              const dKind = dragState.kind;
+              Store.mutateMission((m) => {
+                const cp = m.checkpoints[dIdx];
+                if (!cp || !cp.params) return;
+                if (dKind === "CORRIDOR_END") cp.params.endPos = { x: wx, z: wz };
+                else if (dKind === "POI") cp.params.poiPos = { x: wx, z: wz };
+                else if (cp.action === "ACT_NAV_CORRIDOR") cp.params.startPos = { x: wx, z: wz };
+                else cp.params.targetPos = { x: wx, z: wz };
+              }, { pushUndo: false });
+            }
+          });
+          const endDrag = () => {
+            if (dragState && dragState.target === "MAP") {
+              Store.commitUndoTransaction();
+            }
+            dragState = null;
+          };
+          el.addEventListener("mouseup", endDrag);
+          el.addEventListener("wheel", (e) => {
+            if (e.preventDefault) e.preventDefault();
+            const st = Store.getState();
+            const factor = (e.deltaY || 0) > 0 ? 0.9 : 1.1;
+            const nextZoom = Math.max(0.1, Math.min(4.0, st.ui.zoom * factor));
+            Store.setUi({ zoom: nextZoom });
+          });
+        };
+
+        const bindAltEvents = (el) => {
+          if (!el || boundTarget.has(el)) return;
+          boundTarget.add(el);
+          const localPt = (e) => {
+            const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 120 };
+            return {
+              sx: (e.clientX || 0) - rect.left,
+              sy: (e.clientY || 0) - rect.top,
+              width: rect.width || el.clientWidth || el.width || 800,
+              height: rect.height || el.clientHeight || el.height || 120,
+            };
+          };
+          el.addEventListener("mousedown", (e) => {
+            const st = Store.getState();
+            const cps = st.mission.checkpoints || [];
+            if (cps.length === 0) return;
+            const pt = localPt(e);
+            const bounds = getAltBounds(cps, st.mission.defaults);
+            let bestIdx = -1;
+            let bestDist = 18;
+            for (let i = 0; i < cps.length; i++) {
+              const s = getAltPointScreen(i, pt.width, pt.height, bounds);
+              const dist = Math.hypot(pt.sx - s.sx, pt.sy - s.sy);
+              if (dist <= bestDist) { bestDist = dist; bestIdx = i; }
+            }
+            if (bestIdx >= 0) {
+              Store.selectCheckpoint(bestIdx);
+              Store.beginUndoTransaction();
+              dragState = { target: "ALT", index: bestIdx, bounds, height: pt.height };
+            }
+          });
+          el.addEventListener("mousemove", (e) => {
+            if (!dragState || dragState.target !== "ALT") return;
+            const pt = localPt(e);
+            const padY = 18;
+            const usable = Math.max(1, dragState.height - padY * 2);
+            const frac = ((dragState.height - padY) - pt.sy) / usable;
+            const rawAlt = dragState.bounds.altMin + frac * (dragState.bounds.altMax - dragState.bounds.altMin);
+            const nextAlt = snapAlt(rawAlt, Boolean(e.altKey));
+            const idx = dragState.index;
+            Store.mutateMission((m) => {
+              const cp = m.checkpoints[idx];
+              if (cp) {
+                cp.params = cp.params || {};
+                cp.params.targetAlt = nextAlt;
+              }
+            }, { pushUndo: false });
+          });
+          el.addEventListener("mouseup", () => {
+            if (dragState && dragState.target === "ALT") {
+              Store.commitUndoTransaction();
+            }
+            dragState = null;
+          });
+        };
+
+        const attach = (mapEl, altEl) => {
+          mapCanvasEl = mapEl || mapCanvasEl;
+          altCanvasEl = altEl || altCanvasEl;
+          bindMapEvents(mapCanvasEl);
+          bindAltEvents(altCanvasEl);
+          render();
+          renderAltProfile();
+        };
+
+        return {
+          worldToScreen,
+          screenToWorld,
+          snapCoord,
+          snapAlt,
+          computeRepeatLoopTarget,
+          computeLabelStackOffsets,
+          hitTestCanvas,
+          getAltPointScreen,
+          centerOnCheckpoint,
+          fitView,
+          attach,
+          render,
+          renderAltProfile,
+        };
+      })();
+      const InspectorUI = (() => {
+        const el = (tag, cls, text) => {
+          const node = document.createElement(tag);
+          if (cls) node.className = cls;
+          if (text !== undefined && text !== null) node.textContent = String(text);
+          return node;
+        };
+
+        const clearNode = (node) => {
+          if (!node) return;
+          node.textContent = "";
+          if (Array.isArray(node.children)) node.children.length = 0;
+        };
+
+        const showToast = (message, level) => {
+          const banner = document.getElementById("toastBanner");
+          if (!banner) return;
+          banner.textContent = String(message || "");
+          banner.className = level === "error" ? "toast-banner error" : (level === "warn" ? "toast-banner warn" : "toast-banner");
+          banner.hidden = !message;
+        };
+
+        const makeField = (labelText, inputEl, full) => {
+          const wrap = el("label", full ? "field-group full" : "field-group");
+          if (inputEl && typeof inputEl.setAttribute === "function" && (!inputEl.getAttribute || !inputEl.getAttribute("aria-label"))) {
+            inputEl.setAttribute("aria-label", labelText);
+          }
+          wrap.appendChild(el("span", "field-label", labelText));
+          wrap.appendChild(inputEl);
+          return wrap;
+        };
+
+        const makeInput = (type, value, fieldPath, onCommit) => {
+          const inp = el("input");
+          inp.type = type || "text";
+          inp.value = value === undefined || value === null ? "" : String(value);
+          if (fieldPath) inp.setAttribute("data-field-path", fieldPath);
+          inp.addEventListener("change", () => onCommit(inp.value, inp));
+          return inp;
+        };
+
+        const makeSelect = (options, value, fieldPath, onCommit) => {
+          const sel = el("select");
+          if (fieldPath) sel.setAttribute("data-field-path", fieldPath);
+          for (const optDef of options) {
+            const o = el("option", "", typeof optDef === "string" ? optDef : optDef.label);
+            o.value = typeof optDef === "string" ? optDef : optDef.value;
+            if (o.value === value) o.selected = true;
+            sel.appendChild(o);
+          }
+          sel.value = value == null ? "" : String(value);
+          sel.addEventListener("change", () => onCommit(sel.value));
+          return sel;
+        };
+
+        const renderTopBar = (st) => {
+          const m = st.mission;
+          const mId = document.getElementById("missionIdInput");
+          if (mId && mId.value !== m.missionId) mId.value = m.missionId || "";
+          const btnS = document.getElementById("execModeSingle");
+          const btnR = document.getElementById("execModeRepeat");
+          if (btnS) btnS.setAttribute("aria-pressed", String(m.executionMode !== "REPEAT"));
+          if (btnR) btnR.setAttribute("aria-pressed", String(m.executionMode === "REPEAT"));
+          const btnUndo = document.getElementById("btnUndo");
+          const btnRedo = document.getElementById("btnRedo");
+          if (btnUndo) btnUndo.disabled = !Store.canUndo();
+          if (btnRedo) btnRedo.disabled = !Store.canRedo();
+          const btnRaw = document.getElementById("btnRawJson");
+          if (btnRaw) btnRaw.setAttribute("aria-expanded", String(Boolean(st.ui.rawJsonOpen)));
+          const drawer = document.getElementById("rawJsonDrawer");
+          if (drawer) {
+            drawer.hidden = !st.ui.rawJsonOpen;
+            if (st.ui.rawJsonOpen) {
+              const ta = document.getElementById("rawJsonTextarea");
+              if (ta && document.activeElement !== ta) {
+                ta.value = JsonIO.serializeMission(m);
+              }
+            }
+          }
+          const emptyCta = document.getElementById("emptyCanvasCta");
+          if (emptyCta) emptyCta.hidden = (m.checkpoints || []).length > 0;
+          const altPane = document.getElementById("altProfilePane");
+          if (altPane) altPane.hidden = !st.ui.altProfileOpen;
+          const btnAlt = document.getElementById("btnToggleAltProfile");
+          if (btnAlt) btnAlt.setAttribute("aria-expanded", String(Boolean(st.ui.altProfileOpen)));
+          const zoomEl = document.getElementById("zoomReadout");
+          if (zoomEl) zoomEl.textContent = `${Math.round((st.ui.zoom || 1) * 100)}%`;
+          const snapBtn = document.getElementById("btnToggleSnap");
+          if (snapBtn) snapBtn.setAttribute("aria-pressed", String(Boolean(st.ui.gridSnap)));
+        };
+
+        const renderLeftRail = (st) => {
+          const cps = st.mission.checkpoints || [];
+          const countEl = document.getElementById("cpCountBadge");
+          if (countEl) countEl.textContent = String(cps.length);
+          const listEl = document.getElementById("cpList");
+          if (!listEl) return;
+          clearNode(listEl);
+
+          const errSeqs = new Set((st.lastValidation.errors || []).map((e) => e.seq).filter(Boolean));
+          const warnSeqs = new Set((st.lastValidation.warnings || []).map((w) => w.seq).filter(Boolean));
+
+          for (let i = 0; i < cps.length; i++) {
+            const cp = cps[i];
+            const seq = i + 1;
+            const row = el("div", i === st.ui.selectedIndex ? "cp-row selected" : "cp-row");
+            const top = el("div", "cp-row-top");
+            const selBtn = el("button", "cp-select-btn");
+            selBtn.type = "button";
+            selBtn.appendChild(el("span", "mono tabular badge", `#${seq}`));
+            selBtn.appendChild(el("strong", "mono", cp.checkpointId || `CP_${seq}`));
+            selBtn.appendChild(el("span", SchemaConstants.isMacroActive(cp.action) ? "badge mac" : "badge", cp.action));
+            if (errSeqs.has(seq)) selBtn.appendChild(el("span", "badge err", "ERR"));
+            else if (warnSeqs.has(seq)) selBtn.appendChild(el("span", "badge warn", "WARN"));
+            selBtn.addEventListener("click", () => Store.selectCheckpoint(i));
+
+            const mini = el("div", "cp-actions-mini");
+            const bUp = el("button", "", "▲"); bUp.type = "button"; bUp.disabled = i === 0;
+            bUp.setAttribute("aria-label", `Move CP#${seq} up`);
+            bUp.addEventListener("click", () => Store.moveCheckpoint(i, i - 1));
+            const bDn = el("button", "", "▼"); bDn.type = "button"; bDn.disabled = i === cps.length - 1;
+            bDn.setAttribute("aria-label", `Move CP#${seq} down`);
+            bDn.addEventListener("click", () => Store.moveCheckpoint(i, i + 1));
+            const bDup = el("button", "", "⧉"); bDup.type = "button";
+            bDup.setAttribute("aria-label", `Duplicate CP#${seq}`);
+            bDup.addEventListener("click", () => Store.duplicateCheckpoint(i));
+            const bDel = el("button", "", "✕"); bDel.type = "button";
+            bDel.setAttribute("aria-label", `Delete CP#${seq}`);
+            bDel.addEventListener("click", () => Store.deleteCheckpoint(i));
+            mini.appendChild(bUp); mini.appendChild(bDn); mini.appendChild(bDup); mini.appendChild(bDel);
+
+            top.appendChild(selBtn);
+            top.appendChild(mini);
+            row.appendChild(top);
+
+            const meta = SchemaConstants.ACTIVE_ACTIONS[cp.action] || SchemaConstants.DEFERRED_ACTIONS[cp.action] || SchemaConstants.MACRO_META[cp.action];
+            row.appendChild(el("div", "cp-summary", meta ? meta.summary : cp.action));
+
+            const chips = el("div", "chip-row");
+            if (Array.isArray(cp.decorators) && cp.decorators.length) chips.appendChild(el("span", "badge", `DEC:${cp.decorators.length}`));
+            if (cp.preconditions && Object.keys(cp.preconditions).length) chips.appendChild(el("span", "badge", `PRE:${Object.keys(cp.preconditions).length}`));
+            if (cp.completeWhen || cp.abortWhen) chips.appendChild(el("span", "badge", "COND"));
+            const hkCount = (cp.onEnter ? cp.onEnter.length : 0) + (cp.onExit ? cp.onExit.length : 0) + (cp.onAbort ? cp.onAbort.length : 0);
+            if (hkCount > 0) chips.appendChild(el("span", "badge", `HOOK:${hkCount}`));
+            if (chips.children.length > 0) row.appendChild(chips);
+
+            listEl.appendChild(row);
+          }
+        };
+
+        const renderParamsTab = (body, cp, idx, st) => {
+          const p = cp.params || {};
+          const eff = DefaultResolver.resolveCheckpointDefaults(cp, st.mission.defaults);
+          const grid = el("div", "form-grid");
+          const setParam = (key, val) => Store.mutateMission((m) => {
+            m.checkpoints[idx].params = m.checkpoints[idx].params || {};
+            if (val === undefined) delete m.checkpoints[idx].params[key];
+            else m.checkpoints[idx].params[key] = val;
+          });
+          const setPosCoord = (posKey, axis, raw) => Store.mutateMission((m) => {
+            const cpP = (m.checkpoints[idx].params = m.checkpoints[idx].params || {});
+            const num = Number(raw);
+            cpP[posKey] = Object.assign({ x: 0, z: 0 }, cpP[posKey] || {});
+            if (Number.isFinite(num)) cpP[posKey][axis] = num;
+          });
+
+          if (cp.action === "ACT_NAV_CORRIDOR") {
+            const sx = (p.startPos && p.startPos.x) ?? 0, sz = (p.startPos && p.startPos.z) ?? 0;
+            const ex = (p.endPos && p.endPos.x) ?? 0, ez = (p.endPos && p.endPos.z) ?? 0;
+            grid.appendChild(makeField("startPos.x", makeInput("number", sx, `checkpoints[${idx}].params.startPos`, (v) => setPosCoord("startPos", "x", v))));
+            grid.appendChild(makeField("startPos.z", makeInput("number", sz, `checkpoints[${idx}].params.startPos.z`, (v) => setPosCoord("startPos", "z", v))));
+            grid.appendChild(makeField("endPos.x", makeInput("number", ex, `checkpoints[${idx}].params.endPos`, (v) => setPosCoord("endPos", "x", v))));
+            grid.appendChild(makeField("endPos.z", makeInput("number", ez, `checkpoints[${idx}].params.endPos.z`, (v) => setPosCoord("endPos", "z", v))));
+            grid.appendChild(makeField("maxCrossTrackM", makeInput("number", p.maxCrossTrackM ?? 15, `checkpoints[${idx}].params.maxCrossTrackM`, (v) => setParam("maxCrossTrackM", Number(v)))));
+          } else {
+            const meta = SchemaConstants.ACTIVE_ACTIONS[cp.action] || SchemaConstants.MACRO_META[cp.action];
+            if (!meta || meta.spatial !== false || meta.optionalPos || isPosXZ(p.targetPos)) {
+              const tx = (p.targetPos && p.targetPos.x) ?? "", tz = (p.targetPos && p.targetPos.z) ?? "";
+              grid.appendChild(makeField("targetPos.x", makeInput("number", tx, `checkpoints[${idx}].params.targetPos`, (v) => setPosCoord("targetPos", "x", v))));
+              grid.appendChild(makeField("targetPos.z", makeInput("number", tz, `checkpoints[${idx}].params.targetPos.z`, (v) => setPosCoord("targetPos", "z", v))));
+            }
+          }
+          if ((SchemaConstants.ACTIVE_ACTIONS[cp.action] && SchemaConstants.ACTIVE_ACTIONS[cp.action].hasPoi) || isPosXZ(p.poiPos)) {
+            const px = (p.poiPos && p.poiPos.x) ?? 0, pz = (p.poiPos && p.poiPos.z) ?? 0;
+            grid.appendChild(makeField("poiPos.x", makeInput("number", px, `checkpoints[${idx}].params.poiPos`, (v) => setPosCoord("poiPos", "x", v))));
+            grid.appendChild(makeField("poiPos.z", makeInput("number", pz, `checkpoints[${idx}].params.poiPos.z`, (v) => setPosCoord("poiPos", "z", v))));
+          }
+          grid.appendChild(makeField(`targetAlt (def ${eff.targetAlt}m)`, makeInput("number", p.targetAlt ?? "", `checkpoints[${idx}].params.targetAlt`, (v) => setParam("targetAlt", v === "" ? undefined : Number(v)))));
+          grid.appendChild(makeField(`cruiseSpeed (def ${eff.cruiseSpeed})`, makeInput("number", p.cruiseSpeed ?? "", `checkpoints[${idx}].params.cruiseSpeed`, (v) => setParam("cruiseSpeed", v === "" ? undefined : Number(v)))));
+          grid.appendChild(makeField(`acceptanceRadius (def ${eff.acceptanceRadius}m)`, makeInput("number", p.acceptanceRadius ?? "", `checkpoints[${idx}].params.acceptanceRadius`, (v) => setParam("acceptanceRadius", v === "" ? undefined : Number(v)))));
+          grid.appendChild(makeField("headingMode", makeSelect(["", ...SchemaConstants.HEADING_MODES], p.headingMode || "", `checkpoints[${idx}].params.headingMode`, (v) => setParam("headingMode", v || undefined))));
+
+          if (cp.action.startsWith("ACT_PAT_LOITER_") || cp.action === "MAC_RECON_ORBIT") {
+            grid.appendChild(makeField("radius (m, min 20)", makeInput("number", p.radius ?? 40, `checkpoints[${idx}].params.radius`, (v) => setParam("radius", Number(v)))));
+            grid.appendChild(makeField("direction", makeSelect(["CW", "CCW"], p.direction || "CW", `checkpoints[${idx}].params.direction`, (v) => setParam("direction", v))));
+            if (cp.action === "ACT_PAT_LOITER_TURNS") {
+              grid.appendChild(makeField("turns", makeInput("number", p.turns ?? 2, `checkpoints[${idx}].params.turns`, (v) => setParam("turns", Number(v)))));
+            }
+          }
+          if (cp.action === "ACT_PAT_HOLD_POS" || cp.action === "ACT_PAT_POI_HOLD" || cp.action === "ACT_PAT_LOITER_TIME" || cp.action === "MAC_RECON_ORBIT") {
+            grid.appendChild(makeField("durationSec (s)", makeInput("number", p.durationSec ?? "", `checkpoints[${idx}].params.durationSec`, (v) => setParam("durationSec", v === "" ? undefined : Number(v)))));
+          }
+          if (cp.action.startsWith("ACT_TKL_") || cp.action.startsWith("ACT_MOB_") || cp.action.startsWith("MAC_")) {
+            grid.appendChild(makeField("facilityId", makeInput("text", p.facilityId || "", `checkpoints[${idx}].params.facilityId`, (v) => setParam("facilityId", v || undefined))));
+          }
+          if (cp.action === "ACT_PAY_BUS_CMD" || cp.action === "MAC_CARGO_SORTIE") {
+            const baseCh = DefaultResolver.computeBaseChannel(st.ui.aircraftNumber);
+            const effCh = DefaultResolver.resolveZone3Channel(p.channelOffset ?? p.targetChannel, baseCh);
+            grid.appendChild(makeField(`channelOffset (20..29 -> CH ${effCh ?? "?"})`, makeInput("number", p.channelOffset ?? 20, `checkpoints[${idx}].params.channelOffset`, (v) => setParam("channelOffset", Number(v)))));
+            grid.appendChild(makeField("command", makeInput("text", p.command || "", `checkpoints[${idx}].params.command`, (v) => setParam("command", v))));
+            grid.appendChild(makeField("expectedStatus", makeInput("text", p.expectedStatus || "OK", `checkpoints[${idx}].params.expectedStatus`, (v) => setParam("expectedStatus", v))));
+          }
+          if (cp.action === "ACT_PAY_REDSTONE") {
+            grid.appendChild(makeField("mode", makeSelect(["EMIT", "WAIT_INPUT"], p.mode || "EMIT", `checkpoints[${idx}].params.mode`, (v) => setParam("mode", v))));
+            grid.appendChild(makeField("side", makeSelect(SchemaConstants.REDSTONE_SIDES, p.side || "bottom", `checkpoints[${idx}].params.side`, (v) => setParam("side", v))));
+            grid.appendChild(makeField("durationMs", makeInput("number", p.durationMs ?? 500, `checkpoints[${idx}].params.durationMs`, (v) => setParam("durationMs", Number(v)))));
+          }
+          body.appendChild(grid);
+        };
+
+        const renderGuardsTab = (body, cp, idx) => {
+          const decCard = el("div", "section-card");
+          decCard.appendChild(el("strong", "", "Decorators (DEC_*)"));
+          const decs = Array.isArray(cp.decorators) ? cp.decorators : [];
+          for (const dId of [...SchemaConstants.ACTIVE_DECORATORS, ...SchemaConstants.DEFERRED_DECORATORS]) {
+            const meta = SchemaConstants.DECORATOR_META[dId];
+            const foundIdx = decs.findIndex((d) => d && d.decoratorId === dId);
+            const row = el("div", "cp-row-top");
+            const cb = el("input"); cb.type = "checkbox"; cb.checked = foundIdx >= 0;
+            cb.setAttribute("aria-label", dId);
+            cb.addEventListener("change", () => Store.mutateMission((m) => {
+              const cur = Array.isArray(m.checkpoints[idx].decorators) ? [...m.checkpoints[idx].decorators] : [];
+              const pos = cur.findIndex((x) => x && x.decoratorId === dId);
+              if (cb.checked && pos < 0) {
+                const entry = { decoratorId: dId };
+                if (meta.overrideFields && meta.overrideFields.length > 0) {
+                  entry.overrideParams = {};
+                  for (const ofield of meta.overrideFields) entry.overrideParams[ofield.key] = ofield.defaultVal;
+                }
+                cur.push(entry);
+              } else if (!cb.checked && pos >= 0) {
+                cur.splice(pos, 1);
+              }
+              m.checkpoints[idx].decorators = cur;
+            }));
+            row.appendChild(cb);
+            row.appendChild(el("span", "mono", dId));
+            if (meta.deferred) row.appendChild(el("span", "badge warn", "[예약]"));
+            decCard.appendChild(row);
+            if (foundIdx >= 0 && meta.overrideFields && meta.overrideFields.length) {
+              for (const ofield of meta.overrideFields) {
+                const ov = (decs[foundIdx].overrideParams && decs[foundIdx].overrideParams[ofield.key]) ?? ofield.defaultVal;
+                decCard.appendChild(makeField(`  ${ofield.label}`, makeInput("number", ov, `checkpoints[${idx}].decorators[${foundIdx}].overrideParams.${ofield.key}`, (v) => Store.mutateMission((m) => {
+                  const target = m.checkpoints[idx].decorators[foundIdx];
+                  target.overrideParams = target.overrideParams || {};
+                  target.overrideParams[ofield.key] = Number(v);
+                }))));
+              }
+            }
+          }
+          body.appendChild(decCard);
+
+          const preCard = el("div", "section-card");
+          preCard.appendChild(el("strong", "", "Preconditions (19 keys)"));
+          const pre = cp.preconditions || {};
+          for (const cat of Object.values(SchemaConstants.PRECONDITION_CATEGORIES)) {
+            const det = el("details", "precond-group");
+            det.open = cat.fields.some((f) => pre[f.key] !== undefined);
+            det.appendChild(el("summary", "", cat.title));
+            const fg = el("div", "form-grid");
+            for (const f of cat.fields) {
+              const fp = `checkpoints[${idx}].preconditions.${f.key}`;
+              const val = pre[f.key];
+              if (f.kind === "boolean") {
+                const sel = makeSelect([{ value: "", label: "(unset)" }, { value: "true", label: "true" }, { value: "false", label: "false" }], val === undefined ? "" : String(val), fp, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx].preconditions = m.checkpoints[idx].preconditions || {};
+                  if (v === "") delete m.checkpoints[idx].preconditions[f.key];
+                  else m.checkpoints[idx].preconditions[f.key] = v === "true";
+                }));
+                fg.appendChild(makeField(f.label, sel));
+              } else if (f.kind === "number") {
+                fg.appendChild(makeField(f.label, makeInput("number", val ?? "", fp, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx].preconditions = m.checkpoints[idx].preconditions || {};
+                  if (v === "") delete m.checkpoints[idx].preconditions[f.key];
+                  else m.checkpoints[idx].preconditions[f.key] = Number(v);
+                }))));
+              } else if (f.kind === "list" || f.kind === "string_or_list") {
+                const strVal = Array.isArray(val) ? val.join(", ") : (val || "");
+                fg.appendChild(makeField(f.label, makeInput("text", strVal, fp, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx].preconditions = m.checkpoints[idx].preconditions || {};
+                  const trimmed = v.trim();
+                  if (!trimmed) delete m.checkpoints[idx].preconditions[f.key];
+                  else if (trimmed.includes(",") || f.kind === "list") m.checkpoints[idx].preconditions[f.key] = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+                  else m.checkpoints[idx].preconditions[f.key] = trimmed;
+                })), true));
+              } else {
+                fg.appendChild(makeField(f.label, makeInput("text", val ?? "", fp, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx].preconditions = m.checkpoints[idx].preconditions || {};
+                  if (!v.trim()) delete m.checkpoints[idx].preconditions[f.key];
+                  else m.checkpoints[idx].preconditions[f.key] = v.trim();
+                }))));
+              }
+            }
+            det.appendChild(fg);
+            preCard.appendChild(det);
+          }
+          body.appendChild(preCard);
+        };
+
+        const renderConditionsTab = (body, cp, idx, st) => {
+          const defBox = el("div", "section-card");
+          defBox.appendChild(el("strong", "", "Runtime Default Completion"));
+          defBox.appendChild(el("span", "mono", DefaultResolver.describeDefaultComplete(cp, st.mission.defaults)));
+          body.appendChild(defBox);
+
+          for (const condKey of ["completeWhen", "abortWhen"]) {
+            const card = el("div", "section-card");
+            card.appendChild(el("strong", "", condKey));
+            const cur = cp[condKey];
+            const curLeaf = cur && Array.isArray(cur.conditions) && cur.conditions[0] ? cur.conditions[0] : cur;
+            const curType = curLeaf && curLeaf.type ? curLeaf.type : "";
+            card.appendChild(makeField("Condition Group (ALL) / Quick Leaf", makeSelect(["", ...SchemaConstants.CONDITION_TYPES], curType, `checkpoints[${idx}].${condKey}`, (t) => Store.mutateMission((m) => {
+              if (!t) { delete m.checkpoints[idx][condKey]; return; }
+              const node = { type: t };
+              if (t === "TIMEOUT_SEC") node.timeout = 30;
+              else if (t === "DURATION_SEC") node.durationSec = 10;
+              else if (t === "FUEL_LEVEL_BELOW") node.threshold = 0.2;
+              else if (t === "CROSS_TRACK_ERROR") node.maxDevM = 25;
+              else if (t === "PAYLOAD_RESP_MATCH") node.expectedStatus = "OK";
+              else if (t === "REDSTONE_INPUT_HIGH") node.side = "front";
+              m.checkpoints[idx][condKey] = { logic: "ALL", conditions: [node] };
+            })), true));
+            if (cur) {
+              const rawTa = el("textarea", "mono");
+              rawTa.rows = 3;
+              rawTa.value = JSON.stringify(cur, null, 2);
+              rawTa.setAttribute("data-field-path", `checkpoints[${idx}].${condKey}.timeout`);
+              rawTa.addEventListener("change", () => {
+                try {
+                  const parsed = JSON.parse(rawTa.value);
+                  Store.mutateMission((m) => { m.checkpoints[idx][condKey] = parsed; });
+                } catch (e) { showToast(`Invalid ${condKey} JSON: ${e.message}`, "error"); }
+              });
+              card.appendChild(rawTa);
+            }
+            body.appendChild(card);
+          }
+        };
+
+        const renderHooksTab = (body, cp, idx) => {
+          for (const phase of SchemaConstants.HOOK_PHASES) {
+            const card = el("div", "section-card");
+            const hdr = el("div", "cp-row-top");
+            hdr.appendChild(el("strong", "mono", phase));
+            const addBtn = el("button", "", "+ Add Hook");
+            addBtn.type = "button";
+            addBtn.addEventListener("click", () => Store.mutateMission((m) => {
+              const arr = Array.isArray(m.checkpoints[idx][phase]) ? m.checkpoints[idx][phase] : [];
+              arr.push({ type: "NOTIFY_OPERATOR", message: `${m.checkpoints[idx].checkpointId} ${phase}` });
+              m.checkpoints[idx][phase] = arr;
+            }));
+            hdr.appendChild(addBtn);
+            card.appendChild(hdr);
+
+            const hooks = Array.isArray(cp[phase]) ? cp[phase] : [];
+            for (let h = 0; h < hooks.length; h++) {
+              const hk = hooks[h];
+              const sub = el("div", "form-grid");
+              sub.appendChild(makeField("Type", makeSelect(SchemaConstants.HOOK_TYPES, hk.type || "NOTIFY_OPERATOR", `checkpoints[${idx}].${phase}[${h}].type`, (t) => Store.mutateMission((m) => {
+                const next = { type: t };
+                if (t === "REDSTONE_SET") { next.side = "bottom"; next.state = true; }
+                else if (t === "REDSTONE_PULSE") { next.side = "bottom"; next.durationMs = 500; }
+                else if (t === "ZONE3_PAYLOAD_CMD") { next.channelOffset = 20; next.command = "CAPTURE"; }
+                else next.message = "Hook triggered";
+                m.checkpoints[idx][phase][h] = next;
+              }))));
+              if (hk.type === "NOTIFY_OPERATOR") {
+                sub.appendChild(makeField("message", makeInput("text", hk.message || "", `checkpoints[${idx}].${phase}[${h}].message`, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx][phase][h].message = v;
+                }))));
+              } else if (hk.type === "REDSTONE_SET" || hk.type === "REDSTONE_PULSE") {
+                sub.appendChild(makeField("side", makeSelect(SchemaConstants.REDSTONE_SIDES, hk.side || "bottom", `checkpoints[${idx}].${phase}[${h}].side`, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx][phase][h].side = v;
+                }))));
+                if (hk.type === "REDSTONE_PULSE") {
+                  sub.appendChild(makeField("durationMs", makeInput("number", hk.durationMs ?? 500, `checkpoints[${idx}].${phase}[${h}].durationMs`, (v) => Store.mutateMission((m) => {
+                    m.checkpoints[idx][phase][h].durationMs = Number(v);
+                  }))));
+                }
+              } else if (hk.type === "ZONE3_PAYLOAD_CMD") {
+                sub.appendChild(makeField("channelOffset (20..29)", makeInput("number", hk.channelOffset ?? 20, `checkpoints[${idx}].${phase}[${h}].channelOffset`, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx][phase][h].channelOffset = Number(v);
+                }))));
+                sub.appendChild(makeField("command", makeInput("text", hk.command || "", `checkpoints[${idx}].${phase}[${h}].command`, (v) => Store.mutateMission((m) => {
+                  m.checkpoints[idx][phase][h].command = v;
+                }))));
+              }
+              const rm = el("button", "btn-danger", "Remove Hook"); rm.type = "button";
+              rm.addEventListener("click", () => Store.mutateMission((m) => {
+                m.checkpoints[idx][phase].splice(h, 1);
+              }));
+              sub.appendChild(rm);
+              card.appendChild(sub);
+            }
+            body.appendChild(card);
+          }
+        };
+
+        const renderInspector = (st) => {
+          const btnCp = document.getElementById("modeCheckpointBtn");
+          const btnSet = document.getElementById("modeSettingsBtn");
+          if (btnCp) btnCp.setAttribute("aria-pressed", String(st.ui.rightMode !== "MISSION_SETTINGS"));
+          if (btnSet) btnSet.setAttribute("aria-pressed", String(st.ui.rightMode === "MISSION_SETTINGS"));
+          const body = document.getElementById("inspectorBody");
+          if (!body) return;
+          clearNode(body);
+
+          if (st.ui.rightMode === "MISSION_SETTINGS") {
+            const m = st.mission;
+            const grid = el("div", "form-grid");
+            grid.appendChild(makeField("Mission ID", makeInput("text", m.missionId, "missionId", (v) => Store.mutateMission((ms) => { ms.missionId = v; })), true));
+            grid.appendChild(makeField("Description", makeInput("text", m.description || "", "description", (v) => Store.mutateMission((ms) => { ms.description = v; })), true));
+            grid.appendChild(makeField("Execution Mode", makeSelect(SchemaConstants.EXECUTION_MODES, m.executionMode, "executionMode", (v) => Store.mutateMission((ms) => { ms.executionMode = v; }))));
+            grid.appendChild(makeField("Fallback Policy", makeSelect(SchemaConstants.FALLBACK_POLICIES, m.fallbackPolicy, "fallbackPolicy", (v) => Store.mutateMission((ms) => { ms.fallbackPolicy = v; }))));
+            const defs = m.defaults || {};
+            grid.appendChild(makeField("Default targetAlt (m)", makeInput("number", defs.targetAlt ?? 150, "defaults.targetAlt", (v) => Store.mutateMission((ms) => { ms.defaults.targetAlt = Number(v); }))));
+            grid.appendChild(makeField("Default cruiseSpeed (m/s)", makeInput("number", defs.cruiseSpeed ?? 18, "defaults.cruiseSpeed", (v) => Store.mutateMission((ms) => { ms.defaults.cruiseSpeed = Number(v); }))));
+            grid.appendChild(makeField("Default acceptanceRadius (m)", makeInput("number", defs.acceptanceRadius ?? 15, "defaults.acceptanceRadius", (v) => Store.mutateMission((ms) => { ms.defaults.acceptanceRadius = Number(v); }))));
+            grid.appendChild(makeField("Default headingMode", makeSelect(SchemaConstants.HEADING_MODES, defs.headingMode || "AUTO", "defaults.headingMode", (v) => Store.mutateMission((ms) => { ms.defaults.headingMode = v; }))));
+            const baseCh = DefaultResolver.computeBaseChannel(st.ui.aircraftNumber);
+            grid.appendChild(makeField(`Aircraft #N (Base ${baseCh}, Zone3 ${baseCh + 20}..${baseCh + 29})`, makeInput("number", st.ui.aircraftNumber, "ui.aircraftNumber", (v) => Store.setUi({ aircraftNumber: Math.max(1, Math.min(1000, Math.floor(Number(v) || 1))) }))));
+            grid.appendChild(makeField("Target Airframe (UI Preview)", makeSelect(SchemaConstants.AIRFRAME_TYPES, st.ui.targetAirframe, "ui.targetAirframe", (v) => Store.setUi({ targetAirframe: v }))));
+            body.appendChild(grid);
+            return;
+          }
+
+          const idx = st.ui.selectedIndex;
+          const cp = idx >= 0 ? st.mission.checkpoints[idx] : null;
+          if (!cp) {
+            body.appendChild(el("div", "section-card", "Select or add a checkpoint to inspect parameters."));
+            return;
+          }
+          const hdr = el("div", "form-grid");
+          hdr.appendChild(makeField(`checkpointId (#${idx + 1})`, makeInput("text", cp.checkpointId, `checkpoints[${idx}].checkpointId`, (v) => Store.mutateMission((m) => { m.checkpoints[idx].checkpointId = v; }))));
+          const allActions = [...Object.keys(SchemaConstants.ACTIVE_ACTIONS), ...SchemaConstants.ACTIVE_MACROS, ...Object.keys(SchemaConstants.DEFERRED_ACTIONS), ...SchemaConstants.DEFERRED_MACROS];
+          if (!allActions.includes(cp.action)) allActions.unshift(cp.action);
+          hdr.appendChild(makeField("Action / Macro", makeSelect(allActions, cp.action, `checkpoints[${idx}].action`, (nextAct) => Store.mutateMission((m) => {
+            m.checkpoints[idx].action = nextAct;
+            m.checkpoints[idx].params = MacroExpander.cleanActionSwitchParams(m.checkpoints[idx].params, nextAct);
+          }))));
+          body.appendChild(hdr);
+
+          if (SchemaConstants.isMacroActive(cp.action)) {
+            const macRow = el("div", "section-card");
+            macRow.appendChild(el("span", "", `Macro step (${cp.action}) — click Expand Now to unfold into atomic checkpoints.`));
+            const expBtn = el("button", "btn-primary", "Expand Now"); expBtn.type = "button";
+            expBtn.addEventListener("click", () => Store.expandSelectedMacro(idx));
+            macRow.appendChild(expBtn);
+            body.appendChild(macRow);
+          }
+
+          const tabs = el("div", "inspector-tabs");
+          tabs.setAttribute("role", "tablist");
+          for (const tKey of ["PARAMS", "GUARDS", "CONDITIONS", "HOOKS"]) {
+            const tb = el("button", "", tKey);
+            tb.type = "button";
+            tb.setAttribute("role", "tab");
+            tb.setAttribute("aria-selected", String(st.ui.rightTab === tKey));
+            tb.addEventListener("click", () => Store.setUi({ rightTab: tKey }));
+            tabs.appendChild(tb);
+          }
+          body.appendChild(tabs);
+
+          if (st.ui.rightTab === "PARAMS") renderParamsTab(body, cp, idx, st);
+          else if (st.ui.rightTab === "GUARDS") renderGuardsTab(body, cp, idx);
+          else if (st.ui.rightTab === "CONDITIONS") renderConditionsTab(body, cp, idx, st);
+          else renderHooksTab(body, cp, idx);
+        };
+
+        const renderValidationBar = (st) => {
+          const val = st.lastValidation || { errors: [], warnings: [] };
+          const errs = val.errors || [];
+          const warns = val.warnings || [];
+          const sumEl = document.getElementById("validationSummary");
+          if (sumEl) sumEl.textContent = `${errs.length} Errors · ${warns.length} Warnings`;
+          const f = st.ui.validationFilter || "ALL";
+          const bAll = document.getElementById("valFilterAll");
+          const bErr = document.getElementById("valFilterErrors");
+          const bWrn = document.getElementById("valFilterWarnings");
+          if (bAll) bAll.setAttribute("aria-pressed", String(f === "ALL"));
+          if (bErr) bErr.setAttribute("aria-pressed", String(f === "ERRORS"));
+          if (bWrn) bWrn.setAttribute("aria-pressed", String(f === "WARNINGS"));
+
+          const btnTog = document.getElementById("btnToggleValidation");
+          if (btnTog) btnTog.setAttribute("aria-expanded", String(Boolean(st.ui.validationOpen)));
+          const listEl = document.getElementById("validationList");
+          if (!listEl) return;
+          listEl.hidden = !st.ui.validationOpen;
+          clearNode(listEl);
+          const combined = f === "ERRORS" ? errs : (f === "WARNINGS" ? warns : [...errs, ...warns]);
+          for (const issue of combined) {
+            const btn = el("button", "val-issue-btn");
+            btn.type = "button";
+            btn.appendChild(el("span", issue.level === "ERROR" ? "badge err" : "badge warn", issue.code));
+            btn.appendChild(el("span", "mono", issue.seq ? `CP#${issue.seq}` : "MISSION"));
+            btn.appendChild(el("span", "", issue.message));
+            btn.addEventListener("click", () => activateValidationIssue(issue));
+            listEl.appendChild(btn);
+          }
+        };
+
+        const renderPicker = (st) => {
+          const pop = document.getElementById("actionPickerPopover");
+          if (!pop) return;
+          const domain = st.ui.activePopover;
+          pop.hidden = !domain;
+          if (!domain) return;
+
+          const tabsEl = document.getElementById("pickerDomainTabs");
+          if (tabsEl) {
+            clearNode(tabsEl);
+            for (const d of ["ALL", "SYS", "TKL", "NAV", "PAT", "PAY", "COM", "MOB", "FS", "MAC"]) {
+              const b = el("button", "", d); b.type = "button";
+              b.setAttribute("aria-selected", String(domain === d));
+              b.addEventListener("click", () => Store.setUi({ activePopover: d }));
+              tabsEl.appendChild(b);
+            }
+          }
+
+          const listEl = document.getElementById("pickerList");
+          if (!listEl) return;
+          clearNode(listEl);
+          const qEl = document.getElementById("pickerSearch");
+          const q = (qEl && qEl.value ? qEl.value : "").trim().toLowerCase();
+
+          const entries = [];
+          for (const [id, m] of Object.entries(SchemaConstants.ACTIVE_ACTIONS)) entries.push({ id, ...m, immediate: true });
+          for (const [id, m] of Object.entries(SchemaConstants.MACRO_META)) entries.push({ id, ...m, domain: "MAC", immediate: !m.deferred });
+          for (const [id, m] of Object.entries(SchemaConstants.DEFERRED_ACTIONS)) entries.push({ id, ...m, immediate: false });
+
+          for (const item of entries) {
+            if (domain !== "ALL" && item.domain !== domain) continue;
+            if (q && !item.id.toLowerCase().includes(q) && !(item.summary || "").toLowerCase().includes(q) && !(item.label || "").toLowerCase().includes(q)) continue;
+            const btn = el("button", "picker-item"); btn.type = "button";
+            const left = el("span", "mono", item.id);
+            const right = el("span", item.immediate ? "badge" : "badge warn", item.immediate ? "[즉시]" : "[예약]");
+            btn.appendChild(left);
+            btn.appendChild(el("span", "cp-summary", item.summary || ""));
+            btn.appendChild(right);
+            btn.addEventListener("click", () => {
+              const curIdx = Store.getState().ui.selectedIndex;
+              Store.addCheckpoint(item.id, {}, curIdx >= 0 ? curIdx + 1 : undefined);
+              Store.setUi({ activePopover: null });
+            });
+            listEl.appendChild(btn);
+          }
+        };
+
+        const renderAll = () => {
+          const st = Store.getState();
+          renderTopBar(st);
+          renderLeftRail(st);
+          renderInspector(st);
+          renderValidationBar(st);
+          renderPicker(st);
+          CanvasRenderer.render();
+          if (st.ui.altProfileOpen) CanvasRenderer.renderAltProfile();
+        };
+
+        const activateValidationIssue = (issue) => {
+          if (!issue) return null;
+          if (Number.isInteger(issue.seq) && issue.seq >= 1) {
+            CanvasRenderer.centerOnCheckpoint(issue.seq - 1);
+          }
+          const res = Store.focusFieldPath(issue.fieldPath || "");
+          renderAll();
+          if (res.fieldPath) {
+            const target = document.querySelector(`[data-field-path="${res.fieldPath}"]`);
+            if (target && typeof target.focus === "function") {
+              target.focus();
+            }
+          }
+          return res;
+        };
+
+        return { renderAll, showToast, activateValidationIssue };
+      })();
+      const JsonIO = (() => {
+        const MISSION_KNOWN_KEYS = ["missionId", "version", "description", "executionMode", "fallbackPolicy", "defaults", "checkpoints"];
+        const CHECKPOINT_KNOWN_KEYS = ["checkpointId", "action", "params", "preconditions", "decorators", "completeWhen", "abortWhen", "onEnter", "onExit", "onAbort", "fallbackPolicy"];
+        const UI_ONLY_MISSION_KEYS = new Set(["targetAirframe", "aircraftNumber", "_extra"]);
+
+        const PRESETS = {
+          MSN_RECON_001: {
+            missionId: "MSN_RECON_001",
+            version: "2.0.0",
+            description: "Reconnaissance orbit sortie around target zone",
+            executionMode: "SINGLE",
+            fallbackPolicy: "RTH",
+            defaults: { cruiseSpeed: 18.0, targetAlt: 150.0, acceptanceRadius: 15.0, headingMode: "AUTO" },
+            checkpoints: [
+              { checkpointId: "CP_ARM", action: "ACT_SYS_ARM", params: {} },
+              { checkpointId: "CP_TKOFF", action: "ACT_TKL_TAKEOFF_VERT", params: { targetAlt: 150 } },
+              { checkpointId: "CP_INGRESS", action: "ACT_NAV_SPLINE_WP", params: { targetPos: { x: 240, z: -120 }, targetAlt: 160, cruiseSpeed: 20 } },
+              { checkpointId: "CP_RECON_ORB", action: "ACT_PAT_LOITER_TIME", params: { targetPos: { x: 420, z: -260 }, targetAlt: 180, radius: 50, direction: "CW", durationSec: 45 }, decorators: [{ decoratorId: "DEC_SMOOTH_TRAJ" }] },
+              { checkpointId: "CP_RTL", action: "ACT_FS_RTL_HOME", params: { targetAlt: 150 } },
+              { checkpointId: "CP_LAND", action: "ACT_TKL_LAND_PREC", params: { facilityId: "PAD_ALPHA", targetPos: { x: 0, z: 0 } } },
+            ],
+          },
+          MSN_TRANSIT_CORRIDOR: {
+            missionId: "MSN_TRANSIT_CORRIDOR",
+            version: "2.0.0",
+            description: "Corridor ferry sortie",
+            executionMode: "SINGLE",
+            fallbackPolicy: "RTH",
+            defaults: { cruiseSpeed: 22.0, targetAlt: 140.0, acceptanceRadius: 15.0, headingMode: "AUTO" },
+            checkpoints: [
+              { checkpointId: "CP_TKOFF", action: "ACT_TKL_TAKEOFF_VERT", params: { targetAlt: 140 } },
+              { checkpointId: "CP_CORR_1", action: "ACT_NAV_CORRIDOR", params: { startPos: { x: 0, z: 0 }, endPos: { x: 600, z: 200 }, targetAlt: 140, maxCrossTrackM: 15 } },
+              { checkpointId: "CP_LAND", action: "ACT_TKL_LAND_NORM", params: { targetPos: { x: 600, z: 200 } } },
+            ],
+          },
+          MSN_PRECISION_DELIVERY: {
+            missionId: "MSN_PRECISION_DELIVERY",
+            version: "2.0.0",
+            description: "Zone 3 payload delivery and recovery",
+            executionMode: "SINGLE",
+            fallbackPolicy: "HOVER_HOLD",
+            defaults: { cruiseSpeed: 16.0, targetAlt: 120.0, acceptanceRadius: 10.0, headingMode: "AUTO" },
+            checkpoints: [
+              { checkpointId: "CP_TKOFF", action: "ACT_TKL_TAKEOFF_VERT", params: { targetAlt: 120 } },
+              { checkpointId: "CP_DZ", action: "ACT_NAV_GOTO_WP", params: { targetPos: { x: 320, z: 240 }, targetAlt: 120, acceptanceRadius: 5 } },
+              { checkpointId: "CP_DROP", action: "ACT_PAY_BUS_CMD", params: { channelOffset: 20, command: "DROP_CARGO", commandPayload: { bay: 1 }, waitForAck: true, expectedStatus: "OK" }, decorators: [{ decoratorId: "DEC_HUMAN_AUTH" }] },
+              { checkpointId: "CP_RTL", action: "ACT_FS_RTL_HOME", params: { targetAlt: 120 } },
+              { checkpointId: "CP_LAND", action: "ACT_TKL_LAND_PREC", params: { facilityId: "PAD_HOME", targetPos: { x: 0, z: 0 } } },
+            ],
+          },
+        };
+
+        const isNonEmptyObj = (o) => Boolean(o && typeof o === "object" && !Array.isArray(o) && Object.keys(o).length > 0);
+
+        const cleanCheckpointForExport = (cp) => {
+          const out = {
+            checkpointId: cp.checkpointId || "CP",
+            action: cp.action,
+            params: MacroExpander.normalizeShortcutCoords(cp.params || {}),
+          };
+          if (isNonEmptyObj(cp.preconditions)) out.preconditions = deepClone(cp.preconditions);
+          if (Array.isArray(cp.decorators) && cp.decorators.length > 0) out.decorators = deepClone(cp.decorators);
+          if (isNonEmptyObj(cp.completeWhen)) out.completeWhen = deepClone(cp.completeWhen);
+          if (isNonEmptyObj(cp.abortWhen)) out.abortWhen = deepClone(cp.abortWhen);
+          if (Array.isArray(cp.onEnter) && cp.onEnter.length > 0) out.onEnter = deepClone(cp.onEnter);
+          if (Array.isArray(cp.onExit) && cp.onExit.length > 0) out.onExit = deepClone(cp.onExit);
+          if (Array.isArray(cp.onAbort) && cp.onAbort.length > 0) out.onAbort = deepClone(cp.onAbort);
+          if (typeof cp.fallbackPolicy === "string" && cp.fallbackPolicy) out.fallbackPolicy = cp.fallbackPolicy;
+          return MacroExpander.mergeExtras(out, cp._extra);
+        };
+
+        const buildExportObject = (mission) => {
+          const m = mission && typeof mission === "object" ? mission : {};
+          const out = {
+            missionId: m.missionId || "MSN_NEW_001",
+            version: "2.0.0",
+          };
+          if (typeof m.description === "string" && m.description.trim()) out.description = m.description.trim();
+          out.executionMode = SchemaConstants.EXECUTION_MODES.includes(m.executionMode) ? m.executionMode : "SINGLE";
+          out.fallbackPolicy = SchemaConstants.FALLBACK_POLICIES.includes(m.fallbackPolicy) ? m.fallbackPolicy : "RTH";
+          if (isNonEmptyObj(m.defaults)) out.defaults = deepClone(m.defaults);
+          out.checkpoints = Array.isArray(m.checkpoints) ? m.checkpoints.map(cleanCheckpointForExport) : [];
+          const merged = MacroExpander.mergeExtras(out, m._extra);
+          for (const uiKey of UI_ONLY_MISSION_KEYS) {
+            delete merged[uiKey];
+          }
+          return merged;
+        };
+
+        const serializeMission = (mission) => JSON.stringify(buildExportObject(mission), null, 2);
+
+        const parseAndNormalizeImport = (rawObj) => {
+          if (!rawObj || typeof rawObj !== "object" || Array.isArray(rawObj)) {
+            return { ok: false, errorCode: "INVALID_MISSION_OBJECT", message: "JSON root must be an object." };
+          }
+          if (Array.isArray(rawObj.items)) {
+            return { ok: false, errorCode: "LEGACY_MISSION_FORMAT", message: "Legacy v1.x 'items[]' missions are rejected (Zero-Fallback)." };
+          }
+          const srcCps = Array.isArray(rawObj.checkpoints) ? rawObj.checkpoints : [];
+          for (let i = 0; i < srcCps.length; i++) {
+            const act = srcCps[i] && srcCps[i].action;
+            if (SchemaConstants.isLegacyAction(act)) {
+              return { ok: false, errorCode: "LEGACY_ACTION_UNSUPPORTED", message: `Legacy action '${act}' at CP#${i + 1} is forbidden.` };
+            }
+          }
+          const missionExtras = MacroExpander.extractExtras(rawObj, MISSION_KNOWN_KEYS);
+          const norm = {
+            missionId: typeof rawObj.missionId === "string" && rawObj.missionId.trim() ? rawObj.missionId.trim() : "MSN_IMPORTED",
+            version: "2.0.0",
+            description: typeof rawObj.description === "string" ? rawObj.description : "",
+            executionMode: SchemaConstants.EXECUTION_MODES.includes(rawObj.executionMode) ? rawObj.executionMode : "SINGLE",
+            fallbackPolicy: SchemaConstants.FALLBACK_POLICIES.includes(rawObj.fallbackPolicy) ? rawObj.fallbackPolicy : "RTH",
+            defaults: Object.assign({}, SchemaConstants.DEFAULTS_BASELINE, rawObj.defaults || {}),
+            checkpoints: srcCps.map((cp, idx) => {
+              const cpExtras = MacroExpander.extractExtras(cp, CHECKPOINT_KNOWN_KEYS);
+              const ncp = {
+                checkpointId: (cp && cp.checkpointId) || `CP_${idx + 1}`,
+                action: cp && cp.action,
+                params: MacroExpander.normalizeShortcutCoords((cp && cp.params) || {}),
+              };
+              if (cp && cp.preconditions) ncp.preconditions = deepClone(cp.preconditions);
+              if (cp && Array.isArray(cp.decorators) && cp.decorators.length > 0) ncp.decorators = deepClone(cp.decorators);
+              if (cp && cp.completeWhen) ncp.completeWhen = deepClone(cp.completeWhen);
+              if (cp && cp.abortWhen) ncp.abortWhen = deepClone(cp.abortWhen);
+              if (cp && Array.isArray(cp.onEnter) && cp.onEnter.length > 0) ncp.onEnter = deepClone(cp.onEnter);
+              if (cp && Array.isArray(cp.onExit) && cp.onExit.length > 0) ncp.onExit = deepClone(cp.onExit);
+              if (cp && Array.isArray(cp.onAbort) && cp.onAbort.length > 0) ncp.onAbort = deepClone(cp.onAbort);
+              if (cp && cp.fallbackPolicy) ncp.fallbackPolicy = cp.fallbackPolicy;
+              if (cpExtras) ncp._extra = cpExtras;
+              return ncp;
+            }),
+          };
+          if (missionExtras) norm._extra = missionExtras;
+          return { ok: true, mission: norm };
+        };
+
+        const importJson = (jsonText) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(String(jsonText || ""));
+          } catch (err) {
+            return { ok: false, errorCode: "INVALID_JSON_SYNTAX", message: err.message };
+          }
+          const res = parseAndNormalizeImport(parsed);
+          if (!res.ok) return res;
+          Store.setMission(res.mission, { pushUndo: true, source: "import" });
+          return {
+            ok: true,
+            mission: Store.getState().mission,
+            validation: Store.getState().lastValidation,
+          };
+        };
+
+        return {
+          PRESETS: Object.keys(PRESETS),
+          getPreset: (key) => (PRESETS[key] ? deepClone(PRESETS[key]) : null),
+          buildExportObject,
+          serializeMission,
+          parseAndNormalizeImport,
+          importJson,
+        };
+      })();
+      const AppBootstrap = (() => {
+        let initialized = false;
+        let autosaveTimer = null;
+
+        const on = (id, ev, fn) => {
+          const node = document.getElementById(id);
+          if (node) node.addEventListener(ev, fn);
+        };
+
+        const openActionPicker = (domain) => {
+          const search = document.getElementById("pickerSearch");
+          if (search) search.value = "";
+          Store.setUi({ activePopover: domain || "ALL" });
+          if (search && typeof search.focus === "function") search.focus();
+        };
+
+        const exportJsonFile = () => {
+          const st = Store.getState();
+          if (!st.lastValidation.valid) {
+            InspectorUI.showToast(`Export blocked: ${st.lastValidation.errors.length} error(s). Fix before export.`, "error");
+            Store.setUi({ validationOpen: true, validationFilter: "ERRORS" });
+            return false;
+          }
+          const text = JsonIO.serializeMission(st.mission);
+          const filename = `${(st.mission.missionId || "mission").replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+          if (typeof Blob !== "undefined" && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+            const blob = new Blob([text], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            if (document.body && typeof document.body.appendChild === "function") document.body.appendChild(a);
+            if (typeof a.click === "function") a.click();
+            if (a.parentNode) a.parentNode.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
+          InspectorUI.showToast(`Exported ${filename}`, "info");
+          return true;
+        };
+
+        const init = () => {
+          if (initialized) return;
+          initialized = true;
+
+          Store.subscribe(() => {
+            InspectorUI.renderAll();
+            if (typeof setTimeout === "function") {
+              if (autosaveTimer) clearTimeout(autosaveTimer);
+              autosaveTimer = setTimeout(() => Store.saveAutosave(), 300);
+            }
+          });
+
+          const mapCanvas = document.getElementById("missionCanvas");
+          const altCanvas = document.getElementById("altProfileCanvas");
+          if (mapCanvas || altCanvas) {
+            CanvasRenderer.attach(mapCanvas, altCanvas);
+          }
+
+          on("missionIdInput", "change", (e) => Store.mutateMission((m) => { m.missionId = e.target.value.trim(); }));
+          on("execModeSingle", "click", () => Store.mutateMission((m) => { m.executionMode = "SINGLE"; }));
+          on("execModeRepeat", "click", () => Store.mutateMission((m) => { m.executionMode = "REPEAT"; }));
+          on("btnUndo", "click", () => Store.undo());
+          on("btnRedo", "click", () => Store.redo());
+          on("presetSelect", "change", (e) => {
+            const key = e.target.value;
+            if (!key) return;
+            Store.loadPreset(key);
+            CanvasRenderer.fitView();
+            InspectorUI.showToast(`Loaded preset ${key} (Ctrl+Z to undo)`, "info");
+            e.target.value = "";
+          });
+          on("btnImportJson", "click", () => {
+            const fi = document.getElementById("fileImportInput");
+            if (fi && typeof fi.click === "function") fi.click();
+          });
+          on("fileImportInput", "change", (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file || typeof FileReader === "undefined") return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              const res = JsonIO.importJson(reader.result);
+              if (!res.ok) InspectorUI.showToast(`${res.errorCode}: ${res.message}`, "error");
+              else {
+                CanvasRenderer.fitView();
+                InspectorUI.showToast(`Imported ${res.mission.missionId}`, "info");
+              }
+            };
+            reader.readAsText(file);
+            e.target.value = "";
+          });
+          on("btnRawJson", "click", () => Store.setUi({ rawJsonOpen: !Store.getState().ui.rawJsonOpen }));
+          on("btnCloseRawJson", "click", () => Store.setUi({ rawJsonOpen: false }));
+          on("btnFormatJson", "click", () => {
+            const ta = document.getElementById("rawJsonTextarea");
+            if (!ta) return;
+            try {
+              ta.value = JSON.stringify(JSON.parse(ta.value), null, 2);
+            } catch (err) {
+              InspectorUI.showToast(`JSON syntax error: ${err.message}`, "error");
+            }
+          });
+          on("btnApplyJson", "click", () => {
+            const ta = document.getElementById("rawJsonTextarea");
+            if (!ta) return;
+            const res = JsonIO.importJson(ta.value);
+            if (!res.ok) InspectorUI.showToast(`${res.errorCode}: ${res.message}`, "error");
+            else {
+              CanvasRenderer.fitView();
+              InspectorUI.showToast("Applied Raw JSON (Ctrl+Z to undo)", "info");
+            }
+          });
+          on("btnCopyJson", "click", () => {
+            const text = JsonIO.serializeMission(Store.getState().mission);
+            if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(() => InspectorUI.showToast("Copied AMM v2.0.0 JSON to clipboard", "info")).catch(() => {});
+            }
+          });
+          on("btnExportJson", "click", exportJsonFile);
+
+          on("btnOpenAddPicker", "click", () => openActionPicker("ALL"));
+          on("btnOpenMacroPicker", "click", () => openActionPicker("MAC"));
+          on("btnClosePicker", "click", () => Store.setUi({ activePopover: null }));
+          on("pickerSearch", "input", () => InspectorUI.renderAll());
+          on("btnEmptyPreset", "click", () => {
+            Store.loadPreset("MSN_RECON_001");
+            CanvasRenderer.fitView();
+          });
+          on("btnEmptyAdd", "click", () => openActionPicker("ALL"));
+
+          on("btnToggleSnap", "click", () => Store.setUi({ gridSnap: !Store.getState().ui.gridSnap }));
+          on("btnFitView", "click", () => CanvasRenderer.fitView());
+          on("btnToggleAltProfile", "click", () => Store.setUi({ altProfileOpen: !Store.getState().ui.altProfileOpen }));
+
+          on("modeCheckpointBtn", "click", () => Store.setUi({ rightMode: "CHECKPOINT" }));
+          on("modeSettingsBtn", "click", () => Store.setUi({ rightMode: "MISSION_SETTINGS" }));
+
+          on("valFilterAll", "click", () => Store.setUi({ validationFilter: "ALL", validationOpen: true }));
+          on("valFilterErrors", "click", () => Store.setUi({ validationFilter: "ERRORS", validationOpen: true }));
+          on("valFilterWarnings", "click", () => Store.setUi({ validationFilter: "WARNINGS", validationOpen: true }));
+          on("btnToggleValidation", "click", () => Store.setUi({ validationOpen: !Store.getState().ui.validationOpen }));
+
+          if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+            document.addEventListener("keydown", (e) => {
+              const tag = e.target && e.target.tagName;
+              const isText = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+              if ((e.ctrlKey || e.metaKey) && !isText) {
+                const k = String(e.key || "").toLowerCase();
+                if (k === "z" && e.shiftKey) { if (e.preventDefault) e.preventDefault(); Store.redo(); }
+                else if (k === "z") { if (e.preventDefault) e.preventDefault(); Store.undo(); }
+                else if (k === "y") { if (e.preventDefault) e.preventDefault(); Store.redo(); }
+              } else if (e.key === "Escape") {
+                if (Store.getState().ui.activePopover) Store.setUi({ activePopover: null });
+                else if (Store.getState().ui.rawJsonOpen) Store.setUi({ rawJsonOpen: false });
+              }
+            });
+          }
+
+          if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+            window.addEventListener("resize", () => {
+              CanvasRenderer.render();
+              if (Store.getState().ui.altProfileOpen) CanvasRenderer.renderAltProfile();
+            });
+          }
+
+          const saved = Store.loadAutosave();
+          if (saved.ok && saved.mission && Array.isArray(saved.mission.checkpoints) && saved.mission.checkpoints.length > 0) {
+            Store.setMission(saved.mission, { pushUndo: false, source: "autosave_restore" });
+            Store.setUi({ aircraftNumber: saved.aircraftNumber, targetAirframe: saved.targetAirframe });
+            InspectorUI.showToast("Restored autosaved draft", "info");
+          } else {
+            InspectorUI.renderAll();
+          }
+        };
+
+        return { init, openActionPicker, exportJsonFile };
+      })();
+
+      window.__AMM_EDITOR__ = {
+        version: "0.3.1",
+        deepClone,
+        SchemaConstants,
+        MacroExpander,
+        DefaultResolver,
+        Validator,
+        Store,
+        CanvasRenderer,
+        InspectorUI,
+        JsonIO,
+        AppBootstrap,
+      };
+      AppBootstrap.init();
+    })();
+  </script>
+</body>
+</html>

@@ -4,6 +4,10 @@
 
 local chattering_guard = {}
 
+local function is_finite_number(v)
+    return type(v) == "number" and v == v and v > -math.huge and v < math.huge
+end
+
 chattering_guard.PRIORITY = {
     E_STOP = 1,
     EMERG_LAND = 2,
@@ -96,7 +100,7 @@ end
 --- Evaluate asymmetric threshold hysteresis in HIGH_ACTIVE or LOW_ACTIVE mode.
 function chattering_guard.eval_hysteresis(prevActive, value, enterTh, exitTh, mode)
     local active = (prevActive == true)
-    if type(value) ~= "number" or type(enterTh) ~= "number" or type(exitTh) ~= "number" then
+    if not is_finite_number(value) or not is_finite_number(enterTh) or not is_finite_number(exitTh) then
         return active
     end
     if mode == "HIGH_ACTIVE" then
@@ -148,7 +152,7 @@ end
 function chattering_guard.update_fuel_latches(state, fuel, cfg, isDisarmed)
     if type(state) ~= "table" then return nil end
     state.latches = state.latches or {}
-    if type(fuel) ~= "number" then return state.latches end
+    if not is_finite_number(fuel) then return state.latches end
 
     local chCfg, safety = merge_chattering_cfg(cfg)
     local ch = (type(cfg) == "table" and type(cfg.safety) == "table" and chCfg) or state.cfg or chattering_guard.DEFAULT_CONFIG

@@ -58,6 +58,14 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
         return state.faultCode
     end
 
+    function fsm:get_slot_remaining_sec(nowSec)
+        if not state.slotExpiresAt or state.slotExpiresAt <= 0 then
+            return 0
+        end
+        local t = nowSec or (os.clock and os.clock() or 0)
+        return math.max(0, state.slotExpiresAt - t)
+    end
+
     function fsm:set_sensor_healthy(healthy)
         isSensorHealthy = healthy
         if not healthy and config.mode == "DYNAMIC" then
@@ -177,7 +185,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
             if payload.facilityId == config.padId or payload.aircraftId == state.currentCraft then
                 state.currentState = "GO_AROUND"
                 state.goAroundStartSec = t
-                local upd = streamer:build_facility_update(next_seq(), "FREE", nil, nil)
+                local upd = streamer:build_facility_update(next_seq(), "GO_AROUND", state.currentCraft, "GO_AROUND")
                 table.insert(out, upd)
             end
         end
@@ -228,13 +236,6 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 state.currentAirframe = nil
                 table.insert(out, streamer:build_facility_update(next_seq(), "FREE", nil, nil))
                 return out
-            end
-        elseif state.currentState == "GO_AROUND" then
-            if state.goAroundStartSec and (t - state.goAroundStartSec) >= GO_AROUND_TIMEOUT_SEC then
-                state.currentState = isSensorHealthy and "IDLE" or "MAINTENANCE"
-                state.currentCraft = nil
-                state.currentAirframe = nil
-                state.goAroundStartSec = nil
             end
         end
 

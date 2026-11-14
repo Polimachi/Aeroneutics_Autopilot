@@ -178,12 +178,12 @@
 
 `src/3_planning/amm/modules/chattering_guard.lua`는 순수 Lua 테이블 기반(외부 CC API 비의존)으로 다음 계약을 제공합니다.
 
-- `chattering_guard.init(config)` $\to$ `state`: 설정 로드 및 `streaks`, `dwellUntilTick`, `latches` 테이블 초기화.
-- `chattering_guard.reset(state)` $\to$ `nil`: `engine:stop()` 또는 `DISARMED` 이후 재기동 시 모든 `streaks`, `dwellUntilTick`, `latches` 초기화.
-- `chattering_guard.eval_hysteresis(prevActive, value, enterTh, exitTh, mode)` $\to$ `boolean`: `"LOW_ENTER"` (`<= enterTh` 진입 / `>= exitTh` 해제) 또는 `"HIGH_ENTER"` (`>= enterTh` 진입 / `<= exitTh` 해제) 평가.
+- `chattering_guard.init(config)` $\to$ `state`: 설정 로드 및 `debounce`, `dwell`, `latches`(`lowFuelLatched`, `emergFuelLatched`) 테이블 초기화.
+- `chattering_guard.reset(state)` $\to$ `nil`: `engine:stop()` 또는 `DISARMED` 이후 재기동 시 모든 `debounce`, `dwell`, `latches` 초기화.
+- `chattering_guard.eval_hysteresis(prevActive, value, enterTh, exitTh, mode)` $\to$ `boolean`: `"LOW_ACTIVE"` (`<= enterTh` 진입 / `>= exitTh` 해제) 또는 `"HIGH_ACTIVE"` (`>= enterTh` 진입 / `<= exitTh` 해제) 평가.
 - `chattering_guard.eval_debounce(state, key, condition, requiredTicks)` $\to$ `boolean`: `condition == true` 연속 틱 누적; `requiredTicks` 도달 시 `true` 반환, `false` 시 즉시 `0` 리셋.
-- `chattering_guard.start_dwell(state, key, nowTick, dwellTicks)` / `chattering_guard.is_dwell_locked(state, key, nowTick, currentPrio, candidatePrio)` $\to$ `boolean`: `candidatePrio < currentPrio` (상위 우선순위 선점, 숫자가 작을수록 상위)이면 잠금 즉시 무시(`false`), 그 외에는 `nowTick < dwellUntilTick[key]` 동안 `true` 반환.
-- `chattering_guard.update_fuel_latches(state, fuel, cfg, isDisarmed)`: `fuel <= 0.20` (`60 Ticks`) 시 `latches.rtl = true`, `fuel <= 0.10` (`30 Ticks`) 시 `latches.emergLand = true` 설정. `isDisarmed` 및 `fuel > 0.20 + fuelLatchResetMargin` 충족 시에만 수동/재기동 리셋 허용.
+- `chattering_guard.start_dwell(state, key, nowTick, dwellTicks)` / `chattering_guard.is_dwell_locked(state, key, nowTick, currentPrio, candidatePrio)` $\to$ `boolean`: `candidatePrio < currentPrio` (상위 우선순위 선점, 숫자가 작을수록 상위)이면 잠금 즉시 무시(`false`), 그 외에는 `nowTick < dwell[key]` 동안 `true` 반환.
+- `chattering_guard.update_fuel_latches(state, fuel, cfg, isDisarmed)`: `fuel <= 0.20` (`60 Ticks`) 시 `latches.lowFuelLatched = true`, `fuel <= 0.10` (`30 Ticks`) 시 `latches.emergFuelLatched = true` 설정. `isDisarmed` 및 `fuel > 0.20 + fuelLatchResetMargin` 충족 시에만 수동/재기동 리셋 허용.
 
 ---
 

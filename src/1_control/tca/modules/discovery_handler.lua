@@ -6,12 +6,8 @@ local discovery_handler = {}
 --- Check if the discovery request targets this node's group or wildcard ALL
 function discovery_handler.is_target_matched(payload, myGroupId)
     if not payload or type(payload) ~= "table" then return true end
-    local targetId = payload.targetThrusterId
     local targetGrp = payload.targetGroup
     if targetGrp and targetGrp ~= "ALL" and targetGrp ~= myGroupId then
-        return false
-    end
-    if targetId and targetId ~= "ALL" and targetId ~= myGroupId then
         return false
     end
     return true

@@ -320,4 +320,52 @@ describe("tca vector thruster discovery and status reporting", function()
         assert_near(mockDev._vectorX, -0.5, 1e-6)
         assert_near(mockDev._vectorY, 0.25, 1e-6)
     end)
+
+    it("preserves gimbal deflection on hardware hotplug and dispatches 0..1 ratio when setPower absent", function()
+        local recordedSpeed = nil
+        local mockVecNoSetPower = {
+            setVector = function(x, y) recordedVec = { x = x, y = y } end,
+            setSpeed = function(s) recordedSpeed = s end,
+        }
+        -- Ensure setVector checks work cleanly
+        local vx, vy = 0, 0
+        mockVecNoSetPower.setVector = function(x, y) vx = x; vy = y end
+        mock.peripheral_registry({
+            left = { type = "vector_thruster", dev = mockVecNoSetPower }
+        })
+
+        local mockModem = mock.modem()
+        local cfg = {
+            groupId = "THR_VTOL_1",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            watchdogTimeoutMs = 300,
+            nominalActuatorCount = 1,
+            interactionMode = "API",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = { "left" } }
+        }
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon:handle_thrust_cmd({
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 20,
+            type = "MSG_THRUST_CMD",
+            payload = {
+                watchdogSeq = 20,
+                controlState = "NORMAL",
+                outputs = { THR_VTOL_1 = { thrust = 15, gimbalX = 0.4, gimbalY = -0.7 } }
+            }
+        })
+        assert_near(recordedSpeed, 256.0, 1e-6)
+        assert_near(vx, 0.4, 1e-6)
+        assert_near(vy, -0.7, 1e-6)
+
+        -- Trigger hardware change and verify gimbal is preserved
+        vx, vy = 0, 0
+        daemon:handle_hardware_change()
+        assert_near(vx, 0.4, 1e-6)
+        assert_near(vy, -0.7, 1e-6)
+    end)
 end)

@@ -175,4 +175,18 @@ describe("AMM 51x19 Dual-Pane TUI Renderer (ui_renderer)", function()
             assert_eq(string.sub(buf.text[r], 27, 51), string.rep(" ", 25), "Ghost text leaked at row " .. r)
         end
     end)
+
+    it("renders live mfd.actuatorHealth status (UNKNOWN / OK / FAULT) instead of hardcoded label", function()
+        local buf = ui_renderer.create_buffer(51, 19)
+        local app = { domainId = "AIRCRAFT_01", authority = "PILOT_PRIMARY", banner = "OK", input_mode = "NAV" }
+
+        ui_renderer.render_screen(buf, { fsmState = "IDLE_ARMED" }, nil, app)
+        assert_true(string.find(buf.text[11], "ACTR : UNKNOWN", 1, true) ~= nil)
+
+        ui_renderer.render_screen(buf, { fsmState = "CRUISE", actuatorHealth = { tap = true, asa = true, allOk = true } }, nil, app)
+        assert_true(string.find(buf.text[11], "ACTR : OK", 1, true) ~= nil)
+
+        ui_renderer.render_screen(buf, { fsmState = "CRUISE", actuatorHealth = { tap = false, asa = true } }, nil, app)
+        assert_true(string.find(buf.text[11], "ACTR : FAULT", 1, true) ~= nil)
+    end)
 end)

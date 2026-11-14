@@ -56,15 +56,21 @@ end
 
 function channel_manager.save_registry(state)
     if not state or not state.registryPath then return false end
+    local updated_at = (os and os.date and os.date("!%Y-%m-%d")) or tostring(os and os.epoch and os.epoch("utc") or 0)
     local data = {
         version = "1.0.0",
-        updatedAt = "2026-11-08",
+        updatedAt = updated_at,
         allocations = state.allocations,
     }
-    local f = fs.open(state.registryPath, "w")
+    local tmp_path = state.registryPath .. ".tmp"
+    local f = fs.open(tmp_path, "w")
     if not f then return false end
     f.write(textutils.serializeJSON(data))
     f.close()
+    if fs.exists(state.registryPath) then
+        fs.delete(state.registryPath)
+    end
+    fs.move(tmp_path, state.registryPath)
     return true
 end
 

@@ -181,7 +181,17 @@ function tui_view.apply_operator_action(action, data, ctx, extraPayload)
         local okSave, errSave = persist_and_sync()
         if not okSave then return false, errSave end
         return true, nil
-    elseif action == "TOGGLE_MAINTENANCE" then
+        elseif action == "SAVE_CONFIG" then
+            local okSave, errSave = persist_and_sync()
+            if okSave and ctx.tui then ctx.tui:add_log("[OP] Configuration saved") end
+            return okSave, errSave
+        elseif action == "SELECT_FACILITY" then
+            local targetFac = resolve_facility(data)
+            if targetFac and ctx.tui then
+                ctx.tui:add_log(string.format("[INFO] %s: %s", tostring(targetFac.facilityId), tostring(targetFac.status)))
+            end
+            return true, nil
+        elseif action == "TOGGLE_MAINTENANCE" then
         local targetFac = resolve_facility(data)
         if not targetFac then return false, "FACILITY_NOT_FOUND" end
         local nextStatus = (targetFac.status == "MAINTENANCE") and "FREE" or "MAINTENANCE"
@@ -465,6 +475,10 @@ function tui_view.create(termDev, monitorDev)
             return "DELETE_FACILITY", self.selectedFacilityIndex
         elseif key == keys.p or char == "p" or char == "P" then
             return "EDIT_DEDICATED", self.selectedFacilityIndex
+        elseif key == keys.enter or (keys.numPadEnter and key == keys.numPadEnter) then
+            return "SELECT_FACILITY", self.selectedFacilityIndex
+        elseif key == keys.s or char == "s" or char == "S" then
+            return "SAVE_CONFIG", nil
         elseif key == keys.q or char == "q" or char == "Q" then
             return "QUIT", nil
         end

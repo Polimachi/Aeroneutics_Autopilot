@@ -56,13 +56,14 @@ describe("AMM 20Hz trajectory_generator (11 Modes, LOITER/POI_HOLD, Virtual ILS,
         assert_not_nil(state)
         assert_not_nil(trajectory_generator.MODES)
         local expected = {
-            "IDLE", "TAKEOFF", "CRUISE", "LOITER", "POI_HOLD",
+            "IDLE_ARMED", "TAKEOFF", "CRUISE", "LOITER", "POI_HOLD",
             "APPROACH_LAND", "LANDING", "DOCKING", "FAILSAFE_RTH",
             "HOVER_HOLD", "EMERGENCY_LAND"
         }
         for _, mode in ipairs(expected) do
             assert_not_nil(trajectory_generator.MODES[mode], "Mode " .. mode .. " must be defined in MODES")
         end
+        assert_nil(trajectory_generator.MODES.IDLE, "Deprecated IDLE mode must not be exposed; use IDLE_ARMED")
     end)
 
     it("enforces canonical [I-12] Zero-Fallback schema and forbids targetAccelFF/targetHeadingDeg", function()
@@ -353,16 +354,33 @@ describe("AMM 20Hz trajectory_generator (11 Modes, LOITER/POI_HOLD, Virtual ILS,
         assert_near(sp.flapHint, 1.0, 1e-4)
     end)
 
-    it("handles IDLE, HOVER_HOLD, and FAILSAFE_RTH modes", function()
+    it("handles IDLE_ARMED, HOVER_HOLD, FAILSAFE_RTH, and honors goal.targetAlt across TAKEOFF/CRUISE/LOITER", function()
         local state = trajectory_generator.init(config)
         local nav = make_nav(10.0, 64.0, 20.0, 0.0, 0.0, 0.0, 0.0)
 
-        -- IDLE: on ground, flightActive = false
-        local spIdle = trajectory_generator.compute(state, nav, nil, { flightMode = "IDLE" }, 0.05, 1000)
+        -- IDLE_ARMED: on ground, flightActive = false (and default nil flightMode -> IDLE_ARMED)
+        local spIdle = trajectory_generator.compute(state, nav, nil, { flightMode = "IDLE_ARMED" }, 0.05, 1000)
+        assert_eq(spIdle.flightMode, "IDLE_ARMED")
         assert_false(spIdle.flightActive)
         assert_near(spIdle.targetVel.vx, 0.0, 1e-4)
         assert_near(spIdle.targetVel.vy, 0.0, 1e-4)
         assert_near(spIdle.targetVel.vz, 0.0, 1e-4)
+        local spDef = trajectory_generator.compute(state, nav, nil, {}, 0.05, 1010)
+        assert_eq(spDef.flightMode, "IDLE_ARMED")
+
+        -- TAKEOFF honors explicit goal.targetAlt
+        local spTk = trajectory_generator.compute(state, nav, nil, { flightMode = "TAKEOFF", targetAlt = 140.0 }, 0.05, 1020)
+        assert_near(spTk.targetPos.y, 140.0, 1e-4)
+
+        -- CRUISE with nil targetPos (ACT_NAV_CHANGE_ALT) climbs/descends toward goal.targetAlt
+        local spAlt = trajectory_generator.compute(state, nav, nil, { flightMode = "CRUISE", targetAlt = 180.0, targetSpeed = 10.0 }, 0.05, 1030)
+        assert_near(spAlt.targetPos.y, 180.0, 1e-4)
+        assert_true(spAlt.targetVel.vy > 0.0)
+
+        -- LOITER with different targetAlt (ACT_PAT_LOITER_ALT) commands non-zero vy toward targetAlt
+        local spLoitAlt = trajectory_generator.compute(state, nav, nil, { flightMode = "LOITER", targetPos = { x = 10.0, z = 20.0 }, targetAlt = 120.0 }, 0.05, 1040)
+        assert_near(spLoitAlt.targetPos.y, 120.0, 1e-4)
+        assert_true(spLoitAlt.targetVel.vy > 0.0)
 
         -- HOVER_HOLD: holds current position, flightActive = true
         local spHover = trajectory_generator.compute(state, nav, nil, { flightMode = "HOVER_HOLD" }, 0.05, 1050)

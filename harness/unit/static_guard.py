@@ -231,13 +231,35 @@ PROHIBITED_MOD_TOKENS = (
     "ship_reader",
     "vs_clockwork",
     "eureka",
+    "vs_eureka",
     "trackwork",
+    "vs_trackwork",
     "vs_tournament",
     "vs_addition",
     "create_interactive",
+    "valkyrien_pirates",
     "vmod",
     "drivebywire",
     "kontraption:",
+    "vs_clockwork:",
+    "eureka:",
+    "vs_eureka:",
+    "trackwork:",
+    "vs_trackwork:",
+    "vs_tournament:",
+    "tournament:",
+    "vs_addition:",
+    "valkyrien:",
+    "vs2:",
+    "cc_vs:",
+    "physics_infuser",
+    "flap_bearing",
+    "gravitron",
+    "phys_bearing",
+    "redstone_resistor",
+    "ship_helm",
+    "phys_track",
+    "suspension_track",
 )
 
 CC_VS_SHIP_METHODS = (
@@ -258,12 +280,58 @@ CC_VS_SHIP_METHODS = (
     "getTransformationMatrix",
 )
 
+KNOWN_SUBSYSTEMS = {
+    "alignment",
+    "installer",
+    "sensors",
+    "docking_arm",
+    "gac",
+    "gcs",
+    "gps",
+    "landing_pad",
+    "runway",
+    "asa",
+    "tca",
+    "vas",
+    "fcp",
+    "amm",
+}
+
+YIELD_PATTERNS = (
+    r"\b(?:os\s*\.\s*)?pullEvent(?:Raw)?\s*\(",
+    r"\bos\s*\.\s*pullEvent(?:Raw)?\b",
+    r"\bsleep\b",
+    r"\brednet\s*\.\s*receive\b",
+    r"\bcoroutine\s*\.\s*yield\b",
+    r"\bhttp\s*\.\s*(?:get|post|websocket|request|checkURL)\b",
+    r"\bbreak\b",
+    r"\breturn\b",
+    r"\bread\s*\(",
+    r"\bparallel\s*\.\s*waitFor",
+)
+
 
 def _matches_prohibited_token(text: str, token: str) -> bool:
     if token.endswith(":"):
         return token in text
-    pattern = r"(?<![a-zA-Z0-9_])" + re.escape(token) + r"(?![a-zA-Z0-9_])"
+    pattern = r"(?<![a-zA-Z0-9_])(?:vs_|cc_)?" + re.escape(token) + r"(?![a-zA-Z0-9_])"
     return bool(re.search(pattern, text))
+
+
+def _extract_own_subsystem(rel_path: str) -> str | None:
+    norm = rel_path.replace("\\", "/").strip("/")
+    parts = norm.split("/")
+    if "src" in parts:
+        idx = parts.index("src")
+        if len(parts) > idx + 2:
+            cand = parts[idx + 2]
+            if cand in KNOWN_SUBSYSTEMS:
+                return cand
+    elif len(parts) >= 2 and re.match(r"^\d+_", parts[0]):
+        cand = parts[1]
+        if cand in KNOWN_SUBSYSTEMS:
+            return cand
+    return None
 
 
 def scan_lua_source(
@@ -280,7 +348,10 @@ def scan_lua_source(
     stripped_code, literals = strip_lua_comments_and_strings(source)
     lines = stripped_code.split("\n")
 
-    # 2. Lua 5.3+ operators (scanned on stripped code)
+    # Scope tracker for legacy arg detection
+    declared_scopes: list[set[str]] = [set()]
+
+    # 2. Lua 5.3+ operators, Host OS APIs, and legacy arg (scanned on stripped code)
     for idx, l in enumerate(lines, 1):
         # Integer division //
         if "//" in l:
@@ -363,8 +434,47 @@ def scan_lua_source(
                 )
             )
 
-        # 4. CC:VS ship methods on stripped code
-        method_pattern = r"\bship\s*\.\s*(" + "|".join(CC_VS_SHIP_METHODS) + r")\b"
+        # Legacy arg table access check
+        fn_match = re.search(r"\bfunction\s*(?:[a-zA-Z0-9_.:]+)?\s*\(([^)]*)\)", l)
+        if fn_match:
+            params = [p.strip() for p in fn_match.group(1).split(",") if p.strip()]
+            declared_scopes.append(set(params))
+
+        local_matches = re.findall(r"\blocal\s+([a-zA-Z0-9_,\s]+)(?:=|$|;)", l)
+        for decl in local_matches:
+            vars_declared = [
+                v.strip()
+                for v in decl.split(",")
+                if v.strip() and re.match(r"^[a-zA-Z0-9_]+$", v.strip())
+            ]
+            for v in vars_declared:
+                declared_scopes[-1].add(v)
+
+        is_arg_access = bool(
+            re.search(r"(?<![a-zA-Z0-9_])arg\s*\[", l)
+            or re.search(r"(?<![a-zA-Z0-9_])arg\s*\.\s*[a-zA-Z0-9_]", l)
+            or re.search(r"#\s*arg(?![a-zA-Z0-9_])", l)
+            or re.search(r"\b(?:ipairs|pairs|unpack|table\.unpack)\s*\(\s*arg\s*[,)]", l)
+        )
+        if is_arg_access:
+            is_declared = any("arg" in s for s in declared_scopes)
+            if not is_declared:
+                violations.append(
+                    StaticViolation(
+                        file_path=rel_path,
+                        line=idx,
+                        code="PROHIBITED_LUA51_ARG_API",
+                        message="Legacy Lua 5.1 implicit vararg table 'arg' is forbidden in CC:Tweaked Lua 5.2; use '...'",
+                    )
+                )
+
+        end_count = len(re.findall(r"\bend\b", l))
+        for _ in range(end_count):
+            if len(declared_scopes) > 1:
+                declared_scopes.pop()
+
+        # 4. CC:VS ship methods on stripped code (matches any object or direct ship method call)
+        method_pattern = r"\b[a-zA-Z0-9_]+\s*[:.]\s*(" + "|".join(CC_VS_SHIP_METHODS) + r")\b"
         m_ship = re.search(method_pattern, l)
         if m_ship:
             violations.append(
@@ -372,7 +482,7 @@ def scan_lua_source(
                     file_path=rel_path,
                     line=idx,
                     code="PROHIBITED_MOD_VIOLATION",
-                    message=f"Valkyrien Skies CC:VS ship physics method 'ship.{m_ship.group(1)}()' is prohibited",
+                    message=f"Valkyrien Skies CC:VS ship physics method '{m_ship.group(1)}()' is prohibited",
                 )
             )
 
@@ -412,6 +522,85 @@ def scan_lua_source(
                     )
                 )
 
+    # 6. Static infinite-loop yield check
+    loop_i = 0
+    while loop_i < len(lines):
+        line_str = lines[loop_i].strip()
+        is_while_inf = bool(re.match(r"^while\s+(?:true|1)\s+do\b", line_str))
+        is_repeat = bool(re.match(r"^repeat\b", line_str))
+
+        if is_while_inf or is_repeat:
+            start_line = loop_i + 1
+            body_lines: list[str] = []
+            depth = 1
+            j = loop_i + 1
+            is_infinite_repeat = False
+            while j < len(lines):
+                lj = lines[j]
+                body_lines.append(lj)
+                for _ in re.finditer(r"\b(function|repeat|do)\b|(?<!else)\bif\b", lj):
+                    depth += 1
+                for _ in re.finditer(r"\b(end|until)\b", lj):
+                    depth -= 1
+                    if depth <= 0:
+                        if is_repeat and re.search(r"\buntil\s+(?:false|nil)\b", lj):
+                            is_infinite_repeat = True
+                        break
+                if depth <= 0:
+                    break
+                j += 1
+
+            if is_while_inf or is_infinite_repeat:
+                body_text = "\n".join(body_lines)
+                has_yield = any(re.search(pat, body_text) for pat in YIELD_PATTERNS)
+                if not has_yield:
+                    violations.append(
+                        StaticViolation(
+                            file_path=rel_path,
+                            line=start_line,
+                            code="INFINITE_LOOP_WITHOUT_YIELD",
+                            message="Infinite loop without yield (os.pullEvent, sleep, rednet.receive, coroutine.yield, http) or break/return detected",
+                        )
+                    )
+            loop_i = j
+        else:
+            loop_i += 1
+
+    # 7. Cross-subsystem require isolation check for src/<layer>/<subsystem>/ files
+    own_subsystem = _extract_own_subsystem(rel_path)
+    if own_subsystem:
+        require_pattern = re.compile(r"""\brequire\s*\(?\s*['"]([^'"]+)['"]\s*\)?""")
+        for m in require_pattern.finditer(source):
+            offset = m.start()
+            if stripped_code[offset : offset + 7] == "require":
+                mod_name = m.group(1).strip()
+                if mod_name in (
+                    "avionics_sensors",
+                    "/lib/avionics_sensors",
+                    "/lib/avionics_sensors.lua",
+                ):
+                    continue
+                req_line = source[:offset].count("\n") + 1
+                for other_sub in KNOWN_SUBSYSTEMS:
+                    if other_sub == own_subsystem:
+                        continue
+                    if (
+                        mod_name == other_sub
+                        or mod_name.startswith(f"{other_sub}.")
+                        or mod_name.startswith(f"{other_sub}/")
+                        or f".{other_sub}." in mod_name
+                        or f"/{other_sub}/" in mod_name
+                        or f"_{other_sub}." in mod_name
+                    ):
+                        violations.append(
+                            StaticViolation(
+                                file_path=rel_path,
+                                line=req_line,
+                                code="CROSS_SUBSYSTEM_REQUIRE",
+                                message=f"Cross-subsystem require('{mod_name}') is forbidden; only own subsystem modules or '/lib/avionics_sensors.lua' allowed",
+                            )
+                        )
+
     # Deduplicate violations by (file_path, line, code)
     dedup: dict[tuple[str, int, str], StaticViolation] = {}
     for v in violations:
@@ -432,14 +621,32 @@ def scan_target_files(
     if target.tests_dir.exists():
         scan_dirs.append(target.tests_dir)
 
+    workspace_root = target.source_dir.parent.parent.parent
+
+    # If target is installer, include root installer.lua
+    extra_files: list[Path] = []
+    if target.target_id == "0_development/installer":
+        root_installer = workspace_root / "installer.lua"
+        if root_installer.exists():
+            extra_files.append(root_installer)
+
     for base_dir in scan_dirs:
         for f in sorted(base_dir.rglob("*.lua")):
             try:
-                rel = str(f.relative_to(target.source_dir.parent.parent.parent))
+                rel = str(f.relative_to(workspace_root))
             except Exception:
                 rel = str(f)
             src = f.read_text(encoding="utf-8", errors="replace")
             violations = scan_lua_source(src, rel, checker)
             all_violations.extend(violations)
+
+    for f in extra_files:
+        try:
+            rel = str(f.relative_to(workspace_root))
+        except Exception:
+            rel = str(f)
+        src = f.read_text(encoding="utf-8", errors="replace")
+        violations = scan_lua_source(src, rel, checker)
+        all_violations.extend(violations)
 
     return all_violations

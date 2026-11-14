@@ -130,8 +130,21 @@ describe("GAC facility swarm inventory manager", function()
         assert_eq(summary.freeLandingPads, 1)
         assert_eq(summary.totalRunways, 1)
         assert_eq(summary.freeRunways, 0)
+        assert_eq(summary.totalDockingArms, 0)
+        assert_eq(summary.freeDockingArms, 0)
         assert_eq(summary.maxSupportWeight, 50000.0)
         assert_eq(summary.maxSupportRadius, 15.0)
+    end)
+
+    it("counts totalDockingArms and freeDockingArms in summary", function()
+        local inv = facility_inventory.create({
+            { facilityId = "ARM_01", type = "DOCKING_ARM", status = "FREE" },
+            { facilityId = "ARM_02", type = "DOCKING_ARM", status = "OCCUPIED" },
+            { facilityId = "ARM_03", type = "DOCKING_ARM", status = "FREE", dedicatedCraftIds = { "VIP_01" } }
+        })
+        local summary = inv:get_summary()
+        assert_eq(summary.totalDockingArms, 3)
+        assert_eq(summary.freeDockingArms, 1)
     end)
 
     it("updates dedicated attributes dynamically on an existing facility", function()

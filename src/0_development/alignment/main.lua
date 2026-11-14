@@ -63,7 +63,7 @@ function main.run()
     
     local master = nil
     if modem then
-        master = align_master.init_bay_session(cfg.station, "AIRCRAFT_01", align_master.compute_craft_base(1), modem)
+        master = align_master.init_bay_session(cfg, "AIRCRAFT_01", align_master.compute_craft_base(1), modem, (os.epoch and os.epoch("utc")) or 0)
     end
     
     hud:render_dashboard("STANDBY", { pitch = 0, roll = 0 }, "THR_MAIN_L", {})
@@ -73,12 +73,17 @@ function main.run()
     
     while running do
         local ev, p1, _, _, p4 = os.pullEventRaw()
+        local now_ms = (os.epoch and os.epoch("utc")) or 0
         if ev == "timer" and p1 == ui_timer then
+            if master then align_master.step_fsm(master, { type = "TICK" }, now_ms) end
             local st = master and align_master.get_state(master) or "STANDBY"
-            hud:render_dashboard(st, { pitch = 0, roll = 0 }, "THR_MAIN_L", {})
+            local telem = (master and master.last_telem) or { pitch = 0, roll = 0 }
+            local thr = (master and master.actuators and master.actuators[master.actuator_idx]) or "THR_MAIN_L"
+            local reg = (master and master.last_regression) or {}
+            hud:render_dashboard(st, telem, thr, reg)
             ui_timer = os.startTimer(0.1)
         elseif ev == "modem_message" and master then
-            align_master.step_fsm(master, { type = "PACKET", channel = p1, packet = p4 })
+            align_master.step_fsm(master, { type = "PACKET", channel = p1, packet = p4 }, now_ms)
         elseif ev == "char" then
             running = handle_key_action(master, p1)
         elseif ev == "terminate" then

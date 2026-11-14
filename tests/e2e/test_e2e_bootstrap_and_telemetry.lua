@@ -54,7 +54,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
 
         local boot_req = channel_sentinel.start_bootstrap(amm_state, 1000)
         assert_eq(boot_req.type, "MSG_BLOCK_REQUEST")
-        assert_eq(boot_req.requestedBandwidth, 40)
+        assert_eq(boot_req.payload.requestedBandwidth, 40)
 
         -- Transmit request from AMM to GCS on CH 50000
         amm.modem:transmit(50000, 50000, {
@@ -66,7 +66,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
             payload = {
                 domainId = "AIRCRAFT_01",
                 hardwareUuid = "HW-UUID-4401",
-                requestedBandwidth = boot_req.requestedBandwidth,
+                requestedBandwidth = boot_req.payload.requestedBandwidth,
             },
         })
         bus:step(0.05)

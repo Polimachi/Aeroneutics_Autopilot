@@ -134,7 +134,7 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 3-Channel Netwo
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             type = "MSG_FLIGHT_TELEMETRY",
-            payload = { attitude = { heading = 89.0 }, dynamics = { altitudeY = 100.0 } },
+            payload = { attitude = { yaw = 89.0 }, dynamics = { altitudeY = 100.0 } },
         }
         local ok_telem = network_manager.ingest_modem_event(net, "top", 10002, 10002, telem_pkt, 0, 1000)
         assert_true(ok_telem)
@@ -196,8 +196,10 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
             type = "MSG_CHANNEL_REBIND_ACK",
             payload = {
                 transactionId = "TX-REBIND-10040",
+                nodeId = "VAS",
+                action = "PREPARE",
                 status = "READY",
-                subNodesOk = true,
+                subNodesReady = { tca = true, asa = true },
             },
         }
         local ok_ack = network_manager.ingest_modem_event(net, "top", 10001, 10001, vas_ack, 0, 1050)
@@ -206,8 +208,10 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
         assert_eq(#mock_modem._transmitted, 2)
         assert_eq(mock_modem._transmitted[2].tx, 10004)
         assert_eq(mock_modem._transmitted[2].pkt.type, "MSG_CHANNEL_REBIND_ACK")
+        assert_eq(mock_modem._transmitted[2].pkt.payload.nodeId, "FCP")
         assert_eq(mock_modem._transmitted[2].pkt.payload.status, "READY")
         assert_eq(mock_modem._transmitted[2].pkt.payload.transactionId, "TX-REBIND-10040")
+        assert_nil(mock_modem._transmitted[2].pkt.payload.subNodesOk)
 
         -- Now AMM sends COMMIT on 10004
         local commit_pkt = {
@@ -272,6 +276,13 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
         -- Advance time past 500ms threshold (t = 1501ms, delta = 501ms)
         local status_501 = network_manager.step_rebind_watchdog(net, 1501)
         assert_eq(status_501, "ROLLED_BACK")
+
+        -- Emits upward MSG_CHANNEL_REBIND_ACK (status = "FAILED") to AMM on oldBase+4 (10004)
+        local fail_ack_tx = mock_modem._transmitted[#mock_modem._transmitted - 1]
+        assert_eq(fail_ack_tx.tx, 10004)
+        assert_eq(fail_ack_tx.pkt.type, "MSG_CHANNEL_REBIND_ACK")
+        assert_eq(fail_ack_tx.pkt.payload.status, "FAILED")
+        assert_eq(fail_ack_tx.pkt.payload.nodeId, "FCP")
 
         -- Relays ROLLBACK to VAS on oldBase+1 (10001)
         local last_tx = mock_modem._transmitted[#mock_modem._transmitted]

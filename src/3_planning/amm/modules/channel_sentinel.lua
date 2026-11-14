@@ -34,9 +34,11 @@ function channel_sentinel.init(config)
     local validBase = channel_sentinel.is_valid_base(rawBase) and rawBase or CRAFT_BASE_MIN
     local bootCh = chs.bootstrapChannel or cfg.bootstrapChannel or DEFAULT_BOOTSTRAP_CH
     local dId = sys.domainId or cfg.domainId or "AIRCRAFT_01"
+    local hwUuid = sys.hardwareUuid or cfg.hardwareUuid or ("AMM-NODE-" .. tostring(dId))
     return {
         status = "INIT",
         domainId = dId,
+        hardwareUuid = hwUuid,
         baseChannel = validBase,
         bootstrapChannel = bootCh,
         candidateBase = validBase,
@@ -55,13 +57,16 @@ function channel_sentinel.start_bootstrap(state, now_ms)
     state.status = "WAIT_BLOCK_ASSIGN"
     return {
         type = "MSG_BLOCK_REQUEST",
-        candidateBaseChannel = state.baseChannel,
-        requestedBandwidth = CRAFT_BANDWIDTH,
+        payload = {
+            domainId = state.domainId,
+            hardwareUuid = state.hardwareUuid,
+            requestedBandwidth = CRAFT_BANDWIDTH,
+        },
     }
 end
 
 function channel_sentinel.on_block_assign(state, payload, now_ms)
-    local candidate = payload and (payload.baseChannel or payload.assignedBaseChannel)
+    local candidate = payload and payload.baseChannel
     if candidate and channel_sentinel.is_valid_base(candidate) then
         state.candidateBase = candidate
     else
@@ -77,14 +82,17 @@ function channel_sentinel.probe_channel(state, candidate_base, now_ms)
     state.status = "PROBING"
     return {
         type = "MSG_CHANNEL_PROBE",
-        candidateBaseChannel = c,
-        bandwidth = CRAFT_BANDWIDTH,
+        payload = {
+            hardwareUuid = state.hardwareUuid,
+            candidateBase = c,
+            bandwidth = CRAFT_BANDWIDTH,
+        },
     }
 end
 
 function channel_sentinel.on_probe_ack(state, packet)
-    local payload = packet and packet.payload or {}
-    if payload.conflict or packet.type == "MSG_CHANNEL_PROBE_ACK" then
+    local payload = packet and packet.payload
+    if type(payload) == "table" and (payload.conflict == true or payload.status == "CONFLICT_DETECTED") then
         state.locked = true
         state.status = "ARMING_LOCKED"
         state.conflictReason = "RF_CHANNEL_CONFLICT"
@@ -93,7 +101,7 @@ end
 
 local function step_probing(state, now_ms, inbound)
     local p = inbound and inbound.probe
-    if p and (p.type == "MSG_CHANNEL_PROBE_ACK" or (p.payload and p.payload.conflict)) then
+    if p and p.payload and (p.payload.conflict == true or p.payload.status == "CONFLICT_DETECTED") then
         channel_sentinel.on_probe_ack(state, p)
         return state.status, nil
     end
@@ -129,7 +137,7 @@ end
 
 function channel_sentinel.handle_incoming_probe(state, packet)
     if state.status == "ACQUIRED" and packet and packet.payload then
-        local target = packet.payload.candidateBaseChannel
+        local target = packet.payload.candidateBase
         if target == state.baseChannel then
             return {
                 type = "MSG_CHANNEL_PROBE_ACK",

@@ -87,7 +87,7 @@ local function stepCommit(modem, fsm, nodeCfgPath)
         computerId = fsm.computerId,
         position = fsm.position,
         channels = { ping = protocol.CH_GPS_PING, service = protocol.CH_GPS_SERVICE, nodeIn = protocol.CH_GPS_NODE_IN, mgmt = protocol.CH_GPS_MGMT },
-        modemSide = "top",
+        modemSide = "back",
     }
     local okWrite, errWrite = storage_hal.writeJsonAtomic(nodeCfgPath or "/gps_data/node.json", cfg)
     if not okWrite then

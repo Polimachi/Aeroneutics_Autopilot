@@ -144,6 +144,8 @@ function facility_inventory.create(initialFacilities)
         local freePads = 0
         local totalRunways = 0
         local freeRunways = 0
+        local totalDockingArms = 0
+        local freeDockingArms = 0
         local maxWeight = 0.0
         local maxRadius = 0.0
 
@@ -166,6 +168,11 @@ function facility_inventory.create(initialFacilities)
                 if fac.status == "FREE" and not state.emergencyLockdown and not isDedicated then
                     freeRunways = freeRunways + 1
                 end
+            elseif fType == "DOCKING_ARM" then
+                totalDockingArms = totalDockingArms + 1
+                if fac.status == "FREE" and not state.emergencyLockdown and not isDedicated then
+                    freeDockingArms = freeDockingArms + 1
+                end
             end
         end
 
@@ -174,6 +181,8 @@ function facility_inventory.create(initialFacilities)
             freeLandingPads = freePads,
             totalRunways = totalRunways,
             freeRunways = freeRunways,
+            totalDockingArms = totalDockingArms,
+            freeDockingArms = freeDockingArms,
             maxSupportWeight = maxWeight,
             maxSupportRadius = maxRadius
         }

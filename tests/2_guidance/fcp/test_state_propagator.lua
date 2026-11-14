@@ -3,7 +3,7 @@ local state_propagator = require("state_propagator")
 
 describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagator 20Hz Integration and DR", function()
     it("initializes default state table with zeroed vectors and valid flags", function()
-        local state = state_propagator.init({ posMergeMaxStepM = 2.0, navStaleEpochMs = 500 })
+        local state = state_propagator.init({ posMergeMaxStepM = 2.0, navStaleTimeoutMs = 500 })
         assert_not_nil(state)
         assert_eq(state.pos.x, 0.0)
         assert_eq(state.pos.y, 0.0)
@@ -16,6 +16,12 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
         assert_eq(state.posEpoch, 0)
     end)
 
+    it("keeps navStale false at boot before any telemetry arrives", function()
+        local state = state_propagator.init({ navStaleTimeoutMs = 500 })
+        local snap = state_propagator.propagate(state, 5000)
+        assert_false(snap.navStale, "Boot before first telemetry must not mark navStale=true")
+    end)
+
     it("ingests VAS Base+2 telemetry and updates velocity, attitude and rates", function()
         local state = state_propagator.init()
         local telem = {
@@ -23,9 +29,9 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
                 velocity = { vx = 10.0, vy = 1.0, vz = -5.0 },
                 altitudeY = 120.0,
             },
-            attitude = { pitch = 2.0, roll = -1.0, heading = 90.0, yaw = 90.0 },
+            attitude = { pitch = 2.0, roll = -1.0, yaw = 90.0 },
             angularRates = { pitchRate = 0.1, rollRate = 0.0, yawRate = 0.2 },
-            actuatorHealth = { tap = true, asa = true, allOk = true },
+            actuatorHealth = { tap = false, asa = true },
             activeSource = "FCP",
             sensorOk = true,
         }
@@ -34,10 +40,11 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
         assert_eq(state.vel.vx, 10.0)
         assert_eq(state.vel.vy, 1.0)
         assert_eq(state.vel.vz, -5.0)
+        assert_eq(state.attitude.yaw, 90.0)
         assert_eq(state.attitude.heading, 90.0)
         assert_eq(state.angularRates.pitchRate, 0.1)
         assert_eq(state.lastTelemMs, 1000)
-        assert_eq(state.actuatorHealth.allOk, true)
+        assert_false(state.actuatorHealth.allOk, "allOk must be false when tap=false")
         assert_eq(state.activeSource, "FCP")
     end)
 
@@ -103,8 +110,8 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
         assert_near(state.pos.x, 103.0, 1e-4, "Old posEpoch must not update pos")
     end)
 
-    it("evaluates navStale when telemetry age exceeds 500ms or navValid is false", function()
-        local state = state_propagator.init({ navStaleEpochMs = 500 })
+    it("evaluates navStale when telemetry age exceeds 500ms, posEpoch stagnates, or navValid is false", function()
+        local state = state_propagator.init({ navStaleTimeoutMs = 500 })
         local telem = {
             dynamics = { velocity = { vx = 0.0, vy = 0.0, vz = 0.0 } },
             attitude = {}, angularRates = {}, actuatorHealth = {},
@@ -119,14 +126,21 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
         local res_stale = state_propagator.propagate(state, 1501)
         assert_true(res_stale.navStale)
 
-        -- Telemetry refreshed at t = 1600
+        -- Telemetry refreshed at t = 1600, plus posEpoch=1 received at t=1600
         state_propagator.on_telemetry(state, telem, 1600)
+        state_propagator.on_setpoint_epoch(state, { posEpoch = 1, currentPos = { x = 0, y = 0, z = 0 }, navValid = true }, 1600)
         local res_refreshed = state_propagator.propagate(state, 1610)
         assert_false(res_refreshed.navStale)
 
-        -- But if AMM setpoint has navValid = false
-        state_propagator.on_setpoint_epoch(state, { posEpoch = 1, currentPos = { x = 0, y = 0, z = 0 }, navValid = false }, 1620)
-        local res_invalid = state_propagator.propagate(state, 1625)
+        -- Keep telemetry fresh at t = 2200, but posEpoch stagnates (> 500ms since epoch 1)
+        state_propagator.on_telemetry(state, telem, 2200)
+        state_propagator.on_setpoint_epoch(state, { posEpoch = 1, currentPos = { x = 0, y = 0, z = 0 }, navValid = true }, 2200)
+        local res_epoch_stale = state_propagator.propagate(state, 2200)
+        assert_true(res_epoch_stale.navStale, "posEpoch stagnation > 500ms must flag navStale")
+
+        -- Fresh epoch clears stagnation, then navValid = false flags navStale
+        state_propagator.on_setpoint_epoch(state, { posEpoch = 2, currentPos = { x = 0, y = 0, z = 0 }, navValid = false }, 2210)
+        local res_invalid = state_propagator.propagate(state, 2215)
         assert_true(res_invalid.navStale)
     end)
 
@@ -134,7 +148,7 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
         local state = state_propagator.init()
         local telem = {
             dynamics = { velocity = { vx = 12.0, vy = 0.0, vz = 5.0 } },
-            attitude = { pitch = 1.0, roll = 0.0, heading = 45.0, yaw = 45.0 },
+            attitude = { pitch = 1.0, roll = 0.0, yaw = 45.0 },
             angularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
             actuatorHealth = { tap = true, asa = true, allOk = true },
             activeSource = "FCP",

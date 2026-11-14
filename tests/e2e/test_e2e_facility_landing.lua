@@ -210,7 +210,33 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
 
         local amm_guide_inbox = amm.modem:drain()
         assert_eq(#amm_guide_inbox, 1)
-        assert_eq(amm_guide_inbox[1].payload.payload.facilityId, "PAD_01")
+        local gp = amm_guide_inbox[1].payload.payload
+        assert_eq(gp.facilityId, "PAD_01")
+        assert_eq(gp.approachDirection, "DOWNWARD")
+        assert_true(gp.landingPermitted)
+        assert_eq(gp.deckStatus, "STABLE")
+
+        -- Verify Abort Go-Around & MSG_GAC_ABORT_CLEAR reporting on Base_sec+0 (50201)
+        local abort_clear_pkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 205,
+            type = "MSG_GAC_ABORT_CLEAR",
+            time = 1180,
+            payload = {
+                aircraftId = "AIRCRAFT_01",
+                currentAltitude = 100.0,
+                climbRate = 2.0,
+            }
+        }
+        amm.modem:transmit(50201, 50201, abort_clear_pkt)
+        bus:step(0.05)
+        local clr_pkts = bus:find_packets({ type = "MSG_GAC_ABORT_CLEAR", channel = 50201 })
+        assert_eq(#clr_pkts, 1)
+        assert_eq(clr_pkts[1].payload.payload.currentAltitude, 100.0)
+        local gac_abort_inbox = gac.modem:drain()
+        assert_eq(#gac_abort_inbox, 1)
+        assert_eq(gac_abort_inbox[1].payload.type, "MSG_GAC_ABORT_CLEAR")
 
         -- 11. Step 7: AMM guides to touchdown and transmits MSG_TOUCHDOWN_COMPLETE on 50211
         local td_pkt = {

@@ -143,8 +143,8 @@ MUTATIONS: List[Dict[str, Any]] = [
         "name": "Landing Pad Offset Transform Sine Yaw Sign",
         "domain": "Infra",
         "file": "src/0_infra/landing_pad/modules/offset_transform.lua",
-        "target": "local sinYaw = math.sin(totalYawRad)",
-        "replacement": "local sinYaw = -math.sin(totalYawRad)",
+        "target": "local sY, cY = math.sin(yaw), math.cos(yaw)",
+        "replacement": "local sY, cY = -math.sin(yaw), math.cos(yaw)",
         "runner": "unit",
         "target_arg": "0_infra/landing_pad",
     },
@@ -163,8 +163,8 @@ MUTATIONS: List[Dict[str, Any]] = [
         "name": "FCP SE(3) Desired Vertical Accel Gravity Feedforward Sign",
         "domain": "Guidance",
         "file": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
-        "target": "local ay = ffy + alpha * (kp.y * ey + kd.y * evy) + ints.y - drag.y * vy + g",
-        "replacement": "local ay = ffy + alpha * (kp.y * ey + kd.y * evy) + ints.y - drag.y * vy - g",
+        "target": "return { ax = ax, ay = ay_kin + g, az = az, saturated = saturated }",
+        "replacement": "return { ax = ax, ay = ay_kin - g, az = az, saturated = saturated }",
         "runner": "unit",
         "target_arg": "2_guidance/fcp",
     },
@@ -243,7 +243,7 @@ MUTATIONS: List[Dict[str, Any]] = [
         "name": "FCP SE(3) VTOL Sway-Loss Roll Tilt Fallback Injection",
         "domain": "Guidance",
         "file": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
-        "target": "roll = clamp(math.deg(math.atan2(w_a, a_des.ay)), -25.0, 25.0)",
+        "target": "roll = clamp(math.deg(math.atan2(w_a, math.max(0.5 * g, a_des.ay))), -25.0, 25.0)",
         "replacement": "roll = 0.0",
         "runner": "unit",
         "target_arg": "2_guidance/fcp",
@@ -288,7 +288,14 @@ def run_mutation(mut: Dict[str, Any], verbose: bool = False) -> bool:
         return False
 
     mutated_content = original_content.replace(mut["target"], mut["replacement"], 1)
-    file_path.write_text(mutated_content, encoding="utf-8", newline="")
+    for attempt in range(10):
+        try:
+            file_path.write_text(mutated_content, encoding="utf-8", newline="")
+            break
+        except OSError:
+            if attempt == 9:
+                raise
+            time.sleep(0.1)
 
     try:
         if mut["runner"] == "unit":
@@ -320,7 +327,14 @@ def run_mutation(mut: Dict[str, Any], verbose: bool = False) -> bool:
         return is_killed
     finally:
         # Atomic restore
-        file_path.write_bytes(original_bytes)
+        for attempt in range(10):
+            try:
+                file_path.write_bytes(original_bytes)
+                break
+            except OSError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.1)
 
 
 def main() -> int:

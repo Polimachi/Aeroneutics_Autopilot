@@ -105,8 +105,8 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
             seq = 100,
             type = "MSG_FLIGHT_TELEMETRY",
             payload = {
-                dynamics = { x = 0, y = 64, z = 0, vx = 5.0, vy = 0.0, vz = 0.0, speed = 5.0 },
-                attitude = { pitch = 0, roll = 0, heading = 0 },
+                dynamics = { velocity = { vx = 5.0, vy = 0.0, vz = 0.0 } },
+                attitude = { pitch = 0, roll = 0, yaw = 0 },
                 angularRates = { pitchRate = 0, rollRate = 0, yawRate = 0 },
                 activeSource = "FCP",
                 controlState = "NORMAL",
@@ -128,8 +128,8 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
                 flightActive = true,
                 flightMode = "CRUISE",
                 targetPos = { x = 100, y = 64, z = 0 },
-                targetVel = { x = 15.0, y = 0.0, z = 0.0, vx = 15.0, vy = 0.0, vz = 0.0 },
-                feedforwardAccel = { x = 0, y = 0, z = 0, ax = 0, ay = 0, az = 0 },
+                targetVel = { vx = 15.0, vy = 0.0, vz = 0.0 },
+                feedforwardAccel = { ax = 0, ay = 0, az = 0 },
                 targetHeading = 0.0,
                 constraintProfile = "STRICT_LEVEL",
                 currentPos = { x = 0, y = 64, z = 0 },
@@ -168,6 +168,7 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
 
         assert_not_nil(status_pkt, "Must transmit MSG_OUTER_LOOP_STATUS on Base+4 (10004)")
         assert_eq(status_pkt.payload.fsmState, "ACTIVE_TRACKING")
+        assert_true(status_pkt.payload.saturated, "Large pos error must wire live saturated == true")
         assert_not_nil(status_pkt.payload.posError)
         assert_not_nil(status_pkt.payload.velError)
         assert_not_nil(status_pkt.payload.commandedCollectiveThrust)
@@ -191,8 +192,8 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
             seq = 101,
             type = "MSG_FLIGHT_TELEMETRY",
             payload = {
-                dynamics = { x = 0, y = 64, z = 0, vx = 0, vy = 0, vz = 0 },
-                attitude = { pitch = 0, roll = 0, heading = 0 },
+                dynamics = { velocity = { vx = 0, vy = 0, vz = 0 } },
+                attitude = { pitch = 0, roll = 0, yaw = 0 },
                 angularRates = { pitchRate = 0, rollRate = 0, yawRate = 0 },
                 activeSource = "MFD_ACRO",
                 controlState = "ACRO",
@@ -241,7 +242,7 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
         -- Ingest setpoint with mode change -> triggers bumpless
         ctx.net.inbound.telemetry = {
             ver = "1.9.5", domainId = "AIRCRAFT_01", senderId = "VAS-01", seq = 10, type = "MSG_FLIGHT_TELEMETRY",
-            payload = { dynamics = { x = 0, y = 64, z = 0, vx = 0, vy = 0, vz = 0 }, attitude = { pitch = 0, roll = 0, heading = 0 }, activeSource = "FCP" },
+            payload = { dynamics = { velocity = { vx = 0, vy = 0, vz = 0 } }, attitude = { pitch = 0, roll = 0, yaw = 0 }, activeSource = "FCP" },
         }
         ctx.net.inbound.trajectory = {
             ver = "1.9.5", domainId = "AIRCRAFT_01", senderId = "AMM-03", seq = 20, type = "MSG_TRAJECTORY_SETPOINT",

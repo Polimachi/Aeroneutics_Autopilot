@@ -112,9 +112,25 @@ function waypoint_queue:save(filepath)
     if not filepath or filepath == "" then
         return false, "NIL_FILEPATH"
     end
+    local checkpoints = {}
+    for _, wp in ipairs(self.items) do
+        table.insert(checkpoints, {
+            checkpointId = wp.checkpointId or ("WP_" .. tostring(wp.id)),
+            action = wp.facilityId and "ACT_TKL_LAND_PREC" or "ACT_NAV_GOTO_WP",
+            params = {
+                targetPos = { x = wp.x, z = wp.z },
+                targetAlt = wp.alt,
+                cruiseSpeed = wp.speed,
+                facilityId = wp.facilityId,
+            },
+            completed = wp.completed == true,
+        })
+    end
     local data = {
-        version = "1.0.0",
-        items = self.items,
+        version = "2.0.0",
+        missionId = "ROUTE",
+        executionMode = "SINGLE",
+        checkpoints = checkpoints,
         active_index = self.active_index,
     }
     local raw = textutils.serializeJSON(data)
@@ -138,10 +154,28 @@ function waypoint_queue:load(filepath)
     local raw = f.readAll()
     f.close()
     local data = textutils.unserializeJSON(raw)
-    if type(data) ~= "table" or type(data.items) ~= "table" then
+    if type(data) ~= "table" then
         return false, "PARSE_ERROR"
     end
-    self.items = data.items
+    if data.items ~= nil or data.version == "1.0.0" or type(data.checkpoints) ~= "table" then
+        return false, "SCHEMA_INVALID"
+    end
+    local loaded = {}
+    for i, cp in ipairs(data.checkpoints) do
+        local p = type(cp.params) == "table" and cp.params or {}
+        local pos = type(p.targetPos) == "table" and p.targetPos or p
+        table.insert(loaded, {
+            id = i,
+            checkpointId = cp.checkpointId,
+            x = pos.x or 0,
+            z = pos.z or 0,
+            alt = p.targetAlt or self.defaultAlt,
+            speed = p.cruiseSpeed or self.defaultSpeed,
+            facilityId = p.facilityId or p.designatedFacilityId,
+            completed = cp.completed == true,
+        })
+    end
+    self.items = loaded
     self.active_index = tonumber(data.active_index) or 1
     self.state = (#self.items > 0) and "EN_ROUTE" or "IDLE"
     return true

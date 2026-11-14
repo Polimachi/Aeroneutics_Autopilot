@@ -149,6 +149,7 @@ local function downloadBootstrapFiles(cacheDir, source, opts)
         local hops = 0
         local body = nil
         local fetchErr = nil
+        local retriedGDrive = false
 
         while true do
             local resp, getErr = httpObj.get(curUrl)
@@ -189,13 +190,46 @@ local function downloadBootstrapFiles(cacheDir, source, opts)
                 fetchErr = "HTTP_ERROR_" .. tostring(code)
                 break
             else
+                local respBody = ""
                 if type(resp.readAll) == "function" then
-                    body = resp.readAll() or ""
-                else
-                    body = ""
+                    respBody = resp.readAll() or ""
                 end
                 if type(resp.close) == "function" then resp.close() end
-                break
+
+                local isGDrive = (source == "gdrive" or curUrl:find("drive%.google%.com") or curUrl:find("googleusercontent%.com"))
+                local lowerTrimmed = string.lower(string.match(respBody, "^%s*(.-)%s*$") or "")
+                if isGDrive and (lowerTrimmed:sub(1, 14) == "<!doctype html" or lowerTrimmed:sub(1, 5) == "<html") then
+                    if not retriedGDrive then
+                        local confirmVal = respBody:match('name="confirm"%s+value="([^"]+)"') or respBody:match('confirm=([%w_%-]+)')
+                        local uuidVal = respBody:match('name="uuid"%s+value="([^"]+)"') or respBody:match('uuid=([%w_%-]+)')
+                        if confirmVal then
+                            retriedGDrive = true
+                            local retryUrl = curUrl
+                            if retryUrl:find("confirm=", 1, true) then
+                                retryUrl = retryUrl:gsub("confirm=[^&]+", "confirm=" .. confirmVal)
+                            else
+                                retryUrl = retryUrl .. (retryUrl:find("?", 1, true) and "&" or "?") .. "confirm=" .. confirmVal
+                            end
+                            if uuidVal then
+                                if retryUrl:find("uuid=", 1, true) then
+                                    retryUrl = retryUrl:gsub("uuid=[^&]+", "uuid=" .. uuidVal)
+                                else
+                                    retryUrl = retryUrl .. (retryUrl:find("?", 1, true) and "&" or "?") .. "uuid=" .. uuidVal
+                                end
+                            end
+                            curUrl = retryUrl
+                        else
+                            fetchErr = "GDRIVE_HTML_INTERSTITIAL"
+                            break
+                        end
+                    else
+                        fetchErr = "GDRIVE_HTML_INTERSTITIAL"
+                        break
+                    end
+                else
+                    body = respBody
+                    break
+                end
             end
         end
 

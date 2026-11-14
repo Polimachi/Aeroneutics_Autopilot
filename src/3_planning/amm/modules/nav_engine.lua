@@ -5,6 +5,14 @@ local function is_finite_number(v)
     return type(v) == "number" and v == v and v > -math.huge and v < math.huge
 end
 
+local function pick_finite(fallback, ...)
+    for i = 1, select("#", ...) do
+        local v = select(i, ...)
+        if is_finite_number(v) then return v end
+    end
+    return fallback
+end
+
 function nav_engine.init(config)
     local cfg = config or {}
     local sys = cfg.system or {}
@@ -37,6 +45,7 @@ function nav_engine.init(config)
         degradedAlpha = degAlpha,
         alpha = dAlpha,
         maxAllowedHdop = nav.maxAllowedHdop or 3.0,
+        maxAllowedAccuracyM = nav.maxAllowedAccuracyM or 2.0,
         kinematicGateLimitM = nav.kinematicGateLimitM or 8.0,
         kinematicLimitM = nav.kinematicGateLimitM or 8.0,
         gpsTimeoutMs = nav.gpsTimeoutMs or 5000,
@@ -58,8 +67,12 @@ function nav_engine.init(config)
 end
 
 function nav_engine.should_query_gps(state, now_ms)
-    local now = now_ms or 0
-    local interval = math.floor(1000 / (state.gpsRequestRateHz or 10))
+    local now = is_finite_number(now_ms) and now_ms or 0
+    local rate = state and state.gpsRequestRateHz
+    if not is_finite_number(rate) or rate <= 0 then
+        return false, nil
+    end
+    local interval = math.max(1, math.floor(1000 / rate))
     if (state.lastGpsReqMs or 0) == 0 then
         local cid = state.computerId or 0
         local slots = math.max(1, math.floor(interval / 50))
@@ -115,19 +128,18 @@ end
 
 function nav_engine.integrate_dr(state, telemetry, dt, now_ms)
     if not state or not telemetry then return end
-    local step_dt = dt or 0.05
+    local step_dt = (is_finite_number(dt) and dt >= 0) and dt or 0.05
     local dyn = telemetry.dynamics or {}
     local v = dyn.velocity or telemetry.velocity or {}
-    local vx = v.vx or v.x or 0.0
-    local vy = v.vy or v.y or dyn.verticalSpeed or 0.0
-    local vz = v.vz or v.z or 0.0
+    local vx = pick_finite(0.0, v.vx, v.x)
+    local vy = pick_finite(0.0, v.vy, v.y, dyn.verticalSpeed)
+    local vz = pick_finite(0.0, v.vz, v.z)
     state.vel = { x = vx, y = vy, z = vz }
     state.groundSpeed = math.sqrt(vx * vx + vz * vz)
     state.verticalSpeed = vy
     state.pos.x = state.pos.x + vx * step_dt
-    local altY = dyn.altitudeY
-    if not is_finite_number(altY) then altY = telemetry.altitudeY end
-    if is_finite_number(altY) then
+    local altY = pick_finite(nil, dyn.altitudeY, telemetry.altitudeY)
+    if altY ~= nil then
         state.pos.y = altY
         state.altitudeY = altY
     else
@@ -137,11 +149,14 @@ function nav_engine.integrate_dr(state, telemetry, dt, now_ms)
     state.pos.z = state.pos.z + vz * step_dt
 
     local att = telemetry.attitude or {}
-    state.attitude.pitch = att.pitch or telemetry.pitch or state.attitude.pitch
-    state.attitude.roll = att.roll or telemetry.roll or state.attitude.roll
-    state.attitude.heading = dyn.heading or att.heading or att.yaw or telemetry.heading or state.attitude.heading
-    state.fuel = telemetry.fuel or state.fuel
-    state.lastCoreRxMs = now_ms or 0
+    state.attitude.pitch = pick_finite(state.attitude.pitch, att.pitch, telemetry.pitch)
+    state.attitude.roll = pick_finite(state.attitude.roll, att.roll, telemetry.roll)
+    state.attitude.heading = pick_finite(state.attitude.heading, dyn.heading, att.heading, att.yaw, telemetry.heading)
+    state.fuel = pick_finite(state.fuel, telemetry.fuel)
+    if type(telemetry.controlState) == "string" then
+        state.coreArmed = (telemetry.controlState == "NORMAL" or telemetry.controlState == "IDLE_ARMED")
+    end
+    state.lastCoreRxMs = is_finite_number(now_ms) and now_ms or 0
     state.navValid = true
 end
 
@@ -153,7 +168,13 @@ local function validate_gps_payload(state, fix_payload, expectedSeq)
     if fix_payload.status and fix_payload.status ~= "FIX_OK" and fix_payload.status ~= "FIX_DEGRADED" then
         return false
     end
-    if fix_payload.hdop and state.maxAllowedHdop and fix_payload.hdop > state.maxAllowedHdop then
+    if fix_payload.hdop ~= nil then
+        if not is_finite_number(fix_payload.hdop) then return false end
+        if state.maxAllowedHdop and fix_payload.hdop > state.maxAllowedHdop then
+            return false
+        end
+    end
+    if fix_payload.accuracy ~= nil and not is_finite_number(fix_payload.accuracy) then
         return false
     end
     local cSeq = tonumber(fix_payload.clientSeq or expectedSeq)
@@ -203,8 +224,10 @@ end
 
 local function apply_fix_fusion(state, gx, gz, fix_payload, now_ms, cSeq)
     local a
-    if state.gpsStale or fix_payload.status == "FIX_DEGRADED" then
-        a = state.degradedAlpha or 0.10
+    local acc = fix_payload.accuracy
+    local lowAcc = is_finite_number(acc) and acc > (state.maxAllowedAccuracyM or 2.0)
+    if state.gpsStale or fix_payload.status == "FIX_DEGRADED" or lowAcc then
+        a = math.min(0.10, state.degradedAlpha or 0.10)
     else
         a = state.drComplementaryAlpha or 0.35
     end

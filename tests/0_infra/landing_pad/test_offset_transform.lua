@@ -30,4 +30,25 @@ describe("Landing pad 3D body offset coordinate transform", function()
         assert_near(padPos.x, 10.0, 1e-4)
         assert_near(padPos.z, 0.0, 1e-4)
     end)
+
+    it("applies 3D Euler pitch/roll/yaw rotation and omega x r velocity compensation", function()
+        local compPos = { x = 0.0, y = 64.0, z = 0.0 }
+        local bodyOffset = { forward = 10.0, right = 0.0, up = 0.0 }
+        local attitude = { pitch = 90.0, roll = 0.0, yaw = 0.0 }
+        local padPos = offset_transform.calculate_pad_position(compPos, attitude, 0.0, bodyOffset)
+        assert_near(padPos.x, 0.0, 1e-4)
+        assert_near(padPos.y, 74.0, 1e-4)
+        assert_near(padPos.z, 0.0, 1e-4)
+
+        local vel = offset_transform.calculate_pad_velocity(
+            { vx = 1.0, vy = 0.0, vz = 0.0 },
+            { pitch = 0.0, roll = 0.0, yaw = 0.0 },
+            { pitchRate = 0.0, rollRate = 0.0, yawRate = math.deg(1.0) },
+            0.0,
+            bodyOffset
+        )
+        assert_near(vel.vx, 1.0 + 10.0, 1e-4)
+        assert_near(vel.vy, 0.0, 1e-4)
+        assert_near(vel.vz, 0.0, 1e-4)
+    end)
 end)

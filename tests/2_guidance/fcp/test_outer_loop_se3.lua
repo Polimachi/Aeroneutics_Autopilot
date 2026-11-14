@@ -18,54 +18,60 @@ local function make_base_cfg(airframe)
             airframeType = airframe or "VECTORED_VTOL",
             loopFrequencyHz = 20,
         },
-        se3 = {
+        outerLoop = {
             gravityMps2 = 11.0,
-            kp = { x = 1.6, y = 2.2, z = 1.6 },
-            kd = { x = 1.4, y = 1.8, z = 1.4 },
-            ki = { x = 0.08, y = 0.12, z = 0.08 },
-            drag = { x = 0.02, y = 0.0, z = 0.02 },
-            integralLimit = { x = 3.0, y = 4.0, z = 3.0 },
-            maxThrustAccel = 22.0,
-            minThrustAccel = 2.0,
-            hoverThrustRatio = 0.635,
-            tiltAssistedMaxPitchDeg = 10.0,
-            tiltAssistedThresholdSpeedMps = 15.0,
-            tiltSlewRateDegPerSec = 15.0,
-            gimbalSlewRate = 2.0,
-            multirotorMaxTiltDeg = 25.0,
-            wingedVtolVLowMps = 8.0,
-            wingedVtolVHighMps = 18.0,
-            fixedWingRotationSpeedMps = 12.0,
-            fixedWingStallSpeedMps = 10.0,
-        },
-        guidance = {
-            turn = {
+            kpPos = { x = 0.90, y = 1.10, z = 0.90 },
+            kdVel = { x = 1.20, y = 1.35, z = 1.20 },
+            kiPos = { x = 0.05, y = 0.08, z = 0.05 },
+            maxAccelMps2 = 6.5,
+            maxIntegralAccel = 1.5,
+            hoverThrustNorm = 0.635,
+            maxYawRateDegPerSec = 30.0,
+            bumplessRampSec = 2.0,
+            posMergeMaxStepM = 2.0,
+            dtPropMaxSec = 0.1,
+            fixed_wing = {
                 nominalMaxBankDeg = 20.0,
-                acroMaxBankDeg = 75.0,
-                maxTurnRateDegPerSec = 25.0,
+                emergencyMaxBankDeg = 75.0,
                 bankSlewRateDegPerSec = 45.0,
+                nominalMaxPitchDeg = 20.0,
+                trimThrottle = 0.70,
+                trimPitchDeg = 2.5,
+                energyKp = 0.03,
+                balanceKp = 0.65,
+                rotationSpeedMps = 12.0,
+                stallSpeedMps = 10.0,
+            },
+            winged_vtol = {
+                vLowMps = 8.0,
+                vHighMps = 18.0,
+                transitionMaxPitchDeg = 12.0,
+                transitionMinPitchDeg = -10.0,
+                transitionFlapTarget = 0.50,
             },
             vectored_vtol = {
-                maxYawRateDegPerSec = 30.0,
-                hoverThrottle = 0.635,
+                tiltAssistedMaxPitchDeg = 10.0,
+                tiltSlewRateDegPerSec = 15.0,
+                surgeAccelToBiasGain = 0.18,
+                swayAccelToBiasGain = 0.18,
+                thrustPerGScale = 0.06,
             },
             advanced_vtol = {
+                tiltAssistedMaxPitchDeg = 10.0,
+                tiltSlewRateDegPerSec = 15.0,
                 gimbalSlewRate = 2.0,
-                maxYawRateDegPerSec = 30.0,
-                hoverThrottle = 0.635,
+                surgeAccelToBiasGain = 0.18,
+                swayAccelToBiasGain = 0.18,
+                thrustPerGScale = 0.06,
             },
             multirotor = {
                 maxTiltDeg = 25.0,
-                hoverThrottle = 0.635,
-            },
-            fixed_wing = {
-                stallSpeedMps = 10.0,
-                rotationSpeedMps = 12.0,
             },
         },
         safety = {
             bumplessRampSec = 2.0,
-            emergencyDescentRateMps = -2.0,
+            emergencyDescentRateMps = -1.5,
+            fixedWingGlideDescentMps = -1.0,
         },
     }
 end
@@ -73,8 +79,8 @@ end
 local function make_nav(px, py, pz, vx, vy, vz, pitch, roll, heading)
     return {
         pos = { x = px or 0.0, y = py or 64.0, z = pz or 0.0 },
-        vel = { x = vx or 0.0, y = vy or 0.0, z = vz or 0.0, vx = vx or 0.0, vy = vy or 0.0, vz = vz or 0.0 },
-        attitude = { pitch = pitch or 0.0, roll = roll or 0.0, heading = heading or 0.0 },
+        vel = { vx = vx or 0.0, vy = vy or 0.0, vz = vz or 0.0 },
+        attitude = { pitch = pitch or 0.0, roll = roll or 0.0, yaw = heading or 0.0, heading = heading or 0.0 },
         angularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
     }
 end
@@ -86,8 +92,8 @@ local function make_setpoint(tx, ty, tz, tvx, tvy, tvz, head, mode, profile)
         flightMode = mode or "CRUISE",
         constraintProfile = profile or "STRICT_LEVEL",
         targetPos = { x = tx or 0.0, y = ty or 64.0, z = tz or 0.0 },
-        targetVel = { x = tvx or 0.0, y = tvy or 0.0, z = tvz or 0.0, vx = tvx or 0.0, vy = tvy or 0.0, vz = tvz or 0.0 },
-        feedforwardAccel = { x = 0.0, y = 0.0, z = 0.0, ax = 0.0, ay = 0.0, az = 0.0 },
+        targetVel = { vx = tvx or 0.0, vy = tvy or 0.0, vz = tvz or 0.0 },
+        feedforwardAccel = { ax = 0.0, ay = 0.0, az = 0.0 },
         targetHeading = head or 0.0,
         currentPos = { x = tx or 0.0, y = ty or 64.0, z = tz or 0.0 },
         navValid = true,
@@ -119,9 +125,18 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
 
         local a_des = outer_loop_controller.compute_desired_accel(state, nav, sp, dt, {})
         assert_not_nil(a_des, "a_des must not be nil")
-        assert_true(math.abs(a_des.ax or a_des.x or 0.0) < 1e-4, "Horizontal ax must be 0 at equilibrium")
-        assert_true(math.abs((a_des.ay or a_des.y) - 11.0) < 1e-4, "Vertical ay must equal 11.0 at equilibrium")
-        assert_true(math.abs(a_des.az or a_des.z or 0.0) < 1e-4, "Horizontal az must be 0 at equilibrium")
+        assert_true(math.abs(a_des.ax) < 1e-4, "Horizontal ax must be 0 at equilibrium")
+        assert_true(math.abs(a_des.ay - 11.0) < 1e-4, "Vertical ay must equal 11.0 at equilibrium")
+        assert_true(math.abs(a_des.az) < 1e-4, "Horizontal az must be 0 at equilibrium")
+        assert_false(a_des.saturated, "Equilibrium must not saturate")
+
+        -- Norm clamping test: ||a_des - g*u_y|| <= maxAccelMps2 (6.5)
+        local sp_far = make_setpoint(1000.0, 200.0, -1000.0, 0.0, 0.0, 0.0, 0.0)
+        local a_sat = outer_loop_controller.compute_desired_accel(state, nav, sp_far, dt, {})
+        assert_true(a_sat.saturated, "Large demand must set saturated = true")
+        assert_true(state.saturated, "state.saturated must record saturation")
+        local kin_norm = math.sqrt(a_sat.ax * a_sat.ax + (a_sat.ay - 11.0) * (a_sat.ay - 11.0) + a_sat.az * a_sat.az)
+        assert_true(kin_norm <= 6.5001, "Kinematic accel norm must be clamped to maxAccelMps2=6.5, got: " .. tostring(kin_norm))
 
         local fsmCtx = { currentState = "ACTIVE_TRACKING", rampAlpha = 1.0 }
         local cmd = outer_loop_controller.compute(state, nav, sp, fsmCtx, dt)
@@ -301,10 +316,30 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
         local cmd_mid = outer_loop_controller.compute(state, nav_mid, sp, fsmCtx, 0.05)
         assert_true(cmd_mid.flapTarget >= 0.4 and cmd_mid.flapTarget <= 0.6, "Transition WINGED_VTOL should have flapTarget ~ 0.5")
 
-        -- Case 3: High speed (20 m/s > 18 m/s) -> fixed wing cruise
+        -- Case 3: High speed (20 m/s > 18 m/s) -> fixed wing cruise (preserves sp.flapHint)
         local nav_high = make_nav(0, 100, 0, 0, 0, -20, 0, 0, 0)
         local cmd_high = outer_loop_controller.compute(state, nav_high, sp, fsmCtx, 0.05)
         assert_eq(cmd_high.flapTarget, 0.0, "High speed cruise WINGED_VTOL should have flapTarget == 0.0")
+        sp.flapHint = 0.30
+        local cmd_high_hint = outer_loop_controller.compute(state, nav_high, sp, fsmCtx, 0.05)
+        assert_eq(cmd_high_hint.flapTarget, 0.30, "High speed WINGED_VTOL must preserve sp.flapHint")
+        sp.flapHint = nil
+
+        -- Case 4: Transition pitch clamp [-10, +12] deg and vHigh == vLow div-by-zero guard
+        local sp_climb = make_setpoint(0, 200, -50, 0, 0, -13, 0, "CRUISE", "STRICT_LEVEL")
+        local cmd_mid_climb = outer_loop_controller.compute(state, nav_mid, sp_climb, fsmCtx, 0.05)
+        local q_mc = cmd_mid_climb.targetQuaternion
+        local sinp_mc = clamp(2.0 * (q_mc.w * q_mc.y - q_mc.z * q_mc.x), -1.0, 1.0)
+        local pitch_mc = math.deg(math.asin(sinp_mc))
+        assert_true(pitch_mc >= -10.01 and pitch_mc <= 12.01, "Transition pitch must be clamped to [-10, +12] deg, got: " .. tostring(pitch_mc))
+
+        local cfg_eq = make_base_cfg("WINGED_VTOL")
+        cfg_eq.outerLoop.winged_vtol.vLowMps = 12.0
+        cfg_eq.outerLoop.winged_vtol.vHighMps = 12.0
+        local state_eq = outer_loop_controller.init(cfg_eq)
+        local nav_eq = make_nav(0, 100, 0, 0, 0, -12, 0, 0, 0)
+        local cmd_eq = outer_loop_controller.compute(state_eq, nav_eq, sp, fsmCtx, 0.05)
+        assert_true(cmd_eq.targetQuaternion.w == cmd_eq.targetQuaternion.w, "vHigh == vLow must not produce NaN")
     end)
 
     it("verifies 2.0s bumpless ramp scales feedback correction smoothly", function()
@@ -329,7 +364,7 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
         assert_true(cmd1.translationBias.surge > cmdHalf.translationBias.surge, "Full ramp surge must exceed half ramp surge")
     end)
 
-    it("verifies AMM_TIMEOUT_HOLD self-generates level hover and EMERGENCY_LAND commands -2.0 m/s descent", function()
+    it("verifies AMM_TIMEOUT_HOLD self-generates level hover and EMERGENCY_LAND commands -1.5 m/s descent", function()
         local cfg = make_base_cfg("VECTORED_VTOL")
         local state = outer_loop_controller.init(cfg)
         local nav = make_nav(15.0, 75.0, -30.0, 1.0, 0.0, -1.0, 2.0, 1.0, 45.0)

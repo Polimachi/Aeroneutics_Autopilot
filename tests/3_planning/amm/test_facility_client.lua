@@ -82,8 +82,8 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             local state = facility_client.init(create_test_config())
             local craftInfo = {
                 aircraftId = "AIRCRAFT_01",
-                craftWeight = 1250.0,
-                craftRadius = 4.5,
+                grossWeight = 1250.0,
+                clearanceRadius = 4.5,
                 airframeType = "VECTORED_VTOL",
                 preferredFacilityId = "PAD_ALPHA",
                 isEmergency = false,
@@ -93,25 +93,46 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_not_nil(req)
             assert_eq(req.type, "MSG_GAC_CHECKIN_REQ")
             assert_eq(req.ver, "1.9.5")
+            assert_not_nil(req.domainId)
+            assert_not_nil(req.seq)
+            assert_not_nil(req.time)
             assert_not_nil(req.payload)
             assert_eq(req.payload.sectorId, "SECTOR_DELTA")
             assert_eq(req.payload.aircraftId, "AIRCRAFT_01")
-            assert_eq(req.payload.craftWeight, 1250.0)
-            assert_eq(req.payload.craftRadius, 4.5)
+            assert_eq(req.payload.grossWeight, 1250.0)
+            assert_eq(req.payload.clearanceRadius, 4.5)
             assert_eq(req.payload.airframeType, "VECTORED_VTOL")
             assert_eq(req.payload.preferredFacilityId, "PAD_ALPHA")
             assert_eq(req.payload.isEmergency, false)
         end)
+
+        it("builds full-envelope MSG_ATC_APPROACH_REQ for LANDING_PAD, RUNWAY, and DOCKING_ARM", function()
+            local state = facility_client.init(create_test_config())
+            for _, fType in ipairs({ "LANDING_PAD", "RUNWAY", "DOCKING_ARM" }) do
+                local ok, req = facility_client.request_approach(state, "FAC_" .. fType, { facilityType = fType }, 0.85, 2500)
+                assert_true(ok)
+                assert_eq(req.ver, "1.9.5")
+                assert_eq(req.type, "MSG_ATC_APPROACH_REQ")
+                assert_not_nil(req.domainId)
+                assert_not_nil(req.seq)
+                assert_eq(req.time, 2500)
+                assert_eq(req.payload.facilityType, fType)
+                assert_eq(req.payload.targetFacilityId, "FAC_" .. fType)
+            end
+        end)
     end)
 
     describe("2. ATC clearance handling, denial retries, and holding climb", function()
-        it("handles CLEARED status and binds active facility channels", function()
+        it("handles CLEARED status from GAC (assignedTacticalChannel) and ATC (assignedGuidanceChannel)", function()
             local state = facility_client.init(create_test_config())
             local clr = {
-                status = "CLEARED",
-                assignedFacilityId = "PAD_02",
-                assignedTacticalChannel = 50212,
-                padMobility = "DYNAMIC",
+                type = "MSG_GAC_APPROACH_CLEARANCE",
+                payload = {
+                    status = "CLEARED",
+                    assignedFacilityId = "PAD_02",
+                    assignedTacticalChannel = 50212,
+                    padMobility = "DYNAMIC",
+                },
             }
 
             facility_client.on_atc_clearance(state, clr, { x = 0, y = 80, z = 0 }, 1000)
@@ -121,6 +142,18 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_eq(state.padMobility, "DYNAMIC")
             assert_eq(state.approachRetryCount, 0)
             assert_eq(state.atcDeniedCount, 0)
+
+            local atcClr = {
+                type = "MSG_ATC_APPROACH_CLEARANCE",
+                payload = {
+                    status = "CLEARED",
+                    targetFacilityId = "RWY_01",
+                    assignedGuidanceChannel = 50220,
+                },
+            }
+            facility_client.on_atc_clearance(state, atcClr, { x = 0, y = 80, z = 0 }, 1200)
+            assert_eq(state.activePadId, "RWY_01")
+            assert_eq(state.padChannel, 50220)
         end)
 
         it("handles DENIED status, increments count, raises holdingTargetAlt by 30m, and schedules 15s retry", function()
@@ -145,21 +178,60 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_eq(wd2.holdAltClimbM, 30.0)
         end)
 
-        it("triggers RTH after maxAtcDeniedRetries (10) consecutive denials", function()
+        it("triggers RTH on reaching maxAtcDeniedRetries (10) consecutive denials", function()
             local state = facility_client.init(create_test_config())
-            for i = 1, 10 do
+            for i = 1, 9 do
                 facility_client.on_atc_clearance(state, { status = "DENIED" }, { x = 0, y = 70.0, z = 0 }, i * 1000)
                 assert_eq(state.atcDeniedCount, i)
+                local wd_ok = facility_client.evaluate_guide_watchdog(state, i * 1000 + 20000)
+                assert_eq(wd_ok.retriesExhausted, false)
             end
 
-            -- 11th denial exceeds maxAtcDeniedRetries = 10
-            facility_client.on_atc_clearance(state, { status = "DENIED" }, { x = 0, y = 70.0, z = 0 }, 11000)
-            assert_eq(state.atcDeniedCount, 11)
+            -- 10th denial reaches maxAtcDeniedRetries = 10 -> triggers RTH immediately
+            facility_client.on_atc_clearance(state, { status = "DENIED" }, { x = 0, y = 70.0, z = 0 }, 10000)
+            assert_eq(state.atcDeniedCount, 10)
 
             local wd = facility_client.evaluate_guide_watchdog(state, 30000)
             assert_eq(wd.retriesExhausted, true)
             assert_eq(wd.action, "RTH")
             assert_eq(wd.shouldRetryAtc, false)
+        end)
+
+        it("parses unified [I-5] STATIC/DYNAMIC guide fields and handles MSG_GAC_ABORT_CLEAR", function()
+            local state = facility_client.init(create_test_config())
+            facility_client.on_tactical_guide(state, {
+                type = "MSG_FACILITY_STATIC_GUIDE",
+                payload = {
+                    facilityId = "RWY_01",
+                    facilityType = "RUNWAY",
+                    targetAircraft = "AIRCRAFT_01",
+                    touchdownPoint = { x = 10, y = 64, z = 20 },
+                    attitude = { pitch = 0, roll = 0, yaw = 90 },
+                    approachDirection = "FRONT",
+                    deckStatus = "STABLE",
+                    landingPermitted = true,
+                    abortAlert = true,
+                    endPoint = { x = 210, y = 64, z = 20 },
+                    glideSlopeAngle = 3.5,
+                    touchdownZoneLength = 80.0,
+                },
+            }, 1000)
+            assert_eq(state.padMobility, "STATIC")
+            assert_eq(state.staticGuide.facilityType, "RUNWAY")
+            assert_eq(state.staticGuide.approachDirection, "FRONT")
+            assert_eq(state.staticGuide.glideSlopeAngle, 3.5)
+            assert_true(state.touchdownAborted)
+
+            facility_client.on_gac_abort_clear(state, {
+                type = "MSG_GAC_ABORT_CLEAR",
+                payload = {
+                    reassignedFacilityId = "PAD_03",
+                    assignedTacticalChannel = 50213,
+                },
+            }, 2000)
+            assert_false(state.touchdownAborted)
+            assert_eq(state.activePadId, "PAD_03")
+            assert_eq(state.padChannel, 50213)
         end)
     end)
 

@@ -111,6 +111,9 @@ local function main()
                     deckStatus = status
                     landingPermitted = permitted
                     tiltAngle = tilt
+                    kin.velocity = offset_transform.calculate_pad_velocity(
+                        kin.velocity, kin.attitude, kin.angularRates, cfg.mountingYawOffset, cfg.bodyOffset
+                    )
                 end
                 gpsClient:update_dead_reckoning(TICK_INTERVAL, kin)
             end
@@ -203,7 +206,7 @@ local function main()
                 deckStatus = deckStatus,
                 landingPermitted = landingPermitted,
                 lastGacSyncSec = lastGacSyncSec,
-                slotRemainingSec = 120,
+                slotRemainingSec = fsm:get_slot_remaining_sec(nowClock),
                 slotDurationSec = 120,
                 lastLog = lastLog
             })

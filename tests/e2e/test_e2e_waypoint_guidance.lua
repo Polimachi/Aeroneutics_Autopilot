@@ -55,16 +55,20 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         q:add(300, 300, 160, 20)
         assert_eq(q:count(), 2)
 
-        -- 3. Pilot issues ARM and TAKEOFF via AMM
+        -- 3. Pilot issues ARM and TAKEOFF via AMM (boot arm must be false)
+        local boot_goal = arbiter:get_effective_goal()
+        assert_false(boot_goal.arm, "AMM boot goal must have arm = false before pilot ARM action")
+
         arbiter:handle_pilot_action("ARM")
+        local armed_goal = arbiter:get_effective_goal()
+        assert_true(armed_goal.arm)
+
         arbiter:handle_pilot_action("TAKEOFF", { targetAlt = 150 })
         bus:step(0.05)
 
-        -- Assert C2 commands reached Base+0 (10000)
+        -- AMM communicates with FCP via Base+4; Base+0 has zero outbound packets from AMM
         local c2_pkts = bus:find_packets({ type = "MSG_OPERATOR_CMD", channel = 10000 })
-        assert_eq(#c2_pkts, 2)
-        assert_eq(c2_pkts[1].payload.payload.command, "ARM")
-        assert_eq(c2_pkts[2].payload.payload.command, "TAKEOFF")
+        assert_eq(#c2_pkts, 0, "AMM must not transmit outbound MSG_OPERATOR_CMD on Base+0")
 
         -- 4. AMM computes trajectory setpoint and sends to FCP on Base+4 (10004)
         local traj_gen = amm:require("trajectory_generator")
@@ -134,6 +138,7 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             payload = {
                 watchdogSeq = 1,
                 controlState = "NORMAL",
+                dynamicPressureFactor = 1.0,
                 surfaces = { elevator = 0.0, aileronLeft = 0.0, aileronRight = 0.0, rudder = 0.0, flaps = 0.0 },
             },
         })
@@ -197,6 +202,7 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
             type = "MSG_AERO_STATUS",
             time = 1070,
             payload = {
+                interactionMode = "API",
                 surfaceDeflections = { elevator = 0.0, aileronLeft = 0.0, aileronRight = 0.0, rudder = 0.0 },
                 saturatedSurfaces = {},
                 flapsPosition = 0.0,
@@ -276,13 +282,13 @@ describe("Scenario 2: AMM Waypoint & FCP/VAS/TCA/ASA Closed Loop", function()
         assert_eq(gcs_mfd_in[1].payload.type, "MSG_MFD_STATE")
         assert_eq(gcs_mfd_in[1].payload.payload.fsmState, "CRUISE")
 
-        -- Assert AMM transmitted WP1 command to FCP
-        local wp1_pkts = bus:find_packets({ type = "MSG_OPERATOR_CMD", channel = 10000 })
-        assert_true(#wp1_pkts >= 3)
-        local latest_cmd = wp1_pkts[#wp1_pkts].payload.payload
-        assert_eq(latest_cmd.command, "CRUISE")
-        assert_eq(latest_cmd.params.targetWaypoint.x, 100)
-        assert_eq(latest_cmd.params.targetWaypoint.z, 100)
+        -- Assert AMM waypoint queue advanced to WP1 (without Base+0 outbound echo)
+        local active_wp = q:get_active()
+        assert_not_nil(active_wp)
+        assert_eq(active_wp.x, 100)
+        assert_eq(active_wp.z, 100)
+        local wp1_c2_pkts = bus:find_packets({ type = "MSG_OPERATOR_CMD", channel = 10000 })
+        assert_eq(#wp1_c2_pkts, 0, "AMM must not emit outbound MSG_OPERATOR_CMD on Base+0")
 
         -- 9. FCP full runtime closed-loop LOITER and POI_HOLD C2 -> Base+1 / Base+3 verification
         fcp.modem:drain()

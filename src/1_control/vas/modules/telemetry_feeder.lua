@@ -10,6 +10,27 @@ function telemetry_feeder.init(systemConfig)
     }
 end
 
+local function normalize_actuator_health(diagState)
+    local ah = diagState and diagState.actuatorHealth
+    if not ah then return { tap = true, asa = true, allOk = true } end
+    local tap = (ah.tap ~= false)
+    local asa = (ah.asa ~= false)
+    local allOk = (ah.allOk ~= nil) and (ah.allOk == true) or (tap and asa)
+    return { tap = tap, asa = asa, allOk = allOk }
+end
+
+local function build_mfd_dynamics(comState)
+    local d = (comState and comState.dynamics) or {}
+    local v = d.velocity or {}
+    local gs = d.groundSpeed or math.sqrt((v.vx or 0.0)^2 + (v.vz or 0.0)^2)
+    return {
+        altitudeY = d.altitudeY or 0.0,
+        verticalSpeed = d.verticalSpeed or 0.0,
+        groundSpeed = gs,
+        velocity = d.velocity
+    }
+end
+
 local function build_telem_payload(comState, fsmState, mixerState, diagState)
     return {
         attitude = comState.attitude,
@@ -21,7 +42,7 @@ local function build_telem_payload(comState, fsmState, mixerState, diagState)
         activeSource = fsmState.activeSource or "FCP",
         sensorOk = diagState.sensorOk == true,
         sensorHealth = diagState.sensorHealth,
-        actuatorHealth = diagState.actuatorHealth or { tap = true, asa = true }
+        actuatorHealth = normalize_actuator_health(diagState)
     }
 end
 
@@ -29,15 +50,17 @@ local function build_mfd_payload(comState, fsmState, mixerState, diagState, isAc
     return {
         source = isAcro and "CORE_ACRO_TAKEOVER" or "CORE_FAILSAFE",
         fsmState = fsmState.currentState,
+        controlState = fsmState.currentState,
         flightMode = isAcro and "ACRO" or fsmState.currentState,
         acroActive = isAcro == true,
         attitude = comState.attitude,
         angularRates = comState.rates,
-        dynamics = comState.dynamics,
+        dynamics = build_mfd_dynamics(comState),
         fuel = comState.fuel,
         dynamicLoad = (mixerState and mixerState.dynamicLoad) or 0.0,
+        sensorOk = diagState.sensorOk == true,
         sensorHealth = diagState.sensorHealth,
-        actuatorHealth = diagState.actuatorHealth or { tap = true, asa = true }
+        actuatorHealth = normalize_actuator_health(diagState)
     }
 end
 

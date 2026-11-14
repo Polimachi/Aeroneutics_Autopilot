@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.4` |
+| **문서 버전 (Version)** | `v2.5.0` |
 | **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/landing_pad/` |
 | **주관 도메인 (Domain)** | 지상 인프라 수직이착륙 착륙패드 비콘 (Landing Pad) |
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v2.5.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `[I-5]` `MSG_FACILITY_STATIC_GUIDE`·`MSG_FACILITY_DYNAMIC_GUIDE` 시설물 3종 대칭 공통 스키마(`facilityType = "LANDING_PAD"`, `touchdownPoint`, `attitude`, `approachDirection = "DOWNWARD"`, `deckStatus`, `landingPermitted`, `abortAlert`, 동적 `velocity`/`acceleration`/`angularRates`, 보조 `clearanceRadius`·`safeDescentRate`·`tiltAngleDeg`·`heaveRateMps`) 정합, `clearanceZoneRadius` $\to$ `clearanceRadius` 및 장식 필드(`approachHeading`, `surfaceWind`) 제거, `CH 50003` GAC 집약 비콘 명시 및 연관 문서 버전(`ICD v1.30.0`, `GAC v1.5.0`, `Diagram v2.15.0`, `GPS v2.3.3`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Runway v1.11.0`, `Docking Arm v1.12.0`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 시설물 3종 가이드 패킷 대칭 스키마 단일화 |
 | `v2.4.4` | 2026-11-14 | GPS 고부하 경합 완화 및 위상 분산 규격 반영 (`Implemented` $\to$ `Approved`, `TASK-123`): ① `CH 60001` (`GPS_PING_CHANNEL`)을 송신 전용(Transmit-Only)으로 전환해 `main.lua`의 `modem.open(60001)` 개방을 제거(타 클라이언트 핑 패킷의 수신 큐 유입 차단), ② `gps_client.lua` `should_query_gps`에 `computerId` 기반 결정론적 틱 위상 분산(`offset = (computerId or 0) % interval`, `ID = 0`일 때 `offset = 0`) 추가 | 다수 패드·비행체의 동시 측위 질의 집중 완화 및 모뎀 수신 이벤트 큐 보호 |
 | `v2.4.3` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0)에 따른 기체 외부 교신·2차 테일러 외삽·300ms 복행 및 `landingPermitted`/`DANGEROUS` 호버 게이팅 주체 용어 정렬(`FCP (Node 04)` $\to$ `AMM (Node 03)`, `Base+4`로 `FCP`에 세트포인트 전달) 및 연관 규격서 버전 동기화 (`src/0_infra/landing_pad/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v2.4.2` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
@@ -26,15 +27,15 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.14.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.10.7)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.15.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
 
 ---
 
@@ -51,7 +52,7 @@
    - 패드는 최상위 광역 관제탑(Tower ATC)과 직접 교신하지 않고, 직속 **지상 구역 관제사(GAC)**의 섹터 로컬 백본망(`CH_SECTOR_FACILITY` = $Base_{\text{sec}} + 1$)을 통해서만 슬롯 예약 및 상태 갱신을 수행합니다.
    - 패드는 1회 1기체 독점 점유(**FIFO 점유 모델**)로 운영되며, 착륙한 기체가 이륙할 때까지 무기한 `OCCUPIED`를 유지합니다. 후속 진입 기체는 GAC에 의해 공중 선회 대기(Loiter) 또는 관할 내 가용 타 패드로 자동 분산됩니다.
 3. **유도 역할 분담 경계 (Guidance Responsibility Boundary)**:
-   - **착륙패드 노드**: 터치다운 중심 좌표(`touchdownPoint`), 기본 물리 제원(`dimensions`, `maxWeight`), 접근 권장 헤딩(`approachHeading`), 최대 허용 하강률(`safeDescentRate`), 안전 반경(`clearanceZoneRadius`) 및 지상풍(`surfaceWind`) 등 환경 구속조건만을 브로드캐스트합니다.
+   - **착륙패드 노드**: 터치다운 중심 좌표(`touchdownPoint`), 3축 자세(`attitude`), 접근 방향(`approachDirection = "DOWNWARD"`), 갑판 상태(`deckStatus`, `landingPermitted`, `abortAlert`), 최대 허용 하강률(`safeDescentRate`), 안전 반경(`clearanceRadius`) 등 전술 유도 구속조건만을 송출합니다 (`approachHeading`·`surfaceWind`·`clearanceZoneRadius` `[DEPRECATED]`).
    - **기체 AMM (Node 03) 및 FCP (Node 04)**: 패드가 제공한 구속조건을 바탕으로 `AMM`이 다단계 수직 강하 궤적(상공 진입 정렬 $\to$ 정속 수직 강하 $\to$ 지면효과 감속 플레어 $\to$ 접지) 및 동적 패드 20Hz 외삽 세트포인트를 연산해 `Base+4`(`CH_TRAJECTORY_CMD`)로 하달하고, `FCP`가 외루프 위치/속도/자세 추종 제어를 전담합니다.
 4. **정적(Static) / 동적(Dynamic) 시설물 분리 모델링**:
    - **고정형 착륙패드 (Static Pad)**: 육상 기지 고정 패드. 좌표 불변이므로 속도/가속도 벡터 필드를 전송하지 않고 1Hz 하트비트만 유지하여 무선 트래픽을 최적화합니다.
@@ -192,24 +193,36 @@ flowchart TD
 
 모든 통신은 표준 공통 Lua 테이블 엔벨로프(`ver`, `domainId`, `seq`, `type`, `time`, `payload`)를 필수 준수합니다.
 
-### 3.1 광역 상태 비콘 (`MSG_FACILITY_BEACON`, CH 50003, 1Hz)
+### 3.1 광역 상태 비콘 (`MSG_FACILITY_BEACON`, CH 50003 / $Base_{\text{sec}}+2$, 1Hz — GAC 집약 송출)
 > [!NOTE]
-> **GAC 집약 송출 원칙**: 본 패킷은 개별 패드가 독립 송출하지 않고, 상위 지상 구역 관제사(GAC)가 관할 구역 내 시설물 전체 현황을 수집하여 단일 대표 패킷으로 송출합니다. 패드 노드는 평시 CH 50003을 열지 않아 무선 모뎀 수신 큐를 절약합니다.
+> **GAC 집약 송출 원칙**: 본 패킷은 개별 착륙패드가 `CH 50003`을 직접 송출하지 않고 `Base_sec+1`(`MSG_ATC_FACILITY_UPDATE`)로 관할 GAC에 가용 상태를 보고하면, 상위 지상 구역 관제사(GAC)가 관할 내 전체 시설물 현황을 `facilitiesSummary`로 집약하여 단일 대표 패킷으로 `CH 50003` / `Base_sec+2`에 송출합니다(구 개별 패드 직접 `totalPads`/`freePads` 비콘 포맷은 `[DEPRECATED]`). 패드 노드는 평시 `CH 50003`을 열지 않아 무선 모뎀 수신 큐를 절약하며, 전체 스키마 정본은 [`GAC_PROGRAM_SPECIFICATION_AND_ICD.md`](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) §3.1을 따릅니다.
 ```lua
+-- GAC가 CH 50003 / Base_sec+2로 집약 송출하는 표준 비콘 계약 (GAC_PROGRAM_SPECIFICATION_AND_ICD.md §3.1)
 {
     ver = "1.9.5",
-    domainId = "GAC_APRON_01",
+    domainId = "GAC_ALPHA_01",
     seq = 10021,
     type = "MSG_FACILITY_BEACON",
     time = 1729850000000,
     payload = {
-        sectorId = 1,
+        sectorId = "BASE_ALPHA_SECTOR_01",
+        sectorName = "Alpha Base Central Vertiport",
+        sectorType = "VERTIPORT",
+        towerAtcChannel = 50001,
         gacChannel = 50201,                  -- 해당 섹터 관제 채널 (Base_sec + 0)
-        totalPads = 4,
-        freePads = 3,
-        maxSupportedWeight = 45000.0,
-        maxClearanceRadius = 6.0,
-        surfaceWind = { speed = 2.4, direction = 195.0 }
+        facilitiesSummary = {
+            totalLandingPads = 4,            -- 착륙패드 총 개수 (구 최상위 totalPads [DEPRECATED])
+            freeLandingPads = 3,             -- 공용 가용 패드 수 (구 최상위 freePads [DEPRECATED])
+            totalRunways = 0,
+            freeRunways = 0,
+            totalDockingArms = 2,
+            freeDockingArms = 1,
+            maxSupportWeight = 45000.0,
+            maxSupportRadius = 6.0
+        },
+        surfaceWind = { speed = 2.4, direction = 195.0 },
+        mobility = "STATIC",
+        status = "OPERATIONAL"
     }
 }
 ```
@@ -217,7 +230,7 @@ flowchart TD
 ---
 
 ### 3.2 고정 패드 정밀 유도 패킷 (`MSG_FACILITY_STATIC_GUIDE`, $Base_{\text{sec}}+10+\text{Idx}$, 1Hz)
-좌표가 불변인 육상 고정 패드 전용 패킷입니다. 속도/가속도 필드가 제외되어 대역폭을 절감합니다.
+좌표가 불변인 육상 고정 패드 전용 패킷입니다. 동적 운동학(`velocity`, `acceleration`, `angularRates`) 필드가 제외되며, 시설물 3종 대칭 공통 필수 스키마를 준수합니다.
 ```lua
 {
     ver = "1.9.5",
@@ -227,20 +240,27 @@ flowchart TD
     time = 1729850010000,
     payload = {
         facilityId = "PAD_BRAVO_01",
+        facilityType = "LANDING_PAD",
         targetAircraft = "AIRCRAFT_01",
         touchdownPoint = {                   -- 정밀 터치다운 중심 좌표 (Minecraft World Coordinates: X_MC, Y_MC, Z_MC)
             x = 1250.0,
             y = 65.0,
             z = -820.0
         },
-        approachHeading = 180.0,             -- 권장 진입 헤딩 (deg, 진북 0°)
-        safeDescentRate = 1.0,               -- 최대 허용 수직 하강률 (m/s)
-        clearanceZoneRadius = 5.0,           -- 안전 반경 (m)
-        surfaceWind = {                      -- 지상 국지풍 정보
-            speed = 2.4,                     -- 풍속 (m/s)
-            direction = 195.0                -- 풍향 (풍상 방위각, deg)
+        attitude = {                         -- 패드 정렬 3축 자세각 (deg, 정적 패드는 수평 yaw 정렬용)
+            pitch = 0.0,
+            roll = 0.0,
+            yaw = 180.0
         },
-        abortAlert = false                   -- 긴급 복행 요구 플래그 (true 시 즉시 Go-Around)
+        approachDirection = "DOWNWARD",      -- 고정 수직 착륙 진입 방향
+        deckStatus = "STABLE",               -- "STABLE" | "DANGEROUS"
+        landingPermitted = true,             -- 접지 허용 여부
+        abortAlert = false,                  -- 긴급 복행 요구 플래그 (true 시 즉시 Go-Around)
+        -- LANDING_PAD 대칭 보조 필드
+        clearanceRadius = 5.0,               -- 안전 반경 (m, 구 clearanceZoneRadius [DEPRECATED])
+        safeDescentRate = 1.0,               -- 최대 허용 수직 하강률 (m/s)
+        tiltAngleDeg = 0.0,                  -- 정적 패드 경사각 (0.0°)
+        heaveRateMps = 0.0                   -- 정적 패드 상하 요동 속도 (0.0 m/s)
     }
 }
 ```
@@ -248,7 +268,7 @@ flowchart TD
 ---
 
 ### 3.3 동적 패드 실시간 동역학 스트리밍 (`MSG_FACILITY_DYNAMIC_GUIDE`, $Base_{\text{sec}}+10+\text{Idx}$, 20Hz)
-바지선, 항공모함, 열차 등 이동 플랫폼 상의 패드 전용 패킷입니다. 실시간 3축 동역학과 함께 **갑판 안정성 판정 결과(`deckStatus`, `landingPermitted`)**를 포함하여 20Hz로 송출됩니다.
+바지선, 항공모함, 열차 등 이동 플랫폼 상의 패드 전용 패킷입니다. 시설물 3종 대칭 공통 필수 필드 및 동적 운동학(`velocity`, `acceleration`, `angularRates`)과 **갑판 안정성 판정 결과(`deckStatus`, `landingPermitted`)**를 포함하여 20Hz로 송출됩니다.
 ```lua
 {
     ver = "1.9.5",
@@ -258,12 +278,23 @@ flowchart TD
     time = 1729850020050,
     payload = {
         facilityId = "BARGE_PAD_02",
+        facilityType = "LANDING_PAD",
         targetAircraft = "AIRCRAFT_01",
         touchdownPoint = {                   -- 현재 시각 t에서의 패드 중심 3D 위치
             x = 840.25,
             y = 62.10,
             z = 1120.80
         },
+        attitude = {                         -- 패드 갑판 3축 자세각 (deg)
+            pitch = 1.2,
+            roll = -2.5,
+            yaw = 85.0
+        },
+        approachDirection = "DOWNWARD",      -- 고정 수직 착륙 진입 방향
+        deckStatus = "STABLE",               -- "STABLE" (θ_tilt <= 10.0° and |vy| <= 2.5m/s) | "DANGEROUS"
+        landingPermitted = true,             -- true: 최종 접지 허용, false: 호버 유지/접지 보류
+        abortAlert = false,                  -- 복행 발동 플래그
+        -- 동적 시설물 공통 운동학 필드
         velocity = {                         -- 패드 3축 이동 속도 벡터 (m/s)
             vx = 6.20,
             vy = -0.15,                      -- 파도에 의한 상하 요동 (Heave)
@@ -274,22 +305,16 @@ flowchart TD
             ay = 0.85,
             az = -0.02
         },
-        attitude = {                         -- 패드 갑판 3축 자세각 (deg)
-            pitch = 1.2,
-            roll = -2.5,
-            yaw = 85.0
-        },
         angularRates = {                     -- 3축 각속도 (deg/s)
             pitchRate = 0.4,
             rollRate = -0.8,
             yawRate = 0.05
         },
-        -- 갑판 요동 실시간 안전 판정 플래그 (Section 5.2 수식 연동)
-        deckStatus = "STABLE",               -- "STABLE" (θ_tilt <= 10.0° and |vy| <= 2.5m/s) | "DANGEROUS"
-        landingPermitted = true,             -- true: 최종 접지 허용, false: 호버 유지/접지 보류
+        -- LANDING_PAD 대칭 보조 필드 (Section 5.2 수식 연동)
+        clearanceRadius = 5.0,               -- 안전 반경 (m)
+        safeDescentRate = 1.0,               -- 최대 허용 수직 하강률 (m/s)
         tiltAngleDeg = 2.77,                 -- 현재 합성 경사각 sqrt(pitch^2 + roll^2)
-        heaveRateMps = -0.15,                -- 현재 수직 요동 속도 vy
-        abortAlert = false                   -- 복행 발동 플래그
+        heaveRateMps = -0.15                 -- 현재 수직 요동 속도 vy
     }
 }
 ```
@@ -471,11 +496,11 @@ sequenceDiagram
     Note over A,P: 3단계: 전술 채널 (CH 50211) 핸드오버 및 정밀 착륙
     alt 정적 패드 (STATIC)
         loop 1Hz 주기
-            P->>A: MSG_FACILITY_STATIC_GUIDE (CH 50211)<br/>[touchdownPoint, approachHeading: 180°, wind]
+            P->>A: MSG_FACILITY_STATIC_GUIDE (CH 50211)<br/>[touchdownPoint, attitude, approachDirection: DOWNWARD, clearanceRadius]
         end
     else 동적 패드 (DYNAMIC)
         loop 20Hz 주기 (AMM 2차 테일러 외삽 -> Base+4 FCP 추종)
-            P->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50211)<br/>[touchdownPoint(t), vel, accel, attitude, deckStatus, landingPermitted]
+            P->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50211)<br/>[touchdownPoint(t), vel, accel, attitude, angularRates, deckStatus, landingPermitted]
         end
     end
 
@@ -612,9 +637,9 @@ stateDiagram-v2
    - `Right Offset (m)`: 우측 $(+)$ / 좌측 $(-)$
    - `Up Offset (m)`: 상방 $(+)$ / 하방 $(-)$
 2. 운용 한계 제원 입력 (기본값 제공):
-   - 권장 진입 방위각 `approachHeading` (deg, 기본: `180.0`)
+   - 정적 패드 정렬 방위각 `yaw` (deg, 기본: `180.0`, `attitude.yaw`에 매핑)
    - 최대 허용 강하율 `safeDescentRate` (m/s, 기본: `1.0`)
-   - 안전 구역 반경 `clearanceZoneRadius` (m, 기본: `5.0`)
+   - 안전 구역 반경 `clearanceRadius` (m, 기본: `5.0`, 구 `clearanceZoneRadius [DEPRECATED]`)
    - 최대 지지 하중 `maxSupportedWeight` (kg, 기본: `45000.0`)
 3. **실시간 좌표 프리뷰**: 현재 입력된 오프셋이 적용된 참 월드 좌표 $\vec{p}_{\text{touchdown}}$을 계산하여 화면에 표시하고 작업자의 시각적 검증을 거칩니다.
 
@@ -770,9 +795,8 @@ CC:Tweaked Advanced Computer의 표준 해상도인 **51×19 텍스트 터미널
        "up": 1.2
      },
      "staticPosition": null,
-     "approachHeading": 180.0,
      "safeDescentRate": 1.0,
-     "clearanceZoneRadius": 5.0,
+     "clearanceRadius": 5.0,
      "maxSupportedWeight": 45000.0,
      "wirelessModemSide": "top"
    }

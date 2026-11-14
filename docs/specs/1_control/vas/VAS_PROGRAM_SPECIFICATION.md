@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.19.0` |
-| **최종 수정일 (Date)** | `2026-11-13` |
+| **문서 버전 (Version)** | `v1.20.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.20.0` | 2026-11-14 | **Wave 1 전역 ICD/사양 정합 동기화 (`Implemented` $\to$ `Approved`)**: ① `[I-9]` `MSG_CHANNEL_REBIND`/`MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) Option A 단일화(`transactionId`, `action`, `oldBaseChannel`, `newBaseChannel`, `bandwidth=40`, `500ms` 롤백, `subNodesReady`), ② `[I-4]` `MSG_CALIBRATION_INIT`/`_ACK`/`_CLOSE`/`_ACK`·`MSG_CALIB_BAY_BIND`·`MSG_PROFILE_SYNC.discoveredSurfaces`(객체 맵 & `"RUDD"` 단일화) 통일, ③ `[I-10]` `MSG_AERO_STATUS.interactionMode`(`mode [DEPRECATED]`)·`[I-1]`/`[I-6]` `actuatorHealth.allOk`·`MSG_MFD_STATE`(`sensorOk`, `controlState`, `groundSpeed`) 정합화, ④ `system.json` `minStallThrottle: 0.40`(`minThrottle: 6.0` 교정) 및 `surfaces.json` `"RUDD"` 통일, ⑤ 연관 문서 버전 배지 동기화 | Q1·Q2·Q4·Q6 사용자 확정 결정 반영 (`src/1_control/vas/` Wave 2 반영 후 `Implemented` 재승격 예정) |
 | `v1.19.0` | 2026-11-12 | FCP-AMM 역할 분리 및 `QUATERNION_RATE` 단일화 개정(`Implemented`, 구현 과제 `TASK-209` 완료 · 2026-11-13 승격): 마스터 ICD(`v1.28.0`)에 맞춰 상위 제어 계층(`AMM` $\to$ `FCP` $\to$ `VAS`) 및 `top` 무선 모뎀 채널 범위(`Base+0/+1/+2/+3[ACRO]/+10/+11`) 정합화, 일반 비행 `compute_climb_wrench` 수직 속도 PI 루프 제거(고도/승강률 홀드는 `FCP_TIMEOUT` 1,500ms 시 `FAILSAFE_HOLD`/`EMERGENCY_LAND` 내부에서만 가동), 6대 기체 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias{surge,sway}`) 및 `E_STOP > MFD_ACRO > FCP` 선점 중재 규격화, `Base+3` 평시 `AMM` 5Hz 양보 및 `MFD_ACRO` 시 20Hz 직결 인계 명세, `Base+11` `MSG_SURFACE_DISCOVER_REQ/ACK`·`system.json` 채널 오프셋(`4/10/11`) 정정 및 구버전 유도 타임아웃 설정 키를 `fcpCommandTimeoutMs`로 정규화, 잔존 레거시 식별자(구형 어댑터·구동기 축약 접미어 및 소문자 유도기 표기 등) 일괄 정비 | FCP-AMM-VAS 계층 직교성 확립 및 Zero-Fallback 와이어 계약 일원화 |
 | `v1.18.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 지원: 제어 효율성 행렬(Control Effectiveness Matrix B) 및 Moore-Penrose 의사역행렬(B†) 기반 동적 렌치 믹싱, 다형성 MSG_THRUST_CMD 출력(outputs[groupId] = {thrust, gimbalX, gimbalY}), 짐벌 포화 피드백 기반 방향성 안티 와인드업, 비공력 특성(flapTarget=0.0, ASA 바이패스) 규격화 | 6-DoF 짐벌 추력 분배 믹서 알고리즘 및 비공력 자세 제어 확립 |
 | `v1.17.0` | 2026-11-08 | ASA 어댑터를 ASA 어댑터로 정식 일원화, FCP 타임아웃 사유 및 텔레메트리 헬스 키 동기화, 구 명칭 전면 척결 | 용어 무결성 및 ASA/FCP 표준화 |
@@ -26,14 +27,14 @@
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.0.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.7.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.11.1)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.1)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.1.0)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.8.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.12.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 
 ---
 
@@ -44,9 +45,9 @@
 기존 센서 어댑터(SAP)의 모든 계측 및 신호 처리 파이프라인이 VAS 내부로 완전 통합되었으며, **차량 독립형 제어 드라이버 규격(VICD-Spec, SPEC-VICD-001 v1.1.0)**에 따라 **3계층 디커플링 샌드위치 드라이버 구조**를 표준으로 채택하여 비행 제어 및 안전 감시에 직결되는 다음 핵심 기능들을 단일 루프 내에서 완결합니다:
 
 > [!NOTE]
-> **구현 및 사양 개정 현황 요약 (Baseline v1.18.0 $\to$ v1.19.0 Implemented)**
+> **구현 및 사양 개정 현황 요약 (Baseline v1.19.0 Implemented $\to$ v1.20.0 Approved)**
 > 기존 `v1.18.0` 사양 기준 VAS 소프트웨어는 `src/1_control/vas` 환경에서 7대 핵심 과제 및 16개 마이크로슬라이스(IS-00.1 ~ IS-05.6)가 구현 완료(빌드 **v1.1.5**, 해시 `948bcbb3f2da4188502f951fcfc225d9ff0785de4abc921980a1c895b5a0a407`, Gate 0 ~ Gate 6 및 51x19 HUD 터미널·클러스터 시뮬레이션 통과, 총 소요시간 4,950.07 ms)되었으며, 단일 배포 번들(`dist_gdrive/vas/vas_bundle.lua`)로 패키징되었습니다. (과거 검증 이력은 [제12장](#12-소프트웨어-구현-현황-및-하네스통합-검증-결과-implementation--verification-status) 참조)  
-> 현재 문서는 FCP-AMM 역할 분리에 맞춰 `QUATERNION_RATE` 내루프 단일화, 일반 비행 수직 속도 PI 제거, `E_STOP > MFD_ACRO > FCP` 선점 중재, `Base+3` ACRO 양보 규칙을 확정·구현 완료(`TASK-209`)한 **`v1.19.0` (`Implemented`)** 사양입니다.
+> 직전 `v1.19.0` (`TASK-209`)에서 FCP-AMM 역할 분리에 맞춰 `QUATERNION_RATE` 내루프 단일화, `E_STOP > MFD_ACRO > FCP` 선점 중재, `Base+3` ACRO 양보를 구현 완료하였으며, 현재 문서는 `[I-1]` `actuatorHealth.allOk`, `[I-4]` `INIT`/`BAY_BIND`/`CLOSE`, `[I-6]` `MSG_MFD_STATE`, `[I-9]` `MSG_CHANNEL_REBIND_ACK` (`500ms`) 및 `minStallThrottle: 0.40`을 반영한 **`v1.20.0` (`Approved`)** 사양입니다.
 
 1. **비행 동역학 센서 계측 및 3D 기하 보정**: 3축 자세(Gimbal), 고도(Altimeter), 3차원 속도(Velocity) 실측, 3D 레버암 회전 유도 속도/고도 보정 및 단위 쿼터니언($\mathbf{q} \in SO(3)$) 변환.
 2. **연료/에너지 잔량 계측 (`fuel`)**: Create 유체 탱크(`FLUID_TANK`) 및 축전지/배터리(`BATTERY`)의 최대 용량 대비 잔여량($0.0 \sim 1.0$) 정규화.
@@ -841,7 +842,8 @@ stateDiagram-v2
         },
         actuatorHealth = {         -- 구동계 서브시스템 통합 헬스
             tap = true,            -- TCA 추진기 클러스터 정상 여부
-            asa = true             -- ASA 공력 조종면 클러스터 정상 여부
+            asa = true,            -- ASA 공력 조종면 클러스터 정상 여부
+            allOk = true           -- 전체 구동계(TCA/ASA) 정상 여부
         }
     }
 }
@@ -950,8 +952,7 @@ stateDiagram-v2
     time = 1729845000060,
     payload = {
         groupId = "THR_VTOL_F",
-        interactionMode = "API",
-        mode = "API", -- [DEPRECATED] 구버전 호환용 (코드베이스는 interactionMode 단일 채택)
+        interactionMode = "API",           -- (구 mode [DEPRECATED]; Zero-Fallback 단일 채택)
         appliedSignal = 4.0,               -- 실인가 보정값
         appliedRatio = 0.2667,             -- 정규화 인가 비율 (4/15)
         isSaturated = false,               -- 추력 포화 여부 (단일화 표준, true 시 안티와인드업 발동)
@@ -1001,11 +1002,11 @@ stateDiagram-v2
         podId = "ASA_L",
         surfaceId = "AIL_L",
         boundSide = "left",
-        mode = "API",
+        interactionMode = "API",           -- "API" | "REDSTONE" (구 mode [DEPRECATED])
         appliedDeflection = -1.0,          -- 실인가 정규화 타각 (-1.0 ~ +1.0)
         isSaturated = true,                -- 타각 포화 여부 (true 시 Layer 1 안티와인드업 발동)
         isJammed = false,
-        healthStatus = "NOMINAL"           -- NOMINAL, DEGRADED, TOTAL_LOSS
+        healthStatus = "NOMINAL"           -- "NOMINAL" | "DEGRADED" | "TOTAL_LOSS"
     }
 }
 ```
@@ -1029,9 +1030,10 @@ stateDiagram-v2
     type = "MSG_CALIBRATION_INIT",
     time = 1729845000000,
     payload = {
-        hangarId = "HANGAR_ALPHA",
-        bayId = 1,
         stationId = "HANGAR_BAY_01",
+        bayId = 1,
+        baseHangarChannel = 101,
+        targetCraftDomain = "AIRCRAFT_01",
         timeoutSec = 120,
         targetThruster = "ALL"
     }
@@ -1045,9 +1047,12 @@ stateDiagram-v2
     type = "MSG_CALIB_BAY_BIND",
     time = 1729845000010,
     payload = {
+        action = "OPEN",              -- "OPEN" | "CLOSE"
         stationId = "HANGAR_BAY_01",
+        bayId = 1,
         baseHangarChannel = 101,      -- Base_hangar (Bay 1 기준: 101)
-        bayDiagChannel = 104,         -- Base_hangar + 3 (104) 동적 개방 지시
+        bayCalibrationTap = 104,      -- Base_hangar + 3 (104) 동적 개방 지시
+        bayCalibrationCmd = 101,      -- Base_hangar + 0 (101) 동적 개방 지시
         timeoutSec = 120
     }
 }
@@ -1060,9 +1065,11 @@ stateDiagram-v2
     type = "MSG_CALIBRATION_INIT_ACK",
     time = 1729845000020,
     payload = {
-        status = "READY",
+        aircraftDomainId = "AIRCRAFT_01",
+        hardwareUuid = "cc-core-01-uuid",
         bayId = 1,
-        domainId = "AIRCRAFT_01",
+        status = "READY",
+        airframeType = "VECTORED_VTOL",
         baseChannel = 10000
     }
 }
@@ -1094,7 +1101,14 @@ stateDiagram-v2
         calibratedBy = "05_align",
         totalDryMass = 12500.0,
         controllabilityStatus = "FULL_6DOF_PASS", -- "FULL_6DOF_PASS", "AERO_ASSISTED_PASS"
-        discoveredSurfaces = { "AIL_L", "AIL_R", "ELEV", "RUDDER", "FLAP_L", "FLAP_R" },
+        discoveredSurfaces = {
+            ["AIL_L"]  = { podId = "ASA_L", type = "aileron",  boundPort = "left",  interactionMode = "API", maxDeflectionDeg = 25.0 },
+            ["AIL_R"]  = { podId = "ASA_R", type = "aileron",  boundPort = "right", interactionMode = "API", maxDeflectionDeg = 25.0 },
+            ["ELEV"]   = { podId = "ASA_T", type = "elevator", boundPort = "top",   interactionMode = "API", maxDeflectionDeg = 20.0 },
+            ["RUDD"]   = { podId = "ASA_T", type = "rudder",   boundPort = "back",  interactionMode = "API", maxDeflectionDeg = 30.0 },
+            ["FLAP_L"] = { podId = "ASA_L", type = "flap",     boundPort = "front", interactionMode = "API", maxDeflectionDeg = 40.0 },
+            ["FLAP_R"] = { podId = "ASA_R", type = "flap",     boundPort = "front", interactionMode = "API", maxDeflectionDeg = 40.0 }
+        },
         thrusterCoefficients = {
             ["THR_MAIN_L"] = {
                 surge = 1.0, sway = 0.0, heave = 0.0,
@@ -1142,7 +1156,10 @@ stateDiagram-v2
     type = "MSG_CALIBRATION_CLOSE",
     time = 1729845095000,
     payload = {
-        reason = "COMPLETE",
+        stationId = "HANGAR_BAY_01",
+        bayId = 1,
+        action = "CLOSE_SESSION",
+        reason = "CALIBRATION_COMPLETE",
         saveProfile = true
     }
 }
@@ -1155,6 +1172,7 @@ stateDiagram-v2
     type = "MSG_CALIBRATION_CLOSE_ACK",
     time = 1729845095050,
     payload = {
+        bayId = 1,
         status = "CLOSED",
         currentFsmState = "IDLE_ARMED"
     }
@@ -1243,6 +1261,7 @@ stateDiagram-v2
     payload = {
         source = "CORE_ACRO_TAKEOVER",
         fsmState = "ACRO",
+        controlState = "ACRO",
         flightMode = "ACRO",
         acroActive = true,                 -- ACRO 모드 직접 송출 식별 플래그
         attitude = { pitch = 2.1, roll = -4.5, yaw = 92.4 },
@@ -1254,6 +1273,7 @@ stateDiagram-v2
         },
         fuel = 0.85,
         dynamicLoad = 0.42,
+        sensorOk = true,
         sensorHealth = {
             gimbal = true,
             altitude = true,
@@ -1262,7 +1282,8 @@ stateDiagram-v2
         },
         actuatorHealth = {
             tap = true,
-            asa = true
+            asa = true,
+            allOk = true
         }
     }
 }
@@ -1326,7 +1347,7 @@ stateDiagram-v2
 ### 8.10 [Interface I-9] 계단식 동적 채널 재바인딩 프로토콜 (`AMM` $\rightarrow$ `FCP` $\rightarrow$ `VAS` $\rightarrow$ `TCA/ASA`)
 - **수신 채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`) (`AMM` $\rightarrow$ `FCP` on `Base + 4` $\rightarrow$ `VAS` on `Base + 1`)
 - **전파 채널**: `CH_THRUST_ACTUATION` (`Base + 10`), `CH_SURFACE_ACTUATION` (`Base + 11`) (TCA/ASA 전파, 구 `Base+6/7` [DEPRECATED])
-- **트랜잭션 절차**: 4계층 2단계 커밋(`PREPARE` $\to$ `MSG_REBIND_ACK` $\to$ `COMMIT` / `ROLLBACK`). `AMM`이 `Base+4`로 개시해 `FCP`가 `Base+1`로 `PREPARE`를 전달하면 `VAS`는 하위 `TCA`/`ASA`로 계단식 전파 후 응답을 취합해 `FCP`로 `MSG_REBIND_ACK`를 회신(`FCP`가 `AMM`으로 상향 보고)하고, `COMMIT` 수신 시 일제히 새 40채널 베이스(`bandwidth = 40`)로 스위칭합니다.
+- **트랜잭션 절차**: 4계층 2단계 커밋(`PREPARE` $\to$ `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* $\to$ `COMMIT` / `ROLLBACK`, `500ms` 롤백 타임아웃). `AMM`이 `Base+4`로 개시해 `FCP`가 `Base+1`로 `PREPARE`를 전달하면 `VAS`는 하위 `TCA`/`ASA`로 계단식 전파 후 응답을 취합해 `FCP`로 `MSG_CHANNEL_REBIND_ACK`를 회신(`FCP`가 `AMM`으로 상향 보고)하고, `COMMIT` 수신 시 일제히 새 40채널 베이스(`bandwidth = 40`)로 스위칭합니다.
 
 ```lua
 -- 1. FCP -> VAS 채널 재바인딩 준비 요청 (MSG_CHANNEL_REBIND, Stage 1: PREPARE, Base_old+1)
@@ -1337,26 +1358,29 @@ stateDiagram-v2
     type = "MSG_CHANNEL_REBIND",
     time = 1729845001000,
     payload = {
-        phase = "PREPARE",                       -- "PREPARE" -> "COMMIT" -> "ROLLBACK"
-        oldBase = 10000,
-        newBase = 10040,                         -- 40채널 표준 증분 (N=2)
-        bandwidth = 40,
-        switchTimeoutMs = 1000
+        transactionId = "REBIND-TX-10000-10040",
+        action = "PREPARE",                      -- "PREPARE" | "COMMIT" | "ROLLBACK"
+        oldBaseChannel = 10000,
+        newBaseChannel = 10040,                  -- 40채널 표준 증분 (N=2)
+        bandwidth = 40
     }
 }
 
--- 2. VAS -> FCP 준비 완료 응답 (MSG_REBIND_ACK, Base_old+1 -> FCP가 Base_old+4로 AMM에 상향 보고)
+-- 2. VAS -> FCP 준비 완료 응답 (MSG_CHANNEL_REBIND_ACK, 구 MSG_REBIND_ACK [DEPRECATED], Base_old+1)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
     seq = 802,
-    type = "MSG_REBIND_ACK",
+    type = "MSG_CHANNEL_REBIND_ACK",
     time = 1729845001060,
     payload = {
-        phase = "PREPARE",
+        transactionId = "REBIND-TX-10000-10040",
         nodeId = "01_core",
-        status = "READY",
-        subnodesReady = {
+        action = "PREPARE",
+        status = "READY",                        -- "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"
+        oldBaseChannel = 10000,
+        newBaseChannel = 10040,
+        subNodesReady = {
             tap = true,
             asa = true
         }
@@ -1494,7 +1518,7 @@ stateDiagram-v2
   },
   "stallGuard": {
     "stallSpeed": 10.0,
-    "minThrottle": 6.0,
+    "minStallThrottle": 0.40,
     "flapVfeLimit": 15.0
   },
   "trim": {
@@ -1522,7 +1546,7 @@ stateDiagram-v2
     "AIL_L": { "axis": "roll", "sign": 1.0, "maxDeflectionDeg": 25.0, "deadband": 1.0 },
     "AIL_R": { "axis": "roll", "sign": -1.0, "maxDeflectionDeg": 25.0, "deadband": 1.0 },
     "ELEV":  { "axis": "pitch", "sign": 1.0, "maxDeflectionDeg": 20.0, "deadband": 1.0 },
-    "RUDDER": { "axis": "yaw", "sign": 1.0, "maxDeflectionDeg": 30.0, "deadband": 1.0 },
+    "RUDD": { "axis": "yaw", "sign": 1.0, "maxDeflectionDeg": 30.0, "deadband": 1.0 },
     "FLAP_L": { "axis": "lift", "sign": 1.0, "maxDeflectionDeg": 40.0, "deadband": 1.0 },
     "FLAP_R": { "axis": "lift", "sign": 1.0, "maxDeflectionDeg": 40.0, "deadband": 1.0 }
   },
@@ -1669,4 +1693,4 @@ src/1_control/vas/
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 핵심 비행 컴퓨터(VAS)의 센서 및 제어 소프트웨어 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.29.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.14.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) v1.11.1), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.0.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.7.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.6.1) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.2)와 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 핵심 비행 컴퓨터(VAS)의 센서 및 제어 소프트웨어 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.30.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.15.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.1), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) v1.12.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.1.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.7.0) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3)와 정합성을 유지합니다.*

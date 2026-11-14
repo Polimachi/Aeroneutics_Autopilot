@@ -609,5 +609,128 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_false(app.guard.latches.lowFuelLatched)
         main_mod.step_20hz_tick(app, 0.05, 1250)
         assert_true(app.guard.latches.lowFuelLatched)
+        assert_eq(app.guard, app.arbiter.guard)
+        assert_eq(app.guard, app.engine.guard)
+    end)
+
+    it("wires sentinel probe/rebind propagation, [I-5] ATC/GAC channels & watchdog, [I-6] MFD fields, Ctrl+X ESTOP, and CLI queue sync", function()
+        local main_mod = require("main")
+        local left_m = mock.modem({ wireless = true })
+        local right_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            system = { primaryModemSide = "left", infraModemSide = "right" },
+        }, { left = left_m, right = right_m })
+        assert_eq(app.net.onboardModem, left_m)
+        assert_eq(app.net.infraModem, right_m)
+
+        -- 1. Sentinel INIT -> step_20hz_tick sends MSG_BLOCK_REQUEST on 50000 via infraModem
+        main_mod.step_20hz_tick(app, 0.05, 1000)
+        local saw_boot = false
+        for _, tx in ipairs(right_m._transmitted) do
+            if tx.tx == 50000 and tx.pkt and tx.pkt.type == "MSG_BLOCK_REQUEST" then
+                saw_boot = true
+            end
+        end
+        assert_true(saw_boot)
+
+        -- Assign candidate 10040 -> step_20hz_tick emits MSG_CHANNEL_PROBE on 10040 -> wait 200ms -> ACQUIRED
+        main_mod.process_event(app, "modem_message", "right", 50000, 50000, {
+            ver = "1.9.5", type = "MSG_BLOCK_ASSIGN", payload = { baseChannel = 10040 }
+        }, 1050)
+        main_mod.step_20hz_tick(app, 0.05, 1100)
+        assert_eq(app.sentinel.status, "PROBING")
+        main_mod.step_20hz_tick(app, 0.05, 1350)
+        assert_eq(app.sentinel.status, "ACQUIRED")
+
+        -- Commit rebind to 10080 -> config, nav, engine, net all update
+        app.sentinel.baseChannel = 10000
+        app.net:apply_rebind(10000)
+        local channel_sentinel = require("channel_sentinel")
+        channel_sentinel.initiate_rebind(app.sentinel, 10080, 1400)
+        main_mod.process_event(app, "modem_message", "left", 10004, 10004, {
+            ver = "1.9.5", type = "MSG_CHANNEL_REBIND_ACK",
+            payload = { transactionId = "REBIND-TX-10000-10080", status = "READY" },
+        }, 1450)
+        main_mod.step_20hz_tick(app, 0.05, 1500)
+        assert_eq(app.config.baseChannel, 10080)
+        assert_eq(app.net.baseChannel, 10080)
+        assert_eq(app.nav.baseChannel, 10080)
+        assert_eq(app.engine.baseChannel, 10080)
+
+        -- 2. [I-6] MFD downlink fields (tick 4)
+        local mfd_pkt = nil
+        for _, tx in ipairs(left_m._transmitted) do
+            if tx.tx == 10083 and tx.pkt and tx.pkt.type == "MSG_MFD_STATE" then
+                mfd_pkt = tx.pkt
+            end
+        end
+        assert_not_nil(mfd_pkt)
+        assert_eq(mfd_pkt.payload.source, "AMM_INTEGRATED")
+        assert_eq(mfd_pkt.payload.flightMode, "IDLE_ARMED")
+        assert_not_nil(mfd_pkt.payload.actuatorHealth)
+        assert_not_nil(mfd_pkt.payload.sensorHealth)
+        assert_not_nil(mfd_pkt.payload.angularRates)
+
+        -- 3. [I-5] ATC clearance opens GAC/Pad channels & watchdog FAILSAFE_RTH after 10 denials
+        main_mod.process_event(app, "modem_message", "right", 50001, 50001, {
+            ver = "1.9.5", type = "MSG_ATC_APPROACH_CLEARANCE",
+            payload = { status = "CLEARED", assignedFacilityId = "PAD_01", gacChannel = 51000, assignedGuidanceChannel = 51010, padMobility = "DYNAMIC" },
+        }, 1600)
+        assert_true(app.net.openInfraChannels[51000] == true)
+        assert_true(app.net.openInfraChannels[51010] == true)
+        main_mod.process_event(app, "modem_message", "right", 51010, 51010, {
+            ver = "1.9.5", type = "MSG_FACILITY_DYNAMIC_GUIDE",
+            payload = { facilityId = "PAD_01", touchdownPoint = { x = 10, y = 64, z = 20 }, deckStatus = "STABLE" },
+        }, 1650)
+        assert_eq(app.fac.dynamicGuide.facilityId, "PAD_01")
+        app.fac.touchdownAborted = true
+        assert_true(app.fac.touchdownAborted)
+        main_mod.process_event(app, "modem_message", "right", 51000, 51000, {
+            ver = "1.9.5", type = "MSG_GAC_ABORT_CLEAR",
+            payload = { reason = "WAVEOFF" },
+        }, 1700)
+        assert_false(app.fac.touchdownAborted)
+
+        -- 4. CLI add/alt sync + Ctrl+X ESTOP
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "alt", args = { "210" } }, 1750)
+        assert_eq(app.engine.defaults.targetAlt, 210)
+        main_mod.execute_cli_command(app, { type = "COMMAND", name = "add", args = { "100", "200" } }, 1760)
+        assert_eq(app.engine:count(), 1)
+        assert_eq(app.engine.checkpoints[1].params.targetAlt, 210)
+
+        app.input:set_mode("CLI")
+        main_mod.process_event(app, "key", keys.leftCtrl or 29)
+        main_mod.process_event(app, "char", "x")
+        main_mod.process_event(app, "key_up", keys.leftCtrl or 29)
+        assert_false(app.ctrlHeld)
+        local estop_tx = left_m._transmitted[#left_m._transmitted]
+        assert_eq(estop_tx.tx, 10081)
+        assert_eq(estop_tx.pkt.type, "MSG_EMERGENCY_OVERRIDE")
+
+        -- 5. ATC denial triggers retry transmission MSG_ATC_APPROACH_REQ without crashing, and CH 50004 dispatch is ignored by update_beacons
+        main_mod.process_event(app, "modem_message", "right", 50004, 50004, {
+            ver = "1.9.5", type = "MSG_GAC_DISPATCH",
+            payload = { facilityId = "PAD_IGNORED", pos = { x = 999, y = 64, z = 999 } },
+        }, 1780)
+        assert_nil(app.fac.beacons["PAD_IGNORED"])
+
+        app.fac.beacons["PAD_01"] = { facilityId = "PAD_01", facilityType = "LANDING_PAD", pos = { x = 10, y = 64, z = 20 } }
+        app.fac.activePadId = "PAD_01"
+        app.fac.gacChannel = 51000
+        app.fac.atcStatus = "DENIED"
+        app.fac.atcDeniedCount = 1
+        app.fac.nextAtcRetryMs = 1800
+        main_mod.step_20hz_tick(app, 0.05, 1850)
+        local retry_pkt = nil
+        for _, tx in ipairs(right_m._transmitted) do
+            if tx.tx == 51000 and tx.pkt and tx.pkt.type == "MSG_ATC_APPROACH_REQ" then
+                retry_pkt = tx.pkt
+            end
+        end
+        assert_not_nil(retry_pkt)
+        assert_eq(retry_pkt.payload.targetFacilityId, "PAD_01")
     end)
 end)

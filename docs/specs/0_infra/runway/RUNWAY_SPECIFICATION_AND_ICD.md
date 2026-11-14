@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.10.7` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.11.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/0_infra/runway/` |
 | **주관 도메인 (Domain)** | 지상 인프라 활주로 유도 비콘 및 진입 제어 (Runway) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.11.0` | 2026-11-14 | Wave 1 전역 사양 동기화: `[I-5]` `MSG_FACILITY_STATIC_GUIDE`·`MSG_FACILITY_DYNAMIC_GUIDE` 시설물 3종 대칭 공통 스키마(`facilityType = "RUNWAY"`, `touchdownPoint`, `attitude`, `approachDirection = "FRONT" \| "BACK"`, `deckStatus`, `landingPermitted`, `abortAlert`, 동적 `velocity`/`acceleration`/`angularRates`, 보조 `endPoint`·`glideSlopeAngle`·`touchdownZoneLength`) 정합, `thresholdPoint`·`deckAttitude`·`runwayHeading`·`surfaceWind`·`arrestingWires`·`opticalMeatballOffset` 제거, `CH 50003` GAC 집약 비콘 송출 명시, `MSG_ATC_DEPARTURE_CLEARANCE`(`CH 50001`) vs `MSG_GAC_DEPARTURE_CLEARANCE`(`Base_sec+0`) 역할 분리 명시 및 연관 문서 버전(`ICD v1.30.0`, `GAC v1.5.0`, `Diagram v2.15.0`, `GPS v2.3.3`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Landing Pad v2.5.0`, `Docking Arm v1.12.0`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 시설물 3종 가이드 패킷 대칭 스키마 및 비콘·출발 관제 단일화 |
 | `v1.10.7` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 외부 공중 RF 교신 상대(`CH 50001`, `50003`, `Base_sec+0`, `Base_sec+10+Idx`, `Base+5`)를 `기체 AMM (Node 03)`으로 일원화하고 `AMM`이 상대 ILS 글라이드슬로프/함선 속도 보상 궤적을 연산해 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 전달하는 계층 분담 명시, 연관 규격서 버전 동기화 | AMM 외부 게이트웨이·항법·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.10.6` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
 | `v1.10.5` | 2026-11-07 | 사양서 및 코드 디렉토리 `0_ground` → `0_infra` 통합 이동 및 경로 동기화 | 지상 인프라 체계 단일화 구조 개편 |
@@ -22,15 +23,15 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.4.2)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.14.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.4.4)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.11.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.15.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
 
 ---
 
@@ -53,7 +54,7 @@
 
 ### 1.2 GPS 광역 항법 $\rightarrow$ 활주로 ILS 전술 접근 연계 인터페이스 (GPS to ILS Transition)
 1. **광역 정렬 단계 (GPS Waypoint to IAF)**:
-   - 기체 AMM (Node 03)은 `CH_FACILITY_BEACON` (50003)에서 취득한 활주로 시단 좌표(`thresholdPos`) 및 중심선 방위각을 바탕으로, 활주로 전방 1,000~1,500m 지점의 진입 정렬점(Initial Approach Fix, IAF)까지 중앙 GPS 체계(`CH_GPS_PING` 60001 / `Base+5`)를 이용하여 항법 비행 궤적을 산출하고 `Base+4`로 `FCP (Node 04)`에 하달합니다.
+   - 기체 AMM (Node 03)은 `CH_FACILITY_BEACON` (50003)에서 GAC가 집약 송출한 섹터 비콘의 섹터/활주로 정보 및 유도 좌표(`touchdownPoint`, `attitude`)를 바탕으로, 활주로 전방 1,000~1,500m 지점의 진입 정렬점(Initial Approach Fix, IAF)까지 중앙 GPS 체계(`CH_GPS_PING` 60001 / `Base+5`)를 이용하여 항법 비행 궤적을 산출하고 `Base+4`로 `FCP (Node 04)`에 하달합니다.
 2. **관제 인가 및 ILS 전술 채널 인계 (Terminal Handoff)**:
    - IAF 도달 시 AMM이 `CH_ATC_COMM` (50001)로 `MSG_ATC_APPROACH_REQ`를 송신하여 착륙 허가를 요청합니다.
    - ATC로부터 접근 인가(`MSG_ATC_APPROACH_CLEARANCE`) 및 전술 채널(`CH_TACTICAL_GUIDANCE` = $Base_{\text{sec}} + 10 + \text{Idx}$)을 수신하면, 기체 AMM은 $3.0^\circ$ 글라이드슬로프 및 로컬라이저 정밀 계기 유도(`MSG_FACILITY_STATIC/DYNAMIC_GUIDE`) 기반 접근 궤적을 연산해 `Base+4`로 `FCP`에 전달하는 추종 모드로 전환합니다.
@@ -75,7 +76,8 @@
 ```mermaid
 flowchart TD
     ATC["지상/함상 관제탑 (ATC Node)<br/>[CH 50001 / 50002]"]
-    RWY["활주로 컴퓨터 (Runway Node)<br/>[무선 CH 50003 / Base_sec+1 / Base_sec+10+Idx]"]
+    GAC["지상 구역 관제사 (GAC Node)<br/>[CH 50003 / Base_sec+0 / Base_sec+1]"]
+    RWY["활주로 컴퓨터 (Runway Node)<br/>[무선 CH 50002 / Base_sec+1 / Base_sec+10+Idx]"]
     AMM["기체 AMM (Node 03)<br/>[CH Base+5 / 50001 / Base_sec+10+Idx]"]
     
     subgraph WIRED_NET["유선 모뎀 네트워크 (Wired Modem Cable Bus)"]
@@ -83,7 +85,8 @@ flowchart TD
         CARRIER_CLUTCH["(선택 사양) 항모 어레스팅 제어기<br/>(carrier_arresting_clutch)<br/>* Create 와이어 텐션 클러치"]
     end
 
-    RWY -.->|"무선 CH 50003 (1Hz 비콘)<br/>MSG_FACILITY_BEACON"| AMM
+    GAC -.->|"무선 CH 50003 (1Hz 집약 비콘)<br/>MSG_FACILITY_BEACON"| AMM
+    RWY <==>|"무선 Base_sec + 1 (섹터 로컬 백본)<br/>MSG_ATC_FACILITY_UPDATE"| GAC
     RWY <==>|"무선 CH 50002 (광역 백본)<br/>점유 상태 및 착륙 인가 통보"| ATC
     AMM <==>|"무선 CH 50001 (ATC 관제)<br/>착륙/이륙/지상이동 교신"| ATC
     AMM <==>|"무선 CH Base_sec+10+Idx (전술 유도)<br/>STATIC(1Hz) / DYNAMIC(20Hz)"| RWY
@@ -124,29 +127,36 @@ flowchart TD
 
 ## 3. 통신 패킷 상세 규격 (Message Envelope & Payload Specification)
 
-### 3.1 광역 상태 비콘 (`MSG_FACILITY_BEACON`, CH 50003, 1Hz)
+### 3.1 광역 상태 비콘 (`MSG_FACILITY_BEACON`, CH 50003 / $Base_{\text{sec}}+2$, 1Hz — GAC 집약 송출)
+> [!NOTE]
+> **GAC 집약 송출 원칙**: 개별 활주로 노드는 `CH 50003`을 직접 점유 송출하지 않고 `Base_sec+1`(`MSG_ATC_FACILITY_UPDATE`)로 관할 GAC에 가용 상태(`facilityId`, `status`, `touchdownPoint`, `runwayDesignator`, `surfaceCondition`, `ilsAvailable`)를 보고하며, GAC가 관할 시설물 전체 현황(`facilitiesSummary`)을 집약해 `CH 50003` / `Base_sec+2`로 송출합니다(구 개별 활주로의 직접 `CH 50003` `MSG_FACILITY_BEACON` 송출 포맷은 `[DEPRECATED]`, 상세 스키마 정본은 [`GAC_PROGRAM_SPECIFICATION_AND_ICD.md`](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) §3.1 참조).
 ```lua
+-- GAC가 CH 50003 / Base_sec+2로 집약 송출하는 표준 비콘 계약 (GAC_PROGRAM_SPECIFICATION_AND_ICD.md §3.1)
 {
     ver = "1.9.5",
-    domainId = "RWY_ALPHA_09L",
+    domainId = "GAC_ALPHA_01",
     seq = 20010,
     type = "MSG_FACILITY_BEACON",
     time = 1729850000000,
     payload = {
-        facilityId = "RWY_ALPHA_09L",
-        facilityType = "RUNWAY",
-        mobility = "STATIC",                 -- "STATIC" (육상) | "DYNAMIC" (항공모함 갑판)
-        atcChannel = 50001,
-        tacticalChannel = 50220,             -- 전술 채널 (Base_sec + 10 + 9)
-        status = "FREE",                     -- "FREE", "APPROACH_ACTIVE", "OCCUPIED", "CLOSED"
-        runwayDesignator = "09L",            -- 활주로 번호
-        dimensions = {
-            length = 350.0,                  -- 활주로 길이 (m)
-            width = 30.0                     -- 활주로 폭 (m)
+        sectorId = "BASE_ALPHA_SECTOR_01",
+        sectorName = "Alpha Base Airfield",
+        sectorType = "AIRPORT",
+        towerAtcChannel = 50001,
+        gacChannel = 50201,                  -- 해당 섹터 관제 채널 (Base_sec + 0)
+        facilitiesSummary = {
+            totalLandingPads = 2,
+            freeLandingPads = 2,
+            totalRunways = 2,
+            freeRunways = 1,
+            totalDockingArms = 0,
+            freeDockingArms = 0,
+            maxSupportWeight = 80000.0,
+            maxSupportRadius = 15.0
         },
-        surfaceCondition = "DRY",            -- "DRY", "WET", "ICY", "OBSTRUCTED"
-        ilsAvailable = true,
-        arrestingGearActive = false          -- 어레스팅 와이어 가동 여부
+        surfaceWind = { speed = 3.1, direction = 90.0 },
+        mobility = "STATIC",                 -- "STATIC" (육상) | "DYNAMIC" (항공모함 갑판)
+        status = "OPERATIONAL"
     }
 }
 ```
@@ -154,7 +164,7 @@ flowchart TD
 ---
 
 ### 3.2 고정 활주로 정밀 가상 ILS 패킷 (`MSG_FACILITY_STATIC_GUIDE`, Base_sec + 10 + Idx, 1Hz)
-정적 육상 비행장 전용 패킷입니다(예: CH 50220). 시단/종단 좌표 및 글라이드슬로프 정보가 포함되며, 속도/가속도 필드는 제외됩니다.
+정적 육상 비행장 전용 패킷입니다(예: CH 50220). 시설물 3종 대칭 공통 필수 스키마를 준수하며, 동적 운동학(`velocity`, `acceleration`, `angularRates`) 필드는 제외됩니다.
 ```lua
 {
     ver = "1.9.5",
@@ -164,25 +174,30 @@ flowchart TD
     time = 1729850015000,
     payload = {
         facilityId = "RWY_ALPHA_09L",
+        facilityType = "RUNWAY",
         targetAircraft = "AIRCRAFT_01",
-        runwayHeading = 92.5,                -- 활주로 중심선 방위각 (deg)
-        thresholdPoint = {                   -- 활주로 시단(착륙 진입점) 3D 좌표 (Minecraft World Coordinates: X_MC, Y_MC, Z_MC)
+        touchdownPoint = {                   -- 활주로 시단(착륙 진입점) 3D 좌표 (Minecraft World Coordinates: X_MC, Y_MC, Z_MC)
             x = -1500.0,
             y = 70.0,
             z = 450.0
         },
+        attitude = {                         -- 활주로 3축 자세각 (deg, 정적 활주로는 yaw가 중심선 방위각)
+            pitch = 0.0,
+            roll = 0.0,
+            yaw = 92.5
+        },
+        approachDirection = "FRONT",         -- "FRONT" | "BACK" (활주로 진입 방향)
+        deckStatus = "STABLE",               -- "STABLE" | "DANGEROUS"
+        landingPermitted = true,             -- 착륙 허용 여부
+        abortAlert = false,                  -- 활주로 침범 등 비상 복행 경보
+        -- RUNWAY 대칭 보조 필드
         endPoint = {                         -- 활주로 종단 3D 좌표 (Minecraft World Coordinates: X_MC, Y_MC, Z_MC)
             x = -1150.0,
             y = 70.0,
             z = 465.0
         },
         glideSlopeAngle = 3.0,               -- 표준 강하각 (deg)
-        touchdownZoneLength = 80.0,          -- 권장 접지 구간 길이 (m)
-        surfaceWind = {
-            speed = 4.2,
-            direction = 085.0                -- 맞바람(Headwind) 성분 우세
-        },
-        abortAlert = false                   -- 활주로 침범 등 비상 복행 경보
+        touchdownZoneLength = 80.0           -- 권장 접지 구간 길이 (m)
     }
 }
 ```
@@ -190,7 +205,7 @@ flowchart TD
 ---
 
 ### 3.3 동적 활주로 실시간 동역학 스트리밍 (`MSG_FACILITY_DYNAMIC_GUIDE`, Base_sec + 10 + Idx, 20Hz)
-항공모함 또는 해상 기동 플랫폼 비행갑판 전용 패킷입니다(예: CH 50220). 항진 속도, 가속도 및 갑판 동역학을 20Hz로 스트리밍합니다.
+항공모함 또는 해상 기동 플랫폼 비행갑판 전용 패킷입니다(예: CH 50220). 시설물 3종 대칭 공통 필수 필드, 동적 운동학(`velocity`, `acceleration`, `angularRates`) 및 `RUNWAY` 대칭 보조 필드를 20Hz로 스트리밍합니다.
 ```lua
 {
     ver = "1.9.5",
@@ -200,18 +215,23 @@ flowchart TD
     time = 1729850020100,
     payload = {
         facilityId = "CARRIER_CVN_01_DECK",
+        facilityType = "RUNWAY",
         targetAircraft = "AIRCRAFT_01",
-        runwayHeading = 120.0,               -- 함선 항진 방위각 또는 경사갑판 각도 (deg)
-        thresholdPoint = {                   -- 현재 시각 t에서의 비행갑판 착함 시단 좌표
+        touchdownPoint = {                   -- 현재 시각 t에서의 비행갑판 착함 시단 좌표
             x = 2100.5,
             y = 18.2,
             z = -3400.1
         },
-        endPoint = {                         -- 비행갑판 종단 좌표
-            x = 2280.2,
-            y = 18.4,
-            z = -3295.8
+        attitude = {                         -- 함선 갑판 3축 자세각 (deg, 구 deckAttitude [DEPRECATED])
+            pitch = 0.8,
+            roll = -1.2,
+            yaw = 120.0
         },
+        approachDirection = "FRONT",         -- "FRONT" | "BACK"
+        deckStatus = "STABLE",               -- "STABLE" | "DANGEROUS"
+        landingPermitted = true,             -- 착함 허용 여부
+        abortAlert = false,                  -- 함장/LSO 강제 Wave-Off 신호
+        -- 동적 시설물 공통 운동학 필드
         velocity = {                         -- 함선 항진 속도 벡터 (m/s) (예: 25 knots ≒ 12.8 m/s)
             vx = 11.1,
             vy = 0.05,                       -- 파도에 의한 갑판 Heave 속도
@@ -222,19 +242,19 @@ flowchart TD
             ay = 0.40,
             az = 0.02
         },
-        deckAttitude = {                     -- 함선 갑판 롤/피치 동역학
-            pitch = 0.8,
-            roll = -1.2,
-            yaw = 120.0
+        angularRates = {                     -- 3축 각속도 (deg/s)
+            pitchRate = 0.2,
+            rollRate = -0.3,
+            yawRate = 0.05
         },
-        arrestingWires = {                   -- 어레스팅 와이어 4선 상태
-            wire1 = "READY",
-            wire2 = "READY",
-            wire3 = "READY",
-            wire4 = "READY"
+        -- RUNWAY 대칭 보조 필드
+        endPoint = {                         -- 비행갑판 종단 좌표
+            x = 2280.2,
+            y = 18.4,
+            z = -3295.8
         },
-        opticalMeatballOffset = 0.0,         -- 광학 착함 유도장치(FLOLS) 편차각
-        abortAlert = false                   -- 함장/LSO 강제 Wave-Off 신호
+        glideSlopeAngle = 3.5,               -- 항모 표준 강하각 (deg)
+        touchdownZoneLength = 80.0           -- 권장 접지 구간 길이 (m)
     }
 }
 ```
@@ -293,7 +313,7 @@ flowchart TD
 
 #### 4. 이륙 허가 패킷 (`MSG_ATC_DEPARTURE_CLEARANCE`, CH 50001, ATC $\rightarrow$ AMM)
 > [!NOTE]
-> 본 패킷은 마스터 ICD(v1.16.0) 및 전역 시설물 표준 규격에 따라 `MSG_ATC_DEPARTURE_CLEARANCE`로 단일화되었습니다.
+> 본 패킷은 Tower ATC(`CH 50001`)가 발행하는 광역/활주로 출발 허가 패킷으로 `MSG_ATC_DEPARTURE_CLEARANCE`로 단일화되었습니다 (GAC 관할 섹터 출항 인가는 `Base_sec+0`의 `MSG_GAC_DEPARTURE_CLEARANCE`로 분리 운영).
 > 구버전 패킷 식별자 `MSG_RUNWAY_TAKEOFF_CLEARANCE`는 `[DEPRECATED]` 상태이며, 코드베이스는 사전 이중 호환(Fallback) 코드를 작성하지 않고 최신 명칭만을 단일 채택합니다. 미갱신 송신 노드로 인한 런타임 통신 오류 발생 시 해당 송신 노드의 코드를 즉시 패치합니다.
 
 ```lua
@@ -354,7 +374,7 @@ sequenceDiagram
     participant R as 활주로 노드 (Runway Node)
     participant L as 조명 인티그레이터 (redstone_integrator_0)
 
-    Note over R: 1Hz 광역 비콘 송출 (CH 50003, status: FREE)
+    Note over G: 1Hz 섹터 집약 비콘 송출 (CH 50003, RWY FREE 반영)
     Note over L: CLEAR_GREEN = ON, HOT_RED = OFF, HOLD_SHORT = OFF
     
     A->>C: MSG_ATC_APPROACH_REQ (CH 50001)<br/>[facilityType: RUNWAY, craft: AIRCRAFT_01]
@@ -369,11 +389,11 @@ sequenceDiagram
     Note over A,R: 전술 채널 (CH 50220) 핸드오버
     alt 동적 비행갑판 (DYNAMIC)
         loop 20Hz 주기 (AMM 궤적 연산 -> Base+4 FCP 추종)
-            R->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50220)<br/>[threshold(t), end(t), vel, accel, deckAttitude]
+            R->>A: MSG_FACILITY_DYNAMIC_GUIDE (CH 50220)<br/>[touchdownPoint(t), endPoint(t), vel, accel, attitude, angularRates, landingPermitted]
         end
     else 고정 활주로 (STATIC)
         loop 1Hz 주기
-            R->>A: MSG_FACILITY_STATIC_GUIDE (CH 50220)<br/>[threshold, end, glideSlope: 3.0°, heading]
+            R->>A: MSG_FACILITY_STATIC_GUIDE (CH 50220)<br/>[touchdownPoint, endPoint, attitude, approachDirection: FRONT, glideSlopeAngle: 3.0°]
         end
     end
 

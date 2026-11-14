@@ -40,30 +40,6 @@ function config_manager.compute_base(n)
     return 10000 + (idx - 1) * 40
 end
 
---- Migrate configs saved with deprecated formulas or channels
-function config_manager.migrate_legacy_base(cfg)
-    if not cfg or type(cfg) ~= "table" then return false end
-    local n = tonumber(cfg.aircraftIndexN)
-    if not n then return false end
-    local base = tonumber(cfg.baseChannel)
-    local legacy1 = 10000 + (n - 1) * 20
-    local legacy2 = 10000 + n * 20
-    local channels = cfg.channels or {}
-    local hasLegacyThrust = base and tonumber(channels.thrustActuation) == base + 6
-    local hasCalibration = channels.calibration ~= nil
-    local hasLegacyBase = base == legacy1 or base == legacy2
-
-    if hasLegacyBase or hasLegacyThrust or hasCalibration then
-        local newBase = config_manager.compute_base(n)
-        if not newBase then return false end
-        cfg.baseChannel = newBase
-        cfg.channels = { thrustActuation = newBase + config_manager.ACTUATION_OFFSET }
-        cfg.mode = nil
-        return true
-    end
-    return false
-end
-
 --- Load and validate TCA configuration from JSON file
 function config_manager.load(path)
     path = path or "config.json"
@@ -82,11 +58,8 @@ function config_manager.load(path)
     -- Defaults & Channel Binding
     cfg.aircraftIndexN = tonumber(cfg.aircraftIndexN) or 1
     cfg.baseChannel = tonumber(cfg.baseChannel) or (config_manager.compute_base(cfg.aircraftIndexN) or 10000)
-    cfg.migratedLegacyBase = config_manager.migrate_legacy_base(cfg) or nil
     cfg.channels = cfg.channels or {}
     cfg.channels.thrustActuation = tonumber(cfg.channels.thrustActuation) or (cfg.baseChannel + config_manager.ACTUATION_OFFSET)
-    cfg.channels.calibration = nil
-    cfg.mode = nil
     cfg.watchdogTimeoutMs = tonumber(cfg.watchdogTimeoutMs) or 300
     cfg.nominalActuatorCount = tonumber(cfg.nominalActuatorCount) or 4
     cfg.deadband = tonumber(cfg.deadband) or 0

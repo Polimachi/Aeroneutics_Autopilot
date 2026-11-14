@@ -13,8 +13,9 @@ function discovery_client.new(craftDomainId)
     return setmetatable(obj, Client)
 end
 
-function Client:build_requests(startSeq)
+function Client:build_requests(startSeq, replyChannel)
     local seq = startSeq or 1
+    local repCh = replyChannel or 104
     local now = (os.epoch and os.epoch("utc")) or (os.time() * 1000)
     local reqAct = {
         ver = "1.9.5",
@@ -22,7 +23,7 @@ function Client:build_requests(startSeq)
         seq = seq,
         type = "MSG_ACTUATOR_DISCOVER_REQ",
         time = now,
-        payload = { targetGroup = "ALL" }
+        payload = { targetGroup = "ALL", replyChannel = repCh }
     }
     local reqSurf = {
         ver = "1.9.5",
@@ -30,7 +31,7 @@ function Client:build_requests(startSeq)
         seq = seq + 1,
         type = "MSG_SURFACE_DISCOVER_REQ",
         time = now,
-        payload = { targetGroup = "ALL" }
+        payload = { targetGroup = "ALL", replyChannel = repCh }
     }
     return { reqAct, reqSurf }
 end

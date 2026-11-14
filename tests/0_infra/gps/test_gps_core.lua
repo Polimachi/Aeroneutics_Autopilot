@@ -554,7 +554,7 @@ describe("gps server handlers, CH 60002 status, nodes.json schema, and monitor_u
         assert_eq(state.nodes[1].x, 10)
         assert_eq(state.nodes[1].z, -20)
         assert_eq(state.activeNodes, 1)
-        assert_eq(state.listenChan, 60001)
+        assert_eq(state.listenChan, 60002)
         assert_eq(state.dataChan, 60002)
     end)
 
@@ -1100,5 +1100,69 @@ describe("gps_client HAL managed retry parity and status query", function()
             assert_true(m.isOpen(protocol.CH_GPS_SERVICE), "channel must remain open if opened before query")
         end)
         m.close(protocol.CH_GPS_SERVICE)
+    end)
+end)
+
+describe("gps server commissioning, diag, watchdog, and actions", function()
+    local server = require("server")
+
+    it("handles HELLO -> OFFER, VERIFY_REQ -> VERIFY_RESP, and REG_COMMIT -> REG_ACK", function()
+        local sent = {}
+        local mockModem = {
+            open = function() end,
+            transmit = function(ch, rch, msg)
+                table.insert(sent, { ch = ch, rch = rch, msg = msg })
+            end
+        }
+        local registry = { nodes = {} }
+        local state = { seq = 1, nodes = {}, activeNodes = 0, listenChan = protocol.CH_GPS_SERVICE }
+        local sched = require("session_scheduler").new({ windowMs = 50, tombstoneTtlMs = 1000 })
+
+        local hello = protocol.buildEnvelope("NODE_TEMP", 1, protocol.MSG_NODE_HELLO, { computerId = 12 }, 1000)
+        server.handleModemMsg(sched, registry, mockModem, state, { "modem_message", "back", protocol.CH_GPS_NODE_IN, protocol.CH_GPS_MGMT, hello, 0 })
+        assert_eq(#sent, 1)
+        assert_eq(sent[1].ch, protocol.CH_GPS_MGMT)
+        assert_eq(sent[1].msg.type, protocol.MSG_NODE_OFFER)
+
+        local offerId = sent[1].msg.payload.nodeId
+        local verReq = protocol.buildEnvelope(offerId, 2, protocol.MSG_NODE_VERIFY_REQ, {
+            nodeId = offerId, pos = { x = 100, y = 80, z = 200 }
+        }, 1010)
+        server.handleModemMsg(sched, registry, mockModem, state, { "modem_message", "back", protocol.CH_GPS_NODE_IN, protocol.CH_GPS_MGMT, verReq, 0 })
+        assert_eq(#sent, 2)
+        assert_eq(sent[2].msg.type, protocol.MSG_NODE_VERIFY_RESP)
+        assert_true(sent[2].msg.payload.passed)
+
+        local commit = protocol.buildEnvelope(offerId, 3, protocol.MSG_NODE_REG_COMMIT, {
+            nodeId = offerId, computerId = 12, pos = { x = 100, y = 80, z = 200 }
+        }, 1020)
+        server.handleModemMsg(sched, registry, mockModem, state, { "modem_message", "back", protocol.CH_GPS_NODE_IN, protocol.CH_GPS_MGMT, commit, 0 })
+        assert_eq(#sent, 3)
+        assert_eq(sent[3].msg.type, protocol.MSG_NODE_REG_ACK)
+        assert_not_nil(registry.nodes[offerId])
+    end)
+
+    it("triggers ACTION_CALIBRATE on CH 60004 and marks STALE/OFFLINE in watchdog", function()
+        local sent = {}
+        local mockModem = {
+            transmit = function(ch, rch, msg) table.insert(sent, { ch = ch, msg = msg }) end
+        }
+        local state = {
+            seq = 1,
+            nodes = { { id = "NODE_01", status = "ONLINE", lastHeartbeatMs = 1000 } },
+            activeNodes = 1
+        }
+        local registry = { nodes = { NODE_01 = { nodeId = "NODE_01", status = "ONLINE", lastHeartbeat = 1000 } } }
+
+        server.handleUiAction("ACTION_CALIBRATE", state, mockModem)
+        assert_eq(#sent, 1)
+        assert_eq(sent[1].ch, protocol.CH_GPS_MGMT)
+        assert_eq(sent[1].msg.type, protocol.MSG_DIAG_TRIGGER)
+
+        server.checkNodeWatchdog(state, registry, 15000)
+        assert_eq(state.nodes[1].status, "STALE")
+        server.checkNodeWatchdog(state, registry, 40000)
+        assert_eq(state.nodes[1].status, "OFFLINE")
+        assert_eq(state.activeNodes, 0)
     end)
 end)

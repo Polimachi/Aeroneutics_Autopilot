@@ -6,26 +6,27 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.11.1` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.12.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.7.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.1)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.12.0` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Implemented` $\to$ `Approved`)**: ① `[I-9]` `MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) Option A 정합화 및 응답 상태 `"READY"`(`"PREPARED"` 제거), ② `[I-4]` `MSG_ACTUATOR_DISCOVER_REQ/ACK` 채널 `Base_hangar+3` (`replyChannel = Base_hangar+3`, `targetGroup`, 구 `targetGroupId [DEPRECATED]`) vs `MSG_CALIB_PULSE` 채널 `Base_hangar+0` 분리 명시 및 `MSG_CALIB_BAY_BIND` 키를 `baseHangarChannel`로 단일화, ③ §7.1 `IS-06.1` 채널 수식을 `10000 + (N - 1) * 40`으로 정정, ④ 연관 문서 버전 배지 동기화 | Q1·Q2 사용자 확정 결정 반영 (`src/1_control/tca/` Wave 2 반영 후 `Implemented` 재승격 예정) |
 | `v1.11.1` | 2026-11-12 | 문서·교차참조·채널 상수 정합성 수정(TCA Lua 런타임 동작 변경 없음): `config.json`(`10010`) 및 `MSG_CHANNEL_REBIND`(`oldBase + 10`, `newBaseChannel + 10`) 채널 오프셋 정정, `AMM -> FCP -> VAS` 재바인딩 캐스케이드 및 `TIMEOUT`/`TOTAL_LOSS` 비상 트리거 귀속 명확화, 구 `Base+6` `[DEPRECATED]` 이력 정정 및 과장 표현 제거, 연관 문서 버전(`ICD v1.28.0` 등) 동기화 | ICD `v1.28.0` 및 FCP-AMM 역할 분리 사양과의 문서 정합성 확보 |
 | `v1.11.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진기(vector_thruster) 구동 지원: setVector(x, y) 짐벌 편향 및 setPower(t) 추력 제어, 워치독/E_STOP 페일세이프 노즐 중립(0, 0) 복귀, discovery_handler 내 isVectorCapable 플래그 및 gimbalLimits 브로드캐스트, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 반영 | 2D 짐벌 벡터 액추에이터 통합 구동 및 안전 규격 수립 |
 | `v1.10.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
@@ -398,9 +399,9 @@ function status_reporter.check_and_send(reporter, currentStatus) -> sentBoolean
   - 부팅 스캔 직후 모든 벡터 노즐을 즉시 중립 $(0, 0)$으로 초기화.
   - 단일 축(피치/요) 짐벌 편향 실패 감지 시 `healthStatus = "API_DEGRADED"` 통보.
 - **수신 바인딩 채널 1 (`Base + 10` (구 `Base + 6` [DEPRECATED]), `CH_THRUST_ACTUATION`)**: VAS 시동 및 암링 시퀀스 탐색 요청 수신
-- **수신 바인딩 채널 2 ($Base_{\text{hangar}}+3$, `CH_CALIBRATION_TAP`)**: Alignment 지상 6-DoF 프로파일링 및 펄스 시험 수신 (교정 모드 시 동적 개방, 구버전 `1001` 및 `Base + 4` [DEPRECATED])
-- **회신 원칙**: 요청이 수신된 채널(또는 `replyChannel`)로 동일하게 응답 패킷을 발송하여 요청 주체와의 세션을 격리 보장합니다.
-- **타겟 필터링**: `payload.targetGroupId == "ALL"` 또는 자선의 `groupId`와 일치할 때만 응답하며, 지상 프로파일러의 `targetThrusterId` 필드 역시 지원합니다.
+- **수신 바인딩 채널 2 ($Base_{\text{hangar}}+3$, `CH_CALIBRATION_TAP`)**: Alignment 지상 액추에이터 탐색 요청(`MSG_ACTUATOR_DISCOVER_REQ/ACK`, `replyChannel = Base_hangar+3`) 수신 (교정 모드 시 동적 개방; 다단 시험 펄스 `MSG_CALIB_PULSE`는 $Base_{\text{hangar}}+0$ 수신; 구버전 `1001` 및 `Base + 4` [DEPRECATED])
+- **회신 원칙**: 요청이 수신된 채널(또는 `replyChannel`, 지상 탐색 시 $Base_{\text{hangar}}+3$)로 동일하게 응답 패킷을 발송하여 요청 주체와의 세션을 격리 보장합니다.
+- **타겟 필터링**: `payload.targetGroup == "ALL"` (구 `targetGroupId [DEPRECATED]`) 또는 자선의 `groupId`와 일치할 때만 응답하며, 지상 프로파일러의 `targetThrusterId` 필드 역시 지원합니다.
 - **신규 헬스 상태 판정 매트릭스 (`healthStatus`)**:
   *(참고: 레거시 코드 `NOMINAL`, `MANUAL_DIRECT`, `DEGRADED_COMPENSATED`, `TOTAL_LOSS` 등은 `[DEPRECATED]` 상태이며, 코드베이스는 신규 표준 상태 코드만 단일 채택)*
   - `REDSTONE` 모드: 정상 직결 시 `"REDSTONE_NOMINAL"`, 300ms 타임아웃 페일세이프 시 `"REDSTONE_TIMEOUT"`
@@ -445,17 +446,17 @@ function config_manager.save(path, cfg) -> boolean, err
 - **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10` (구 `Base + 6` [DEPRECATED]))
 - **전송 조건**: 기체가 정비 격납고에 입고되어 VAS가 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이 바인딩 명령을 중계 전파할 때 수신.
 - **수신 동작**:
-  1. `bayBaseChannel` ($101 \sim 200$)을 파싱하여 $Base_{\text{hangar}} + 0$ (Hangar C2) 및 $Base_{\text{hangar}} + 3$ (Hangar Telemetry / 펄스 시험) 채널을 동적 개방.
-  2. Alignment으로부터 직접 수신되는 `MSG_ACTUATOR_DISCOVER_REQ` 및 `MSG_CALIB_PULSE`에 응답.
+  1. `baseHangarChannel` ($101 \sim 200$, 구 `bayBaseChannel [DEPRECATED]`)을 파싱하여 $Base_{\text{hangar}} + 0$ (Hangar C2 / `MSG_CALIB_PULSE` 펄스 시험) 및 $Base_{\text{hangar}} + 3$ (`MSG_ACTUATOR_DISCOVER_REQ/ACK` 탐색 응답) 채널을 동적 개방.
+  2. Alignment으로부터 $Base_{\text{hangar}} + 3$으로 수신되는 `MSG_ACTUATOR_DISCOVER_REQ`에 `replyChannel = Base_hangar + 3`으로 회신하고, $Base_{\text{hangar}} + 0$으로 수신되는 `MSG_CALIB_PULSE` 시험 펄스에 응답.
   3. 교정 완료 시 해당 격납고 채널을 닫고 비행 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]))로 복귀.
 
-#### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
+#### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
 - **통신 채널**: `CH_THRUST_ACTUATION` (`oldBase + 10`, 구 `oldBase + 6` [DEPRECATED])
 - **전송 조건**: GCS 발령에 따라 AMM $\to$ FCP $\to$ VAS를 거쳐 하달되는 채널 재바인딩 트랜잭션.
-- **2단계 트랜잭션 수신 시퀀스**:
-  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 10`으로 ACK 회신 (구 `oldBase + 6` [DEPRECATED]).
-  2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 10` 채널을 닫고 `newBase + 10`을 (구 oldBase/newBase + 6 [DEPRECATED]) 주 통신 채널로 영속 확정.
-  3. **타임아웃 및 ROLLBACK**: 500ms 이내 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 10`을 파기하고 `oldBase + 10` 유지 (구 oldBase+6 [DEPRECATED]).
+- **2단계 트랜잭션 수신 시퀀스 (`500ms` 타임아웃)**:
+  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 임시로 `newBase + 10` 채널 (구 newBase + 6 [DEPRECATED])을 백그라운드 수신 대기 개방하고 `oldBase + 10`으로 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`{ transactionId, nodeId, action = "PREPARE", status = "READY", oldBaseChannel, newBaseChannel }`) 회신 (구 `oldBase + 6` [DEPRECATED]).
+  2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 10` 채널을 닫고 `newBase + 10`을 (구 oldBase/newBase + 6 [DEPRECATED]) 주 통신 채널로 영속 확정하고 `status = "COMMITTED"` 회신.
+  3. **타임아웃 및 ROLLBACK**: 500ms 이내 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 10`을 파기하고 `oldBase + 10` 유지하며 `status = "ROLLED_BACK"`(실패 시 `"FAILED"`) 회신 (구 oldBase+6 [DEPRECATED]).
 
 ---
 
@@ -540,14 +541,14 @@ local function run_daemon()
                     elseif pkt.type == "MSG_ACTUATOR_DISCOVER_REQ" then
                         discovery_handler.handle_request(modem, channel, replyChannel, pkt, cfg, adapterState)
                     elseif pkt.type == "MSG_CALIB_BAY_BIND" then
-                        local bayBase = pkt.payload.bayBaseChannel
+                        local bayBase = pkt.payload.baseHangarChannel
                         state.hangarBayChannel = bayBase + 3
                         modem.open(bayBase + 0)
                         modem.open(bayBase + 3)
                     elseif pkt.type == "MSG_CHANNEL_REBIND" then
                         if pkt.payload.action == "PREPARE" then
                             modem.open(pkt.payload.newBaseChannel + 10)
-                            packet_protocol.send_rebind_ack(modem, replyChannel, cfg, "PREPARED")
+                            packet_protocol.send_rebind_ack(modem, replyChannel, cfg, "READY", pkt.payload)
                         elseif pkt.payload.action == "COMMIT" then
                             modem.close(cfg.channels.thrustActuation)
                             cfg.channels.thrustActuation = pkt.payload.newBaseChannel + 10
@@ -608,7 +609,7 @@ end
 | **IS-03.1 ~ 03.2** | TS-03 | 하드웨어 워치독 및 안전 차단 타이머 기초 | `watchdog_sentinel.lua` / `test_watchdog_sentinel.lua` | **PASS** |
 | **IS-04.1 ~ 04.3** | TS-04 | 설정 매니저 및 그룹 할당 체계 | `config_manager.lua`, `group_allocator.lua` | **PASS** |
 | **IS-05.1 ~ 05.2** | TS-05 | 온-체인지 상태 리포터 엔진 | `status_reporter.lua` / `test_status_reporter.lua` | **PASS** |
-| **IS-06.1** | TS-06 | JSON 설정 로더 (`config.json`) 및 $Base = 10000 + N \cdot 20$ 검증 | `config_manager.lua` / `test_config_manager.lua` | **PASS** |
+| **IS-06.1** | TS-06 | JSON 설정 로더 (`config.json`) 및 $Base = 10000 + (N - 1) \cdot 40$ 검증 | `config_manager.lua` / `test_config_manager.lua` | **PASS** |
 | **IS-06.2** | TS-06 | Raw Modem 기반 최신 ICD v1.9.5 엔벨로프 인코더/검증기 | `packet_protocol.lua` / `test_packet_protocol.lua` | **PASS** |
 | **IS-06.3** | TS-06 | 300ms 고정밀 워치독 및 지상 교정 펄스 타이머 컷오프 | `watchdog_sentinel.lua` / `test_watchdog_sentinel.lua` | **PASS** |
 | **IS-06.4** | TS-06 | 온-체인지 `MSG_ACTUATOR_STATUS` 필터 및 `Base+10` (구 `Base+6` [DEPRECATED]) 발신 엔진 | `status_reporter.lua` / `test_status_reporter.lua` | **PASS** |
@@ -669,4 +670,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.29.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.19.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.0.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.7.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.6.1), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.2) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.14.0)와 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.30.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.1), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.20.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.1.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.7.0), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.15.0)와 정합성을 유지합니다.*

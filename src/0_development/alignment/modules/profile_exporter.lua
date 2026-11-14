@@ -34,6 +34,27 @@ function profile_exporter.serialize_profile(profile_data)
     return serialize_json_val(profile_data)
 end
 
+function profile_exporter.save_local(profile_data, base_dir, fs_api)
+    local fsObj = fs_api or _G.fs
+    if not fsObj or not fsObj.open then
+        return false, "FS_UNAVAILABLE"
+    end
+    local p = profile_data or {}
+    local pid = tostring(p.profileId or ("PROF-" .. tostring(p.domainId or "AIRCRAFT_01")))
+    local dir = (base_dir and base_dir ~= "") and (base_dir:gsub("/+$", "") .. "/profiles") or "profiles"
+    if fsObj.makeDir and not fsObj.exists(dir) then
+        pcall(fsObj.makeDir, dir)
+    end
+    local path = dir .. "/" .. pid .. ".json"
+    local h = fsObj.open(path, "w")
+    if not h then
+        return false, "OPEN_FAILED: " .. path
+    end
+    h.write(profile_exporter.serialize_profile(p))
+    h.close()
+    return true, path
+end
+
 function profile_exporter.build_sync_packet(domain_id, seq, profile_data)
     return {
         ver = "1.9.5",

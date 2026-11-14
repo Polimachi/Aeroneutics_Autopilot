@@ -14,6 +14,8 @@ function state_machine.init(systemConfig, isCalibrated)
         transitionReason = "INIT",
         lastFcpCmdMs = now,
         lastFcpCmd = nil,
+        lastAcroCmdMs = 0,
+        lastAcroCmd = nil,
         calibStartMs = 0,
         hoverBaseThrottle = cfg.hoverBaseThrottle or 9.525,
         emergencyVyIntegrator = 0.0,
@@ -22,8 +24,9 @@ function state_machine.init(systemConfig, isCalibrated)
         isAirborne = false,
         activeSource = "FCP",
         sensorLossTicks = 0,
-        sensorLossDebounceTicks = timeouts.sensorLossDebounceTicks or 1,
+        sensorLossDebounceTicks = timeouts.sensorLossDebounceTicks or 15,
         fcpTimeoutMs = timeouts.fcpCommandTimeoutMs or 1500,
+        acroTimeoutMs = timeouts.acroTimeoutMs or 250,
         calibTimeoutSec = timeouts.calibrationTimeoutSec or 120
     }
     fsm.transition_to = function(self, nextState, reason)
@@ -67,8 +70,7 @@ end
 
 function state_machine.arbitrate_c2(state, cmd)
     if not cmd then return nil end
-    local action = cmd.emergencyAction or (cmd.eStop and "E_STOP") or (cmd.action == "E_STOP" and "E_STOP")
-    if action == "E_STOP" then
+    if cmd.action == "E_STOP" then
         if cmd.authKey == "ESTOP_CONFIRM_KEY" then
             state.activeSource = "EMERGENCY_DIRECT"
             state_machine.transition_to(state, "E_STOP", "EMERGENCY_OVERRIDE_E_STOP")
@@ -76,12 +78,30 @@ function state_machine.arbitrate_c2(state, cmd)
         end
         return nil, "ERR_ESTOP_UNAUTHORIZED"
     end
-    if cmd.acroActive == true or ((cmd.source == "PILOT_MFD" or cmd.source == "MFD_ACRO" or cmd.source == "MFD_DIRECT" or cmd.commandType == "RATE_COMMAND") and cmd.acroActive ~= false) then
+    local isAcroSource = (cmd.source == "MFD_ACRO" or cmd.source == "MFD_DIRECT" or cmd.commandType == "RATE_COMMAND")
+    if cmd.acroActive == true or (isAcroSource and cmd.acroActive ~= false) then
         state.activeSource = "MFD_ACRO"
+        state.lastAcroCmdMs = (os.epoch and os.epoch("utc")) or 0
+        state.lastAcroCmd = cmd
         return cmd
+    end
+    if cmd.acroActive == false then
+        state.activeSource = "FCP"
+        state.lastAcroCmd = nil
+        return cmd
+    end
+    if state.activeSource == "MFD_ACRO" then
+        return nil, "ERR_PREEMPTED_BY_MFD_ACRO"
     end
     state.activeSource = "FCP"
     return cmd
+end
+
+function state_machine.on_actuators_ready(state)
+    if state.currentState == "ARMING" then
+        return state_machine.transition_to(state, "IDLE_ARMED", "ACTUATOR_READY")
+    end
+    return false
 end
 
 function state_machine.handle_arm_command(state, cmd)
@@ -104,18 +124,24 @@ function state_machine.handle_arm_command(state, cmd)
     end
 end
 
-function state_machine.update_watchdogs(state, nowMs, comState, _healthMap, sensorOk)
+function state_machine.update_watchdogs(state, nowMs, comState, _healthMap, sensorOk, actuatorsReady)
     local now = nowMs or ((os.epoch and os.epoch("utc")) or 0)
     if comState and comState.dynamics and comState.dynamics.altitudeY then
         state.isAirborne = (comState.dynamics.altitudeY > 2.0)
     end
+    if state.activeSource == "MFD_ACRO" and (now - (state.lastAcroCmdMs or 0)) > (state.acroTimeoutMs or 250) then
+        state.activeSource = "FCP"
+        state.lastAcroCmd = nil
+    end
     local curr = state.currentState
-    if curr == "NORMAL" then
+    if curr == "ARMING" and actuatorsReady == true then
+        state_machine.transition_to(state, "IDLE_ARMED", "ACTUATOR_READY")
+    elseif curr == "NORMAL" then
         if (now - state.lastFcpCmdMs) > state.fcpTimeoutMs then
             state_machine.transition_to(state, "FAILSAFE_HOLD", "FCP_CMD_TIMEOUT_1500MS")
         elseif not sensorOk then
             state.sensorLossTicks = (state.sensorLossTicks or 0) + 1
-            if state.sensorLossTicks >= (state.sensorLossDebounceTicks or 1) then
+            if state.sensorLossTicks >= (state.sensorLossDebounceTicks or 15) then
                 state_machine.transition_to(state, "FAILSAFE_HOLD", "SENSOR_HEALTH_DROPPED")
             end
         else
@@ -138,10 +164,12 @@ end
 
 function state_machine.get_effective_command(state, comState)
     local vy = (comState and comState.dynamics and comState.dynamics.verticalSpeed) or 0.0
-    local yaw = (comState and comState.attitude and (comState.attitude.yaw or comState.attitude.heading)) or 0.0
+    local yaw = (comState and comState.attitude and comState.attitude.yaw) or 0.0
     local curr = state.currentState
 
-    if curr == "NORMAL" and state.lastFcpCmd then
+    if curr == "NORMAL" and state.activeSource == "MFD_ACRO" and state.lastAcroCmd then
+        return state.lastAcroCmd
+    elseif curr == "NORMAL" and state.lastFcpCmd then
         return state.lastFcpCmd
     elseif curr == "FAILSAFE_HOLD" then
         local coll = state_machine.compute_emergency_collective(state, 0.0, vy)

@@ -6,26 +6,27 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.7.0` |
-| **최종 수정일 (Date)** | `2026-11-12` |
+| **문서 버전 (Version)** | `v1.8.0` |
+| **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/1_control/asa/` |
 | **주관 도메인 (Domain)** | 공력 조종면 및 날개 구동기 분산 클러스터 (ASA / Node 06-xx) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.29.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.14.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.0.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.19.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.11.1)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.6.1)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.2)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.12.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.8.0` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Approved` 유지)**: ① `[I-10]` `MSG_AERO_STATUS` 내 `mode`를 `interactionMode = "API" \| "REDSTONE"`(`mode [DEPRECATED]`)로 단일화하고 `healthStatus = "NOMINAL" \| "DEGRADED" \| "TOTAL_LOSS"` 명시, ② `[I-4]` `MSG_CALIB_BAY_BIND` 키를 `baseHangarChannel`(`bayBaseChannel [DEPRECATED]`)로 통일, ③ `[I-9]` `MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) 및 응답 상태 `"READY"`(`"PREPARED"` 제거) Option A 정합화, ④ 연관 문서 버전 배지 동기화 | Q1·Q2·Q4 사용자 확정 결정 반영 및 제어 버스 Zero-Fallback 규격 통일 |
 | `v1.7.0` | 2026-11-12 | FCP-AMM 역할 분리(ICD v1.28.0) 및 채널/스키마 정합화: FCP 순수 `SE(3)` 외루프 `QUATERNION_RATE` + 선택적 `flapTarget`(`Base+1` $\to$ `VAS`) 및 `AMM` 궤적/C2 역할 반영, `Base+2` `FCP`/`AMM` 수신 명시, `top` 모뎀 `VAS (Node 01)` 및 `Alignment` 전용 포트 정정, `config.json` `surfaceActuation`(`10011`) 및 `MSG_CHANNEL_REBIND`(`bandwidth = 40`, `oldBase + 11`, `newBaseChannel + 11`) 결함 수정, `MSG_AERO_CMD` 스키마(`controlState`, `dynamicPressureFactor`) ICD 정합화, 구 `Base+7` `[DEPRECATED]` 이력 정정 및 과장 표현 제거 | AMM-FCP-VAS 계층 분리 동기화 및 `Base+11` 채널·패킷 결함 해소 |
 | `v1.6.0` | 2026-11-08 | 포드 ID(podId) ASA_L/R/T 완전 단일화, 구 명칭(구버전 명칭) 잔재 전면 척결 | 포드 명칭 표준화 및 잔재 제거 |
 | `v1.5.0` | 2026-11-08 | 비동기 진단 TUI(`config.json` 내 `debug: true` 기본값, CC `parallel.waitForAny` 기반 이벤트 루프 + 진단 뷰 분리) 및 `debug: false` 헤드리스 직결 모드 명세 반영, baseChannel 수식 정합화 | 제어 지연 방지 및 헤드리스 런타임 호환성 확보 |
@@ -290,11 +291,11 @@ end
         podId = "ASA_L",
         surfaceId = "AIL_L",
         boundSide = "left",
-        mode = "API",
-        appliedDeflection = -1.0, -- 실제 인가된 정규화 타각
+        interactionMode = "API",   -- "API" | "REDSTONE" (구 mode [DEPRECATED])
+        appliedDeflection = -1.0,  -- 실제 인가된 정규화 타각
         isSaturated = true,        -- 최대 타각 포화 여부
         isJammed = false,          -- 기계적 고착/단선 여부
-        healthStatus = "NOMINAL"   -- NOMINAL, DEGRADED, TOTAL_LOSS
+        healthStatus = "NOMINAL"   -- "NOMINAL" | "DEGRADED" | "TOTAL_LOSS"
     }
 }
 ```
@@ -316,8 +317,8 @@ end
         podId = "ASA_L",
         managedSurfaces = {"AIL_L", "FLAP_L"},
         boundPorts = {
-            ["AIL_L"] = { side = "left", mode = "API" },
-            ["FLAP_L"] = { side = "right", mode = "API" }
+            ["AIL_L"] = { side = "left", interactionMode = "API" },
+            ["FLAP_L"] = { side = "right", interactionMode = "API" }
         },
         healthStatus = "NOMINAL"
     }
@@ -341,20 +342,21 @@ end
     type = "MSG_CALIB_BAY_BIND",
     time = 1729860000000,
     payload = {
+        action = "OPEN",                 -- "OPEN" | "CLOSE"
         stationId = "HANGAR_BAY_01",
-        bayBaseChannel = 101, -- Base_hangar (101~200 블록)
+        baseHangarChannel = 101, -- Base_hangar (101~200 블록, 구 bayBaseChannel [DEPRECATED])
         testPass = "AERO_ASSISTED_PASS"
     }
 }
 ```
 
-### 4.5 계층적 동적 채널 재바인딩 핸들러 (`MSG_CHANNEL_REBIND`, Core $\rightarrow$ ASA, oldBase + 11, 구 oldBase + 7 [DEPRECATED])
+### 4.5 계층적 동적 채널 재바인딩 핸들러 (`MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK`, Core $\rightarrow$ ASA, oldBase + 11, 구 oldBase + 7 [DEPRECATED])
 - **통신 채널**: `CH_SURFACE_ACTUATION` (`oldBase + 11`, 구 `oldBase + 7` [DEPRECATED])
 - **전송 조건**: GCS가 AMM에 기체 Base 채널 재할당을 발령하고, AMM이 FCP $\to$ VAS를 거쳐 하위 액추에이터 버스로 중계 전파할 때 수신.
-- **2단계 트랜잭션 수신 시퀀스**:
-  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 `newBase + 11` 채널 (구 newBase + 7 [DEPRECATED])을 백그라운드 수신 상태로 대기 개방하고 `oldBase + 11`로 ACK 회신 (구 `oldBase + 7` [DEPRECATED]).
-  2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 11` 채널을 닫고 `newBase + 11`을 주 통신 소켓으로 공식 확정.
-  3. **타임아웃 및 ROLLBACK**: 500ms 이내에 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 11`을 즉시 파기하고 `oldBase + 11`을 유지 (구 oldBase+7 [DEPRECATED]).
+- **2단계 트랜잭션 수신 시퀀스 (`500ms` 타임아웃)**:
+  1. **Phase 1 (PREPARE)**: `action = "PREPARE"`, `newBaseChannel` 수신 시 `newBase + 11` 채널 (구 newBase + 7 [DEPRECATED])을 백그라운드 수신 상태로 대기 개방하고 `oldBase + 11`로 `MSG_CHANNEL_REBIND_ACK` (`구 MSG_REBIND_ACK [DEPRECATED]`, `{ transactionId, nodeId, action = "PREPARE", status = "READY", oldBaseChannel, newBaseChannel }`) 회신 (구 `oldBase + 7` [DEPRECATED]).
+  2. **Phase 2 (COMMIT)**: `action = "COMMIT"` 수신 즉시 기존 `oldBase + 11` 채널을 닫고 `newBase + 11`을 주 통신 소켓으로 공식 확정하고 `status = "COMMITTED"` 회신.
+  3. **타임아웃 및 ROLLBACK**: 500ms 이내에 `COMMIT` 미수신 또는 `action = "ROLLBACK"` 수신 시 임시 개방한 `newBase + 11`을 즉시 파기하고 `oldBase + 11`을 유지하며 `status = "ROLLED_BACK"`(실패 시 `"FAILED"`) 회신 (구 oldBase+7 [DEPRECATED]).
 
 ```lua
 -- ASA가 Core로부터 수신하는 채널 재바인딩 지령
@@ -483,17 +485,17 @@ function asa_main()
 
                         elseif pkt.type == "MSG_CALIB_BAY_BIND" then
                             -- Alignment 격납고 동적 베이 바인딩
-                            local bayBase = pkt.payload.bayBaseChannel
+                            local bayBase = pkt.payload.baseHangarChannel
                             state.hangarBayChannel = bayBase + 0
                             modem.open(bayBase + 0)
                             modem.open(bayBase + 3)
 
                         elseif pkt.type == "MSG_CHANNEL_REBIND" then
-                            -- 2단계 Base 채널 재바인딩 트랜잭션
+                            -- 2단계 Base 채널 재바인딩 트랜잭션 (MSG_CHANNEL_REBIND_ACK)
                             if pkt.payload.action == "PREPARE" then
                                 local tempCh = pkt.payload.newBaseChannel + 11
                                 modem.open(tempCh)
-                                packet_protocol.send_rebind_ack(modem, replyChannel, config, "PREPARED")
+                                packet_protocol.send_rebind_ack(modem, replyChannel, config, "READY", pkt.payload)
                             elseif pkt.payload.action == "COMMIT" then
                                 modem.close(config.channels.surfaceActuation)
                                 config.channels.surfaceActuation = pkt.payload.newBaseChannel + 11
@@ -540,12 +542,12 @@ end
 
 ## 7. 교차 참조 및 버전 메타데이터
 
-- 본 규격서 시맨틱 버전: **v1.7.0**
-- 연계 상위 마스터 ICD: **v1.29.0**
-- 연계 AMM 규격서: **v2.0.0**
-- 연계 FCP 비행 제어 규격서: **v2.0.0**
-- 연계 VAS 규격서: **v1.19.0**
-- 연계 전체 구조도: **v2.14.0**
-- 연계 TCA 규격서: **v1.11.1**
-- 연계 Alignment 규격서: **v2.6.1**
-- 연계 GPS 체계 규격서: **v2.3.2**
+- 본 규격서 시맨틱 버전: **v1.8.0**
+- 연계 상위 마스터 ICD: **v1.30.0**
+- 연계 AMM 규격서: **v2.0.1**
+- 연계 FCP 비행 제어 규격서: **v2.1.0**
+- 연계 VAS 규격서: **v1.20.0**
+- 연계 전체 구조도: **v2.15.0**
+- 연계 TCA 규격서: **v1.12.0**
+- 연계 Alignment 규격서: **v2.7.0**
+- 연계 GPS 체계 규격서: **v2.3.3**

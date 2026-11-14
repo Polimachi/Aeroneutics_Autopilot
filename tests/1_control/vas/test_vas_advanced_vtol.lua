@@ -162,7 +162,7 @@ describe("vas advanced_vtol allocation & policy", function()
                 vectorGroupOrder = { "THR_VEC_1", "THR_VEC_2", "THR_VEC_3", "THR_VEC_4" },
                 isStaticFallback = false
             },
-            surfaces = { surfaceMix = { AIL_L = { pitch = 1.0 } } },
+            surfaces = { surfaceGeometry = { AIL_L = { axis = "pitch", sign = 1.0 } } },
             sensors = { roles = { altitude = { preferredSide = "bottom", peripheralType = "altitude_sensor" } } },
             pid = {}
         })

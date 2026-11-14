@@ -105,7 +105,15 @@ function tca_daemon.handle_hardware_change(inst)
     actuator_adapter.scan_api_peripherals(inst.adapterState)
     local act, tot, mode = discovery_handler.resolve_counts(inst.cfg, inst.adapterState)
     if not inst.sentinel.isExpired and (inst.adapterState.lastSignal or 0) > 0 then
-        actuator_adapter.apply_thrust(inst.adapterState, inst.adapterState.lastSignal, act, tot)
+        local sigArg = inst.adapterState.lastSignal
+        if inst.adapterState.isVectorCapable and inst.adapterState.lastGimbal then
+            sigArg = {
+                thrust = inst.adapterState.lastSignal,
+                gimbalX = inst.adapterState.lastGimbal.x,
+                gimbalY = inst.adapterState.lastGimbal.y
+            }
+        end
+        actuator_adapter.apply_thrust(inst.adapterState, sigArg, act, tot)
     end
     local hStat = discovery_handler.compute_health_status(mode, act, tot, inst.sentinel.isExpired)
     inst.reporter:check_and_send({
@@ -193,10 +201,13 @@ function tca_daemon.step_event(inst, ev, p1, p2, p3, p4)
     if ev == "modem_message" then
         local bay, pulse = inst.adapterState and inst.adapterState.hangarBayChannel, inst.adapterState and inst.adapterState.hangarPulseChannel
         local act = inst.cfg and inst.cfg.channels and inst.cfg.channels.thrustActuation
-        if p2 == act or p2 == bay or p2 == pulse then
+        local prepCh = inst.adapterState and inst.adapterState.preparedRebind and (inst.adapterState.preparedRebind.newBaseChannel + channel_rebind_handler.ACTUATION_OFFSET)
+        if p2 == act or p2 == bay or p2 == pulse or (prepCh and p2 == prepCh) then
             inst:dispatch_modem_message(p2, p3, p4)
         end
-    elseif ev == "timer" then inst.sentinel:handle_timer(p1)
+    elseif ev == "timer" then
+        inst.sentinel:handle_timer(p1)
+        channel_rebind_handler.handle_timer(inst.modem, inst.cfg, inst.adapterState, p1)
     elseif ev == "peripheral" or ev == "peripheral_detach" then inst:handle_hardware_change()
     elseif ev == "terminate" then
         actuator_adapter.cut_thrust(inst.adapterState)

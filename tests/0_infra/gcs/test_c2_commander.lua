@@ -48,6 +48,7 @@ describe("GCS C2 commander and emergency generator", function()
         assert_not_nil(estop)
         assert_eq(estop.source, "GCS")
         assert_eq(estop.action, "E_STOP")
+        assert_eq(estop.authKey, "ESTOP_CONFIRM_KEY")
         assert_eq(estop.targetCraft, "AIRCRAFT_01")
         assert_eq(estop.reason, "MANUAL_ABORT")
 

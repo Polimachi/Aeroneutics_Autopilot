@@ -137,4 +137,17 @@ describe("GAC 3-tab TUI view and operator controls", function()
         assert_eq(payload.dedicatedCraftIds[2], "V2")
         assert_eq(payload.dedicatedAirframeTypes[1], "DRONE")
     end)
+
+    it("handles Enter and S hotkeys in Tab 2", function()
+        local tui = tui_view.create(mockTerm)
+        tui.activeTab = 2
+        tui.selectedFacilityIndex = 1
+
+        local actEnter, idxEnter = tui:handle_key(keys.enter, nil, {})
+        assert_eq(actEnter, "SELECT_FACILITY")
+        assert_eq(idxEnter, 1)
+
+        local actSave = tui:handle_key(keys.s, "s", {})
+        assert_eq(actSave, "SAVE_CONFIG")
+    end)
 end)

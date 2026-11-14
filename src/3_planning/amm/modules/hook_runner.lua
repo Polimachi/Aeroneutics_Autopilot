@@ -185,6 +185,29 @@ local function start_redstone_action(self, cp, now_ms)
     return true, nil
 end
 
+local function start_roi_action(self, cp)
+    local p = cp.params or {}
+    local sel = (p.channelOffset ~= nil) and p.channelOffset or p.targetChannel
+    if sel == nil then
+        return true, nil
+    end
+    if not self.net then return false, "NET_UNAVAILABLE" end
+    local cmd = (cp.action == "ACT_PAY_SET_ROI") and "SET_ROI" or "CLEAR_ROI"
+    local body = (cp.action == "ACT_PAY_SET_ROI") and { poiPos = p.poiPos } or {}
+    local wait_ack = (p.waitForAck == true)
+    local ok, ch_or_err = self.net:send_payload_req(sel, cp.checkpointId, cmd, body, { keepOpen = wait_ack })
+    if not ok then return false, ch_or_err end
+    if wait_ack then
+        self.pendingPayload = {
+            channel = ch_or_err,
+            checkpointId = cp.checkpointId,
+            command = cmd,
+            expectedStatus = p.expectedStatus or "OK",
+        }
+    end
+    return true, nil
+end
+
 function hook_runner:start_action(checkpoint, now_ms)
     if type(checkpoint) ~= "table" or type(checkpoint.action) ~= "string" then
         return false, "INVALID_CHECKPOINT"
@@ -199,6 +222,8 @@ function hook_runner:start_action(checkpoint, now_ms)
         return start_payload_action(self, checkpoint)
     elseif checkpoint.action == "ACT_PAY_REDSTONE" then
         return start_redstone_action(self, checkpoint, now_ms)
+    elseif checkpoint.action == "ACT_PAY_SET_ROI" or checkpoint.action == "ACT_PAY_CLEAR_ROI" then
+        return start_roi_action(self, checkpoint)
     end
     return true, nil
 end

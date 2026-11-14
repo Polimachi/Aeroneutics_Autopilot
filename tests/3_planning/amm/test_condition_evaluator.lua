@@ -172,4 +172,46 @@ describe("AMM 12-Type Condition Evaluator and Default Resolver", function()
         )
         assert_true(#str > 0 and #str <= 25)
     end)
+
+    it("resolves all 36 active ACT_* defaults, evaluates SYS_ARMED/IMMEDIATE, and tracks 360*turns for ACT_PAT_LOITER_TURNS", function()
+        local action_registry = require("action_registry")
+        for act_id in pairs(action_registry.ACTIVE_LIFECYCLES) do
+            local grp, err = condition_evaluator.resolve_default_complete({ action = act_id, params = {} }, { acceptanceRadius = 15 })
+            assert_nil(err, act_id .. " should resolve cleanly")
+            assert_not_nil(grp, act_id .. " should return default group")
+        end
+
+        assert_true(condition_evaluator.evaluate_condition({ type = "IMMEDIATE" }, {}))
+        assert_false(condition_evaluator.evaluate_condition({ type = "SYS_ARMED" }, { mfd = { controlState = "DISARMED", fsmState = "DISARMED" } }))
+        assert_true(condition_evaluator.evaluate_condition({ type = "SYS_ARMED" }, { mfd = { controlState = "IDLE_ARMED" } }))
+
+        local set_home = condition_evaluator.resolve_default_complete({ action = "ACT_SYS_SET_HOME", params = {} })
+        assert_eq(set_home.conditions[1].type, "IMMEDIATE")
+
+        local trans = condition_evaluator.resolve_default_complete({ action = "ACT_TKL_TRANS_MC2FW", params = {} })
+        assert_eq(trans.conditions[1].type, "DURATION_SEC")
+        assert_eq(trans.conditions[1].durationSec, 0.5)
+
+        local roi_imm = condition_evaluator.resolve_default_complete({ action = "ACT_PAY_SET_ROI", params = { poiPos = { x = 1, y = 2, z = 3 } } })
+        assert_eq(roi_imm.conditions[1].type, "IMMEDIATE")
+
+        -- ACT_PAT_LOITER_TURNS: 1 full turn = 360 deg around center (0, 0)
+        local orb_cp = {
+            checkpointId = "CP_ORB",
+            action = "ACT_PAT_LOITER_TURNS",
+            params = { targetPos = { x = 0, z = 0 }, turns = 1 },
+        }
+        local angles = { 0, 90, 180, 270, 360 }
+        for i, deg in ipairs(angles) do
+            local rad = math.rad(deg)
+            local ev = condition_evaluator.evaluate_checkpoint(orb_cp, {
+                mfd = { navigation = { currentPos = { x = 20 * math.cos(rad), z = 20 * math.sin(rad) } } },
+            })
+            if i < #angles then
+                assert_false(ev.completed)
+            else
+                assert_true(ev.completed)
+            end
+        end
+    end)
 end)

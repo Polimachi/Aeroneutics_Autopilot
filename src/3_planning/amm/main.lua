@@ -98,7 +98,7 @@ local function try_auto_start_mission(engine, auto_spec, now_ms, cfg, arbiter, m
     local t_ms = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
     local ok, err, detail
     if type(auto_spec) == "table" then
-        local vok, verr, vdetail = mission_engine.validate_mission_table(auto_spec)
+        local vok, verr, vdetail = mission_engine.validate_mission_table(auto_spec, cfg)
         if not vok then
             if arbiter then arbiter.lastBanner = "BOOT FAIL: " .. tostring(vdetail or verr) end
             return false, verr, vdetail
@@ -157,7 +157,7 @@ local function handle_file_transfer(app, transferred, now_ms)
         if app.arbiter then app.arbiter.lastBanner = "DROP FAIL: MALFORMED_JSON" end
         return false, "MALFORMED_JSON"
     end
-    local vok, verr, vdetail = mission_engine.validate_mission_table(parsed)
+    local vok, verr, vdetail = mission_engine.validate_mission_table(parsed, app.config)
     if not vok then
         local d = vdetail or verr
         if app.arbiter then app.arbiter.lastBanner = "DROP FAIL: " .. tostring(d) end
@@ -362,6 +362,26 @@ local function handle_cli_save(app, a, _now_ms)
     app.arbiter.lastBanner = ok and ("SAVED: " .. a[1]) or ("SAVE FAIL: " .. tostring(err))
 end
 
+local function sync_queue_to_engine(app, now_ms, reload_cps)
+    if not app.engine or not app.queue then return end
+    app.engine.defaults.targetAlt = app.queue.defaultAlt
+    app.engine.defaults.cruiseSpeed = app.queue.defaultSpeed
+    app.engine.defaults.acceptanceRadius = app.queue.arrivalRadius
+    if not reload_cps then return end
+    if app.engine.missionId == "MANUAL_QUEUE" or app.engine:count() == 0 then
+        local was_running = (app.engine.state == "EN_ROUTE")
+        if app.queue:count() > 0 then
+            app.engine:load_table(queue_to_mission_table(app.queue))
+            if was_running then app.engine:start("SINGLE", now_ms) end
+        else
+            app.engine:stop(now_ms)
+            app.engine.checkpoints = {}
+            app.engine.state = "IDLE"
+            app.engine.active_index = 1
+        end
+    end
+end
+
 local CLI_HANDLERS = {
     run = handle_cli_run,
     load = handle_cli_load,
@@ -369,12 +389,14 @@ local CLI_HANDLERS = {
     stop = handle_cli_stop,
     next = handle_cli_next,
     mission = handle_cli_mission,
-    add = function(app, a, _now_ms)
+    add = function(app, a, now_ms)
         app.queue:add(a[1], a[2], a[3], a[4], a[5])
+        sync_queue_to_engine(app, now_ms, true)
         app.arbiter.lastBanner = "WP ADDED"
     end,
-    del = function(app, a, _now_ms)
+    del = function(app, a, now_ms)
         app.queue:del(a[1])
+        sync_queue_to_engine(app, now_ms, true)
         app.arbiter.lastBanner = "WP DELETED"
     end,
     clear = function(app, _a, now_ms)
@@ -411,21 +433,24 @@ local CLI_HANDLERS = {
         end
     end,
     save = handle_cli_save,
-    alt = function(app, a, _now_ms)
+    alt = function(app, a, now_ms)
         if a[1] then
             app.queue.defaultAlt = tonumber(a[1]) or app.queue.defaultAlt
+            sync_queue_to_engine(app, now_ms, false)
             app.arbiter.lastBanner = "ALT SET: " .. tostring(app.queue.defaultAlt)
         end
     end,
-    spd = function(app, a, _now_ms)
+    spd = function(app, a, now_ms)
         if a[1] then
             app.queue.defaultSpeed = tonumber(a[1]) or app.queue.defaultSpeed
+            sync_queue_to_engine(app, now_ms, false)
             app.arbiter.lastBanner = "SPD SET: " .. tostring(app.queue.defaultSpeed)
         end
     end,
-    rad = function(app, a, _now_ms)
+    rad = function(app, a, now_ms)
         if a[1] then
             app.queue.arrivalRadius = tonumber(a[1]) or app.queue.arrivalRadius
+            sync_queue_to_engine(app, now_ms, false)
             app.arbiter.lastBanner = "RAD SET: " .. tostring(app.queue.arrivalRadius)
         end
     end,
@@ -491,6 +516,65 @@ local function handle_timer_event(app, timer_id, now_ms)
     render_ui_frame(app, now_ms)
 end
 
+local function open_fac_channels(app)
+    if not app.fac or not app.net or not app.net.open_infra_channel then return end
+    if app.fac.gacChannel then app.net:open_infra_channel(app.fac.gacChannel) end
+    if app.fac.padChannel then app.net:open_infra_channel(app.fac.padChannel) end
+end
+
+local function handle_sentinel_rx(app, chan, pkt, base, now_ms)
+    if not app.sentinel then return false end
+    if chan == base + 0 and pkt.type == "MSG_CHANNEL_PROBE" then
+        local ack = channel_sentinel.handle_incoming_probe(app.sentinel, pkt)
+        local m = app.net and (app.net.onboardModem or app.net.modem)
+        if ack and m then
+            local env = app.net:encode_envelope(ack.type, ack.payload)
+            pcall(function() m.transmit(base + 0, base + 0, env) end)
+        end
+        return true
+    elseif pkt.type == "MSG_CHANNEL_PROBE_ACK" and (chan == base + 0 or chan == 50000 or chan == app.sentinel.candidateBase) then
+        channel_sentinel.on_probe_ack(app.sentinel, pkt)
+        return true
+    elseif chan == 50000 and pkt.type == "MSG_BLOCK_ASSIGN" then
+        channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
+        return true
+    end
+    return false
+end
+
+local function handle_facility_rx(app, chan, pkt, now_ms)
+    if not app.fac then return false end
+    local pos = app.nav and app.nav.pos
+    if chan == 50001 then
+        if pkt.type == "MSG_ATC_APPROACH_CLEARANCE" or pkt.type == "MSG_ATC_SECTOR_HANDOFF" then
+            facility_client.on_atc_clearance(app.fac, pkt, pos, now_ms)
+            open_fac_channels(app)
+        elseif pkt.type == "MSG_FACILITY_BEACON" then
+            facility_client.update_beacons(app.fac, pkt.payload, now_ms)
+        end
+        return true
+    elseif chan == 50003 and pkt.type == "MSG_FACILITY_BEACON" then
+        facility_client.update_beacons(app.fac, pkt.payload, now_ms)
+        return true
+    elseif app.fac.gacChannel and chan == app.fac.gacChannel then
+        if pkt.type == "MSG_GAC_APPROACH_CLEARANCE" then
+            facility_client.on_atc_clearance(app.fac, pkt, pos, now_ms)
+            open_fac_channels(app)
+        elseif pkt.type == "MSG_GAC_ABORT_CLEAR" then
+            facility_client.on_gac_abort_clear(app.fac, pkt, now_ms)
+        end
+        return true
+    elseif app.fac.padChannel and chan == app.fac.padChannel then
+        if pkt.type == "MSG_DOCKING_STATUS" then
+            facility_client.on_docking_status(app.fac, pkt, now_ms)
+        else
+            facility_client.on_tactical_guide(app.fac, pkt, now_ms)
+        end
+        return true
+    end
+    return false
+end
+
 local function handle_modem_message(app, chan, raw_msg, now_ms)
     if not app.net or not app.net.decode_envelope then return end
     local ok, pkt = app.net:decode_envelope(raw_msg)
@@ -513,43 +597,67 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
         end
     elseif chan == base + 5 and app.nav and pkt.type == "MSG_GPS_RESPONSE" then
         nav_engine.filter_gps(app.nav, pkt.payload, 0.05, now_ms)
+    elseif handle_sentinel_rx(app, chan, pkt, base, now_ms) then
+        return
     elseif chan == base + 0 and app.arbiter and app.arbiter.handle_gcs_packet then
         app.arbiter:handle_gcs_packet(pkt, now_ms)
-    elseif chan == 50000 and app.sentinel then
-        if pkt.type == "MSG_BLOCK_ASSIGN" then
-            channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
-        elseif pkt.type == "MSG_CHANNEL_PROBE_ACK" then
-            channel_sentinel.on_probe_ack(app.sentinel, pkt)
-        end
-    elseif (chan == 50001 or (chan >= 50003 and chan <= 50004)) and app.fac then
-        facility_client.update_beacons(app.fac, pkt.payload, now_ms)
+    elseif handle_facility_rx(app, chan, pkt, now_ms) then
+        return
     elseif app.net.is_payload_channel and app.net:is_payload_channel(chan) and app.engine then
         app.engine:on_payload_ack(pkt, chan, now_ms)
     end
 end
 
-local function process_event(app, ev, p1, p2, p3, p4, p5)
-    local now_ms = get_now_ms(app)
-    if ev == "timer" then
-        handle_timer_event(app, p1, now_ms)
-    elseif ev == "modem_message" then
-        handle_modem_message(app, p2, p4, now_ms)
+local function is_ctrl_keycode(k)
+    local lc = keys and keys.leftCtrl or 29
+    local rc = keys and keys.rightCtrl or 157
+    return k == lc or k == rc
+end
+
+local function handle_input_event(app, ev, p1, now_ms)
+    if ev == "key_up" and is_ctrl_keycode(p1) then
+        app.ctrlHeld = false
     elseif ev == "char" then
+        if app.ctrlHeld and app.input and app.input.handle_ctrl_key then
+            local act = app.input:handle_ctrl_key(p1)
+            if act and act.action and app.arbiter then
+                app.arbiter:handle_pilot_action(act.action, act.params or {}, now_ms)
+                return
+            end
+        end
         local act = app.input:handle_char(p1)
         if act and act.action then
             app.arbiter:handle_pilot_action(act.action, act.params or {}, now_ms)
         end
     elseif ev == "key" then
+        if is_ctrl_keycode(p1) then
+            app.ctrlHeld = true
+            return
+        end
+        if app.ctrlHeld and p1 == (keys and keys.x or 45) and app.input and app.input.handle_ctrl_key then
+            local act = app.input:handle_ctrl_key("x")
+            if act and act.action and app.arbiter then
+                app.arbiter:handle_pilot_action(act.action, act.params or {}, now_ms)
+                return
+            end
+        end
         local cmd = app.input:handle_key(p1)
-        if cmd then
-            execute_cli_command(app, cmd, now_ms)
-        end
-    elseif ev == "paste" then
-        if app.input and app.input.handle_paste then
-            app.input:handle_paste(p1)
-        end
+        if cmd then execute_cli_command(app, cmd, now_ms) end
+    elseif ev == "paste" and app.input and app.input.handle_paste then
+        app.input:handle_paste(p1)
     elseif ev == "file_transfer" then
         handle_file_transfer(app, p1, now_ms)
+    end
+end
+
+local function process_event(app, ev, p1, p2, p3, p4, _p5)
+    local now_ms = get_now_ms(app)
+    if ev == "timer" then
+        handle_timer_event(app, p1, now_ms)
+    elseif ev == "modem_message" then
+        handle_modem_message(app, p2, p4, now_ms)
+    else
+        handle_input_event(app, ev, p1, now_ms)
     end
 end
 
@@ -565,9 +673,14 @@ local function shutdown_app(app)
     app.running = false
 end
 
-local function bind_app_modems(net, modems, base_ch)
+local function bind_app_modems(net, modems, base_ch, cfg)
+    local sys = type(cfg) == "table" and cfg.system or nil
+    local pri_side = (sys and sys.primaryModemSide) or "top"
+    local inf_side = (sys and sys.infraModemSide) or "back"
     if type(modems) == "table" then
-        if modems.top or modems.back then
+        if modems[pri_side] or modems[inf_side] then
+            net:bind_modems(modems[pri_side], modems[inf_side], base_ch)
+        elseif modems.top or modems.back then
             net:bind_modems(modems.top, modems.back, base_ch)
         elseif modems[1] or modems[2] then
             net:bind_modems(modems[1], modems[2], base_ch)
@@ -575,11 +688,11 @@ local function bind_app_modems(net, modems, base_ch)
             net:bind_modem(modems)
         end
     elseif peripheral and peripheral.find then
-        local top_m = peripheral.wrap and peripheral.wrap("top")
-        local back_m = peripheral.wrap and peripheral.wrap("back")
+        local pri_m = peripheral.wrap and peripheral.wrap(pri_side)
+        local inf_m = peripheral.wrap and peripheral.wrap(inf_side)
         local is_w = function(m) return m and type(m.isWireless) == "function" and m.isWireless() end
-        if is_w(top_m) and is_w(back_m) then
-            net:bind_modems(top_m, back_m, base_ch)
+        if is_w(pri_m) and is_w(inf_m) then
+            net:bind_modems(pri_m, inf_m, base_ch)
         else
             local m = peripheral.find("modem", function(_, o) return o.isWireless and o.isWireless() end)
             if m then net:bind_modem(m) end
@@ -595,18 +708,21 @@ local function create_app(config, modems)
     local nav = setmetatable(nav_engine.init(cfg), { __index = nav_engine })
     local fac = setmetatable(facility_client.init(cfg), { __index = facility_client })
     local traj = setmetatable(trajectory_generator.init(cfg), { __index = trajectory_generator })
+    local guard = chattering_guard.init(cfg)
     local engine = mission_engine.new({
         net = net,
         config = cfg,
+        guard = guard,
+        sentinel = sentinel,
+        fac = fac,
         redstone = redstone,
         colors = colors,
     })
-    local arbiter = c2_arbiter.new(queue, net, cfg, engine)
-    local guard = chattering_guard.init(cfg)
+    local arbiter = c2_arbiter.new(queue, net, cfg, engine, guard)
     local input = input_handler.new()
     local screen_buf = (not cfg.headless) and ui_renderer.create_buffer(51, 19) or nil
 
-    bind_app_modems(net, modems, cfg.baseChannel)
+    bind_app_modems(net, modems, cfg.baseChannel, cfg)
 
     return {
         config = cfg,
@@ -623,24 +739,47 @@ local function create_app(config, modems)
         screen_buf = screen_buf,
         render_timer = os.startTimer(0.2),
         tickCount = 0,
+        ctrlHeld = false,
         running = true,
     }
 end
 
 local function step_5hz_downlink(app, now_ms)
-    local now = now_ms or get_now_ms(app)
     local act_src = (app.arbiter and app.arbiter.activeSource) or "FCP"
     if act_src == "MFD_ACRO" then
         return false, "YIELDED_TO_MFD_ACRO"
     end
+    local telem = (app.arbiter and app.arbiter.latest_telem) or {}
+    local goal = (app.arbiter and app.arbiter.get_effective_goal and app.arbiter:get_effective_goal()) or {}
     local nav_pos = app.nav and app.nav.pos
+    local att = (app.nav and app.nav.attitude) or telem.attitude or {}
+    local dist_wp = nil
+    if nav_pos and goal.targetPos then
+        local dx = (goal.targetPos.x or 0) - (nav_pos.x or 0)
+        local dz = (goal.targetPos.z or 0) - (nav_pos.z or 0)
+        dist_wp = math.sqrt(dx * dx + dz * dz)
+    end
     local mfd_payload = {
+        source = "AMM_INTEGRATED",
         fsmState = (app.arbiter and app.arbiter.fsmState) or "DISARMED",
+        controlState = telem.controlState or (app.arbiter and app.arbiter.fsmState) or "DISARMED",
+        flightMode = goal.flightMode or "IDLE_ARMED",
         activeSource = act_src,
         authority = (app.arbiter and app.arbiter.authority) or "PILOT_PRIMARY",
         domainId = (app.config and app.config.domainId) or "AIRCRAFT_01",
-        fuel = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.fuel)
-            or (app.nav and app.nav.fuel) or 1.0,
+        fuel = telem.fuel or (app.nav and app.nav.fuel) or 1.0,
+        dynamicLoad = telem.dynamicLoad or 0.0,
+        sensorOk = (telem.sensorOk ~= false),
+        sensorHealth = telem.sensorHealth or { gimbal = true, altitude = true, velocity = true, fuel = true },
+        actuatorHealth = telem.actuatorHealth or { tap = true, asa = true, allOk = true },
+        angularRates = telem.angularRates or { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+        nav = {
+            targetAlt = goal.targetAlt,
+            targetSpeed = goal.targetSpeed,
+            targetHeading = goal.fixedHeadingDeg,
+            distToWp = dist_wp,
+            currentWpIndex = (app.engine and app.engine.active_index) or (app.queue and app.queue.active_index) or 1,
+        },
         navigation = {
             currentPos = nav_pos,
             navValid = app.nav and app.nav.navValid,
@@ -652,12 +791,77 @@ local function step_5hz_downlink(app, now_ms)
             groundSpeed = app.nav and app.nav.groundSpeed,
             verticalSpeed = app.nav and app.nav.verticalSpeed,
         },
-        attitude = app.nav and app.nav.attitude,
+        attitude = {
+            pitch = att.pitch or 0.0,
+            roll = att.roll or 0.0,
+            yaw = att.yaw or att.heading or 0.0,
+            heading = att.heading or att.yaw or 0.0,
+        },
     }
     if app.net and app.net.send_mfd_state then
         return app.net:send_mfd_state(mfd_payload, act_src)
     end
     return true
+end
+
+local function step_sentinel_20hz(app, now)
+    if not app.sentinel or not app.net then return end
+    local _, out_pkt = channel_sentinel.negotiate_and_probe(app.sentinel, now)
+    if out_pkt then
+        if out_pkt.type == "MSG_BLOCK_REQUEST" then
+            app.net:send_infra_packet(50000, out_pkt.type, out_pkt.payload)
+        elseif out_pkt.type == "MSG_CHANNEL_PROBE" then
+            local probe_ch = (out_pkt.payload and out_pkt.payload.candidateBase)
+                or app.sentinel.candidateBase or (app.config and app.config.baseChannel) or 10000
+            local m = app.net.onboardModem or app.net.modem
+            if m then
+                pcall(function() m.open(probe_ch) end)
+                local env = app.net:encode_envelope(out_pkt.type, out_pkt.payload)
+                pcall(function() m.transmit(probe_ch, probe_ch, env) end)
+            end
+        end
+    end
+    if app.sentinel.rebindTx then
+        local rebind_msg, status = channel_sentinel.step_rebind_transaction(app.sentinel, now)
+        if rebind_msg then
+            local p = rebind_msg.payload
+            app.net:send_rebind_command(p.action, p.transactionId, p.oldBaseChannel, p.newBaseChannel)
+            if status == "COMMITTED" then
+                app.net:apply_rebind(p.newBaseChannel)
+                if app.config then app.config.baseChannel = p.newBaseChannel end
+                if app.nav then app.nav.baseChannel = p.newBaseChannel end
+                if app.engine then app.engine.baseChannel = p.newBaseChannel end
+            end
+        end
+    end
+end
+
+local function step_facility_watchdog_20hz(app, goal, now)
+    if not app.fac then return end
+    app.fac.flightMode = goal and goal.flightMode or app.fac.flightMode
+    local wd = facility_client.evaluate_guide_watchdog(app.fac, now)
+    if wd.action == "RTH" or wd.action == "FAILSAFE_RTH" then
+        if app.arbiter then
+            app.arbiter.emergencyGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true }
+            app.arbiter.lastBanner = "[FACILITY WATCHDOG: FAILSAFE RTH]"
+        end
+    elseif wd.triggerGoAround and app.arbiter then
+        app.arbiter.emergencyGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true, targetAlt = wd.targetAlt }
+        app.arbiter.lastBanner = "[FACILITY WATCHDOG: GO-AROUND]"
+    elseif wd.shouldRetryAtc and app.fac.activePadId and app.net then
+        local pad_id = app.fac.activePadId
+        local fac_info = (app.fac.beacons and app.fac.beacons[pad_id]) or {}
+        local craft_cfg = {
+            facilityType = fac_info.facilityType or "LANDING_PAD",
+            domainId = (app.config and app.config.domainId) or "AIRCRAFT_01",
+        }
+        local fuel_pct = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.fuel) or 1.0
+        local ok_req, req = facility_client.request_approach(app.fac, pad_id, craft_cfg, fuel_pct, now)
+        if ok_req and type(req) == "table" then
+            local tx_ch = app.fac.gacChannel or 50001
+            app.net:send_infra_packet(tx_ch, req.type, req.payload)
+        end
+    end
 end
 
 local function step_20hz_tick(app, dt, now_ms)
@@ -668,13 +872,12 @@ local function step_20hz_tick(app, dt, now_ms)
     if app.arbiter and app.arbiter.check_timeouts then
         app.arbiter:check_timeouts(now)
     end
-
     if app.nav and nav_engine.update_timeout then
         nav_engine.update_timeout(app.nav, now)
     end
 
     local pre_goal = (app.arbiter and app.arbiter.get_effective_goal and app.arbiter:get_effective_goal())
-        or { flightMode = "IDLE", arm = false, flightActive = false }
+        or { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
     local emcon_active = (pre_goal.emconActive == true) or (app.engine and app.engine.emconActive == true)
     if app.nav and app.net and not emcon_active then
         local should_gps, _, gps_pkt = nav_engine.build_gps_request(app.nav, now)
@@ -686,38 +889,32 @@ local function step_20hz_tick(app, dt, now_ms)
     local mfd_live = app.lastMfd or (app.arbiter and app.arbiter.latest_mfd_payload)
     local fuel_live = (mfd_live and mfd_live.fuel) or (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.fuel)
     local is_disarmed = mfd_live and (mfd_live.controlState == "DISARMED" or mfd_live.fsmState == "DISARMED")
-    if app.guard and type(fuel_live) == "number" then
-        chattering_guard.update_fuel_latches(app.guard, fuel_live, app.config, is_disarmed)
-    end
-
-    if app.sentinel and app.sentinel.rebindTx then
-        local rebind_msg, status = channel_sentinel.step_rebind_transaction(app.sentinel, now)
-        if rebind_msg and app.net then
-            local p = rebind_msg.payload
-            app.net:send_rebind_command(p.action, p.transactionId, p.oldBaseChannel, p.newBaseChannel)
-            if status == "COMMITTED" then
-                app.net:apply_rebind(p.newBaseChannel)
+    if app.guard and type(fuel_live) == "number" and (not app.arbiter or app.arbiter.lastTelemMs ~= now) then
+        local latches = chattering_guard.update_fuel_latches(app.guard, fuel_live, app.config, is_disarmed)
+        if app.arbiter and latches then
+            if latches.emergFuelLatched then
+                app.arbiter.emergencyGoal = { flightMode = "EMERGENCY_LAND", arm = true, flightActive = true, _fuelLatch = "EMERG" }
+            elseif latches.lowFuelLatched and (not app.arbiter.emergencyGoal or app.arbiter.emergencyGoal.flightMode ~= "EMERGENCY_LAND") then
+                app.arbiter.emergencyGoal = { flightMode = "FAILSAFE_RTH", arm = true, flightActive = true, _fuelLatch = "LOW" }
             end
         end
     end
 
-    if app.engine then
-        app.engine:tick(now)
-    end
+    step_sentinel_20hz(app, now)
+    if app.engine then app.engine:tick(now) end
 
     local goal = (app.arbiter and app.arbiter.get_effective_goal and app.arbiter:get_effective_goal())
-        or { flightMode = "IDLE", arm = false, flightActive = false }
+        or { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
+    step_facility_watchdog_20hz(app, goal, now)
+    goal = (app.arbiter and app.arbiter.get_effective_goal and app.arbiter:get_effective_goal()) or goal
 
     local setpoint = trajectory_generator.compute(app.traj, app.nav, app.fac, goal, step_dt, now)
-
     if app.net and app.net.send_trajectory_setpoint then
         app.net:send_trajectory_setpoint(setpoint)
     end
-
     if app.tickCount % 4 == 0 then
         step_5hz_downlink(app, now)
     end
-
     return setpoint
 end
 
@@ -738,22 +935,6 @@ local function make_coroutine_a(app)
                 handle_modem_message(app, p2, p4, now_ms)
             end
         end
-    end
-end
-
-local function handle_input_event(app, ev, p1, now_ms)
-    if ev == "char" then
-        local act = app.input:handle_char(p1)
-        if act and act.action then
-            app.arbiter:handle_pilot_action(act.action, act.params or {}, now_ms)
-        end
-    elseif ev == "key" then
-        local cmd = app.input:handle_key(p1)
-        if cmd then execute_cli_command(app, cmd, now_ms) end
-    elseif ev == "paste" and app.input and app.input.handle_paste then
-        app.input:handle_paste(p1)
-    elseif ev == "file_transfer" then
-        handle_file_transfer(app, p1, now_ms)
     end
 end
 

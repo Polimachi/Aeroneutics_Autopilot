@@ -40,8 +40,8 @@ end
 function network_manager:bind_modems(top_modem, back_modem, base_ch)
     if base_ch then self.baseChannel = base_ch end
     local base = self.baseChannel
-    local on_chs = { base + 0, base + 2, base + 3, base + 4, base + 5 }
-    local inf_chs = { 50000, 50001, 50003, 50004, 60002 }
+    local on_chs = { base + 0, base + 1, base + 2, base + 3, base + 4 }
+    local inf_chs = { base + 5, 50000, 50001, 50003, 50004, 60002 }
 
     if top_modem and back_modem and top_modem ~= back_modem then
         self.onboardModem = top_modem
@@ -66,11 +66,28 @@ function network_manager:bind_modem(modem_obj)
 end
 
 function network_manager:apply_rebind(new_base)
-    if not new_base then return false, "INVALID_BASE" end
+    if not is_finite_int(new_base) then return false, "INVALID_BASE" end
     local old_base = self.baseChannel
-    local m = self.onboardModem or self.modem
-    close_ch_list(m, { old_base + 0, old_base + 2, old_base + 3, old_base + 4, old_base + 5 })
-    open_ch_list(m, { new_base + 0, new_base + 2, new_base + 3, new_base + 4, new_base + 5 })
+    local on_m = self.onboardModem or self.modem
+    local inf_m = self.infraModem or self.modem
+    close_ch_list(on_m, { old_base + 0, old_base + 1, old_base + 2, old_base + 3, old_base + 4 })
+    open_ch_list(on_m, { new_base + 0, new_base + 1, new_base + 2, new_base + 3, new_base + 4 })
+    close_ch_list(inf_m, { old_base + 5 })
+    open_ch_list(inf_m, { new_base + 5 })
+
+    local offsets = {}
+    for ch, open in pairs(self.openPayloadChannels) do
+        if open and ch >= old_base + 20 and ch <= old_base + 29 then
+            offsets[#offsets + 1] = ch - old_base
+        end
+    end
+    for _, off in ipairs(offsets) do
+        close_ch_list(on_m, { old_base + off })
+        open_ch_list(on_m, { new_base + off })
+        self.openPayloadChannels[old_base + off] = nil
+        self.openPayloadChannels[new_base + off] = true
+    end
+
     self.baseChannel = new_base
     return true
 end
@@ -141,23 +158,6 @@ function network_manager:send_mfd_state(payload, activeSource)
     if not m then return false, "MODEM_UNBOUND" end
     local ok, err = pcall(function()
         m.transmit(self.baseChannel + 3, self.baseChannel + 3, pkt)
-    end)
-    return ok, err
-end
-
-function network_manager:send_operator_cmd(command, flightMode, params, emergencyAction, authority)
-    local payload = {
-        authority = authority or "PILOT_PRIMARY",
-        command = command or "CRUISE",
-        flightMode = flightMode or "CRUISE",
-        params = params or {},
-        emergencyAction = emergencyAction or "NONE",
-    }
-    local pkt = self:encode_envelope("MSG_OPERATOR_CMD", payload)
-    local m = self.onboardModem or self.modem
-    if not m then return false, "MODEM_UNBOUND" end
-    local ok, err = pcall(function()
-        m.transmit(self.baseChannel + 0, self.baseChannel + 0, pkt)
     end)
     return ok, err
 end
