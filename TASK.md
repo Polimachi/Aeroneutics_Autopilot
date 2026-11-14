@@ -104,7 +104,7 @@
   - **선행 의존성**:
     - **공통 선행**: `TASK-010` 완료 필요 (표준 7대 섹션 템플릿 `playbook/README.md` 및 `tools/verify_playbooks.py` 검증·인가 목록 체계 활용)
     - **완료 연동**: `TASK-011-5` (`playbook/0_development/fdr.md`)는 `TASK-120` 완료(`FDR v0.3.0 Implemented`, `tools/analyze_flight_log.py`) 기준 반영 가능 (`Alignment`, `GCS`, `GAC`, `Landing Pad`, `Mission Editor`, `FDR` 모두 `TASK-010` 완료 즉시 착수 가능)
-  - **배경 및 필요성**: `TASK-10`은 핵심 5종(GPS, VAS, TCA, FCP, AMM)에 집중되어 있으므로, ① 실제 인게임 운용 시 설정·조작이 까다로운 격납고 동역학 캘리브레이션(`Alignment`)과 지상 관제소/패드(`GCS`, `GAC`, `Landing Pad`), ② `TASK-402`로 구현 완료된 오프라인 WebUI 미션 에디터(`tools/amm_mission_editor.html`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.3.1 Implemented))의 작성·검증·AMM 투입 워크플로우, ③ `TASK-120`으로 구축 완료된 지상 In-Flight Aligner FDR(`src/0_development/fdr/`) 및 오프라인 텔레메트리 분석기(`tools/analyze_flight_log.py`) 운용·진단 매뉴얼을 통합 확장함
+  - **배경 및 필요성**: `TASK-010`은 핵심 5종(GPS, VAS, TCA, FCP, AMM)에 집중되어 있으므로, ① 실제 인게임 운용 시 설정·조작이 까다로운 격납고 동역학 캘리브레이션(`Alignment`)과 지상 관제소/패드(`GCS`, `GAC`, `Landing Pad`), ② `TASK-402`로 구현 완료된 오프라인 WebUI 미션 에디터(`tools/amm_mission_editor.html`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.3.1 Implemented))의 작성·검증·AMM 투입 워크플로우, ③ `TASK-120`으로 구축 완료된 지상 In-Flight Aligner FDR(`src/0_development/fdr/`) 및 오프라인 텔레메트리 분석기(`tools/analyze_flight_log.py`) 운용·진단 매뉴얼을 통합 확장함
   - **주요 작업**:
     - [ ] **TASK-011-1**: 격납고 동역학 캘리브레이션 매뉴얼(`playbook/0_development/alignment.md`) 작성
     - [ ] **TASK-011-2**: 중앙 지상 관제소 매뉴얼(`playbook/0_infra/gcs.md`) 작성
@@ -182,6 +182,11 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
 
+- [x] **TASK-120: 지상 실환경 비행 식별기(FDR)·멀티 디스크 VFS 로거 및 오프라인 프로파일러 구축 (`FDR v0.3.0`·`VAS v1.21.0 Implemented`)** (완료일: 2026-11-14)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-120-fdr-and-analyzer.md`
+  - **핵심 성과**: 수신 전용(`modem.transmit` 0회) 지상 상주형 FDR (`src/0_development/fdr/` 6모듈+`main.lua`+`fdr_config.json`: `[N]` 동적 기체 바인딩·`domainId` 자동 잠금·다중 `/disk*` Spanned VFS 롤오버·`STREAMING`/`RING_BUFFER`·`E_STOP` 에지 래치·`GDRIVE_WEBHOOK` `FDR_Reports` 반출·51x19 TUI·`manifest.lua` 13모듈 등록), `VAS` Opt-in `telemetryDiag` (`telemetry_feeder.lua`/`core_daemon.lua`), 호스트 오프라인 분석/튜닝 CLI(`tools/analyze_flight_log.py`: 다중 JSONL 병합·`quat.lua` 오일러 변환·포화/추력 분배·`[0.70x, 1.35x]` 가드 `--emit-profile`) 구현 (`TASK-120-0~2`).
+  - **승격·검증**: `FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0 Implemented`), `VAS_PROGRAM_SPECIFICATION.md` (`v1.21.0 Implemented`) 승격(`12 Implemented, 5 Approved`), 단위 `13`타겟 `523/523 PASS` (`0_development/fdr` `16/16`, `1_control/vas` `58/58`, `0_development/installer` `40/40`), E2E `9`스위트 `14/14 PASS`, 돌연변이 `25/25 KILLED`, 하네스 `93/93 PASS`, Lua 5.2 `124/124 PASS`, 매니페스트·사양서 `0 Errors, 0 Warnings`.
+
 - [x] **TASK-402: AMM WebUI 단일 파일 미션 에디터(`tools/amm_mission_editor.html`) 구현, CraftOS-PC 라운드트립 검증 및 `AMM`/`에디터` 사양 `Implemented` 승격** (완료일: 2026-11-14)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-402-amm-mission-editor.md`
   - **핵심 성과**: `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Implemented`) 기준 오프라인 단일 HTML5/CSS/JS 에디터(9 IIFE 모듈, 36+22 `ACT_*`·6+1 `DEC_*`·3+2 `MAC_*`·19종 `preconditions`·14종 조건·4종 훅·2D 전술 캔버스·`#altProfilePane`·50단 Undo/Redo·Raw JSON 드로어·`localStorage` 자동저장) 구현 및 Web Interface Guidelines 준수 정적/DOM-shim 감사 완료.
@@ -216,7 +221,3 @@
 - [x] **TASK-202: UAFS 통합 미션 시퀀서 엔진, AMM 조종석 단말 및 WebUI 에디터 사양 수립 (구 TASK-201[AMP 초안] + 203 통합)** (완료일: 2026-11-12)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-{2,3,4}-*.md`, `docs/superpowers/plans/2026-11-12-task-202-5-amm-webui-editor-spec.md`
   - **핵심 성과**: 3분할 미션 코어(`mission_engine`, `condition_evaluator`, `hook_runner`), Zone 3 버스, 51x19 뷰포트, `resolve_path`·`file_transfer`·CLI 및 WebUI 에디터 초안(`AMM_MISSION_EDITOR_SPECIFICATION.md` 당시 `v0.1.0 Draft`) 수립 (`TASK-202-1~5`).
-
-- [x] **TASK-206: FCP 외루프 경량화 및 AMM 상위 계층 이관을 위한 15대 사양서 전면 개편** (완료일: 2026-11-12)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-fcp-amm-role-refactor-specs.md`
-  - **핵심 성과**: Spec-First 4계층 책임 분리(`AMM` 외부 게이트웨이·항법·궤적 / `FCP` `SE(3)` / `VAS` `SO(3)`), `Base+4` `[I-12]` 신설, `[I-2]`/`[I-10]` 단일화 및 잔존 결함 일괄 정정 (`TASK-206-1~8`).
