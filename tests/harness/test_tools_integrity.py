@@ -22,6 +22,9 @@ class TestToolsIntegrity(unittest.TestCase):
             WORKSPACE_ROOT / "tools" / "sync_gdrive.py",
             WORKSPACE_ROOT / "tools" / "verify_manifest_sync.py",
             WORKSPACE_ROOT / "tools" / "verify_context_docs.py",
+            WORKSPACE_ROOT / "tools" / "verify_contracts.py",
+            WORKSPACE_ROOT / "tools" / "verify_runtime_wiring.py",
+            WORKSPACE_ROOT / "tools" / "run_boot_smoke.py",
         ]
         for tool_path in expected_tools:
             self.assertTrue(
@@ -130,6 +133,42 @@ class TestToolsIntegrity(unittest.TestCase):
             f"tools/verify_manifest_sync.py exited with non-zero code {result.returncode}.\nOutput:\n{result.stdout}\nError:\n{result.stderr}",
         )
         self.assertIn("0 Errors, 0 Warnings", result.stdout)
+
+    def test_verify_contracts_execution(self) -> None:
+        script = WORKSPACE_ROOT / "tools" / "verify_contracts.py"
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(WORKSPACE_ROOT),
+            timeout=30,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"tools/verify_contracts.py exited with non-zero code {result.returncode}.\nOutput:\n{result.stdout}\nError:\n{result.stderr}",
+        )
+        self.assertIn("0 errors", result.stdout.lower())
+
+    def test_verify_runtime_wiring_execution(self) -> None:
+        script = WORKSPACE_ROOT / "tools" / "verify_runtime_wiring.py"
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(WORKSPACE_ROOT),
+            timeout=30,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"tools/verify_runtime_wiring.py exited with non-zero code {result.returncode}.\nOutput:\n{result.stdout}\nError:\n{result.stderr}",
+        )
+        self.assertIn("0 violations", result.stdout)
 
 
 if __name__ == "__main__":
