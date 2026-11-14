@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-206~209`, `TASK-124`, `TASK-123`, `TASK-204`, `TASK-013`, `TASK-402`(WebUI 에디터 `tools/amm_mission_editor.html` 구현·CraftOS-PC 라운드트립 검증·`AMM`/`에디터` `Implemented` 승격; 2026-11-14, `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-207~209`, `TASK-124`, `TASK-123`, `TASK-204`, `TASK-013`, `TASK-402`, `TASK-120`(지상 FDR `src/0_development/fdr/`, `VAS` `telemetryDiag` `v1.21.0`, `tools/analyze_flight_log.py` 구현 및 `FDR v0.3.0`·`VAS v1.21.0 Implemented` 승격; 2026-11-14, `.agent/memory/workspace-root.md`).
 - **다음 액션**:
-  1. `TASK-010`·`011`: 개별 코드베이스 플레이북(5종 + 인프라 4종) 구축 (`GPS`·`VAS`·`TCA`·`FCP`·`AMM`·에디터 전량 즉시 착수 가능).
-  2. `TASK-120` / `TASK-117` / `TASK-501`: 블랙박스 FDR, 무선 OTA 배포/롤백, GDrive 101패키지 동기화(`TASK-501`).
+  1. `TASK-010`·`011`: 개별 코드베이스 플레이북(5종 + 확장 6종: `Alignment`·`FDR` 포함 전량 즉시 착수 가능).
+  2. `TASK-117` / `TASK-014` / `TASK-501`: 무선 OTA 배포/롤백(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), GDrive 101패키지 동기화(`TASK-501`).
   3. `TASK-210`: `[연기] TASK-105` 재개 시 `ASA v1.8.0`·`FLT-HIGH-12` 연동.
 
 ## 2. Confirmed Architecture & Paths
@@ -15,9 +15,9 @@
 - `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
 - `docs/superpowers/{plans,specs}/`: 태스크별 실행 계획서 및 설계 청사진.
-- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
+- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_mutation_tests.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.3.1 Implemented`).
+- `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_mutation_tests.py`, `analyze_flight_log.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.3.1 Implemented`).
 - `config/gdrive_mapping.json` & `dist_gdrive/` & `tools/sync_gdrive.py`: GDrive 배포 매핑 SSOT, 격리 스테이징, 동기화 CLI (가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
@@ -25,12 +25,12 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 504/504 PASS).
-- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (8개 스위트 13/13 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (13개 타겟 523/523 PASS).
+- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (9개 스위트 14/14 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (88/88 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (93/93 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (117 파일), `python tools/verify_spec_status.py` (17종 12 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (17/17 PASS).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (124 파일), `python tools/verify_spec_status.py` (17종 12 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (17/17 PASS).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants
