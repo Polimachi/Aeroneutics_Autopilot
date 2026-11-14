@@ -1,8 +1,8 @@
-# Create_Aeroneutics — Task Management & Implementation Roadmap
+﻿# Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-14  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 403, 010, 011, 501, 210)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 403, 404, 302, 010, 011, 014, 501, 210)
 
 ---
 
@@ -22,15 +22,17 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-403` (에디터 World Preset) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
+> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-403` (에디터 World Preset) · `TASK-404` (GCS WebSocket 브리지·실시간 전술 지도) · `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · `TASK-014` (3대 감사 가드레일) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
 
-- [ ] **TASK-120: [1순위 / 개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
+- [-] **TASK-120: [1순위 / 개발 도구] 지상 실환경 비행 식별기(FDR)·디스크 풀 로거 및 오프라인 프로파일러 구축** (`src/0_development/fdr/`, `src/1_control/vas/`, `tools/analyze_flight_log.py`)
   - **권장 착수 순위**: **1순위** (독립 도구로서 즉시 착수 가능; `TASK-117` E2E/실전 검증 및 `TASK-011-5` FDR 매뉴얼 작성의 선행 기반)
-  - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요; `Base+1` `MSG_ATTITUDE_CMD`·`Base+2` `MSG_FLIGHT_TELEMETRY` 패시브 감청 기준, 필요 시 진단 필드 확장 검토)
-  - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 인게임 비행 중 발생하는 미세 자세 진동, 짐벌 포화(Saturation), 슬루율 제한 현상을 정밀 튜닝하기 위한 시계열 로그 수집 수단 부재
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-120-fdr-and-analyzer.md`
+  - **사양서 상태**: `docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0 Approved` 승격 완료 — `VAS` Opt-in `telemetryDiag`·`GDRIVE_WEBHOOK` `FDR_Reports` 확정; `VAS_PROGRAM_SPECIFICATION.md` `v1.21.0 Approved` & `ICD v1.31.0` 동기화)
+  - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 실비행 중 발생하는 미세 자세 진동·적분항/짐벌 포화·트림/호버 편차를 계측하고 보정 프로필(`pid.json`/`system.json`/`fcp_config.json`)을 산출할 지상 상주형 동적 비행 식별기 부재
   - **주요 작업**:
-    - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
-    - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
+    - [x] **TASK-120-0**: 사양서 작성 및 `Approved` 승격 게이트 (`FDR_PROGRAM_SPECIFICATION.md` `v0.3.0 Approved`, `VAS` `telemetryDiag` Opt-in, `GDRIVE_WEBHOOK` `FDR_Reports` 기본값 확정, `VAS v1.21.0`·`ICD v1.31.0`·`Diagram v2.15.1` 양방향 동기화)
+    - [-] **TASK-120-1**: 지상 FDR 로거(`src/0_development/fdr/`) 구현 — `Alignment`형 동적 `[N]` 바인딩 & `domainId` 자동 잠금, `Base+1`/`Base+2`/`Base+10` 필수 + `Base+11`/`Base+4` 감청, `storage_pool.lua`(유선/인접 `/disk*` Spanned VFS 롤오버·핫플러그·순환 삭제), `STREAMING` 기본 + `RING_BUFFER` 선택, `cloud_exporter.lua`(`[U]` `http.post` `GDRIVE_WEBHOOK` 반출) 구현 (`manifest.lua`·`verify_manifest_sync.py`·`VAS` `telemetryDiag` Opt-in 연동 포함)
+    - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 및 프로파일러 CLI(`tools/analyze_flight_log.py`) 구현 — 다중 파트 JSONL 병합 분석, Setpoint vs PV 추종 오차·포화·추력 분배 리포트(`--json`/`--csv`), `--emit-profile` 보정 프로필(`pid_tuned.json`/`system_patch.json`/`fcp_patch.json`/`tuning_summary.json`) 생성 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
 - [ ] **TASK-117: [1순위] 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 구축 (구 TASK-117 + 119 통합)** (`src/0_development/ota/`, `src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{vas,tca}/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)
   - **권장 착수 순위**: **1순위** (선행 과제 `TASK-202`·`TASK-204`·`TASK-207~209`·`TASK-013`·`TASK-402` 완료로 즉시 착수 가능; `TASK-120`과 병렬 또는 연계 진행)
@@ -61,6 +63,22 @@
     - [ ] **TASK-403-4**: 에디터 `#worldPresetDrawer`·2D 캔버스·시설 지정·`ACT_TKL_LAND_NEAREST` UI 구현 (`tools/amm_mission_editor.html`) — 상단 `World` 컨트롤, 2D 4변(상하 `X`·좌우 `Z`) 격자 좌표 눈금 & 배경 핀 레이어/토글, `PICK_FACILITY`, 이착륙/도킹 호환 시설 드롭다운·미등록 경고/1클릭 등록, `'From World…'` 퀵픽·`'Save as Facility'` 등록, `ACT_TKL_LAND_NEAREST` 폼/검증, `Undo` 보호
     - [ ] **TASK-403-5**: 전수 회귀 테스트(CraftOS-PC 라운드트립 포함) 및 사양서 승격 — `test_amm_mission_editor.py`·`run_unit_tests.py`·`run_e2e_tests.py` 통과 후 `AMM_PROGRAM_SPECIFICATION.md` (`v2.1.0`) 및 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.4.0`) `Implemented` 승격
 
+- [ ] **TASK-404: [2순위 / 에디터·GCS 실시간 연동] GCS WebSocket 브리지 및 실시간 전술 지도·원클릭 미션 무선 푸시** (`tools/gcs_live_bridge.py`, `tools/amm_mission_editor.html`)
+  - **권장 착수 순위**: **2순위** (`TASK-403` 완료 이후 착수)
+  - **선행 의존성**: `TASK-403` (`tools/amm_mission_editor.html`의 `WorldStore` 및 2D 캔버스 완료 이후)
+  - **배경 및 필요성**: 브라우저 에디터에서 작성한 미션 JSON을 매번 월드 세이브 폴더로 복사하는 수작업을 제거하고, `TASK-403`의 월드 시설물 지도 위에 실제 비행 중인 기체의 실시간 궤적을 오버레이함
+  - **주요 작업**:
+    - [ ] **TASK-404-1**: 로컬 Python WebSocket 브리지(`tools/gcs_live_bridge.py`) 구축 — 인게임 `GCS` 컴퓨터(`http.websocket`)와 외부 브라우저 WebUI 간 양방향 JSON 중계 서버 구현
+    - [ ] **TASK-404-2**: `amm_mission_editor.html` Live Mode 확장 — `WorldStore` 2D 캔버스 위에 다중 기체 실시간 위치·기수각·계획 경로 대비 실제 궤적(`Trail`) 렌더링 및 상단 헤더 `'Push to Aircraft'` 원클릭 무선 미션 전송·즉시 로드 기능 구현
+
+- [ ] **TASK-302: [2순위 / 현장 운용 HMI] CC:Tweaked 포켓 컴퓨터(Pocket PDA) 휴대용 원격 관제·비상 E_STOP 단말** (`src/0_infra/pocket_pda/`)
+  - **권장 착수 순위**: **2순위** (`TASK-120` 완료 후 FDR 원격 덤프 트리거 연동 시 시너지 극대화)
+  - **선행 의존성**: `TASK-120` (FDR 원격 덤프 트리거 연동 시 시너지 극대화)
+  - **배경 및 필요성**: 인게임 시험 비행 중 기체 이상 진동이나 경로 이탈 시 고정형 GCS까지 이동할 시간적 여유가 없음. 플레이어가 인벤토리에서 꺼내 즉시 조작할 수 있는 무선 휴대 단말(`src/0_infra/pocket_pda/`)이 필요함.
+  - **주요 작업**:
+    - [ ] **TASK-302-1**: Pocket Computer 전용 경량 TUI 구현 — 소형 화면(26×20)에 최적화된 기체 선택기, 고도·속도·자세·연료 HUD, 링크 품질(RSSI/거리) 표시
+    - [ ] **TASK-302-2**: 원격 비상 제어 및 FDR 연동 — 단일 키 입력으로 무선 `E_STOP` 송출 + `TASK-120` 블랙박스 로그 즉시 JSONL 덤프 트리거, `HOLD` / `RTB` / `LAND_NEAREST` 단축 명령 지원
+
 - [ ] **TASK-010: [2순위] 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
   - **권장 착수 순위**: **2순위** (`GPS`·`VAS`·`TCA`·`FCP`·`AMM`·`tools/amm_mission_editor.html` 모두 `Implemented` 승격 완료; 1순위 `TASK-120`·`TASK-117` 이후 또는 병렬 착수 가능, `TASK-011`의 선행 기반)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md`
@@ -84,6 +102,21 @@
     - [ ] **TASK-011-4**: AMM WebUI 미션 에디터 운용 매뉴얼(`playbook/3_planning/amm_mission_editor.md`) 작성 (`tools/amm_mission_editor.html` 기준 2D 캔버스/인스펙터·조건/훅 빌더·프리플라이트 검증·JSON Export → `AMM` 다중 경로/드래그앤드롭 투입 연동 및 `amm.md` 상호 참조; `TASK-403` 완료 시 World Preset 기능 포함)
     - [ ] **TASK-011-5**: 블랙박스 FDR 및 오프라인 텔레메트리 분석기 매뉴얼(`playbook/0_development/fdr.md`) 작성 (`TASK-120` 완료 연동 — `src/0_development/fdr/` 감청/덤프 절차 및 `tools/analyze_flight_log.py` CLI 튜닝·진단 해석 가이드)
     - [ ] **TASK-011-6**: `playbook/README.md` 인덱스·`tools/verify_playbooks.py` 인가 목록 동기화 및 7대 섹션·링크 정적 검증 통과
+
+- [-] **TASK-014: [2순위 / 검증 인프라] 전수 감사 3대 사각지대 방지 가드레일 구축 (SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크)** (`config/protocol_contracts.json`, `tools/verify_contracts.py`, `tools/verify_runtime_wiring.py`, `tools/run_boot_smoke.py`, `harness/simulation/virtual_bus.lua`, `tools/run_e2e_tests.py`, `.agent/`)
+  - **설계서 및 실행 계획서**: [2026-11-14-audit-prevention-guardrails-design.md](docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md), [2026-11-14-task-014-audit-prevention-guardrails.md](docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md)
+  - **확정 설계 결정 (`/brainstorming` · `/grill-me` 2026-11-14)**:
+    - **SSOT 원천**: `config/protocol_contracts.json`을 기계 판독형 계약 정본으로 신설하고, `tools/verify_contracts.py`가 16개 활성 사양서·활성 `src/` Lua/JSON·E2E 패킷을 교차 검증 (`Revision History`·`[DEPRECATED]` 배지 맥락 오탐 배제).
+    - **와이어 계약 검증**: `virtual_bus.lua` + `tools/run_e2e_tests.py`가 E2E 중 오가는 모든 패킷을 `result.json`으로 캡처해 엔벨로프·필수키·열거형·수치범위·Zero-Fallback을 자동 검증하며, 정적 `src/` 이중키 폴백 린트 병행.
+    - **미배선 런타임 경로 차단**: `tools/verify_runtime_wiring.py`로 `main.lua` 도달성·고아 모듈·깨진 `require`·미사용 임포트를 검출하고, `tools/run_boot_smoke.py`로 10개 활성 `main.lua`를 CraftOS-PC에서 실제 설치 레이아웃으로 약 7틱 부팅 스모크 검증.
+    - **유예 및 컨텍스트 게이트**: `src/1_control/asa`(`TASK-105`) 런타임 검사는 `--include-deferred` 전까지 기본 유예(사양서 16종 SSOT는 전수 검사); `.agent/hooks/`는 R1~R8 경량 유지하고 `skill-workflows.md`·스킬 지침으로 완료 게이트 통합.
+  - **주요 작업**:
+    - [ ] **TASK-014-1**: `config/protocol_contracts.json` SSOT 스키마 구축 및 로더 검증 (`tests/harness/test_verify_contracts.py`)
+    - [ ] **TASK-014-2**: `tools/verify_contracts.py` 사양서 SSOT 대조 및 정적 Zero-Fallback/폐기키 린터 구현
+    - [ ] **TASK-014-3**: `virtual_bus.lua` + `tools/run_e2e_tests.py` E2E 실전 패킷 캡처 계약 검증 연동 (`tests/harness/test_e2e_contract_validation.py`)
+    - [ ] **TASK-014-4**: `tools/verify_runtime_wiring.py` 정적 도달성·고아 모듈·미사용 임포트 검증기 구현 (`tests/harness/test_verify_runtime_wiring.py`)
+    - [ ] **TASK-014-5**: `tools/run_boot_smoke.py` 10개 활성 `main.lua` CraftOS-PC 실부팅 스모크 러너 구현 및 `test_tools_integrity.py` 등록
+    - [ ] **TASK-014-6**: `.agent/` 규칙·스킬 게이트 및 컨텍스트 문서 동기화
 
 - [ ] **TASK-501: [3순위 / 배포 인프라] Google Drive 전수 패키지(101종) 업로드·매핑 동기화 및 `--strict-gdrive-packages` 게이트 활성화** (`config/gdrive_mapping.json`, `tools/sync_gdrive.py`, `tools/verify_manifest_sync.py`, `dist_gdrive/`)
   - **등록 배경**: `TASK-013` Q8 결정(방안 A 우선 적용 + 방안 B 후속 과제 분리)에 따라 현행 9종 부트스트랩/공용 파일 해시 갱신만 우선 완료하고, 12개 서브시스템 전수 패키지 파일(`101`건; `manifest.lua` `109`경로 + 루트 `installer.lua` - 기매핑 `9`건)의 Google Drive 실업로드·매핑 등록 및 엄격 정합성 게이트 활성화를 별도 과제로 추적함.
