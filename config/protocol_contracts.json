@@ -1,0 +1,1130 @@
+{
+  "schemaVersion": "1.0.0",
+  "envelope": {
+    "ver": "1.9.5",
+    "requiredKeys": ["ver", "domainId", "seq", "type", "time", "payload"],
+    "types": {
+      "ver": "string",
+      "domainId": "string",
+      "seq": "number",
+      "type": "string",
+      "time": "number",
+      "payload": "object"
+    }
+  },
+  "channels": {
+    "aircraft": {
+      "baseMin": 10000,
+      "baseMax": 49960,
+      "bandwidth": 40,
+      "maxAircraft": 1000,
+      "zones": {
+        "zone1_flight_core": {
+          "start": 0,
+          "end": 9,
+          "offsets": [0, 1, 2, 3, 4, 5],
+          "description": "Core C2, guidance, telemetry, MFD, trajectory setpoints, external comms"
+        },
+        "zone2_inner_actuation": {
+          "start": 10,
+          "end": 19,
+          "offsets": [10, 11],
+          "description": "Distributed actuator buses: TCA thrust (offset 10) & ASA aero (offset 11)"
+        },
+        "zone3_payload_bus": {
+          "start": 20,
+          "end": 29,
+          "offsets": [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+          "description": "Dynamic payload nodes: cargo, magnets, radar, weapons"
+        },
+        "zone4_swarm_formation": {
+          "start": 30,
+          "end": 39,
+          "offsets": [30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+          "description": "Swarm & formation broadcast bus"
+        }
+      },
+      "deprecatedOffsets": [6, 7]
+    },
+    "hangar": {
+      "baseMin": 101,
+      "baseMax": 191,
+      "bandwidth": 10,
+      "bayCount": 10,
+      "offsets": {
+        "calibCmd": 0,
+        "calibTelem": 1,
+        "facilityInterlock": 2,
+        "calibTap": 3
+      },
+      "deprecatedOffsets": [1001, 1002]
+    },
+    "global": {
+      "fixed": [50000, 50001, 50002, 50003, 50004, 60001, 60002, 60003, 60004],
+      "reservedGps": [60005, 60006, 60007, 60008, 60009, 60010, 60011, 60012, 60013, 60014, 60015, 60016, 60017, 60018, 60019, 60020],
+      "descriptions": {
+        "50000": "GCS Channel Manager Bootstrap",
+        "50001": "Tower ATC Wide-Area Airspace Ingress",
+        "50002": "Tower ATC Backbone with GAC",
+        "50003": "GAC Sector 0 Facility Aggregate Beacon",
+        "50004": "GAC Sector Dispatch Directory",
+        "60001": "GPS Ping Broadcast Channel",
+        "60002": "GPS Service & Query Channel"
+      }
+    }
+  },
+  "interfaces": [
+    {
+      "id": "I-1",
+      "name": "Flight Telemetry",
+      "specs": [
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+        "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 2 },
+        { "kind": "hangar_offset", "offset": 1 }
+      ],
+      "deprecatedOffsets": [1002],
+      "packets": {
+        "MSG_FLIGHT_TELEMETRY": {
+          "requiredKeys": [
+            "attitude",
+            "angularRates",
+            "dynamics",
+            "fuel",
+            "dynamicLoad",
+            "controlState",
+            "activeSource",
+            "sensorOk",
+            "sensorHealth",
+            "actuatorHealth"
+          ],
+          "optionalKeys": [],
+          "numericBounds": {
+            "fuel": [0.0, 1.0],
+            "dynamicLoad": [0.0, 1.0]
+          },
+          "enums": {
+            "activeSource": ["FCP", "MFD_ACRO", "EMERGENCY_DIRECT"]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "telemetryWatchdogMs": 500
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-2",
+      "name": "Outer Loop Guidance & Direct Pilot Commands",
+      "specs": [
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 1 }
+      ],
+      "deprecatedOffsets": [],
+      "packets": {
+        "MSG_ATTITUDE_CMD": {
+          "requiredKeys": [
+            "source",
+            "arm",
+            "flightActive",
+            "flightMode",
+            "commandType",
+            "targetAngularRates",
+            "collectiveThrust"
+          ],
+          "optionalKeys": [
+            "targetQuaternion",
+            "flapTarget",
+            "acroActive",
+            "translationBias"
+          ],
+          "enums": {
+            "commandType": ["QUATERNION_RATE", "RATE_COMMAND"]
+          },
+          "numericBounds": {
+            "collectiveThrust": [0.0, 1.0]
+          }
+        },
+        "MSG_EMERGENCY_OVERRIDE": {
+          "requiredKeys": [
+            "action",
+            "authKey",
+            "source"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "action": ["E_STOP"],
+            "authKey": ["ESTOP_CONFIRM_KEY"]
+          }
+        },
+        "MSG_EMERGENCY_ALERT": {
+          "requiredKeys": [
+            "reason",
+            "isAirborne",
+            "fsmState",
+            "altitude"
+          ],
+          "optionalKeys": []
+        }
+      },
+      "timeoutsMs": {
+        "guidanceWatchdogMs": 1500
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": [
+        "angleTargets",
+        "rateTargets",
+        "targetClimbRate",
+        "targetThrottle",
+        "heave"
+      ],
+      "deprecatedModes": [
+        "ATTITUDE_ANGLE"
+      ]
+    },
+    {
+      "id": "I-3",
+      "name": "Inner Loop Thrust Actuation & Health Feedback",
+      "specs": [
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 10 }
+      ],
+      "deprecatedOffsets": [6],
+      "packets": {
+        "MSG_THRUST_CMD": {
+          "requiredKeys": [
+            "watchdogSeq",
+            "controlState",
+            "outputs"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_ACTUATOR_STATUS": {
+          "requiredKeys": [
+            "groupId",
+            "interactionMode",
+            "appliedSignal",
+            "isSaturated",
+            "activeCount",
+            "totalCount",
+            "healthStatus"
+          ],
+          "optionalKeys": [
+            "appliedRatio",
+            "appliedGimbal",
+            "gimbalSaturated"
+          ],
+          "enums": {
+            "interactionMode": ["REDSTONE", "API"]
+          },
+          "numericBounds": {
+            "appliedSignal": [0, 15],
+            "activeCount": [0, 16],
+            "totalCount": [1, 16]
+          }
+        },
+        "MSG_ACTUATOR_DISCOVER_REQ": {
+          "requiredKeys": [
+            "targetGroup",
+            "replyChannel"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_ACTUATOR_DISCOVER_ACK": {
+          "requiredKeys": [
+            "groupId",
+            "interactionMode",
+            "activeCount",
+            "totalCount",
+            "isVectorCapable",
+            "healthStatus"
+          ],
+          "optionalKeys": [
+            "gimbalLimits"
+          ],
+          "enums": {
+            "interactionMode": ["REDSTONE", "API"]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "thrustWatchdogMs": 300
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": [
+        "mode"
+      ]
+    },
+    {
+      "id": "I-4",
+      "name": "Aircraft Ground Calibration & Profile Sync",
+      "specs": [
+        "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 0 },
+        { "kind": "hangar_offset", "offset": 0 },
+        { "kind": "hangar_offset", "offset": 1 },
+        { "kind": "hangar_offset", "offset": 3 }
+      ],
+      "deprecatedOffsets": [1001, 1002],
+      "packets": {
+        "MSG_CALIBRATION_INIT": {
+          "requiredKeys": [
+            "stationId",
+            "bayId",
+            "baseHangarChannel"
+          ],
+          "optionalKeys": [
+            "targetCraftDomain",
+            "timeoutSec",
+            "targetThruster"
+          ]
+        },
+        "MSG_CALIBRATION_INIT_ACK": {
+          "requiredKeys": [
+            "aircraftDomainId",
+            "hardwareUuid",
+            "bayId",
+            "status",
+            "airframeType"
+          ],
+          "optionalKeys": [
+            "baseChannel"
+          ],
+          "enums": {
+            "status": ["READY", "BUSY"]
+          }
+        },
+        "MSG_CALIB_BAY_BIND": {
+          "requiredKeys": [
+            "action",
+            "stationId",
+            "bayId",
+            "baseHangarChannel",
+            "bayCalibrationTap",
+            "bayCalibrationCmd"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "action": ["OPEN", "CLOSE"]
+          }
+        },
+        "MSG_CALIB_START": {
+          "requiredKeys": [
+            "action",
+            "targetThruster",
+            "timeoutSec"
+          ],
+          "optionalKeys": [
+            "stationId"
+          ],
+          "enums": {
+            "action": ["ENTER_CALIBRATION", "ABORT_CALIBRATION"]
+          }
+        },
+        "MSG_CALIB_PULSE": {
+          "requiredKeys": [
+            "targetThrusterId",
+            "stepIndex",
+            "pulseLevel",
+            "pulseDurationMs",
+            "safetyMaxTiltDeg"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "stepIndex": [1, 2, 3],
+            "pulseLevel": [4, 8, 12]
+          }
+        },
+        "MSG_PROFILE_SYNC": {
+          "requiredKeys": [
+            "profileId",
+            "calibratedBy",
+            "totalDryMass",
+            "controllabilityStatus",
+            "discoveredSurfaces",
+            "thrusterCoefficients"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_CALIB_ACK": {
+          "requiredKeys": [
+            "profileId",
+            "status"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "status": ["ACCEPTED", "REJECTED"]
+          }
+        },
+        "MSG_CALIBRATION_CLOSE": {
+          "requiredKeys": [
+            "bayId",
+            "action",
+            "reason"
+          ],
+          "optionalKeys": [
+            "saveProfile"
+          ],
+          "enums": {
+            "action": ["CLOSE_SESSION"],
+            "reason": ["COMPLETE", "MANUAL"]
+          }
+        },
+        "MSG_CALIBRATION_CLOSE_ACK": {
+          "requiredKeys": [
+            "bayId",
+            "status"
+          ],
+          "optionalKeys": [
+            "currentFsmState"
+          ],
+          "enums": {
+            "status": ["CLOSED"]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "calibrationSessionTimeoutSec": 120
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-5",
+      "name": "Facility ATC & 3-Tier Guidance Handshake",
+      "specs": [
+        "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+        "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+        "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+        "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "global_fixed", "channels": [50001, 50002, 50003, 50004] },
+        { "kind": "sector_offset", "offsets": [0, 1, 2, 5] },
+        { "kind": "aircraft_offset", "offset": 5 }
+      ],
+      "deprecatedOffsets": [],
+      "packets": {
+        "MSG_FACILITY_BEACON": {
+          "requiredKeys": [
+            "sectorId",
+            "facilitiesSummary"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_ATC_FACILITY_UPDATE": {
+          "requiredKeys": [
+            "facilityId",
+            "status"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "status": ["FREE", "RESERVED", "OCCUPIED", "MAINTENANCE"]
+          }
+        },
+        "MSG_FACILITY_STATIC_GUIDE": {
+          "requiredKeys": [
+            "facilityId",
+            "facilityType",
+            "targetAircraft",
+            "touchdownPoint",
+            "attitude",
+            "approachDirection",
+            "deckStatus",
+            "landingPermitted",
+            "abortAlert"
+          ],
+          "optionalKeys": [
+            "clearanceRadius",
+            "safeDescentRate",
+            "tiltAngleDeg",
+            "heaveRateMps"
+          ],
+          "enums": {
+            "approachDirection": ["FRONT", "BACK", "LEFT", "RIGHT", "UPWARD", "DOWNWARD"],
+            "deckStatus": ["STABLE", "DANGEROUS"],
+            "facilityType": ["LANDING_PAD", "RUNWAY", "DOCKING_ARM"]
+          }
+        },
+        "MSG_FACILITY_DYNAMIC_GUIDE": {
+          "requiredKeys": [
+            "facilityId",
+            "facilityType",
+            "targetAircraft",
+            "touchdownPoint",
+            "attitude",
+            "approachDirection",
+            "deckStatus",
+            "landingPermitted",
+            "abortAlert",
+            "velocity",
+            "acceleration",
+            "angularRates"
+          ],
+          "optionalKeys": [
+            "endPoint",
+            "glideSlopeAngle",
+            "touchdownZoneLength",
+            "clearanceRadius",
+            "safeDescentRate",
+            "tiltAngleDeg",
+            "heaveRateMps"
+          ],
+          "enums": {
+            "approachDirection": ["FRONT", "BACK", "LEFT", "RIGHT", "UPWARD", "DOWNWARD"],
+            "deckStatus": ["STABLE", "DANGEROUS"],
+            "facilityType": ["LANDING_PAD", "RUNWAY", "DOCKING_ARM"]
+          }
+        },
+        "MSG_GAC_DEPARTURE_CLEARANCE": {
+          "requiredKeys": [
+            "aircraftId",
+            "status"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_GAC_ABORT_CLEAR": {
+          "requiredKeys": [
+            "aircraftId"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_ATC_APPROACH_CLEARANCE": {
+          "requiredKeys": [
+            "aircraftId",
+            "targetFacilityId",
+            "status"
+          ],
+          "optionalKeys": [
+            "assignedGuidanceChannel",
+            "glideSlope",
+            "touchdownPoint",
+            "reason",
+            "retryAfterSec"
+          ],
+          "enums": {
+            "status": ["CLEARED", "DENIED"]
+          }
+        },
+        "MSG_GAC_CHECKIN_REQ": {
+          "requiredKeys": [
+            "aircraftId",
+            "sectorId",
+            "airframeType",
+            "grossWeight",
+            "clearanceRadius"
+          ],
+          "optionalKeys": [
+            "estimatedArrivalTime"
+          ]
+        },
+        "MSG_GAC_APPROACH_CLEARANCE": {
+          "requiredKeys": [
+            "aircraftId",
+            "assignedFacilityId",
+            "tacticalChannel"
+          ],
+          "optionalKeys": [
+            "approachHeading",
+            "safeDescentRate",
+            "slotDurationSec"
+          ]
+        }
+      },
+      "timeoutsMs": {
+        "slotTimeoutMs": 120000,
+        "dynamicGuideWatchdogMs": 300
+      },
+      "deprecatedPacketTypes": [
+        "MSG_DOCKING_ARM_CMD"
+      ],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-6",
+      "name": "Operator C2 & Cockpit MFD Display",
+      "specs": [
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 0 },
+        { "kind": "aircraft_offset", "offset": 3 }
+      ],
+      "deprecatedOffsets": [],
+      "packets": {
+        "MSG_OPERATOR_CMD": {
+          "requiredKeys": [
+            "authority",
+            "command",
+            "flightMode",
+            "params",
+            "emergencyAction"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "authority": ["PILOT_PRIMARY", "GCS_OVERRIDE"],
+            "emergencyAction": ["NONE", "RTH", "HOVER_HOLD", "EMERGENCY_LAND"]
+          }
+        },
+        "MSG_MISSION_CMD": {
+          "requiredKeys": [
+            "action"
+          ],
+          "optionalKeys": [
+            "missionName",
+            "executionMode",
+            "forceRestart"
+          ],
+          "enums": {
+            "action": ["RUN", "STOP", "PAUSE", "RESUME", "NEXT", "CONFIRM"]
+          }
+        },
+        "MSG_MISSION_ACK": {
+          "requiredKeys": [
+            "action",
+            "status"
+          ],
+          "optionalKeys": [
+            "missionId",
+            "missionState",
+            "activeIndex",
+            "totalCheckpoints",
+            "reason"
+          ],
+          "enums": {
+            "status": [
+              "ACCEPTED",
+              "BUSY_REJECTED",
+              "FILE_NOT_FOUND",
+              "SCHEMA_INVALID",
+              "DEFERRED_ACTION_UNSUPPORTED",
+              "PRECONDITION_FAILED",
+              "INVALID_CMD"
+            ]
+          }
+        },
+        "MSG_MFD_STATE": {
+          "requiredKeys": [
+            "source",
+            "controlState",
+            "sensorOk",
+            "attitude",
+            "dynamics",
+            "fuel",
+            "dynamicLoad",
+            "actuatorHealth"
+          ],
+          "optionalKeys": [
+            "fsmState",
+            "flightMode",
+            "angularRates",
+            "nav",
+            "sensorHealth"
+          ]
+        }
+      },
+      "timeoutsMs": {},
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-7",
+      "name": "External Precision GPS Positioning",
+      "specs": [
+        "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "global_fixed", "channels": [60001, 60002] },
+        { "kind": "aircraft_offset", "offset": 5 },
+        { "kind": "sector_offset", "offsets": [5] }
+      ],
+      "deprecatedOffsets": [10045],
+      "packets": {
+        "MSG_GPS_REQUEST": {
+          "requiredKeys": [
+            "replyChannel",
+            "altitudeY",
+            "clientType",
+            "clientSeq"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_GPS_RESPONSE": {
+          "requiredKeys": [
+            "targetClient",
+            "clientSeq",
+            "status",
+            "position",
+            "accuracy"
+          ],
+          "optionalKeys": [
+            "hdop",
+            "nodeCount",
+            "selectedNodes"
+          ],
+          "enums": {
+            "status": ["FIX_OK", "FIX_DEGRADED", "NO_FIX"]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "gpsTimeoutMs": 5000
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-8",
+      "name": "GCS Channel Block Bootstrap",
+      "specs": [
+        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "global_fixed", "channels": [50000] }
+      ],
+      "deprecatedOffsets": [10040],
+      "packets": {
+        "MSG_BLOCK_REQUEST": {
+          "requiredKeys": [
+            "domainId",
+            "hardwareUuid",
+            "requestedBandwidth"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_BLOCK_ASSIGN": {
+          "requiredKeys": [
+            "blockId",
+            "baseChannel",
+            "bandwidth",
+            "status",
+            "channelRange"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "status": ["ASSIGNED", "FAILED"]
+          }
+        }
+      },
+      "timeoutsMs": {},
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-9",
+      "name": "Channel Collision Probe & Atomic Rebinding Cascade",
+      "specs": [
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+        "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 0 },
+        { "kind": "aircraft_offset", "offset": 4 },
+        { "kind": "aircraft_offset", "offset": 1 },
+        { "kind": "aircraft_offset", "offset": 10 },
+        { "kind": "aircraft_offset", "offset": 11 }
+      ],
+      "deprecatedOffsets": [6, 7],
+      "packets": {
+        "MSG_CHANNEL_PROBE": {
+          "requiredKeys": [
+            "hardwareUuid",
+            "candidateBase",
+            "bandwidth"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_CHANNEL_PROBE_ACK": {
+          "requiredKeys": [
+            "existingDomain",
+            "occupiedBase",
+            "status"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "status": ["CONFLICT_DETECTED"]
+          }
+        },
+        "MSG_CHANNEL_REBIND": {
+          "requiredKeys": [
+            "transactionId",
+            "action",
+            "oldBaseChannel",
+            "newBaseChannel",
+            "bandwidth"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "action": ["PREPARE", "COMMIT", "ROLLBACK"]
+          }
+        },
+        "MSG_CHANNEL_REBIND_ACK": {
+          "requiredKeys": [
+            "transactionId",
+            "action",
+            "status",
+            "oldBaseChannel",
+            "newBaseChannel"
+          ],
+          "optionalKeys": [
+            "nodeId",
+            "subNodesReady"
+          ],
+          "enums": {
+            "status": ["READY", "COMMITTED", "ROLLED_BACK", "FAILED"]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "rebindWatchdogMs": 500,
+        "probeListenMs": 200
+      },
+      "deprecatedPacketTypes": [
+        "MSG_REBIND_ACK"
+      ],
+      "deprecatedPayloadKeys": [
+        "phase",
+        "oldBase",
+        "newBase",
+        "switchTimeoutMs"
+      ]
+    },
+    {
+      "id": "I-10",
+      "name": "Aerodynamic Surface Actuation & Feedback",
+      "specs": [
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 11 }
+      ],
+      "deprecatedOffsets": [7],
+      "packets": {
+        "MSG_AERO_CMD": {
+          "requiredKeys": [
+            "watchdogSeq",
+            "controlState",
+            "surfaces"
+          ],
+          "optionalKeys": [
+            "dynamicPressureFactor"
+          ],
+          "numericBounds": {
+            "dynamicPressureFactor": [0.1, 1.0]
+          }
+        },
+        "MSG_AERO_STATUS": {
+          "requiredKeys": [
+            "podId",
+            "surfaceId",
+            "interactionMode",
+            "appliedDeflection",
+            "healthStatus"
+          ],
+          "optionalKeys": [
+            "boundSide",
+            "isSaturated",
+            "isJammed"
+          ],
+          "enums": {
+            "healthStatus": ["NOMINAL", "DEGRADED", "TOTAL_LOSS"],
+            "interactionMode": ["API", "REDSTONE"]
+          },
+          "numericBounds": {
+            "appliedDeflection": [-1.0, 1.0]
+          }
+        },
+        "MSG_SURFACE_DISCOVER_REQ": {
+          "requiredKeys": [
+            "targetPod",
+            "replyChannel"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_SURFACE_DISCOVER_ACK": {
+          "requiredKeys": [
+            "podId",
+            "managedSurfaces",
+            "healthStatus"
+          ],
+          "optionalKeys": [
+            "boundPorts"
+          ]
+        }
+      },
+      "timeoutsMs": {
+        "aeroWatchdogMs": 300
+      },
+      "deprecatedPacketTypes": [
+        "MSG_SURFACE_CMD",
+        "MSG_SURFACE_STATUS"
+      ],
+      "deprecatedPayloadKeys": [
+        "mode",
+        "appliedDeg",
+        "API_NOMINAL",
+        "API_TOTAL_LOSS"
+      ]
+    },
+    {
+      "id": "I-11",
+      "name": "Aircraft Payload Bus (Zone 3)",
+      "specs": [
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset_range", "minOffset": 20, "maxOffset": 29 }
+      ],
+      "deprecatedOffsets": [],
+      "packets": {
+        "MSG_PAYLOAD_REQ": {
+          "requiredKeys": [
+            "checkpointId",
+            "command",
+            "replyChannel"
+          ],
+          "optionalKeys": [
+            "params"
+          ]
+        },
+        "MSG_PAYLOAD_ACK": {
+          "requiredKeys": [
+            "checkpointId",
+            "command",
+            "status"
+          ],
+          "optionalKeys": [
+            "detail"
+          ]
+        }
+      },
+      "timeoutsMs": {},
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
+    },
+    {
+      "id": "I-12",
+      "name": "Trajectory Setpoint & Outer Loop Feedback",
+      "specs": [
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+        "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        { "kind": "aircraft_offset", "offset": 4 }
+      ],
+      "deprecatedOffsets": [],
+      "packets": {
+        "MSG_TRAJECTORY_SETPOINT": {
+          "requiredKeys": [
+            "arm",
+            "flightActive",
+            "flightMode",
+            "constraintProfile",
+            "targetPos",
+            "targetVel",
+            "feedforwardAccel",
+            "targetHeading",
+            "currentPos",
+            "navValid",
+            "gpsTimedOut",
+            "hdop",
+            "posEpoch"
+          ],
+          "optionalKeys": [
+            "flapHint",
+            "translationBiasHint"
+          ],
+          "enums": {
+            "constraintProfile": [
+              "STANDARD",
+              "STRICT_LEVEL",
+              "TILT_ASSISTED",
+              "FIXED_WING_GLIDE"
+            ]
+          },
+          "numericBounds": {
+            "targetHeading": [0.0, 360.0]
+          }
+        },
+        "MSG_OUTER_LOOP_STATUS": {
+          "requiredKeys": [
+            "fsmState",
+            "posError",
+            "velError",
+            "saturated",
+            "navStale",
+            "activeConstraintProfile",
+            "commandedCollectiveThrust"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "fsmState": [
+              "BOOT",
+              "IDLE_ARMED",
+              "ACTIVE_TRACKING",
+              "PASSIVE_TRACKING",
+              "AMM_TIMEOUT_HOLD",
+              "EMERGENCY_LAND"
+            ]
+          },
+          "numericBounds": {
+            "commandedCollectiveThrust": [0.0, 1.0]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "setpointWatchdogMs": 500
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": [],
+      "deprecatedTokens": [
+        "CH_NAV_SENSOR"
+      ]
+    }
+  ],
+  "missionSchema": {
+    "version": "2.0.0",
+    "activeActions": [
+      "ACT_SYS_LOAD",
+      "ACT_SYS_PREFLIGHT",
+      "ACT_SYS_SET_HOME",
+      "ACT_SYS_ARM",
+      "ACT_SYS_DISARM",
+      "ACT_SYS_TERMINATE",
+      "ACT_TKL_TAKEOFF_VERT",
+      "ACT_TKL_TRANS_MC2FW",
+      "ACT_TKL_TRANS_FW2MC",
+      "ACT_TKL_LAND_NORM",
+      "ACT_TKL_LAND_PREC",
+      "ACT_TKL_ABORT_LAND",
+      "ACT_NAV_GOTO_WP",
+      "ACT_NAV_SPLINE_WP",
+      "ACT_NAV_CORRIDOR",
+      "ACT_NAV_CHANGE_ALT",
+      "ACT_NAV_CHANGE_SPD",
+      "ACT_NAV_CHANGE_YAW",
+      "ACT_PAT_HOLD_POS",
+      "ACT_PAT_POI_HOLD",
+      "ACT_PAT_LOITER_TIME",
+      "ACT_PAT_LOITER_TURNS",
+      "ACT_PAT_LOITER_ALT",
+      "ACT_PAY_BUS_CMD",
+      "ACT_PAY_REDSTONE",
+      "ACT_PAY_SET_ROI",
+      "ACT_PAY_CLEAR_ROI",
+      "ACT_COM_ATC_HOLD",
+      "ACT_MOB_RV_TRACK",
+      "ACT_MOB_DECK_SYNC",
+      "ACT_MOB_MOVING_TKOFF",
+      "ACT_FS_RTL_HOME",
+      "ACT_FS_GOTO_RALLY",
+      "ACT_FS_FENCE_BRAKE",
+      "ACT_FS_HOVER_HOLD",
+      "ACT_FS_EMERG_LAND"
+    ],
+    "activeDecorators": [
+      "DEC_EMCON",
+      "DEC_ENERGY_ECO",
+      "DEC_SMOOTH_TRAJ",
+      "DEC_HUMAN_AUTH",
+      "DEC_RETRY_N",
+      "DEC_TIMEOUT_GUARD"
+    ],
+    "activeMacros": [
+      "MAC_RECON_ORBIT",
+      "MAC_SHIP_RECOVERY",
+      "MAC_CARGO_SORTIE"
+    ],
+    "deferredActions": [
+      "ACT_TKL_TAKEOFF_RWY",
+      "ACT_TKL_LAND_RWY",
+      "ACT_NAV_TERRAIN_FLW",
+      "ACT_PAT_FIG_EIGHT",
+      "ACT_PAT_GRID_SURVEY",
+      "ACT_PAT_EXP_SPIRAL",
+      "ACT_PER_LOCAL_AVOID",
+      "ACT_PER_REPLAN_GLB",
+      "ACT_PER_TRACK_TGT",
+      "ACT_PER_SENTRY_HOLD",
+      "ACT_COM_SWARM_FOLLOW",
+      "ACT_COM_HANDOVER",
+      "ACT_MOB_ARM_DOCK",
+      "ACT_MOB_ARM_UNDOCK",
+      "ACT_NRG_REFUEL_DOCK",
+      "ACT_NRG_HIBERNATE",
+      "ACT_MUMT_WINGMAN",
+      "ACT_MUMT_UGV_SCOUT",
+      "ACT_MUMT_CROSS_CUE",
+      "ACT_PAY_CARGO_DROP",
+      "ACT_PAY_FIRE_CTRL",
+      "ACT_PAY_GEO_SCAN"
+    ],
+    "deferredDecorators": [
+      "DEC_TIME_CRIT"
+    ],
+    "deferredMacros": [
+      "MAC_PATROL_RADAR",
+      "MAC_ARM_RESUPPLY"
+    ],
+    "conditionTypes": [
+      "PROXIMITY_2D",
+      "PROXIMITY_3D",
+      "ALTITUDE_REACHED",
+      "DURATION_SEC",
+      "TIMEOUT_SEC",
+      "FUEL_LEVEL_BELOW",
+      "FACILITY_TOUCHDOWN",
+      "PAYLOAD_RESP_MATCH",
+      "REDSTONE_INPUT_HIGH",
+      "CROSS_TRACK_ERROR",
+      "ARM_DOCKED",
+      "ARM_RELEASED",
+      "SYS_ARMED",
+      "IMMEDIATE"
+    ],
+    "deprecatedActions": [
+      "FLY_OVER",
+      "FLY_TO",
+      "ORBIT",
+      "PATROL",
+      "POI_HOLD",
+      "TAKEOFF_LAUNCHPAD",
+      "LAND_LAUNCHPAD",
+      "PAYLOAD_ACTION",
+      "REDSTONE_ACTION",
+      "TAKEOFF_RUNWAY",
+      "LAND_RUNWAY",
+      "DOCK_ARM",
+      "UNDOCK_ARM"
+    ]
+  },
+  "deferredSubsystems": [
+    "src/1_control/asa"
+  ]
+}
