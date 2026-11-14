@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-14 — 지상 In-Flight Aligner FDR(src/0_development/fdr/), VAS telemetryDiag(v1.21.0) 및 오프라인 프로파일러(tools/analyze_flight_log.py) 구현 및 Implemented 승격 (TASK-120)
+
+- **결정 배경**: `/grill-me`·CC:Tweaked VFS/Disk Array 조사로 기존 단일 컴퓨터 블랙박스 초안(`v0.1.0 Draft`)을 수신 전용 지상 실환경 비행 식별기(Ground In-Flight Aligner) + 멀티 디스크 VFS 스패닝 풀 + `GDRIVE_WEBHOOK`(`FDR_Reports`, `1C3ZWMoXjsba1QE8ksgWG0LSfxzW_nMWI`) 반출 + `VAS` Opt-in `telemetryDiag`(`system.json` 기본 `false`) + 호스트 오프라인 프로파일러(`v0.3.0 Approved`)로 재정의·승격한 뒤 `TASK-120-1~2`를 구현함 (`docs/superpowers/plans/2026-11-14-task-120-fdr-and-analyzer.md`).
+- **반영 내역**:
+  1. **지상 FDR 및 인스톨러 등록 (`src/0_development/fdr/`, `manifest.lua`)**: `ring_buffer.lua`, `packet_tap.lua`(전수 `modem.transmit` 0회, `[N]` 동적 바인딩 `Base = 10000 + (N-1)*40`, `"*"` `domainId` 자동 잠금), `storage_pool.lua`(유선/인접 `/disk*` Spanned VFS 롤오버·잔여용량 우선·고아/만료 세션 순환 정리), `jsonl_dumper.lua`(`STREAMING` 기본 + `RING_BUFFER` 덤프), `cloud_exporter.lua`(`<=100KB` JSON 청크 `http.post`), `fdr_ui.lua`(51x19 `term.blit`), `main.lua`(`disk`/`disk_eject` `DISK_FULL` 자동 복구·`E_STOP` 에지 래치·`[N]/[D]/[S]/[U]/[P]/[C]/[Q]` 키바인딩) 및 `manifest.lua` 13번째 모듈 `fdr` 등록 (`tests/0_development/installer/` 13모듈 반영).
+  2. **VAS Opt-in `telemetryDiag` (`src/1_control/vas/`)**: `telemetry_feeder.lua`·`core_daemon.lua`가 `system.telemetryDiag == true`일 때만 `Base+2` `MSG_FLIGHT_TELEMETRY.payload`에 `satFlags` 및 `diag = { integrators, integralLimits, saturationFreeze, lastDemands }`를 첨부하도록 확장(기본 `false` 무오버헤드·Zero-Fallback 유지).
+  3. **호스트 오프라인 분석/튜닝 CLI (`tools/analyze_flight_log.py`)**: 다중 JSONL/glob/디렉토리/`session_manifest.json` 병합(`(rxMs, seqIdx)` 중복 제거), `vas/modules/quat.lua` 동일 오일러 변환·150ms 타임라인 정렬(`RATE_COMMAND` 건너뛰기), 포화·Scalar/`ADVANCED_VTOL` 추력 분배 리포트(`--json`/`--csv`), 안전 가드(`sensorFaultRatio > 20%` 차단, `minSamples=100`, 포화 시 `ki` 증액 동결, `[0.70x, 1.35x]` 클램프) 기반 `--emit-profile`(`pid_tuned.json`, `system_patch.json`, `fcp_patch.json`, `tuning_summary.json`) 구현 및 `tests/harness/test_tools_integrity.py` 등록.
+- **승격 & 검증**: `FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0 Implemented`) 및 `VAS_PROGRAM_SPECIFICATION.md` (`v1.21.0 Implemented`) 승격(`tools/verify_spec_status.py` `12 Implemented, 5 Approved`), `TASK.md` 아카이브 10개 상한 유지(`TASK-206` 정리—본 아카이브 기보존). CraftOS-PC 단위 13타겟 `523/523 PASS`, E2E 9스위트 `14/14 PASS`(Scenario 9 `test_e2e_fdr_blackbox.lua` 포함), 돌연변이 `25/25 KILLED` (`100.0%`), Python 하네스 `93/93 PASS`(CraftOS-PC -> `analyze_flight_log.py --emit-profile --strict` 라운드트립 포함), Lua 5.2 `124/124 PASS`, `verify_manifest_sync.py`·`verify_all_specs.py --check-readmes` `0 Errors, 0 Warnings`, `verify_context_docs.py` `0 findings`.
+
+---
+
 ## 2026-11-14 — AMM WebUI Mission Editor(tools/amm_mission_editor.html) 구현, CraftOS-PC 라운드트립 및 AMM·에디터 사양 Implemented 승격 (TASK-402)
 
 - **결정 배경**: `/grill-me`·`frontend-design`·`web-design-guidelines` 기반으로 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Approved`)를 구체화하고, `mission_engine.lua` 런타임 SSOT와의 100% 패리티(`cp.onEnter`/`onExit`/`onAbort` 최상위 훅, `ACT_NAV_CORRIDOR` 양 끝점 필수, `{ logic: "ALL"|"ANY"|"NOT", conditions: [...] }` 조건 그룹, `TIMEOUT_SEC.timeout`)를 보장하는 오프라인 단일 파일 HTML 에디터(`tools/amm_mission_editor.html`)를 구현함 (`docs/superpowers/plans/2026-11-14-task-402-amm-mission-editor.md`).
