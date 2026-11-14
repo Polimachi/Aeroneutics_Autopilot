@@ -1,8 +1,8 @@
 ﻿# Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
-> **최종 갱신일**: 2026-11-14  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 403, 404, 302, 010, 011, 014, 501, 210)
+> **최종 갱신일**: 2026-11-15  
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402, TASK-014 / 활성 대기: TASK-120, 117, 403, 404, 302, 010, 011, 501, 210)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-403` (에디터 World Preset) · `TASK-404` (GCS WebSocket 브리지·실시간 전술 지도) · `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · `TASK-014` (3대 감사 가드레일) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
+> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-403` (에디터 World Preset) · `TASK-404` (GCS WebSocket 브리지·실시간 전술 지도) · `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
 
 - [-] **TASK-120: [1순위 / 개발 도구] 지상 실환경 비행 식별기(FDR)·디스크 풀 로거 및 오프라인 프로파일러 구축** (`src/0_development/fdr/`, `src/1_control/vas/`, `tools/analyze_flight_log.py`)
   - **권장 착수 순위**: **1순위** (독립 도구로서 즉시 착수 가능; `TASK-117` E2E/실전 검증 및 `TASK-011-5` FDR 매뉴얼 작성의 선행 기반)
@@ -103,20 +103,6 @@
     - [ ] **TASK-011-5**: 블랙박스 FDR 및 오프라인 텔레메트리 분석기 매뉴얼(`playbook/0_development/fdr.md`) 작성 (`TASK-120` 완료 연동 — `src/0_development/fdr/` 감청/덤프 절차 및 `tools/analyze_flight_log.py` CLI 튜닝·진단 해석 가이드)
     - [ ] **TASK-011-6**: `playbook/README.md` 인덱스·`tools/verify_playbooks.py` 인가 목록 동기화 및 7대 섹션·링크 정적 검증 통과
 
-- [-] **TASK-014: [2순위 / 검증 인프라] 전수 감사 3대 사각지대 방지 가드레일 구축 (SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크)** (`config/protocol_contracts.json`, `tools/verify_contracts.py`, `tools/verify_runtime_wiring.py`, `tools/run_boot_smoke.py`, `harness/simulation/virtual_bus.lua`, `tools/run_e2e_tests.py`, `.agent/`)
-  - **설계서 및 실행 계획서**: [2026-11-14-audit-prevention-guardrails-design.md](docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md), [2026-11-14-task-014-audit-prevention-guardrails.md](docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md)
-  - **확정 설계 결정 (`/brainstorming` · `/grill-me` 2026-11-14)**:
-    - **SSOT 원천**: `config/protocol_contracts.json`을 기계 판독형 계약 정본으로 신설하고, `tools/verify_contracts.py`가 16개 활성 사양서·활성 `src/` Lua/JSON·E2E 패킷을 교차 검증 (`Revision History`·`[DEPRECATED]` 배지 맥락 오탐 배제).
-    - **와이어 계약 검증**: `virtual_bus.lua` + `tools/run_e2e_tests.py`가 E2E 중 오가는 모든 패킷을 `result.json`으로 캡처해 엔벨로프·필수키·열거형·수치범위·Zero-Fallback을 자동 검증하며, 정적 `src/` 이중키 폴백 린트 병행.
-    - **미배선 런타임 경로 차단**: `tools/verify_runtime_wiring.py`로 `main.lua` 도달성·고아 모듈·깨진 `require`·미사용 임포트를 검출하고, `tools/run_boot_smoke.py`로 10개 활성 `main.lua`를 CraftOS-PC에서 실제 설치 레이아웃으로 약 7틱 부팅 스모크 검증.
-    - **유예 및 컨텍스트 게이트**: `src/1_control/asa`(`TASK-105`) 런타임 검사는 `--include-deferred` 전까지 기본 유예(사양서 16종 SSOT는 전수 검사); `.agent/hooks/`는 R1~R8 경량 유지하고 `skill-workflows.md`·스킬 지침으로 완료 게이트 통합.
-  - **주요 작업**:
-    - [ ] **TASK-014-1**: `config/protocol_contracts.json` SSOT 스키마 구축 및 로더 검증 (`tests/harness/test_verify_contracts.py`)
-    - [ ] **TASK-014-2**: `tools/verify_contracts.py` 사양서 SSOT 대조 및 정적 Zero-Fallback/폐기키 린터 구현
-    - [ ] **TASK-014-3**: `virtual_bus.lua` + `tools/run_e2e_tests.py` E2E 실전 패킷 캡처 계약 검증 연동 (`tests/harness/test_e2e_contract_validation.py`)
-    - [ ] **TASK-014-4**: `tools/verify_runtime_wiring.py` 정적 도달성·고아 모듈·미사용 임포트 검증기 구현 (`tests/harness/test_verify_runtime_wiring.py`)
-    - [ ] **TASK-014-5**: `tools/run_boot_smoke.py` 10개 활성 `main.lua` CraftOS-PC 실부팅 스모크 러너 구현 및 `test_tools_integrity.py` 등록
-    - [ ] **TASK-014-6**: `.agent/` 규칙·스킬 게이트 및 컨텍스트 문서 동기화
 
 - [ ] **TASK-501: [3순위 / 배포 인프라] Google Drive 전수 패키지(101종) 업로드·매핑 동기화 및 `--strict-gdrive-packages` 게이트 활성화** (`config/gdrive_mapping.json`, `tools/sync_gdrive.py`, `tools/verify_manifest_sync.py`, `dist_gdrive/`)
   - **등록 배경**: `TASK-013` Q8 결정(방안 A 우선 적용 + 방안 B 후속 과제 분리)에 따라 현행 9종 부트스트랩/공용 파일 해시 갱신만 우선 완료하고, 12개 서브시스템 전수 패키지 파일(`101`건; `manifest.lua` `109`경로 + 루트 `installer.lua` - 기매핑 `9`건)의 Google Drive 실업로드·매핑 등록 및 엄격 정합성 게이트 활성화를 별도 과제로 추적함.
@@ -172,6 +158,11 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
 
+- [x] **TASK-014: 전수 감사 3대 사각지대 방지 가드레일 구축 (SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크)** (완료일: 2026-11-15)
+  - **설계서 및 실행 계획서**: `docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md`, `docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md`
+  - **핵심 성과**: `config/protocol_contracts.json` SSOT(16개 활성 사양서·23개 메시지·11개 채널·120개 소스 파일 교차 검증), `tools/verify_contracts.py`(정적 Zero-Fallback/폐기키 린터), `virtual_bus.lua` + `tools/run_e2e_tests.py` 실전 패킷 캡처 검증(458개 패킷 0건 위반), `tools/verify_runtime_wiring.py`(10개 서브시스템 정적 도달성·4개 기지의 예외 승인 관리), `tools/run_boot_smoke.py`(10개 활성 `main.lua` CraftOS-PC 7틱 실부팅 스모크), `.agent/` 규칙/스킬 게이트 동기화 완료 (`TASK-014-1~6`). `src/1_control/asa/**`(`TASK-105`)는 `0 diff` 동결 유지.
+  - **검증**: `verify_contracts.py` PASS(16 specs, 120 files, 0 errors), `verify_runtime_wiring.py` PASS(0 violations, 4 exemptions), `run_boot_smoke.py` 10/10 PASS, `tests/harness/` 122/122 PASS, 단위 12타겟 504/504 PASS, E2E 8스위트 13/13 PASS(458 packets validated), `verify_spec_status.py` 16종(11 Implemented, 5 Approved), `verify_context_docs.py` 0 findings.
+
 - [x] **TASK-402: AMM WebUI 단일 파일 미션 에디터(`tools/amm_mission_editor.html`) 구현, CraftOS-PC 라운드트립 검증 및 `AMM`/`에디터` 사양 `Implemented` 승격** (완료일: 2026-11-14)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-402-amm-mission-editor.md`
   - **핵심 성과**: `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Implemented`) 기준 오프라인 단일 HTML5/CSS/JS 에디터(9 IIFE 모듈, 36+22 `ACT_*`·6+1 `DEC_*`·3+2 `MAC_*`·19종 `preconditions`·14종 조건·4종 훅·2D 전술 캔버스·`#altProfilePane`·50단 Undo/Redo·Raw JSON 드로어·`localStorage` 자동저장) 구현 및 Web Interface Guidelines 준수 정적/DOM-shim 감사 완료.
@@ -207,6 +198,4 @@
   - **실행 계획서**: `docs/superpowers/plans/2026-11-11-task-202-{2,3,4}-*.md`, `docs/superpowers/plans/2026-11-12-task-202-5-amm-webui-editor-spec.md`
   - **핵심 성과**: 3분할 미션 코어(`mission_engine`, `condition_evaluator`, `hook_runner`), Zone 3 버스, 51x19 뷰포트, `resolve_path`·`file_transfer`·CLI 및 WebUI 에디터 초안(`AMM_MISSION_EDITOR_SPECIFICATION.md` 당시 `v0.1.0 Draft`) 수립 (`TASK-202-1~5`).
 
-- [x] **TASK-206: FCP 외루프 경량화 및 AMM 상위 계층 이관을 위한 15대 사양서 전면 개편** (완료일: 2026-11-12)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-11-fcp-amm-role-refactor-specs.md`
-  - **핵심 성과**: Spec-First 4계층 책임 분리(`AMM` 외부 게이트웨이·항법·궤적 / `FCP` `SE(3)` / `VAS` `SO(3)`), `Base+4` `[I-12]` 신설, `[I-2]`/`[I-10]` 단일화 및 잔존 결함 일괄 정정 (`TASK-206-1~8`).
+

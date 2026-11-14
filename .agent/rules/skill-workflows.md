@@ -36,6 +36,7 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
   - 코드 리뷰 요청 또는 커밋/PR 전 `.lua` 감사 시: `pr-review-toolkit` (+ API 시그니처 대조 시 `computercraft-lua`, 언어 최적화 대조 시 `lua`).
 - **작업 완료 보고 및 마일스톤 인계 (Completion & Context Sync)**:
   - 실제 코드·설정·테스트 변경 완료 주장 직전에만 `verification-before-completion` 호출.
+  - 코드·사양서 변경 완료 주장 전 3대 검증 게이트를 단위/E2E 테스트와 함께 실행한다: `python tools/verify_contracts.py` (16대 사양서 SSOT 및 정적 Zero-Fallback/폐기키 린트; 사양서 전용 수정 시 `--specs-only`), `python tools/verify_runtime_wiring.py` (도달성, 깨진 `require`, 고아 모듈, 미사용 임포트), `python tools/run_boot_smoke.py --clean-orphans` (`src/` 런타임 변경 시 활성 `main.lua` 대상 CraftOS-PC 실부팅 스모크).
   - 사양서 기반 코드 구현이 검증을 통과하면 **Mixed-Scope 중단 예외(경량 완료 전이)**로서 `specification-lifecycle-manager`를 호출하지 않고, 대상 사양서 상단 메타데이터 표의 `문서 상태`를 `Implemented`로 갱신하고 `최종 수정일`을 당일 날짜로 동기화한다.
   - `TASK-ID` 완료 시 `md-management`를 호출해 `.agent/memory/<dir>.md`에 `TASK-ID`를 포함한 이력 항목을 추가한다(`verify_context_docs.py` R8). `GEMINI.md` 스냅샷은 Phase·디렉토리·표준 명령어·핵심 아키텍처 불변식이 바뀐 마일스톤 완료 시에만 갱신한다.
   - 작업 계획 생성 시 및 작업 완료 후 후속 과제 도출 시 `TASK.md`에 신규/후속 태스크를 즉시 등록하고 진행 상태(`[ ]`, `[-]`, `[x]`)를 동기화한다.
@@ -44,6 +45,7 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
 ## 3. 사양서 생명주기 가드레일 (Spec Lifecycle Guardrails)
 - **사양서 수정 및 양방향 동기화 시 (Revision Protocol)**:
   - 활성 사양서 수정 시 `specification-lifecycle-manager` 규칙에 따라 `docs/system/*.md` 및 활성 `docs/specs/**/*.md`(Status != `Draft`) 간 양방향 동기화를 수행한다.
+  - 활성 프로토콜·패킷 엔벨로프·채널·열거형·수치 범위 변경 시 `config/protocol_contracts.json`을 동기화하고, `python tools/verify_contracts.py --specs-only`를 실행하여 오류 0건(`0 errors`)을 확인한다.
   - `Implemented` 사양서 중 요구사항·패킷 스키마·채널·파라미터 변경으로 **`src/` 런타임 코드 수정이 필요한 사양서만** 상단 메타데이터 표의 `문서 상태`를 `Approved`로 전이하고 `최종 수정일` 갱신 및 `Revision History` 테이블(버전, 일자, 변경 요약, 변경 사유)에 행을 추가한다. 단순 상대 링크나 참조 버전 배지만 갱신된 연관 사양서는 `Implemented` 상태를 유지한다.
 - **신규 및 폐기 사양서 전이 시 (Drafting & Deprecation Protocol)**:
   - 신규 기획안은 대상 도메인 디렉토리에 직접 `문서 상태`: `Draft`로 작성하며(`specification-lifecycle-manager` 비발동), 검토 완료 후 `Approved`로 상태를 승격할 때 `specification-lifecycle-manager`로 전역 동기화를 수행한다.

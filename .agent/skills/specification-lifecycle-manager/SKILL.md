@@ -102,6 +102,10 @@ Verify alignment across all modified and peer active specifications on all six d
    - Verify all relative markdown links (`../../../system/...`, `../../<domain>/...`) and section anchors. Ensure zero broken links and zero stale lifecycle path segments (`approved/`, `implemented/`, `drafts/`, `archived/`).
 5. **FSM & Algorithmic Parameters**: Exact FSM state identifiers, state transition conditions, control loop frequencies (20Hz / 50ms), watchdog timeouts, filter coefficients, and safety thresholds.
 6. **Deprecation Hygiene**: Consistent `[DEPRECATED]` badges across Master ICD, diagrams, and active subsystem specs, with zero dual-key fallback logic.
+7. **Machine-Readable Contract Synchronization (`config/protocol_contracts.json`)**:
+   - Whenever active specification modifications change wire schemas, message types, channels, enums, or numerical bounds (applicable to Case B and Option 2 Phase 1), synchronize `config/protocol_contracts.json` alongside markdown specifications.
+   - Run `python tools/verify_contracts.py --specs-only` as part of specification verification and confirm 0 errors (`0 errors`).
+   - Case D (`Approved` → `Implemented` post-verification status promotion with no contract change) remains exempt from contract schema modifications.
 
 ### 2.5 Conflict Safety Gate (Architectural Contradiction Stop)
 Distinguish between **routine synchronization** (updating peer specs to reflect an intentional interface change) and **design conflicts** (incompatible mathematical equations, contradictory control authority hierarchies, or mutually exclusive safety invariants across documents).

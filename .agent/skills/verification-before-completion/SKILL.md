@@ -25,6 +25,8 @@ If you have not executed the verification command in the current state, do not c
 Before claiming any task completion or fix:
 
 1. **IDENTIFY**: Determine the exact command that proves the claim (e.g., harness runner, unit test script, syntax/file check).
+   - **Specs / Wire Contracts / Lua `src/` changes**: Always run `python tools/verify_contracts.py` (SSOT 16 specs & Zero-Fallback lint) and `python tools/run_e2e_tests.py --clean-orphans` (captures & validates wire packets against `config/protocol_contracts.json`).
+   - **Runtime `src/` module/require/boot wiring changes**: Always run `python tools/verify_runtime_wiring.py` (reachability, broken `require`, orphan modules, dead imports) and `python tools/run_boot_smoke.py --clean-orphans` (CraftOS-PC boot smoke across active `main.lua` targets).
 2. **RUN**: Execute the full command freshly against the current workspace state.
 3. **READ**: Inspect full output, exit code (`0` vs non-zero), and failure counts.
 4. **VERIFY**: Confirm the output directly proves the requirement:

@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-15 — 전수 감사 3대 사각지대 방지 가드레일(SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크) 구축 (TASK-014)
+
+- **결정 배경**: `reports/reviewCompleted/Audit_Report_1_11142026.md`의 3대 사각지대(계층 간 와이어 계약 불일치, 미배선 런타임 경로, 사양서 SSOT 분열) 재발 방지를 위한 `/brainstorming` · `/grill-me` 확정안 구현 (`docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md`, `docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md`).
+- **반영 내역**:
+  1. **SSOT 와이어 프로토콜 계약 명세 및 린터 (`config/protocol_contracts.json`, `tools/verify_contracts.py`)**: 16개 활성 사양서 기준 23개 패킷·11개 채널·엔벨로프 필수키·열거형·수치 허용범위를 기계 판독형 JSON 정본으로 일원화. `verify_contracts.py`를 통해 16개 사양서(Mermaid 블록 포함)와 120개 코드/설정 파일의 Zero-Fallback 및 폐기키 린트를 자동화함 (`tests/harness/test_verify_contracts.py` 24건 PASS).
+  2. **E2E 실전 패킷 캡처 계약 검증 연동 (`harness/simulation/virtual_bus.lua`, `tools/run_e2e_tests.py`)**: E2E 시뮬레이션 중 오가는 모든 무선 패킷을 가상 버스에서 가로채 `result.json`으로 캡처하고 계약 위반을 즉시 검출하도록 연동함 (`tests/harness/test_e2e_contract_validation.py` 10건 PASS).
+  3. **정적 런타임 배선·고아 모듈 검증기 (`tools/verify_runtime_wiring.py`)**: 10개 서브시스템의 `main.lua` 호출 그래프 역추적을 통해 고아 모듈, 깨진 `require`, 미사용 임포트를 자동 감지. `gac/config.lua`, `landing_pad/config.lua`, `landing_pad/main.lua` setup_wizard, `vas/modules/vec3.lua` 4건을 투명한 `KNOWN_EXEMPTIONS`로 등록 관리함 (`tests/harness/test_verify_runtime_wiring.py` 14건 PASS).
+  4. **CraftOS-PC 실부팅 스모크 러너 (`tools/run_boot_smoke.py`, `tests/harness/test_tools_integrity.py`)**: 10개 활성 서브시스템 `main.lua`를 실제 인스톨러 배포 레이아웃과 동일하게 스테이징하여 헤드리스 약 7틱 부팅 후 정상 실행·모뎀 개방 및 이벤트 루프 진입을 검증함 (`tools/verify_context_docs.py` R8 및 `test_tools_integrity.py` 도구 등록).
+  5. **동결 및 유예 보호 (`src/1_control/asa/**`)**: `TASK-013` 및 `TASK-105` 결정에 따라 `src/1_control/asa/**`와 `tests/1_control/asa/**`는 `0 diff` 동결을 엄수하며, 배선 검증 및 실부팅 스모크에서 `--include-deferred` 옵션 전까지 기본 유예 처리함.
+  6. **`.agent/` 규칙·스킬 게이트 동기화**: `skill-workflows.md`, `specification-lifecycle-manager`, `verification-before-completion`, `TASK.md`, `GEMINI.md`에 신규 3대 검증 게이트를 통합함.
+- **검증**: `verify_contracts.py` PASS (16 specs, 120 files, 0 errors), `verify_runtime_wiring.py` PASS (0 violations, 4 exemptions), `run_boot_smoke.py` 10/10 PASS, `tests/harness/` 122/122 PASS, 단위 12타겟 504/504 PASS, E2E 8스위트 13/13 PASS (와이어 계약 458개 패킷 검증 0건 위반), `verify_spec_status.py` 16종 (11 Implemented, 5 Approved), `verify_context_docs.py` 0 findings, `diff e18b0a8..HEAD -- src/1_control/asa/ tests/1_control/asa/ AGENTS.md` 0 diff.
+
+---
+
 ## 2026-11-14 — AMM WebUI Mission Editor(tools/amm_mission_editor.html) 구현, CraftOS-PC 라운드트립 및 AMM·에디터 사양 Implemented 승격 (TASK-402)
 
 - **결정 배경**: `/grill-me`·`frontend-design`·`web-design-guidelines` 기반으로 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Approved`)를 구체화하고, `mission_engine.lua` 런타임 SSOT와의 100% 패리티(`cp.onEnter`/`onExit`/`onAbort` 최상위 훅, `ACT_NAV_CORRIDOR` 양 끝점 필수, `{ logic: "ALL"|"ANY"|"NOT", conditions: [...] }` 조건 그룹, `TIMEOUT_SEC.timeout`)를 보장하는 오프라인 단일 파일 HTML 에디터(`tools/amm_mission_editor.html`)를 구현함 (`docs/superpowers/plans/2026-11-14-task-402-amm-mission-editor.md`).
