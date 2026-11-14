@@ -24,3 +24,6 @@ worktrees
 dist_gdrive/*
 !dist_gdrive/.gitkeep
 !dist_gdrive/gdrive_mapping.json
+
+# Superpowers ephemeral SDD sessions
+.superpowers/

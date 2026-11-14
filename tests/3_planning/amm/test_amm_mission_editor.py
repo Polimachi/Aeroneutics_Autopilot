@@ -1068,6 +1068,94 @@ const document = {{
         self.assertTrue(out["totalFailureFallback"]["rawDrawerOpen"])
         self.assertFalse(out["totalFailureFallback"]["toastHidden"])
 
+    def test_snap_toggle_updates_visual_css_aria_and_label(self) -> None:
+        html = EDITOR_HTML.read_text(encoding="utf-8")
+        self.assertRegex(
+            html,
+            r"(?m)^\s*button\[aria-pressed=\"true\"\]",
+            "Standalone toggle buttons like #btnToggleSnap require non-segmented button[aria-pressed=\"true\"] active CSS",
+        )
+        self.assertRegex(
+            html,
+            r"button\[aria-expanded=\"true\"\]",
+            "Expandable toggle buttons require button[aria-expanded=\"true\"] active CSS",
+        )
+
+        dom_setup = """
+        const byId = Object.create(null);
+        function makeEl(tag, id) {
+          const listeners = {};
+          let _text = "";
+          const el = {
+            tagName: String(tag || "DIV").toUpperCase(),
+            id: id || "",
+            className: "",
+            type: "",
+            title: "",
+            value: "",
+            hidden: false,
+            children: [],
+            attributes: {},
+            style: {},
+            classList: { add(){}, remove(){}, toggle(){} },
+            focus(){},
+            setAttribute(k, v){ el.attributes[k] = String(v); },
+            getAttribute(k){ return Object.prototype.hasOwnProperty.call(el.attributes, k) ? el.attributes[k] : null; },
+            appendChild(c){ el.children.push(c); return c; },
+            addEventListener(type, fn){ (listeners[type] = listeners[type] || []).push(fn); },
+            click(){ for (const fn of listeners.click || []) fn({ target: el, currentTarget: el, preventDefault(){} }); },
+            querySelector(){ return null; },
+            querySelectorAll(){ return []; },
+            get textContent(){ return _text; },
+            set textContent(v){ _text = String(v == null ? "" : v); },
+            getContext(){ return null; },
+            getBoundingClientRect(){ return { left: 0, top: 0, width: 800, height: 600 }; },
+          };
+          if (id) byId[id] = el;
+          return el;
+        }
+        [
+          "missionIdInput", "execModeSingle", "execModeRepeat", "btnUndo", "btnRedo",
+          "presetSelect", "fileImportInput", "btnImportJson", "btnRawJson", "btnCopyJson", "btnExportJson",
+          "toastBanner", "btnOpenAddPicker", "btnOpenMacroPicker", "cpList", "actionPickerPopover",
+          "pickerSearch", "btnClosePicker", "pickerDomainTabs", "pickerList", "btnToggleSnap", "btnFitView",
+          "btnToggleAltProfile", "altProfilePane", "altProfileCanvas", "emptyCanvasCta", "btnEmptyPreset",
+          "btnEmptyAdd", "missionCanvas", "modeCheckpointBtn", "modeSettingsBtn", "inspectorBody",
+          "rawJsonDrawer", "btnFormatJson", "btnApplyJson", "btnCloseRawJson", "rawJsonTextarea",
+          "validationBar", "validationSummary", "valFilterAll", "valFilterErrors", "valFilterWarnings",
+          "btnToggleValidation", "validationList"
+        ].forEach((id) => makeEl("DIV", id));
+        document.getElementById = (id) => byId[id] || null;
+        document.createElement = (tag) => makeEl(tag);
+        """
+        out = run_editor_js(
+            """
+            const snapBtn = document.getElementById("btnToggleSnap");
+            const init = {
+              gridSnap: E.Store.getState().ui.gridSnap,
+              pressed: snapBtn.getAttribute("aria-pressed"),
+              text: snapBtn.textContent,
+            };
+            snapBtn.click();
+            const afterOff = {
+              gridSnap: E.Store.getState().ui.gridSnap,
+              pressed: snapBtn.getAttribute("aria-pressed"),
+              text: snapBtn.textContent,
+            };
+            snapBtn.click();
+            const afterOn = {
+              gridSnap: E.Store.getState().ui.gridSnap,
+              pressed: snapBtn.getAttribute("aria-pressed"),
+              text: snapBtn.textContent,
+            };
+            return { init, afterOff, afterOn };
+            """,
+            dom_setup=dom_setup,
+        )
+        self.assertEqual(out["init"], {"gridSnap": True, "pressed": "true", "text": "Snap 10m"})
+        self.assertEqual(out["afterOff"], {"gridSnap": False, "pressed": "false", "text": "Snap Off"})
+        self.assertEqual(out["afterOn"], {"gridSnap": True, "pressed": "true", "text": "Snap 10m"})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -52,7 +52,7 @@ class TargetSmokeReport:
 def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) -> list[SmokeTarget]:
     """
     Constructs the standard list of boot smoke targets.
-    Active subsystems (10): alignment, installer, gps, gac, gcs, landing_pad, tca, vas, fcp, amm.
+    Active subsystems (11): alignment, fdr, installer, gps, gac, gcs, landing_pad, tca, vas, fcp, amm.
     Deferred subsystems (1): asa (TASK-105).
     """
     root = workspace_root.resolve()
@@ -63,6 +63,14 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             target_id="0_development/alignment",
             source_dir=src / "0_development" / "alignment",
             expected_channels=[101, 102, 104],
+            cli_args=[],
+            deferred=False,
+            workspace_root=root,
+        ),
+        SmokeTarget(
+            target_id="0_development/fdr",
+            source_dir=src / "0_development" / "fdr",
+            expected_channels=[10001, 10002, 10004, 10010, 10011],
             cli_args=[],
             deferred=False,
             workspace_root=root,
@@ -268,6 +276,17 @@ def _stage_minimal_configs(computer_dir: Path) -> None:
         json.dumps({"debug": False, "baseChannel": 10000}, indent=2),
         encoding="utf-8",
     )
+
+    # 8. FDR config
+    fdr_cfg = {
+        "schemaVersion": "1.1.0",
+        "aircraftIndexN": 1,
+        "baseChannel": 10000,
+        "recordMode": "STREAMING",
+        "autoStartOnBoot": True,
+        "storage": {"allowLocalFallback": True},
+    }
+    (config_dir / "fdr_config.json").write_text(json.dumps(fdr_cfg, indent=2), encoding="utf-8")
 
 
 def _build_guest_startup_lua() -> str:

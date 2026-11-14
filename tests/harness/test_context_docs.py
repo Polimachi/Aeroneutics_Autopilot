@@ -118,6 +118,100 @@ class TestCrossRefRules(unittest.TestCase):
         self.assertEqual([x.rule for x in f], ["R8"])
         self.assertIn("TASK-009", f[0].message)
 
+    def test_readme_sync_detects_tree_and_count_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "docs/specs/0_development/alignment").mkdir(parents=True)
+            (root / "docs/specs/0_development/fdr").mkdir(parents=True)
+            (root / "src/0_development/alignment").mkdir(parents=True)
+            (root / "src/0_development/fdr").mkdir(parents=True)
+            (root / "tests/0_development/alignment").mkdir(parents=True)
+            (root / "tests/e2e").mkdir(parents=True)
+            (root / "tests/e2e/test_e2e_one.lua").write_text(
+                'describe("x", function()\n  it("a", function() end)\n  it("b", function() end)\nend)\n',
+                encoding="utf-8",
+            )
+            (root / "tools").mkdir(parents=True)
+            (root / "tools/a.py").write_text("", encoding="utf-8")
+            (root / "tools/b.py").write_text("", encoding="utf-8")
+            (root / "tools/verify_all_specs.py").write_text(
+                'SPEC_FILES = ["docs/specs/0_development/alignment/A.md"]\n',
+                encoding="utf-8",
+            )
+            (root / "docs/specs/0_development/alignment/A.md").write_text(SPEC, encoding="utf-8")
+
+            readme = (
+                "```text\n"
+                "Create_Aeroneutics/\n"
+                "├── docs/\n"
+                "│   └── specs/\n"
+                "│       └── 0_development/ # desc (alignment)\n"
+                "├── src/\n"
+                "│   ├── 0_development/alignment/\n"
+                "│   └── 0_infra/ghost/\n"
+                "├── tests/\n"
+                "│   ├── 0_development/alignment/\n"
+                "│   └── e2e/\n"
+                "└── tools/\n"
+                "    ├── a.py\n"
+                "    └── verify_all_specs.py # 2대 사양서\n"
+                "```\n"
+                "0개 통합 시뮬레이션 스위트(1개 케이스)\n"
+                "활성 사양서 3종 (2 Implemented, 1 Approved)\n"
+            )
+            findings = vcd.check_readme_sync(readme, root)
+            msgs = "\n".join(x.message for x in findings)
+            self.assertTrue(all(x.rule == "R9" for x in findings))
+            self.assertNotIn("0_development/alignment", msgs)
+            self.assertIn("0_development/fdr", msgs)
+            self.assertIn("0_infra/ghost", msgs)
+            self.assertIn("b.py", msgs)
+            self.assertIn("E2E", msgs)
+            self.assertIn("2대", msgs)
+            self.assertIn("3종", msgs)
+
+    def test_readme_sync_passes_with_brace_and_paren_expansion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for d in (
+                "docs/specs/0_development/alignment",
+                "docs/specs/0_development/fdr",
+                "src/0_development/alignment",
+                "src/0_development/fdr",
+                "tests/0_infra/gac",
+                "tests/0_infra/gps",
+                "tests/e2e",
+                "tools",
+            ):
+                (root / d).mkdir(parents=True)
+            (root / "docs/specs/0_development/alignment/A.md").write_text(SPEC, encoding="utf-8")
+            (root / "tests/e2e/test_e2e_one.lua").write_text(
+                'it("a", function() end)\nit("b", function() end)\n', encoding="utf-8"
+            )
+            (root / "tools/verify_all_specs.py").write_text(
+                'SPEC_FILES = ["docs/specs/0_development/alignment/A.md"]\n',
+                encoding="utf-8",
+            )
+            readme = (
+                "Phase 0: 12대 사양서 개편, TASK-013: 8대 사양서 승격\n"
+                "```text\n"
+                "Create_Aeroneutics/\n"
+                "├── docs/\n"
+                "│   └── specs/\n"
+                "│       └── 0_development/ # 사양서 (alignment, fdr)\n"
+                "├── src/\n"
+                "│   └── 0_development/ # 코드 (alignment, fdr)\n"
+                "├── tests/\n"
+                "│   ├── 0_infra/{gac, gps}/\n"
+                "│   └── e2e/\n"
+                "└── tools/\n"
+                "    └── verify_all_specs.py # 1대 사양서\n"
+                "```\n"
+                "1개 통합 시뮬레이션 스위트(2개 케이스)\n"
+                "1대 활성 사양서 / 활성 사양서 1종 (1 Implemented, 0 Approved)\n"
+            )
+            self.assertEqual(vcd.check_readme_sync(readme, root), [])
+
 
 class TestRepositoryBaseline(unittest.TestCase):
     def test_repository_has_no_context_drift(self) -> None:

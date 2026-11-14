@@ -182,7 +182,10 @@
             "sensorHealth",
             "actuatorHealth"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "satFlags",
+            "diag"
+          ],
           "numericBounds": {
             "fuel": [
               0.0,
