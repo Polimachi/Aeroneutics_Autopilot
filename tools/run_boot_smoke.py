@@ -30,6 +30,7 @@ class SmokeTarget:
     expected_channels: list[int]
     cli_args: list[str] = field(default_factory=list)
     deferred: bool = False
+    workspace_root: Path | None = None
 
 
 @dataclass
@@ -64,6 +65,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[101, 102, 104],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="0_development/installer",
@@ -71,6 +73,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="0_infra/gps",
@@ -78,6 +81,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[60002, 60003, 60004],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="0_infra/gac",
@@ -85,6 +89,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[50001, 50002, 50004, 50201, 50202],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="0_infra/gcs",
@@ -92,6 +97,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[50000],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="0_infra/landing_pad",
@@ -99,6 +105,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[50202, 50206, 50211],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="1_control/tca",
@@ -106,6 +113,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[10010],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="1_control/vas",
@@ -113,6 +121,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[10001, 10010, 10011],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="2_guidance/fcp",
@@ -120,6 +129,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[10001, 10002, 10004],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="3_planning/amm",
@@ -127,6 +137,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[10000, 10002, 10003, 10004, 10005],
             cli_args=[],
             deferred=False,
+            workspace_root=root,
         ),
         SmokeTarget(
             target_id="1_control/asa",
@@ -134,6 +145,7 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             expected_channels=[10011],
             cli_args=[],
             deferred=True,
+            workspace_root=root,
         ),
     ]
 
@@ -144,13 +156,14 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
 
 def _stage_shared_sensors(computer_dir: Path, workspace_root: Path) -> None:
     shared_sensors = workspace_root / "src" / "0_development" / "sensors" / "avionics_sensors.lua"
-    if shared_sensors.is_file():
-        lib_dest = computer_dir / "lib"
-        lib_dest.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(shared_sensors, lib_dest / "avionics_sensors.lua")
+    if not shared_sensors.is_file():
+        raise FileNotFoundError(f"Required shared sensor library missing at {shared_sensors}")
+    lib_dest = computer_dir / "lib"
+    lib_dest.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(shared_sensors, lib_dest / "avionics_sensors.lua")
 
 
-def _stage_minimal_configs(computer_dir: Path, target_id: str) -> None:
+def _stage_minimal_configs(computer_dir: Path) -> None:
     """
     Stages minimal, non-blocking configuration files to avoid interactive setup wizards
     or missing configuration aborts during boot smoke.
@@ -598,7 +611,18 @@ def run_target_boot_smoke(
             missing_channels=target.expected_channels,
         ).to_dict()
 
-    workspace_root = target.source_dir.parent.parent
+    if target.workspace_root is not None:
+        workspace_root = target.workspace_root
+    else:
+        resolved_src = target.source_dir.resolve()
+        if (
+            len(resolved_src.parents) > 2
+            and (resolved_src.parents[2] / "src" / "0_development" / "sensors" / "avionics_sensors.lua").is_file()
+        ):
+            workspace_root = resolved_src.parents[2]
+        else:
+            workspace_root = Path(__file__).resolve().parent.parent
+
     session_prefix = f"smoke_{target.target_id.replace('/', '_')}"
 
     with EphemeralCraftOSSession(
@@ -616,7 +640,7 @@ def run_target_boot_smoke(
         session.stage_tree(target.source_dir, computer_id=0, dest_subdir="")
 
         # 3. Stage minimal configs
-        _stage_minimal_configs(c0, target.target_id)
+        _stage_minimal_configs(c0)
 
         # 4. Stage harness config
         harness_dir = c0 / "_harness"
