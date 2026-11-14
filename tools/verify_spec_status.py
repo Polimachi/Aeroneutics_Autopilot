@@ -15,8 +15,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 TARGET_IMPLEMENTED = [
     'docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md',
+    'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
+    'docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
@@ -29,10 +31,8 @@ TARGET_IMPLEMENTED = [
 TARGET_APPROVED = [
     'docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md',
     'docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md',
-    'docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
-    'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
 ]
 

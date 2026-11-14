@@ -30,7 +30,7 @@
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (88/88 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (117 파일), `python tools/verify_spec_status.py` (17종 10 Implemented, 7 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (17/17 PASS).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (117 파일), `python tools/verify_spec_status.py` (17종 12 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (17/17 PASS).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants
