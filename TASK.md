@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-14  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 010, 011, 501, 210)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 403, 010, 011, 501, 210)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
+> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-403` (에디터 World Preset) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
 
 - [ ] **TASK-120: [1순위 / 개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
   - **권장 착수 순위**: **1순위** (독립 도구로서 즉시 착수 가능; `TASK-117` E2E/실전 검증 및 `TASK-011-5` FDR 매뉴얼 작성의 선행 기반)
@@ -42,6 +42,24 @@
     - [ ] **TASK-117-3**: 온보드 안전 상태 게이트 및 노드 타게팅 연동 — 기체가 `DISARMED`·지상 `IDLE_ARMED`·지상 `E_STOP`(`not isAirborne`) 등 비비행 안전 상태일 때만 OTA 수신·적용을 허용하고 비행 중에는 `NACK` 거부하는 상태 게이트 구현 (`src/1_control/{vas,tca}/`·`FCP`·`AMM` 우선 적용, `src/1_control/asa/`는 `TASK-105` 연기 해제 시 연동)
     - [ ] **TASK-117-4**: 격납고 무선 OTA 배포 서버 구축 및 매니페스트 동기화 — 격납고 마스터 컴퓨터 단일 명령으로 기체 내 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 일괄 배포 및 원격 `os.reboot()` 트리거 구현 (`src/0_development/ota/` 신설 시 `manifest.lua`, `config/gdrive_mapping.json`, `verify_manifest_sync.py` 정합성 동기화 필수)
     - [ ] **TASK-117-5**: 멀티노드 OTA E2E 시뮬레이션 검증 및 사양서 승격 — 정상 일괄 배포, 비행 상태 `NACK` 거부, 체크섬 불일치 중단, 부팅 크래시 자동 `/ota_backup/` 롤백 E2E 검증 완료 후 관련 사양서 `Implemented` 승격
+
+- [ ] **TASK-403: [2순위 / 에디터·AMM 확장] AMM WebUI 미션 에디터 World Preset, 시설 기반 이착륙 지정 및 `ACT_TKL_LAND_NEAREST` 추가** (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.3.1 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented), `tools/amm_mission_editor.html`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
+  - **권장 착수 순위**: **2순위** (`TASK-120`·`TASK-117` 다음, `TASK-011-4` 에디터 매뉴얼 작성 전 착수; Spec-First 절차 준수)
+  - **확정 설계 결정 (`/grill-me` 2026-11-14)**:
+    - **구조 범위**: **멀티 월드 프로필 구조** — 월드/서버별 이름(`Survival_Main`, `Test_Lab` 등)을 생성·전환하며 각 월드마다 시설물 목록 독립 보관
+    - **시설 스키마**: `facilityId`, `label`, `type`(`LANDING_PAD` | `RUNWAY` | `DOCKING_ARM` | `RALLY` | `POI` | `CUSTOM`), `x`/`z`(필수), `y`(선택), `headingDeg`(선택), `notes`(선택)
+    - **이중 영속성**: `localStorage` 자동 저장 + World Preset `.json` 파일 Export/Import(백업·공유·병합) 병행
+    - **UI/등록 동선**: 상단 헤더 `World` 선택·드로어(`#worldPresetDrawer`) + 체크포인트 `Params` `'Save as Facility'` 및 캔버스 좌표 픽커(`PICK_FACILITY`) 빠른 등록
+    - **편집 연동 및 바인딩**: 2D 캔버스 배경 시설물 핀 레이어(토글·클릭 할당/센터링) + 인스펙터 `Params` `'From World…'` 퀵픽 + `'+ From Facility'` 병행; **순수 값 복사**(미션 JSON `v2.0.0` 순수성 유지) 및 **스마트 Y 매핑**(`facility.y`는 `poiPos.y`에 기본 반영하고 `targetAlt`는 비행 고도 보호를 위해 명시적 선택 시에만 적용)
+    - **이착륙 시설 지정 규약**: 도킹암(`ACT_MOB_ARM_DOCK`/`UNDOCK`)·랜딩패드(`ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_LAND_NORM`/`PREC`)·활주로(`ACT_TKL_TAKEOFF_RWY`/`LAND_RWY`) 및 시설 기반 매크로(`MAC_*`)는 **활성 월드 프로필 내 호환 타입 시설 드롭다운 선택**으로 전환(좌표·`facilityId` 자동 채움; 외부 JSON 미등록 `facilityId` 임포트 시 `WARNING` + `'현재 월드에 등록'` 1클릭 버튼 제공)
+    - **신규 행동 `ACT_TKL_LAND_NEAREST` (가장 가까운 착륙 가능 시설에 착륙)**: `AMM` 런타임(`facility_client.find_nearest_free_landing_facility` 연동)과 에디터 동시 확장; `facilityTypeFilter`(`"ANY"` | `"LANDING_PAD"` | `"RUNWAY"`)·`maxRangeM`(선택) 지원, 비콘 기반 최근접 `FREE` 착륙 시설 동적 탐색 후 착륙(`FACILITY_TOUCHDOWN` 완료), 가용 시설 부재 시 체크포인트 `abort`/`fallbackPolicy` 전이
+    - **2D XZ 캔버스 4변 좌표 눈금 표시**: 메인 `(X, Z)` 평면 상단/하단(X축) 및 좌측/우측(Z축) 가장자리 격자선에 월드 좌표 라벨(`tabular-nums` 고정폭, 주 격자선 정렬, 툴바·HUD 영역 회피) 실시간 렌더링
+  - **주요 작업**:
+    - [ ] **TASK-403-1**: Spec-First 양대 사양서 개정 — `AMM_PROGRAM_SPECIFICATION.md` (`v2.0.1 Implemented` → `v2.1.0 Approved`, `ACT_TKL_LAND_NEAREST` 규격) 및 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Implemented` → `v0.4.0 Approved`, World Preset·호환 시설 드롭다운·`ACT_TKL_LAND_NEAREST`·2D 캔버스 4변 격자 좌표 눈금 규격) 동시 반영
+    - [ ] **TASK-403-2**: 온보드 `AMM` `ACT_TKL_LAND_NEAREST` 구현 (`src/3_planning/amm/`, `tests/3_planning/amm/`) — `action_registry.lua`(활성 37종 확장), `mission_engine.lua`·`main.lua`·`facility_client.find_nearest_free_landing_facility` 동적 탐색/가용 시설 부재 전이 연동, `condition_evaluator.lua`·`ui_renderer.lua` 및 Lua 단위 테스트 추가
+    - [ ] **TASK-403-3**: 에디터 월드 프리셋 스토어 & 이중 영속성 구현 (`tools/amm_mission_editor.html`) — `WorldStore` 모듈(멀티 월드 생성/전환/수정/삭제, 시설 CRUD, `localStorage` 영속화, `.json` Import/Export 병합, DOM XSS 안전 렌더링) 구현
+    - [ ] **TASK-403-4**: 에디터 `#worldPresetDrawer`·2D 캔버스·시설 지정·`ACT_TKL_LAND_NEAREST` UI 구현 (`tools/amm_mission_editor.html`) — 상단 `World` 컨트롤, 2D 4변(상하 `X`·좌우 `Z`) 격자 좌표 눈금 & 배경 핀 레이어/토글, `PICK_FACILITY`, 이착륙/도킹 호환 시설 드롭다운·미등록 경고/1클릭 등록, `'From World…'` 퀵픽·`'Save as Facility'` 등록, `ACT_TKL_LAND_NEAREST` 폼/검증, `Undo` 보호
+    - [ ] **TASK-403-5**: 전수 회귀 테스트(CraftOS-PC 라운드트립 포함) 및 사양서 승격 — `test_amm_mission_editor.py`·`run_unit_tests.py`·`run_e2e_tests.py` 통과 후 `AMM_PROGRAM_SPECIFICATION.md` (`v2.1.0`) 및 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.4.0`) `Implemented` 승격
 
 - [ ] **TASK-010: [2순위] 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
   - **권장 착수 순위**: **2순위** (`GPS`·`VAS`·`TCA`·`FCP`·`AMM`·`tools/amm_mission_editor.html` 모두 `Implemented` 승격 완료; 1순위 `TASK-120`·`TASK-117` 이후 또는 병렬 착수 가능, `TASK-011`의 선행 기반)
@@ -63,7 +81,7 @@
     - [ ] **TASK-011-1**: 격납고 동역학 캘리브레이션 매뉴얼(`playbook/0_development/alignment.md`) 작성
     - [ ] **TASK-011-2**: 중앙 지상 관제소 매뉴얼(`playbook/0_infra/gcs.md`) 작성
     - [ ] **TASK-011-3**: 섹터 관제·착륙패드 매뉴얼(`playbook/0_infra/gac.md`, `playbook/0_infra/landing_pad.md`) 작성
-    - [ ] **TASK-011-4**: AMM WebUI 미션 에디터 운용 매뉴얼(`playbook/3_planning/amm_mission_editor.md`) 작성 (`tools/amm_mission_editor.html` 기준 2D 캔버스/인스펙터·조건/훅 빌더·프리플라이트 검증·JSON Export → `AMM` 다중 경로/드래그앤드롭 투입 연동 및 `amm.md` 상호 참조)
+    - [ ] **TASK-011-4**: AMM WebUI 미션 에디터 운용 매뉴얼(`playbook/3_planning/amm_mission_editor.md`) 작성 (`tools/amm_mission_editor.html` 기준 2D 캔버스/인스펙터·조건/훅 빌더·프리플라이트 검증·JSON Export → `AMM` 다중 경로/드래그앤드롭 투입 연동 및 `amm.md` 상호 참조; `TASK-403` 완료 시 World Preset 기능 포함)
     - [ ] **TASK-011-5**: 블랙박스 FDR 및 오프라인 텔레메트리 분석기 매뉴얼(`playbook/0_development/fdr.md`) 작성 (`TASK-120` 완료 연동 — `src/0_development/fdr/` 감청/덤프 절차 및 `tools/analyze_flight_log.py` CLI 튜닝·진단 해석 가이드)
     - [ ] **TASK-011-6**: `playbook/README.md` 인덱스·`tools/verify_playbooks.py` 인가 목록 동기화 및 7대 섹션·링크 정적 검증 통과
 

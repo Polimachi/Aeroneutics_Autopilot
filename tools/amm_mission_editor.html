@@ -42,6 +42,7 @@
       background: var(--bg-app);
       color: var(--text-primary);
     }
+    [hidden] { display: none !important; }
     :focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
@@ -112,16 +113,33 @@
       min-width: 0;
     }
     .top-header {
-      height: 52px;
-      flex: 0 0 52px;
+      min-height: 52px;
+      flex: 0 0 auto;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 0 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 6px 12px;
       background: var(--bg-panel);
       border-bottom: 1px solid var(--border-default);
       user-select: none;
       min-width: 0;
+    }
+    .top-header > button,
+    .top-header > .segmented,
+    .top-header > .brand-pill,
+    .top-header > .field-label {
+      flex-shrink: 0;
+    }
+    #missionIdInput {
+      width: 140px;
+      min-width: 96px;
+      flex: 0 1 140px;
+    }
+    #presetSelect {
+      max-width: 240px;
+      min-width: 120px;
+      flex: 0 1 240px;
     }
     .brand-pill {
       padding: 4px 8px;
@@ -152,15 +170,22 @@
     }
     .header-spacer { flex: 1 1 auto; min-width: 0; }
     .toast-banner {
-      padding: 4px 10px;
+      position: fixed;
+      bottom: 44px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      padding: 6px 14px;
       border-radius: 6px;
       background: #0f293a;
       border: 1px solid var(--accent-cyan);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
       font-size: 12px;
-      max-width: 340px;
+      max-width: min(480px, calc(100vw - 28px));
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      pointer-events: none;
     }
     .toast-banner.warn { background: #3b2608; border-color: var(--accent-amber); }
     .toast-banner.error { background: #3d1216; border-color: var(--accent-red); }
@@ -483,8 +508,11 @@
     }
     @media (max-width: 1150px) {
       .workspace-main { flex-direction: column; overflow-y: auto; }
-      #leftRail, #rightInspector { width: 100%; flex: 0 0 auto; max-height: 40vh; border: 0; border-bottom: 1px solid var(--border-default); }
-      .canvas-stage { min-height: 320px; }
+      #leftRail { width: 100%; flex: 0 0 auto; min-height: 240px; max-height: 340px; overflow: hidden; border: 0; border-bottom: 1px solid var(--border-default); }
+      #rightInspector { width: 100%; flex: 0 0 auto; min-height: 280px; max-height: 420px; overflow: hidden; border: 0; border-bottom: 1px solid var(--border-default); }
+      #centerColumn { flex: 0 0 auto; min-height: 380px; }
+      .canvas-stage { flex: 0 0 360px; min-height: 320px; }
+      #rawJsonDrawer { top: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -2345,12 +2373,20 @@
           if (Array.isArray(node.children)) node.children.length = 0;
         };
 
+        let toastTimer = null;
         const showToast = (message, level) => {
           const banner = document.getElementById("toastBanner");
           if (!banner) return;
+          if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
           banner.textContent = String(message || "");
           banner.className = level === "error" ? "toast-banner error" : (level === "warn" ? "toast-banner warn" : "toast-banner");
           banner.hidden = !message;
+          if (message && typeof setTimeout === "function") {
+            toastTimer = setTimeout(() => {
+              banner.hidden = true;
+              toastTimer = null;
+            }, 4500);
+          }
         };
 
         const makeField = (labelText, inputEl, full) => {
@@ -3193,9 +3229,46 @@
           });
           on("btnCopyJson", "click", () => {
             const text = JsonIO.serializeMission(Store.getState().mission);
-            if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(text).then(() => InspectorUI.showToast("Copied AMM v2.0.0 JSON to clipboard", "info")).catch(() => {});
+            const fallbackCopyViaTextarea = () => {
+              try {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.setAttribute("readonly", "");
+                ta.style.position = "fixed";
+                ta.style.left = "-9999px";
+                ta.style.top = "0";
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                if (typeof ta.setSelectionRange === "function") ta.setSelectionRange(0, text.length);
+                const ok = typeof document.execCommand === "function" && document.execCommand("copy");
+                document.body.removeChild(ta);
+                return Boolean(ok);
+              } catch (_) {
+                return false;
+              }
+            };
+            const handleCopyFallback = () => {
+              if (fallbackCopyViaTextarea()) {
+                InspectorUI.showToast("Copied AMM v2.0.0 JSON to clipboard", "info");
+                return;
+              }
+              Store.setUi({ rawJsonOpen: true });
+              const rawTa = document.getElementById("rawJsonTextarea");
+              if (rawTa) {
+                rawTa.value = text;
+                if (typeof rawTa.focus === "function") rawTa.focus();
+                if (typeof rawTa.select === "function") rawTa.select();
+              }
+              InspectorUI.showToast("Clipboard blocked — JSON opened in Raw JSON drawer for copy", "warn");
+            };
+            if (typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+              navigator.clipboard.writeText(text)
+                .then(() => InspectorUI.showToast("Copied AMM v2.0.0 JSON to clipboard", "info"))
+                .catch(handleCopyFallback);
+              return;
             }
+            handleCopyFallback();
           });
           on("btnExportJson", "click", exportJsonFile);
 

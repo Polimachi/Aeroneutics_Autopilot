@@ -926,5 +926,148 @@ os.shutdown()
         self.assertEqual(lua_out["legacy"]["err"], "SCHEMA_INVALID")
 
 
+class TestOperabilityRegressions(unittest.TestCase):
+    def test_css_hidden_precedence_and_responsive_layout_invariants(self) -> None:
+        html = EDITOR_HTML.read_text(encoding="utf-8")
+        self.assertRegex(
+            html,
+            r"\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}",
+            "Global [hidden] { display: none !important; } is required so flex/grid panels respect [hidden]",
+        )
+        self.assertRegex(
+            html,
+            r"\.toast-banner\s*\{[^}]*position:\s*fixed;",
+            "Toast banner must be out of .top-header flex flow so showing toasts never clips header buttons",
+        )
+        self.assertRegex(
+            html,
+            r"\.top-header\s*>\s*\.(?:segmented|brand-pill)[^}]*flex-shrink:\s*0",
+            "Header buttons and segmented toggle must not shrink and clip REPEAT",
+        )
+        media_match = re.search(r"@media\s*\(max-width:\s*1150px\)\s*\{([\s\S]*?)\n\s*\}", html)
+        self.assertIsNotNone(media_match, "@media (max-width: 1150px) block must exist")
+        media_block = media_match.group(1)
+        self.assertIn("overflow: hidden", media_block)
+        self.assertRegex(media_block, r"#centerColumn\s*\{[^}]*flex:\s*0\s+0")
+
+    def test_copy_json_fallback_when_clipboard_rejects(self) -> None:
+        node = shutil.which("node")
+        self.assertIsNotNone(node)
+        script_body = extract_inline_script()
+        async_harness = f"""
+const __storage = Object.create(null);
+const localStorage = {{
+  getItem(k) {{ return Object.prototype.hasOwnProperty.call(__storage, k) ? __storage[k] : null; }},
+  setItem(k, v) {{ __storage[k] = String(v); }},
+  removeItem(k) {{ delete __storage[k]; }},
+}};
+let execCopyResult = true;
+let execCopyCalls = 0;
+let copiedText = "";
+const byId = Object.create(null);
+function makeEl(tag, id) {{
+  const listeners = {{}};
+  let _text = "";
+  const el = {{
+    tagName: String(tag || "DIV").toUpperCase(),
+    id: id || "",
+    className: "",
+    type: "",
+    value: "",
+    checked: false,
+    disabled: false,
+    hidden: id === "toastBanner" || id === "rawJsonDrawer" || id === "actionPickerPopover" || id === "altProfilePane" || id === "validationList",
+    dataset: {{}},
+    style: {{}},
+    children: [],
+    attributes: {{}},
+    classList: {{ add(){{}}, remove(){{}}, toggle(){{}}, contains(){{ return false; }} }},
+    focus(){{ document.activeElement = el; }},
+    select(){{ copiedText = el.value; }},
+    setSelectionRange(){{}},
+    setAttribute(k, v){{ el.attributes[k] = String(v); }},
+    getAttribute(k){{ return Object.prototype.hasOwnProperty.call(el.attributes, k) ? el.attributes[k] : null; }},
+    appendChild(child){{ el.children.push(child); return child; }},
+    removeChild(child){{ const i = el.children.indexOf(child); if (i >= 0) el.children.splice(i, 1); }},
+    addEventListener(type, fn){{ (listeners[type] = listeners[type] || []).push(fn); }},
+    click(){{ for (const fn of listeners.click || []) fn({{ target: el, currentTarget: el, preventDefault(){{}} }}); }},
+    querySelector(){{ return null; }},
+    querySelectorAll(){{ return []; }},
+    get textContent(){{ return _text + (el.children || []).map((c) => c.textContent || "").join(""); }},
+    set textContent(v){{ _text = String(v == null ? "" : v); if (v === "") el.children = []; }},
+    getContext(){{ return null; }},
+    getBoundingClientRect(){{ return {{ left: 0, top: 0, width: 800, height: 600 }}; }},
+  }};
+  if (id) byId[id] = el;
+  return el;
+}}
+const ids = [
+  "missionIdInput", "execModeSingle", "execModeRepeat", "btnUndo", "btnRedo",
+  "presetSelect", "fileImportInput", "btnImportJson", "btnRawJson", "btnCopyJson", "btnExportJson",
+  "toastBanner", "btnOpenAddPicker", "btnOpenMacroPicker", "cpList", "actionPickerPopover",
+  "pickerSearch", "btnClosePicker", "pickerDomainTabs", "pickerList", "btnToggleSnap", "btnFitView",
+  "btnToggleAltProfile", "altProfilePane", "altProfileCanvas", "emptyCanvasCta", "btnEmptyPreset",
+  "btnEmptyAdd", "missionCanvas", "modeCheckpointBtn", "modeSettingsBtn", "inspectorBody",
+  "rawJsonDrawer", "btnFormatJson", "btnApplyJson", "btnCloseRawJson", "rawJsonTextarea",
+  "validationBar", "validationSummary", "valFilterAll", "valFilterErrors", "valFilterWarnings",
+  "btnToggleValidation", "validationList"
+];
+for (const id of ids) makeEl("DIV", id);
+const navigator = {{ clipboard: {{ writeText() {{ return Promise.reject(new Error("NotAllowedError")); }} }} }};
+const window = {{ devicePixelRatio: 1, addEventListener(){{}}, removeEventListener(){{}}, requestAnimationFrame(){{ return 0; }} }};
+const document = {{
+  body: makeEl("BODY"),
+  activeElement: null,
+  addEventListener(){{}},
+  removeEventListener(){{}},
+  getElementById(id){{ return byId[id] || null; }},
+  querySelector(){{ return null; }},
+  querySelectorAll(){{ return []; }},
+  createElement(tag){{ return makeEl(tag); }},
+  execCommand(cmd){{ if (cmd === "copy") {{ execCopyCalls += 1; return execCopyResult; }} return false; }},
+}};
+{script_body}
+(async () => {{
+  const E = window.__AMM_EDITOR__;
+  E.AppBootstrap.init();
+  byId.btnCopyJson.click();
+  await new Promise((r) => setTimeout(r, 30));
+  const fallbackSuccess = {{
+    execCopyCalls,
+    toastHidden: byId.toastBanner.hidden,
+    toastText: byId.toastBanner.textContent,
+    hasMissionJson: copiedText.includes('"version": "2.0.0"') && copiedText.includes('"checkpoints"'),
+  }};
+  execCopyResult = false;
+  byId.toastBanner.hidden = true;
+  byId.toastBanner.textContent = "";
+  byId.btnCopyJson.click();
+  await new Promise((r) => setTimeout(r, 30));
+  const totalFailureFallback = {{
+    rawDrawerOpen: byId.rawJsonDrawer.hidden === false,
+    toastHidden: byId.toastBanner.hidden,
+    toastText: byId.toastBanner.textContent,
+  }};
+  console.log(JSON.stringify({{ fallbackSuccess, totalFailureFallback }}));
+}})();
+"""
+        res = subprocess.run(
+            [node, "-"],
+            input=async_harness,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            cwd=str(WORKSPACE_ROOT),
+            timeout=30,
+        )
+        self.assertEqual(res.returncode, 0, f"Node failed: {res.stderr}")
+        out = json.loads(res.stdout.splitlines()[-1])
+        self.assertEqual(out["fallbackSuccess"]["execCopyCalls"], 1)
+        self.assertFalse(out["fallbackSuccess"]["toastHidden"])
+        self.assertTrue(out["fallbackSuccess"]["hasMissionJson"])
+        self.assertTrue(out["totalFailureFallback"]["rawDrawerOpen"])
+        self.assertFalse(out["totalFailureFallback"]["toastHidden"])
+
+
 if __name__ == "__main__":
     unittest.main()
