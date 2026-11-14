@@ -50,6 +50,17 @@ _TASK_SPEC_REF_RE = re.compile(
 _MEMORY_HEADING_RE = re.compile(r"^## \d{4}-\d{2}-\d{2} — ")
 _TASK_ID_RE = re.compile(r"\bTASK-\d+\b")
 
+_TREE_LINE_RE = re.compile(r"^([│ ]*)(?:├──|└──)\s+(.*)$")
+_BRACE_DIR_RE = re.compile(r"^([A-Za-z0-9_]+)/\{([^}]+)\}/?$")
+_NESTED_DIR_RE = re.compile(r"^([A-Za-z0-9_]+)/([A-Za-z0-9_]+)/?$")
+_PAREN_SUBDIRS_RE = re.compile(r"\(([a-z][a-z0-9_]*(?:\s*,\s*[a-z][a-z0-9_]*)*)\)")
+_README_E2E_RE = re.compile(r"(\d+)개\s+통합\s+시뮬레이션\s+스위트\((\d+)개\s+케이스\)")
+_README_SPEC_TOTAL_RE = re.compile(r"활성\s+사양서\s+(\d+)종")
+_README_VERIFY_SPECS_RE = re.compile(r"(\d+)대\s+활성\s+사양서")
+_README_VERIFY_SPECS_INLINE_RE = re.compile(r"verify_all_specs\.py.*?(\d+)대\s+사양서")
+_E2E_IT_RE = re.compile(r"^\s*it\s*\(", re.MULTILINE)
+_SPEC_FILES_BLOCK_RE = re.compile(r"SPEC_FILES\s*=\s*\[([^\]]+)\]")
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -207,7 +218,7 @@ def iter_spec_files(repo_root: Path) -> list[Path]:
     return sorted(set(paths))
 
 
-def check_gemini_spec_distribution(gemini_text: str, repo_root: Path) -> list[Finding]:
+def _spec_status_counts(repo_root: Path) -> tuple[int, int]:
     actual_impl = 0
     actual_appr = 0
     for spec_path in iter_spec_files(repo_root):
@@ -219,6 +230,11 @@ def check_gemini_spec_distribution(gemini_text: str, repo_root: Path) -> list[Fi
             actual_impl += 1
         elif status == "Approved":
             actual_appr += 1
+    return actual_impl, actual_appr
+
+
+def check_gemini_spec_distribution(gemini_text: str, repo_root: Path) -> list[Finding]:
+    actual_impl, actual_appr = _spec_status_counts(repo_root)
 
     findings: list[Finding] = []
     found_any = False
@@ -312,6 +328,223 @@ def check_memory_coverage(
     ]
 
 
+def _iter_domain_subsystems(root: Path, include_flat: bool = False) -> set[str]:
+    if not root.is_dir():
+        return set()
+    items: set[str] = set()
+    for top in sorted(root.iterdir()):
+        if not top.is_dir() or top.name.startswith(".") or top.name == "__pycache__":
+            continue
+        subs = [
+            s
+            for s in top.iterdir()
+            if s.is_dir() and not s.name.startswith(".") and s.name != "__pycache__"
+        ]
+        if subs:
+            items.update(f"{top.name}/{sub.name}" for sub in subs)
+        elif include_flat:
+            items.add(top.name)
+    return items
+
+
+def _expand_tree_dir_entry(raw_path: str, comment: str, allow_flat: bool) -> list[str]:
+    brace_m = _BRACE_DIR_RE.match(raw_path)
+    if brace_m:
+        layer, inner = brace_m.group(1), brace_m.group(2)
+        return [f"{layer}/{tok.strip()}" for tok in inner.split(",") if tok.strip()]
+    nested_m = _NESTED_DIR_RE.match(raw_path)
+    if nested_m:
+        return [f"{nested_m.group(1)}/{nested_m.group(2)}"]
+    layer = raw_path.rstrip("/")
+    if "/" in layer:
+        return []
+    paren_m = _PAREN_SUBDIRS_RE.search(comment)
+    if paren_m:
+        return [f"{layer}/{tok.strip()}" for tok in paren_m.group(1).split(",") if tok.strip()]
+    return [layer] if allow_flat else []
+
+
+def _parse_readme_tree(
+    readme_text: str,
+) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+    section_lines: dict[str, int] = {}
+    entries: dict[str, dict[str, int]] = {k: {} for k in ("specs", "src", "tests", "tools")}
+    in_tree = False
+    in_docs = False
+    section: str | None = None
+
+    for idx, line in enumerate(readme_text.splitlines(), 1):
+        stripped = line.strip()
+        if not in_tree:
+            if stripped == "```text":
+                in_tree = True
+            continue
+        if stripped.startswith("```"):
+            break
+        m = _TREE_LINE_RE.match(line)
+        if not m:
+            continue
+        indent = len(m.group(1))
+        parts = m.group(2).split("#", 1)
+        raw_path = parts[0].strip()
+        comment = parts[1].strip() if len(parts) > 1 else ""
+
+        if indent == 0:
+            top = raw_path.rstrip("/")
+            in_docs = top == "docs"
+            section = top if top in ("src", "tests", "tools") else None
+            if section:
+                section_lines[section] = idx
+            continue
+        if in_docs and indent == 4:
+            section = "specs" if raw_path.rstrip("/") == "specs" else None
+            if section:
+                section_lines[section] = idx
+            continue
+        if section in ("specs", "src", "tests"):
+            expected_indent = 8 if section == "specs" else 4
+            if indent == expected_indent:
+                for item in _expand_tree_dir_entry(raw_path, comment, section == "tests"):
+                    entries[section].setdefault(item, idx)
+        elif section == "tools" and indent == 4 and not raw_path.endswith("/"):
+            entries["tools"].setdefault(raw_path, idx)
+
+    return section_lines, entries
+
+
+def _check_readme_tree(
+    readme_text: str, repo_root: Path, path: str
+) -> list[Finding]:
+    section_lines, tree_entries = _parse_readme_tree(readme_text)
+    if not section_lines:
+        return []
+
+    actual_map: dict[str, tuple[Path, set[str]]] = {
+        "specs": (
+            repo_root / "docs" / "specs",
+            _iter_domain_subsystems(repo_root / "docs" / "specs"),
+        ),
+        "src": (repo_root / "src", _iter_domain_subsystems(repo_root / "src")),
+        "tests": (
+            repo_root / "tests",
+            _iter_domain_subsystems(repo_root / "tests", include_flat=True),
+        ),
+        "tools": (
+            repo_root / "tools",
+            {
+                p.name
+                for p in (repo_root / "tools").iterdir()
+                if p.is_file() and not p.name.startswith(".") and not p.name.endswith(".pyc")
+            }
+            if (repo_root / "tools").is_dir()
+            else set(),
+        ),
+    }
+
+    findings: list[Finding] = []
+    for sec, (sec_dir, actual) in actual_map.items():
+        if sec not in section_lines or not sec_dir.is_dir():
+            continue
+        documented = tree_entries[sec]
+        for missing in sorted(actual - set(documented)):
+            findings.append(
+                Finding(
+                    "R9",
+                    path,
+                    section_lines[sec],
+                    f"missing {sec}/ entry '{missing}' in README tree",
+                )
+            )
+        for stale in sorted(set(documented) - actual):
+            findings.append(
+                Finding(
+                    "R9",
+                    path,
+                    documented[stale],
+                    f"stale {sec}/ entry '{stale}' not found on disk",
+                )
+            )
+    return findings
+
+
+def _check_readme_spec_and_e2e_counts(
+    readme_text: str, repo_root: Path, path: str
+) -> list[Finding]:
+    findings: list[Finding] = []
+    e2e_dir = repo_root / "tests" / "e2e"
+    e2e_files = sorted(e2e_dir.glob("test_e2e_*.lua")) if e2e_dir.is_dir() else []
+    actual_suites = len(e2e_files)
+    actual_cases = sum(
+        len(_E2E_IT_RE.findall(p.read_text(encoding="utf-8-sig"))) for p in e2e_files
+    )
+
+    verify_specs_path = repo_root / "tools" / "verify_all_specs.py"
+    actual_verified_specs: int | None = None
+    if verify_specs_path.is_file():
+        m_block = _SPEC_FILES_BLOCK_RE.search(verify_specs_path.read_text(encoding="utf-8-sig"))
+        if m_block:
+            actual_verified_specs = len(re.findall(r"['\"][^'\"]+\.md['\"]", m_block.group(1)))
+
+    actual_impl, actual_appr = _spec_status_counts(repo_root)
+    actual_total_specs = actual_impl + actual_appr
+
+    for idx, line in enumerate(readme_text.splitlines(), 1):
+        if e2e_files:
+            em = _README_E2E_RE.search(line)
+            if em and (int(em.group(1)) != actual_suites or int(em.group(2)) != actual_cases):
+                findings.append(
+                    Finding(
+                        "R9",
+                        path,
+                        idx,
+                        f"E2E count mismatch: listed {em.group(1)} suites ({em.group(2)} cases), actual {actual_suites} suites ({actual_cases} cases)",
+                    )
+                )
+        if actual_verified_specs is not None:
+            for pat in (_README_VERIFY_SPECS_RE, _README_VERIFY_SPECS_INLINE_RE):
+                vm = pat.search(line)
+                if vm and int(vm.group(1)) != actual_verified_specs:
+                    findings.append(
+                        Finding(
+                            "R9",
+                            path,
+                            idx,
+                            f"verify_all_specs count mismatch: listed {vm.group(1)}대, actual {actual_verified_specs}대",
+                        )
+                    )
+        if actual_total_specs > 0:
+            tm = _README_SPEC_TOTAL_RE.search(line)
+            if tm and int(tm.group(1)) != actual_total_specs:
+                findings.append(
+                    Finding(
+                        "R9",
+                        path,
+                        idx,
+                        f"active spec total mismatch: listed {tm.group(1)}종, actual {actual_total_specs}종",
+                    )
+                )
+            dm = _GEMINI_DIST_RE.search(line)
+            if dm and (int(dm.group(1)) != actual_impl or int(dm.group(2)) != actual_appr):
+                findings.append(
+                    Finding(
+                        "R9",
+                        path,
+                        idx,
+                        f"spec distribution mismatch: listed ({dm.group(1)} Implemented, {dm.group(2)} Approved), actual ({actual_impl} Implemented, {actual_appr} Approved)",
+                    )
+                )
+    return findings
+
+
+def check_readme_sync(
+    readme_text: str, repo_root: Path, path: str = "README.md"
+) -> list[Finding]:
+    """Verify README.md directory tree and E2E/spec counts match the filesystem (R9)."""
+    return _check_readme_tree(readme_text, repo_root, path) + _check_readme_spec_and_e2e_counts(
+        readme_text, repo_root, path
+    )
+
+
 def run_all(repo_root: Path) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -320,6 +553,7 @@ def run_all(repo_root: Path) -> list[Finding]:
         readme_text = readme_path.read_text(encoding="utf-8-sig")
         findings.extend(check_readme_counts(readme_text, "README.md"))
         findings.extend(check_overclaim(readme_text, "README.md"))
+        findings.extend(check_readme_sync(readme_text, repo_root, "README.md"))
 
     gemini_path = repo_root / "GEMINI.md"
     if gemini_path.is_file():
