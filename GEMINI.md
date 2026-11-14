@@ -32,7 +32,7 @@
 - **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (12개 타겟 504/504 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (8개 스위트 13/13 PASS, 와이어 패킷 계약 458/458 PASS).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (122/122 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (123/123 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R8).
 - **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (15대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (117 파일), `python tools/verify_spec_status.py` (16종 11 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (17/17 PASS).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).

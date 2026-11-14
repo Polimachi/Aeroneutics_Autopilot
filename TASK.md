@@ -161,7 +161,7 @@
 - [x] **TASK-014: 전수 감사 3대 사각지대 방지 가드레일 구축 (SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크)** (완료일: 2026-11-15)
   - **설계서 및 실행 계획서**: `docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md`, `docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md`
   - **핵심 성과**: `config/protocol_contracts.json` SSOT(16개 활성 사양서·23개 메시지·11개 채널·120개 소스 파일 교차 검증), `tools/verify_contracts.py`(정적 Zero-Fallback/폐기키 린터), `virtual_bus.lua` + `tools/run_e2e_tests.py` 실전 패킷 캡처 검증(458개 패킷 0건 위반), `tools/verify_runtime_wiring.py`(10개 서브시스템 정적 도달성·4개 기지의 예외 승인 관리), `tools/run_boot_smoke.py`(10개 활성 `main.lua` CraftOS-PC 7틱 실부팅 스모크), `.agent/` 규칙/스킬 게이트 동기화 완료 (`TASK-014-1~6`). `src/1_control/asa/**`(`TASK-105`)는 `0 diff` 동결 유지.
-  - **검증**: `verify_contracts.py` PASS(16 specs, 120 files, 0 errors), `verify_runtime_wiring.py` PASS(0 violations, 4 exemptions), `run_boot_smoke.py` 10/10 PASS, `tests/harness/` 122/122 PASS, 단위 12타겟 504/504 PASS, E2E 8스위트 13/13 PASS(458 packets validated), `verify_spec_status.py` 16종(11 Implemented, 5 Approved), `verify_context_docs.py` 0 findings.
+  - **검증**: `verify_contracts.py` PASS(16 specs, 120 files, 0 errors), `verify_runtime_wiring.py` PASS(0 violations, 4 exemptions), `run_boot_smoke.py` 10/10 PASS, `tests/harness/` 123/123 PASS, 단위 12타겟 504/504 PASS, E2E 8스위트 13/13 PASS(458 packets validated), `verify_spec_status.py` 16종(11 Implemented, 5 Approved), `verify_context_docs.py` 0 findings.
 
 - [x] **TASK-402: AMM WebUI 단일 파일 미션 에디터(`tools/amm_mission_editor.html`) 구현, CraftOS-PC 라운드트립 검증 및 `AMM`/`에디터` 사양 `Implemented` 승격** (완료일: 2026-11-14)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-402-amm-mission-editor.md`
