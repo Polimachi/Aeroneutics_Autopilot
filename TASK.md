@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-14  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-010, 011, 120, 117, 501, 210)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 010, 011, 501, 210)
 
 ---
 
@@ -22,38 +22,18 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-010` → `TASK-011` (플레이북) · `TASK-120` (FDR) → **2순위** `TASK-117` (무선 OTA) · `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
+> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
 
-- [ ] **TASK-010: [1순위] 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
-  - **권장 착수 순위**: **1순위** (`GPS`·`VAS`·`TCA`·`FCP`·`AMM`·`tools/amm_mission_editor.html` 모두 `Implemented` 승격 완료로 전량 즉시 착수 가능)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md`
-  - 계층형 단일 마크다운(`playbook/<도메인>/<서브시스템>.md`) 기반 인게임 운용 실전 매뉴얼 5종(GPS, VAS, TCA, FCP, AMM) 구축, 표준 7대 섹션 템플릿(`playbook/README.md`), CLI 정적 검증 도구(`tools/verify_playbooks.py`), 미인가 체계 작성 차단 가드레일 및 워크플로우 동기화
-  - [ ] **TASK-010-1**: 플레이북 정적 검증 도구(`tools/verify_playbooks.py`) 구현 (7대 필수 섹션, 링크 유효성, 미인가 파일 생성 차단 검증)
-  - [ ] **TASK-010-2**: 표준 템플릿 명세 및 인덱스(`playbook/README.md`) 작성
-  - [ ] **TASK-010-3**: 인프라 도메인 매뉴얼(`playbook/0_infra/gps.md`) 작성 (`GPS v2.3.3 Implemented` 반영)
-  - [ ] **TASK-010-4**: 온보드 제어 도메인 매뉴얼(`playbook/1_control/vas.md`, `playbook/1_control/tca.md`) 작성 (`VAS v1.20.0` `QUATERNION_RATE`·`Base+3` `MFD_ACRO`·`system.json` 및 `TCA v1.12.0` 반영)
-  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성 (현행 `FCP v2.1.0` `Base+4/+2/+1` 3채널 순수 `SE(3)` 외루프 및 `TASK-204`·`TASK-013` 반영 완료 기준 `AMM v2.0.1` 듀얼 모뎀 외부 게이트웨이·`nav_engine`·`trajectory_generator`·`ACT_*`/`DEC_*`/`MAC_*` 3계층 미션 시퀀서·`chattering_guard`·CLI/TUI·외부 파일 즉시 구동 규격 반영; 후속 `TASK-402` WebUI 에디터 완료 시 해당 절 동기화)
-  - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증 (`test_tools_integrity.py` 도구 등록·`verify_context_docs.py` 통과 및 `TASK-009`·`013`·`113`·`114`·`115`·`116`·`122`·`202`·`207~209` 현행 반영 확인)
-
-- [ ] **TASK-011: [2순위 / 인프라 매뉴얼] 지상 관제 및 정비 도메인 플레이북 2차 확장 (Alignment, GCS, GAC, Landing Pad)** (`playbook/0_development/alignment.md`, `playbook/0_infra/{gcs,gac,landing_pad}.md`)
-  - **선행 의존성**: `TASK-010` 완료 필요 (표준 7대 섹션 템플릿 `playbook/README.md` 및 `tools/verify_playbooks.py` 검증 체계 활용)
-  - **배경 및 필요성**: `TASK-010`은 핵심 5종(GPS, VAS, TCA, FCP, AMM)에 집중되어 있으나, 실제 인게임 운용 시 설정·조작이 가장 까다로운 격납고 동역학 캘리브레이션(Alignment)과 지상 관제소/패드 셋업(GCS, GAC, Landing Pad) 매뉴얼 보강 필요
-  - **주요 작업**:
-    - [ ] **TASK-011-1**: 격납고 동역학 캘리브레이션 매뉴얼(`playbook/0_development/alignment.md`) 작성
-    - [ ] **TASK-011-2**: 중앙 지상 관제소 매뉴얼(`playbook/0_infra/gcs.md`) 작성
-    - [ ] **TASK-011-3**: 섹터 관제·착륙패드 매뉴얼(`playbook/0_infra/gac.md`, `playbook/0_infra/landing_pad.md`) 작성
-    - [ ] **TASK-011-4**: `tools/verify_playbooks.py` 7대 섹션·링크·인가 목록 정적 검증 통과
-
-- [ ] **TASK-120: [2순위 / 개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
-  - **권장 착수 순위**: **2순위** (독립 도구로서 병렬 착수 가능, `TASK-117` 선행 조건)
+- [ ] **TASK-120: [1순위 / 개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
+  - **권장 착수 순위**: **1순위** (독립 도구로서 즉시 착수 가능; `TASK-117` E2E/실전 검증 및 `TASK-011-5` FDR 매뉴얼 작성의 선행 기반)
   - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요; `Base+1` `MSG_ATTITUDE_CMD`·`Base+2` `MSG_FLIGHT_TELEMETRY` 패시브 감청 기준, 필요 시 진단 필드 확장 검토)
   - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 인게임 비행 중 발생하는 미세 자세 진동, 짐벌 포화(Saturation), 슬루율 제한 현상을 정밀 튜닝하기 위한 시계열 로그 수집 수단 부재
   - **주요 작업**:
     - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
     - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
-- [ ] **TASK-117: [3순위] 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 구축 (구 TASK-117 + 119 통합)** (`src/0_development/ota/`, `src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{vas,tca}/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)
-  - **권장 착수 순위**: **3순위** (선행 과제 중 `TASK-202`·`TASK-204`·`TASK-207~209`·`TASK-013` 완료; 잔여 선행 `TASK-010`·`TASK-011`·`TASK-120` 완료 후 리소스 집중 착수)
+- [ ] **TASK-117: [1순위] 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 구축 (구 TASK-117 + 119 통합)** (`src/0_development/ota/`, `src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{vas,tca}/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)
+  - **권장 착수 순위**: **1순위** (선행 과제 `TASK-202`·`TASK-204`·`TASK-207~209`·`TASK-013`·`TASK-402` 완료로 즉시 착수 가능; `TASK-120`과 병렬 또는 연계 진행)
   - **사양서 상태**: 통합 OTA 사양서 미작성(Draft → Approved 및 대상 경로 확정 필요) / 연관 개정 대상: `docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md` (현재 v1.1.1 Implemented), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.30.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.15.0 Approved), `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.20.0 Implemented), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.12.0 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.1.0 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented)
   - **배경 및 통합 사유**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM)의 수동 `installer.lua` 업데이트 비용을 해소하되, `Zero-Fallback` 원칙상 체크섬 검증·`/ota_staging/` 원자적 교체 응답·안전 게이트 거부(`NACK`) 사유 코드가 서버 프로토콜에 처음부터 일체화되어야 재설계를 방지할 수 있음. 또한 비행 중 OTA 재부팅 추락 및 패킷 유실로 인한 벽돌(Brick) 장애를 막기 위해 서버와 슬레이브 부트스트랩 가드를 단일 E2E 게이트로 통합 검증함
   - **주요 작업**:
@@ -63,6 +43,30 @@
     - [ ] **TASK-117-4**: 격납고 무선 OTA 배포 서버 구축 및 매니페스트 동기화 — 격납고 마스터 컴퓨터 단일 명령으로 기체 내 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 일괄 배포 및 원격 `os.reboot()` 트리거 구현 (`src/0_development/ota/` 신설 시 `manifest.lua`, `config/gdrive_mapping.json`, `verify_manifest_sync.py` 정합성 동기화 필수)
     - [ ] **TASK-117-5**: 멀티노드 OTA E2E 시뮬레이션 검증 및 사양서 승격 — 정상 일괄 배포, 비행 상태 `NACK` 거부, 체크섬 불일치 중단, 부팅 크래시 자동 `/ota_backup/` 롤백 E2E 검증 완료 후 관련 사양서 `Implemented` 승격
 
+- [ ] **TASK-010: [2순위] 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
+  - **권장 착수 순위**: **2순위** (`GPS`·`VAS`·`TCA`·`FCP`·`AMM`·`tools/amm_mission_editor.html` 모두 `Implemented` 승격 완료; 1순위 `TASK-120`·`TASK-117` 이후 또는 병렬 착수 가능, `TASK-011`의 선행 기반)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md`
+  - 계층형 단일 마크다운(`playbook/<도메인>/<서브시스템>.md`) 기반 인게임 운용 실전 매뉴얼 5종(GPS, VAS, TCA, FCP, AMM) 구축, 표준 7대 섹션 템플릿(`playbook/README.md`), CLI 정적 검증 도구(`tools/verify_playbooks.py`), 미인가 체계 작성 차단 가드레일 및 워크플로우 동기화
+  - [ ] **TASK-010-1**: 플레이북 정적 검증 도구(`tools/verify_playbooks.py`) 구현 (7대 필수 섹션, 링크 유효성, 미인가 파일 생성 차단 검증)
+  - [ ] **TASK-010-2**: 표준 템플릿 명세 및 인덱스(`playbook/README.md`) 작성
+  - [ ] **TASK-010-3**: 인프라 도메인 매뉴얼(`playbook/0_infra/gps.md`) 작성 (`GPS v2.3.3 Implemented` 반영)
+  - [ ] **TASK-010-4**: 온보드 제어 도메인 매뉴얼(`playbook/1_control/vas.md`, `playbook/1_control/tca.md`) 작성 (`VAS v1.20.0` `QUATERNION_RATE`·`Base+3` `MFD_ACRO`·`system.json` 및 `TCA v1.12.0` 반영)
+  - [ ] **TASK-010-5**: 유도 및 임무 도메인 매뉴얼(`playbook/2_guidance/fcp.md`, `playbook/3_planning/amm.md`) 작성 (현행 `FCP v2.1.0` `Base+4/+2/+1` 3채널 순수 `SE(3)` 외루프 및 `TASK-204`·`TASK-013`·`TASK-402` 반영 완료 기준 `AMM v2.0.1` 듀얼 모뎀 외부 게이트웨이·`nav_engine`·`trajectory_generator`·`ACT_*`/`DEC_*`/`MAC_*` 3계층 미션 시퀀서·`chattering_guard`·CLI/TUI·외부 파일 즉시 구동 규격 및 `amm_mission_editor.md` 연동 안내 반영)
+  - [ ] **TASK-010-6**: 프로젝트 규칙 반영, 컨텍스트 동기화 및 검증 (`test_tools_integrity.py` 도구 등록·`verify_context_docs.py` 통과 및 `TASK-009`·`013`·`113`·`114`·`115`·`116`·`122`·`202`·`207~209`·`402` 현행 반영 확인)
+
+- [ ] **TASK-011: [2순위 / 확장 매뉴얼] 지상 관제·정비·미션 에디터·FDR 및 텔레메트리 분석기 플레이북 2차 확장** (`playbook/0_development/{alignment,fdr}.md`, `playbook/0_infra/{gcs,gac,landing_pad}.md`, `playbook/3_planning/amm_mission_editor.md`)
+  - **선행 의존성**:
+    - **공통 선행**: `TASK-010` 완료 필요 (표준 7대 섹션 템플릿 `playbook/README.md` 및 `tools/verify_playbooks.py` 검증·인가 목록 체계 활용)
+    - **조건부 선행**: `TASK-011-5` (`playbook/0_development/fdr.md`)는 `TASK-120` 완료 후 FDR JSONL 포맷·핫키·`tools/analyze_flight_log.py` CLI 확정 기준 반영 (`Alignment`, `GCS`, `GAC`, `Landing Pad`, `Mission Editor`는 `TASK-010` 완료 즉시 착수 가능)
+  - **배경 및 필요성**: `TASK-010`은 핵심 5종(GPS, VAS, TCA, FCP, AMM)에 집중되어 있으므로, ① 실제 인게임 운용 시 설정·조작이 까다로운 격납고 동역학 캘리브레이션(`Alignment`)과 지상 관제소/패드(`GCS`, `GAC`, `Landing Pad`), ② `TASK-402`로 구현 완료된 오프라인 WebUI 미션 에디터(`tools/amm_mission_editor.html`, `docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.3.1 Implemented))의 작성·검증·AMM 투입 워크플로우, ③ `TASK-120`으로 구축될 블랙박스 FDR(`src/0_development/fdr/`) 및 오프라인 텔레메트리 분석기(`tools/analyze_flight_log.py`) 운용·진단 매뉴얼을 통합 확장함
+  - **주요 작업**:
+    - [ ] **TASK-011-1**: 격납고 동역학 캘리브레이션 매뉴얼(`playbook/0_development/alignment.md`) 작성
+    - [ ] **TASK-011-2**: 중앙 지상 관제소 매뉴얼(`playbook/0_infra/gcs.md`) 작성
+    - [ ] **TASK-011-3**: 섹터 관제·착륙패드 매뉴얼(`playbook/0_infra/gac.md`, `playbook/0_infra/landing_pad.md`) 작성
+    - [ ] **TASK-011-4**: AMM WebUI 미션 에디터 운용 매뉴얼(`playbook/3_planning/amm_mission_editor.md`) 작성 (`tools/amm_mission_editor.html` 기준 2D 캔버스/인스펙터·조건/훅 빌더·프리플라이트 검증·JSON Export → `AMM` 다중 경로/드래그앤드롭 투입 연동 및 `amm.md` 상호 참조)
+    - [ ] **TASK-011-5**: 블랙박스 FDR 및 오프라인 텔레메트리 분석기 매뉴얼(`playbook/0_development/fdr.md`) 작성 (`TASK-120` 완료 연동 — `src/0_development/fdr/` 감청/덤프 절차 및 `tools/analyze_flight_log.py` CLI 튜닝·진단 해석 가이드)
+    - [ ] **TASK-011-6**: `playbook/README.md` 인덱스·`tools/verify_playbooks.py` 인가 목록 동기화 및 7대 섹션·링크 정적 검증 통과
+
 - [ ] **TASK-501: [3순위 / 배포 인프라] Google Drive 전수 패키지(101종) 업로드·매핑 동기화 및 `--strict-gdrive-packages` 게이트 활성화** (`config/gdrive_mapping.json`, `tools/sync_gdrive.py`, `tools/verify_manifest_sync.py`, `dist_gdrive/`)
   - **등록 배경**: `TASK-013` Q8 결정(방안 A 우선 적용 + 방안 B 후속 과제 분리)에 따라 현행 9종 부트스트랩/공용 파일 해시 갱신만 우선 완료하고, 12개 서브시스템 전수 패키지 파일(`101`건; `manifest.lua` `109`경로 + 루트 `installer.lua` - 기매핑 `9`건)의 Google Drive 실업로드·매핑 등록 및 엄격 정합성 게이트 활성화를 별도 과제로 추적함.
   - **주요 작업**:
@@ -70,9 +74,11 @@
     - [ ] **TASK-501-2**: `gdrive` CLI 환경에서 `python tools/sync_gdrive.py sync --dry-run` 검증 후 본 동기화(`sync`) 실행 및 `config/gdrive_mapping.json` 내 전수 패키지(`101`건)의 `fileId`, `sha256`, `sizeBytes` 갱신
     - [ ] **TASK-501-3**: `python tools/verify_manifest_sync.py --strict-gdrive-packages` `0 Errors, 0 Warnings` 검증 통과 및 CI/표준 검증 파이프라인 반영
 
-- [ ] **TASK-210: [대기] ASA v1.8.0 / TCA / Alignment 구현 정합화 (`MSG_AERO_*` · 채널 · 핸드셰이크 반영)** (`docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md` (현재 v1.8.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.12.0 Implemented), `docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md` (현재 v2.7.0 Implemented), `src/1_control/asa/`)
-  - **선행 의존성**: `TASK-206`·`TASK-209`·`TASK-013`(`VAS v1.20.0`·`TCA v1.12.0`·`Alignment v2.7.0`) 완료 및 연동; `ASA` 본 구현 및 `FLT-HIGH-12` 골격 정합은 `[연기] TASK-105` 재개 시 일괄 반영
-  - **배경 및 목적**: ① **[1차 검증 완료 — `TASK-207/208/209` E2E, `244c940` + `TASK-013` 전수 교정]** `TCA`/`Alignment`/`VAS` 간 채널·`AMM -> FCP -> VAS -> TCA` 4계층 재바인딩(`[I-9]` `MSG_CHANNEL_REBIND_ACK` Option A) 및 `[I-4]` 격납고 캘리브레이션 와이어·`UUID`(`VAS-NODE-01-4402`) 호환 검증 완료, ② `TASK-105`로 연기 중인 `ASA` 본 구현 재개 시 `Base+11` (`10011`), `bandwidth = 40`, `[I-10]` `MSG_AERO_CMD`/`MSG_AERO_STATUS`(`[-1.0, +1.0]`/`[0.0, 1.0]`, `dynamicPressureFactor`, `interactionMode`, `appliedDeflection`, `"NOMINAL"|"DEGRADED"|"TOTAL_LOSS"`) 및 `MSG_ACTUATOR_DISCOVER_REQ/ACK`(`Base_hangar+3`, `targetGroup`), `MSG_CALIB_BAY_BIND`/`MSG_PROFILE_SYNC` `"RUDD"`, `AMM -> FCP -> VAS -> ASA` 4계층 재바인딩(`oldBase + 11` / `newBaseChannel + 11`, `500ms`)을 준수하도록 구현·검증한 뒤 `ASA` 사양서를 `Implemented`로 승격함
+- [ ] **TASK-210: [대기] ASA v1.8.0 구현 정합화 및 VAS·Alignment 실노드 연동 검증 (`MSG_AERO_*` · `MSG_SURFACE_DISCOVER_*` · 4계층 재바인딩 반영)** (`docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md` (현재 v1.8.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.12.0 Implemented), `docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md` (현재 v2.7.0 Implemented), `src/1_control/asa/`)
+  - **선행 의존성**:
+    - **기완료 기반 (`TASK-206`·`TASK-207`·`TASK-208`·`TASK-209`·`TASK-013` 완료)**: `VAS v1.20.0` (`Implemented`, `actuator_adapter_asa.lua`·`Base+11` 송신단), `TCA v1.12.0` (`Implemented`, `Option A` 재바인딩·`Base_hangar+3` 탐색), `ALIGNMENT v2.7.0` (`Implemented`, `discovery_client.lua` `MSG_SURFACE_DISCOVER_REQ/ACK`·`profile_exporter.lua`) 정합화 및 1차 E2E(`244c940`) 완료.
+    - **잔여 차단 의존성**: **`[연기] TASK-105` (ASA 본 구현 재개 및 `FLT-HIGH-12` 5대 골격 결함 해소)** — `TASK-013` Q4 방안 B에 따라 `src/1_control/asa/**`·`tests/1_control/asa/**`가 동결(`0 diff`)되어 있으므로, `TASK-105` 재개 시 본 과제를 일괄 병행 수행함.
+  - **배경 및 목적**: ① **[기반 완료 — `TASK-207/208/209` E2E (`244c940`) + `TASK-013` 전수 교정]** `TCA`/`Alignment`/`VAS` 간 채널·`AMM -> FCP -> VAS -> TCA` 4계층 재바인딩(`[I-9]` `MSG_CHANNEL_REBIND_ACK` Option A), `[I-4]` 격납고 캘리브레이션 와이어·`UUID`(`VAS-NODE-01-4402`), `VAS` `actuator_adapter_asa.lua` 송신단(`[-1.0, +1.0]`/`[0.0, 1.0]`, `VAS §9.5`) 및 `Alignment` `discovery_client.lua`(`MSG_SURFACE_DISCOVER_REQ/ACK`) 정합 구현·`Implemented` 승격 완료, ② **[잔여 범위 — `TASK-105` 재개 시]** 동결 중인 `ASA` 본 구현 재개와 함께 `FLT-HIGH-12` 결함을 해소하여 `Base+11` (`10011`), `bandwidth = 40`, `[I-10]` `MSG_AERO_CMD`/`MSG_AERO_STATUS`(`[-1.0, +1.0]`/`[0.0, 1.0]`, `dynamicPressureFactor`, `interactionMode`, `appliedDeflection`, `"NOMINAL"|"DEGRADED"|"TOTAL_LOSS"`, `"SAFE_GLIDE_TRIM"`), `MSG_SURFACE_DISCOVER_REQ/ACK`(`Base+11`·`Base_hangar+3`), `MSG_CALIB_BAY_BIND`(`baseHangarChannel`)·`MSG_PROFILE_SYNC` `"RUDD"`, `AMM -> FCP -> VAS -> ASA` 4계층 재바인딩(`oldBase + 11` / `newBaseChannel + 11`, `500ms`)을 구현·다중 노드 E2E(`AMM ↔ FCP ↔ VAS ↔ ASA ↔ Alignment`)로 검증한 뒤 `ASA` 사양서를 `Implemented`로 승격함
 
 ---
 
