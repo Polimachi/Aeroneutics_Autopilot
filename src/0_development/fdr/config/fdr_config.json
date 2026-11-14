@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.1.0",
+  "aircraftIndexN": 1,
+  "baseChannel": 10000,
+  "bandwidth": 40,
+  "domainId": "*",
+  "modemSide": "top",
+  "autoStartOnBoot": true,
+  "recordMode": "STREAMING",
+  "tapOptions": {
+    "aero": true,
+    "trajectory": true,
+    "includeControlEvents": false
+  },
+  "streaming": {
+    "flushIntervalFrames": 20,
+    "flushIntervalSec": 1.0
+  },
+  "ringBuffer": {
+    "capacity": 1500
+  },
+  "storage": {
+    "preferExternalDisk": true,
+    "allowLocalFallback": true,
+    "localDumpDir": "/logs",
+    "diskSubDir": "fdr_logs",
+    "maxPartBytes": 100000,
+    "rollOverReserveBytes": 16384,
+    "minFreeSpaceBytes": 16384,
+    "autoPruneOldest": true,
+    "maxTotalSessions": 10,
+    "autoFlushOnEstop": true
+  },
+  "export": {
+    "mode": "GDRIVE_WEBHOOK",
+    "webhookUrl": "",
+    "gdriveFolderId": "1C3ZWMoXjsba1QE8ksgWG0LSfxzW_nMWI",
+    "gdriveFolderName": "FDR_Reports",
+    "authToken": "",
+    "timeoutSec": 15
+  },
+  "debug": true
+}

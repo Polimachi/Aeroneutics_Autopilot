@@ -21,7 +21,6 @@ TARGET_IMPLEMENTED = [
     'docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md',
-    'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
     'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
     'docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md',
@@ -30,8 +29,10 @@ TARGET_IMPLEMENTED = [
 TARGET_APPROVED = [
     'docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md',
     'docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md',
+    'docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md',
     'docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md',
+    'docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md',
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
 ]
 

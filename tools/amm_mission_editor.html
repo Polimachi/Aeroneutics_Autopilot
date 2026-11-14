@@ -85,6 +85,17 @@
       border-color: #ef4444;
       color: #fecaca;
     }
+    button[aria-pressed="true"],
+    button[aria-expanded="true"] {
+      background: #0e7490;
+      border-color: #22d3ee;
+      color: #f0fdff;
+      font-weight: 600;
+    }
+    button[aria-pressed="true"]:hover:not(:disabled),
+    button[aria-expanded="true"]:hover:not(:disabled) {
+      background: #0891b2;
+    }
     input[type="text"], input[type="number"], select, textarea {
       background: var(--bg-input);
       border: 1px solid var(--border-default);
@@ -2455,7 +2466,14 @@
           const zoomEl = document.getElementById("zoomReadout");
           if (zoomEl) zoomEl.textContent = `${Math.round((st.ui.zoom || 1) * 100)}%`;
           const snapBtn = document.getElementById("btnToggleSnap");
-          if (snapBtn) snapBtn.setAttribute("aria-pressed", String(Boolean(st.ui.gridSnap)));
+          if (snapBtn) {
+            const snapOn = Boolean(st.ui.gridSnap);
+            snapBtn.setAttribute("aria-pressed", String(snapOn));
+            snapBtn.textContent = snapOn ? `Snap ${st.ui.gridStep || 10}m` : "Snap Off";
+            snapBtn.title = snapOn
+              ? "Grid snap enabled (hold Alt while dragging to bypass)"
+              : "Grid snap disabled (click to enable 10m snap)";
+          }
         };
 
         const renderLeftRail = (st) => {

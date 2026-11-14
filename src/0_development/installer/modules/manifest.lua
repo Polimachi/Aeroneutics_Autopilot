@@ -92,6 +92,7 @@ manifest.MODULE_ORDER = {
     "tca",
     "fcp",
     "alignment",
+    "fdr",
     "gps_server",
     "gps_node",
     "gps_client",
@@ -647,6 +648,32 @@ manifest.MODULES = {
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },
+    fdr = {
+        id = "fdr",
+        name = "FDR",
+        category = "development",
+        version = "0.3.0",
+        installDir = "/",
+        startup = {
+            enabled = true,
+            path = "/startup/00_fdr.lua",
+            target = "/main.lua",
+            name = "FDR",
+        },
+        description = "Ground In-Flight Aligner & Multi-Disk VFS Logger (Receive-Only)",
+        roles = { "Ground Aligner", "Blackbox", "Dev Layer 0" },
+        files = {
+            { repoPath = "src/0_development/fdr/main.lua", dest = "/main.lua", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/config/fdr_config.json", dest = "/config/fdr_config.json", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/modules/ring_buffer.lua", dest = "/modules/ring_buffer.lua", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/modules/packet_tap.lua", dest = "/modules/packet_tap.lua", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/modules/storage_pool.lua", dest = "/modules/storage_pool.lua", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/modules/jsonl_dumper.lua", dest = "/modules/jsonl_dumper.lua", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/modules/cloud_exporter.lua", dest = "/modules/cloud_exporter.lua", gdriveId = nil },
+            { repoPath = "src/0_development/fdr/modules/fdr_ui.lua", dest = "/modules/fdr_ui.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
 }
 
 function manifest.getModule(id)
@@ -730,6 +757,7 @@ manifest.AIRFRAME_PRESETS = {
                 airframeType = "ADVANCED_VTOL",
                 loopFrequencyHz = 20,
                 primaryModemSide = "top",
+                telemetryDiag = false,
                 debug = false,
             },
             channels = {
@@ -752,6 +780,7 @@ manifest.AIRFRAME_PRESETS = {
                 airframeType = "VECTORED_VTOL",
                 loopFrequencyHz = 20,
                 primaryModemSide = "top",
+                telemetryDiag = false,
                 debug = false,
             },
             channels = {

@@ -1,0 +1,9 @@
+{
+  "timeout_sec": 12.0,
+  "abort_timeout_ms": 4000,
+  "term_width": 51,
+  "term_height": 19,
+  "peripherals": [
+    { "side": "top", "type": "modem" }
+  ]
+}

@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.20.0` |
+| **문서 버전 (Version)** | `v1.21.0` |
 | **최종 수정일 (Date)** | `2026-11-14` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.21.0` | 2026-11-14 | **FDR `telemetryDiag` Opt-In 진단 확장 (`Implemented` $\to$ `Approved`)**: ① `config/system.json`에 `telemetryDiag: false` 기본 Opt-In 플래그 신설, ② `telemetryDiag == true`일 때만 `Base+2` `MSG_FLIGHT_TELEMETRY.payload`에 선택 진단 서브테이블(`satFlags`, `diag = { integrators, integralLimits, saturationFreeze, lastDemands }`) 첨부 (`Zero-Fallback` 및 기본 `false` 무오버헤드 유지), ③ `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.31.0`) 및 `FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0`) 상호 참조 동기화 | `TASK-120` 지상 실환경 비행 식별기(FDR)의 PID 적분항·포화 프리즈 정밀 계측 연동 (`src/1_control/vas/` 반영 후 `Implemented` 승격 예정) |
 | `v1.20.0` | 2026-11-14 | **Wave 1 전역 ICD/사양 정합 동기화 (`Implemented` $\to$ `Approved`)**: ① `[I-9]` `MSG_CHANNEL_REBIND`/`MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) Option A 단일화(`transactionId`, `action`, `oldBaseChannel`, `newBaseChannel`, `bandwidth=40`, `500ms` 롤백, `subNodesReady`), ② `[I-4]` `MSG_CALIBRATION_INIT`/`_ACK`/`_CLOSE`/`_ACK`·`MSG_CALIB_BAY_BIND`·`MSG_PROFILE_SYNC.discoveredSurfaces`(객체 맵 & `"RUDD"` 단일화) 통일, ③ `[I-10]` `MSG_AERO_STATUS.interactionMode`(`mode [DEPRECATED]`)·`[I-1]`/`[I-6]` `actuatorHealth.allOk`·`MSG_MFD_STATE`(`sensorOk`, `controlState`, `groundSpeed`) 정합화, ④ `system.json` `minStallThrottle: 0.40`(`minThrottle: 6.0` 교정) 및 `surfaces.json` `"RUDD"` 통일, ⑤ 연관 문서 버전 배지 동기화 | Q1·Q2·Q4·Q6 사용자 확정 결정 반영 (`src/1_control/vas/` Wave 2 반영 후 `Implemented` 재승격 예정) |
 | `v1.19.0` | 2026-11-12 | FCP-AMM 역할 분리 및 `QUATERNION_RATE` 단일화 개정(`Implemented`, 구현 과제 `TASK-209` 완료 · 2026-11-13 승격): 마스터 ICD(`v1.28.0`)에 맞춰 상위 제어 계층(`AMM` $\to$ `FCP` $\to$ `VAS`) 및 `top` 무선 모뎀 채널 범위(`Base+0/+1/+2/+3[ACRO]/+10/+11`) 정합화, 일반 비행 `compute_climb_wrench` 수직 속도 PI 루프 제거(고도/승강률 홀드는 `FCP_TIMEOUT` 1,500ms 시 `FAILSAFE_HOLD`/`EMERGENCY_LAND` 내부에서만 가동), 6대 기체 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`/`translationBias{surge,sway}`) 및 `E_STOP > MFD_ACRO > FCP` 선점 중재 규격화, `Base+3` 평시 `AMM` 5Hz 양보 및 `MFD_ACRO` 시 20Hz 직결 인계 명세, `Base+11` `MSG_SURFACE_DISCOVER_REQ/ACK`·`system.json` 채널 오프셋(`4/10/11`) 정정 및 구버전 유도 타임아웃 설정 키를 `fcpCommandTimeoutMs`로 정규화, 잔존 레거시 식별자(구형 어댑터·구동기 축약 접미어 및 소문자 유도기 표기 등) 일괄 정비 | FCP-AMM-VAS 계층 직교성 확립 및 Zero-Fallback 와이어 계약 일원화 |
 | `v1.18.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진 비행체 지원: 제어 효율성 행렬(Control Effectiveness Matrix B) 및 Moore-Penrose 의사역행렬(B†) 기반 동적 렌치 믹싱, 다형성 MSG_THRUST_CMD 출력(outputs[groupId] = {thrust, gimbalX, gimbalY}), 짐벌 포화 피드백 기반 방향성 안티 와인드업, 비공력 특성(flapTarget=0.0, ASA 바이패스) 규격화 | 6-DoF 짐벌 추력 분배 믹서 알고리즘 및 비공력 자세 제어 확립 |
@@ -27,13 +28,14 @@
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.31.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.1)
 > - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.0.1)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.1.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.8.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.12.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [FDR_PROGRAM_SPECIFICATION.md](../../0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) (지상 실환경 비행 식별·계측기 FDR v0.3.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 
 ---
@@ -550,7 +552,7 @@ flowchart TD
   ```
 
 ### 5.11 모듈 11: `telemetry_feeder` (20Hz 텔레메트리 & ACRO MFD 직결 송출기)
-- **역할**: 20Hz 비행 텔레메트리(`MSG_FLIGHT_TELEMETRY`, `activeSource` 포함)를 채널 `Base+2`로 브로드캐스트(`FCP`, `AMM`, `Alignment` 수신)합니다. 평시(`activeSource == "FCP"`)에는 **`AMM (Node 03)`이 `Base+3` 5Hz 통합 HUD 다운링크를 전담**하므로 `VAS`는 `Base+3` 송출을 유예(Yield/Silence)하며, 조종석 수동 급기동(`activeSource == "MFD_ACRO"`) 진입 시에만 `Base+2`로 `"MFD_ACRO"` 점유를 통보(`AMM` 양보 유도)하고 **`VAS`가 `Base+3`으로 `MSG_MFD_STATE` 20Hz 고속 직접 송출을 인계**합니다. *(단, 비행 중 `FCP_TIMEOUT` 1,500ms 발생 시 MFD 블랙아웃 방지를 위해 임시 5Hz 폴백 HUD를 송출)*
+- **역할**: 20Hz 비행 텔레메트리(`MSG_FLIGHT_TELEMETRY`, `activeSource` 포함)를 채널 `Base+2`로 브로드캐스트(`FCP`, `AMM`, `Alignment`, 패시브 `FDR` 수신)합니다. 평시(`activeSource == "FCP"`)에는 **`AMM (Node 03)`이 `Base+3` 5Hz 통합 HUD 다운링크를 전담**하므로 `VAS`는 `Base+3` 송출을 유예(Yield/Silence)하며, 조종석 수동 급기동(`activeSource == "MFD_ACRO"`) 진입 시에만 `Base+2`로 `"MFD_ACRO"` 점유를 통보(`AMM` 양보 유도)하고 **`VAS`가 `Base+3`으로 `MSG_MFD_STATE` 20Hz 고속 직접 송출을 인계**합니다. *(단, 비행 중 `FCP_TIMEOUT` 1,500ms 발생 시 MFD 블랙아웃 방지를 위해 임시 5Hz 폴백 HUD를 송출; `config/system.json`의 `telemetryDiag == true` 설정 시 `FDR` 정밀 튜닝용 선택 `satFlags`·`diag` 필드를 추가 송출하며 기본값 `false` 시 생략)*
 - **핵심 시그니처**:
   ```lua
   function telemetry_feeder.init(systemConfig) -> feederState
@@ -845,6 +847,9 @@ stateDiagram-v2
             asa = true,            -- ASA 공력 조종면 클러스터 정상 여부
             allOk = true           -- 전체 구동계(TCA/ASA) 정상 여부
         }
+        -- [선택: config/system.json telemetryDiag = true 시에만 첨부 (FDR In-Flight Aligner 계측용)]
+        -- satFlags = { axisSaturatedPos = {...}, axisSaturatedNeg = {...} },
+        -- diag = { integrators = { pitch, roll, yaw, climb }, integralLimits = { pitch, roll, yaw, climb }, saturationFreeze = false, lastDemands = { pitch, roll, yaw } }
     }
 }
 ```
@@ -1497,6 +1502,7 @@ stateDiagram-v2
   "vehicleType": "VTOL",
   "baseChannel": 10000,
   "debug": true,
+  "telemetryDiag": false,
   "subchannels": {
     "c2Command": 0,
     "guidance": 1,

@@ -124,6 +124,27 @@ function core_daemon.init(configDirOrTable)
     }
 end
 
+local function build_telemetry_diag(state, sensorOk, healthMap, tapOk, asaOk, combSat)
+    local telemDiag = {
+        sensorOk = sensorOk, sensorHealth = healthMap,
+        actuatorHealth = { tap = tapOk, asa = asaOk, allOk = (tapOk and asaOk) }
+    }
+    if state.feeder and state.feeder.telemetryDiag == true then
+        local g = state.fdCore.gains
+        telemDiag.satFlags = combSat
+        telemDiag.diag = {
+            integrators = state.fdCore.integrators,
+            integralLimits = {
+                pitch = g.pitch.integralLimit, roll = g.roll.integralLimit,
+                yaw = g.yaw.integralLimit, climb = g.climb.integralLimit,
+            },
+            saturationFreeze = state.fdCore.saturationFreeze == true,
+            lastDemands = state.fdCore.lastDemands,
+        }
+    end
+    return telemDiag
+end
+
 local function step_kinematics(state, dt, nowMs)
     local raw = sensor_pipeline.sample_all(state.sensors)
     local comState, healthMap, sensorOk = sensor_pipeline.process_kinematics(state.sensors, raw, dt)
@@ -222,10 +243,10 @@ function core_daemon.tick(state)
 
     local tapOk = (state.adapter.healthStatus ~= "API_TOTAL_LOSS")
     local asaOk = (not isAero) or (state.adapterAsa.healthStatus ~= "TOTAL_LOSS")
-    telemetry_feeder.tick(state.feeder, state.net, comState, state.fsm, state.mixer, {
-        sensorOk = sensorOk, sensorHealth = healthMap,
-        actuatorHealth = { tap = tapOk, asa = asaOk, allOk = (tapOk and asaOk) }
-    })
+    telemetry_feeder.tick(
+        state.feeder, state.net, comState, state.fsm, state.mixer,
+        build_telemetry_diag(state, sensorOk, healthMap, tapOk, asaOk, state.fdCore.saturationStatus)
+    )
     return true
 end
 

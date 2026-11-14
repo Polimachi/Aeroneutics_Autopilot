@@ -22,6 +22,7 @@ class TestToolsIntegrity(unittest.TestCase):
             WORKSPACE_ROOT / "tools" / "sync_gdrive.py",
             WORKSPACE_ROOT / "tools" / "verify_manifest_sync.py",
             WORKSPACE_ROOT / "tools" / "verify_context_docs.py",
+            WORKSPACE_ROOT / "tools" / "analyze_flight_log.py",
         ]
         for tool_path in expected_tools:
             self.assertTrue(

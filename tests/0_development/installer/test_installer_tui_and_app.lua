@@ -45,7 +45,7 @@ local function readFile(path)
 end
 
 describe("tui_view 51x19 terminal rendering and source toggle", function()
-    it("renders header, 12-module menu, progress bar, and source toggle within 51x19 bounds", function()
+    it("renders header, 13-module menu, progress bar, and source toggle within 51x19 bounds", function()
         -- 1. Source toggle logic
         assert_eq(tui_view.toggleSource("github"), "gdrive")
         assert_eq(tui_view.toggleSource("gdrive"), "github")
@@ -53,7 +53,7 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         assert_eq(tui_view.toggleSource("GDRIVE"), "github")
 
         local modules = manifest.listModules()
-        assert_eq(#modules, 12)
+        assert_eq(#modules, 13)
 
         -- 2. Color terminal rendering
         local termColor = mock.term(51, 19)
@@ -65,9 +65,11 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
 
         tui_view.renderMenu(termColor, modules, 1, "github", {})
         assert_true(termColor:_contains("[GitHub]"))
-        for _, mod in ipairs(modules) do
-            assert_true(termColor:_contains(mod.name))
+        for i = 1, math.min(#modules, 12) do
+            assert_true(termColor:_contains(modules[i].name))
         end
+        tui_view.renderMenu(termColor, modules, #modules, "github", {})
+        assert_true(termColor:_contains(modules[#modules].name))
 
         tui_view.renderMenu(termColor, modules, 2, "gdrive", { tca = { version = "1.9.1" } })
         assert_true(termColor:_contains("[GDrive]"))
@@ -87,9 +89,11 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
 
         tui_view.renderMenu(termMono, modules, 3, "gdrive", {})
         assert_true(termMono:_contains("[GDrive]"))
-        for _, mod in ipairs(modules) do
-            assert_true(termMono:_contains(mod.name))
+        for i = 1, math.min(#modules, 12) do
+            assert_true(termMono:_contains(modules[i].name))
         end
+        tui_view.renderMenu(termMono, modules, #modules, "gdrive", {})
+        assert_true(termMono:_contains(modules[#modules].name))
     end)
 
     it("computes 12-row viewport window and scrolls smoothly when items exceed 12 rows", function()

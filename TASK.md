@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-14  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 403, 010, 011, 501, 210)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-206~209, TASK-124, TASK-123, TASK-204, TASK-013, TASK-402 / 활성 대기: TASK-120, 117, 125, 403, 404, 302, 010, 011, 014, 501, 210)
 
 ---
 
@@ -22,19 +22,21 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-403` (에디터 World Preset) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
+> **권장 실행 우선순위**: **1순위** `TASK-120` (FDR·텔레메트리 분석기) · `TASK-117` (무선 OTA 배포·롤백) → **2순위** `TASK-125` (40채널 블록 개편·경합·검증 결함 12종 해소) · `TASK-403` (에디터 World Preset) · `TASK-404` (GCS WebSocket 브리지·실시간 전술 지도) · `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) · `TASK-010` → `TASK-011` (플레이북·에디터/FDR 문서) · `TASK-014` (3대 감사 가드레일) · **3순위** `TASK-501` (GDrive 전수 업로드·엄격 검증) / **대기** `TASK-210` (`[연기] TASK-105` 재개 연동) / **로드맵(연기)** `TASK-401`
 
-- [ ] **TASK-120: [1순위 / 개발 도구] 블랙박스 비행 기록기(FDR) 및 호스트 PC 오프라인 텔레메트리 분석기 구축** (`src/0_development/fdr/`, `tools/analyze_flight_log.py`)
+- [-] **TASK-120: [1순위 / 개발 도구] 지상 실환경 비행 식별기(FDR)·디스크 풀 로거 및 오프라인 프로파일러 구축** (`src/0_development/fdr/`, `src/1_control/vas/`, `tools/analyze_flight_log.py`)
   - **권장 착수 순위**: **1순위** (독립 도구로서 즉시 착수 가능; `TASK-117` E2E/실전 검증 및 `TASK-011-5` FDR 매뉴얼 작성의 선행 기반)
-  - **사양서 상태**: 미작성 (구현 착수 전 Draft → Approved 필요; `Base+1` `MSG_ATTITUDE_CMD`·`Base+2` `MSG_FLIGHT_TELEMETRY` 패시브 감청 기준, 필요 시 진단 필드 확장 검토)
-  - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 인게임 비행 중 발생하는 미세 자세 진동, 짐벌 포화(Saturation), 슬루율 제한 현상을 정밀 튜닝하기 위한 시계열 로그 수집 수단 부재
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-120-fdr-and-analyzer.md`
+  - **사양서 상태**: `docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0 Approved` 승격 완료 — `VAS` Opt-in `telemetryDiag`·`GDRIVE_WEBHOOK` `FDR_Reports` 확정; `VAS_PROGRAM_SPECIFICATION.md` `v1.21.0 Approved` & `ICD v1.31.0` 동기화)
+  - **배경 및 필요성**: 온보드 제어기 헤드리스 전환(TASK-113)으로 실시간 20Hz 성능은 확보되었으나, 실비행 중 발생하는 미세 자세 진동·적분항/짐벌 포화·트림/호버 편차를 계측하고 보정 프로필(`pid.json`/`system.json`/`fcp_config.json`)을 산출할 지상 상주형 동적 비행 식별기 부재
   - **주요 작업**:
-    - [ ] **TASK-120-1**: 경량 블랙박스 로거(`src/0_development/fdr/`) 구현 — `Base+1`(유도 지령) 및 `Base+2`(20Hz VAS 텔레메트리) 패킷을 패시브 감청해 로컬 링 버퍼에 기록하고 `E_STOP` 또는 사용자 핫키 입력 시 JSONL 포맷으로 덤프 (`manifest.lua`·`verify_manifest_sync.py` 등록 포함)
-    - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 CLI(`tools/analyze_flight_log.py`) 구현 — JSONL 덤프 파일을 읽어 목표치(Setpoint) 대비 실제 측정치(Process Variable), PID 적분항 포화도, 추력 분배율 분석·요약 출력 (`tests/harness/test_tools_integrity.py` 등록 포함)
+    - [x] **TASK-120-0**: 사양서 작성 및 `Approved` 승격 게이트 (`FDR_PROGRAM_SPECIFICATION.md` `v0.3.0 Approved`, `VAS` `telemetryDiag` Opt-in, `GDRIVE_WEBHOOK` `FDR_Reports` 기본값 확정, `VAS v1.21.0`·`ICD v1.31.0`·`Diagram v2.15.1` 양방향 동기화)
+    - [-] **TASK-120-1**: 지상 FDR 로거(`src/0_development/fdr/`) 구현 — `Alignment`형 동적 `[N]` 바인딩 & `domainId` 자동 잠금, `Base+1`/`Base+2`/`Base+10` 필수 + `Base+11`/`Base+4` 감청, `storage_pool.lua`(유선/인접 `/disk*` Spanned VFS 롤오버·핫플러그·순환 삭제), `STREAMING` 기본 + `RING_BUFFER` 선택, `cloud_exporter.lua`(`[U]` `http.post` `GDRIVE_WEBHOOK` 반출) 구현 (`manifest.lua`·`verify_manifest_sync.py`·`VAS` `telemetryDiag` Opt-in 연동 포함)
+    - [ ] **TASK-120-2**: 오프라인 텔레메트리 분석 및 프로파일러 CLI(`tools/analyze_flight_log.py`) 구현 — 다중 파트 JSONL 병합 분석, Setpoint vs PV 추종 오차·포화·추력 분배 리포트(`--json`/`--csv`), `--emit-profile` 보정 프로필(`pid_tuned.json`/`system_patch.json`/`fcp_patch.json`/`tuning_summary.json`) 생성 (`tests/harness/test_tools_integrity.py` 등록 포함)
 
 - [ ] **TASK-117: [1순위] 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 구축 (구 TASK-117 + 119 통합)** (`src/0_development/ota/`, `src/0_development/installer/modules/startup_generator.lua`, `src/1_control/{vas,tca}/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)
   - **권장 착수 순위**: **1순위** (선행 과제 `TASK-202`·`TASK-204`·`TASK-207~209`·`TASK-013`·`TASK-402` 완료로 즉시 착수 가능; `TASK-120`과 병렬 또는 연계 진행)
-  - **사양서 상태**: 통합 OTA 사양서 미작성(Draft → Approved 및 대상 경로 확정 필요) / 연관 개정 대상: `docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md` (현재 v1.1.1 Implemented), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.30.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.15.0 Approved), `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.20.0 Implemented), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.12.0 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.1.0 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented)
+  - **사양서 상태**: 통합 OTA 사양서 미작성(Draft → Approved 및 대상 경로 확정 필요) / 연관 개정 대상: `docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md` (현재 v1.1.1 Implemented), `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.31.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.15.1 Approved), `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.21.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.12.0 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.1.0 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented)
   - **배경 및 통합 사유**: 다중 CC:Tweaked 컴퓨터 탑재 기체(VAS, 다수 TCA, 다수 ASA, FCP, AMM)의 수동 `installer.lua` 업데이트 비용을 해소하되, `Zero-Fallback` 원칙상 체크섬 검증·`/ota_staging/` 원자적 교체 응답·안전 게이트 거부(`NACK`) 사유 코드가 서버 프로토콜에 처음부터 일체화되어야 재설계를 방지할 수 있음. 또한 비행 중 OTA 재부팅 추락 및 패킷 유실로 인한 벽돌(Brick) 장애를 막기 위해 서버와 슬레이브 부트스트랩 가드를 단일 E2E 게이트로 통합 검증함
   - **주요 작업**:
     - [ ] **TASK-117-1**: 통합 OTA 사양 및 아키텍처 동시 개정 — 격납고 예약 대역(`101 ~ 200`, `Base_hangar+4~+9`) 무선 OTA 채널(`0 ~ 100` 유선/내부 IPC 대역 배제), `/.version.json` 기반 다중 노드 주소 지정(`VAS`·`TCA`·`FCP`·`AMM`), 체크섬·원자적 교체 ACK/NACK(`NOT_DISARMED` 등) 패킷 스키마를 통합 사양서(Draft → Approved), 마스터 ICD, 전체 구조도, 인스톨러·VAS·TCA·FCP·AMM 사양서에 동시 반영
@@ -42,6 +44,25 @@
     - [ ] **TASK-117-3**: 온보드 안전 상태 게이트 및 노드 타게팅 연동 — 기체가 `DISARMED`·지상 `IDLE_ARMED`·지상 `E_STOP`(`not isAirborne`) 등 비비행 안전 상태일 때만 OTA 수신·적용을 허용하고 비행 중에는 `NACK` 거부하는 상태 게이트 구현 (`src/1_control/{vas,tca}/`·`FCP`·`AMM` 우선 적용, `src/1_control/asa/`는 `TASK-105` 연기 해제 시 연동)
     - [ ] **TASK-117-4**: 격납고 무선 OTA 배포 서버 구축 및 매니페스트 동기화 — 격납고 마스터 컴퓨터 단일 명령으로 기체 내 슬레이브 컴퓨터 로컬 파일(`src/` 하위 패키지) 일괄 배포 및 원격 `os.reboot()` 트리거 구현 (`src/0_development/ota/` 신설 시 `manifest.lua`, `config/gdrive_mapping.json`, `verify_manifest_sync.py` 정합성 동기화 필수)
     - [ ] **TASK-117-5**: 멀티노드 OTA E2E 시뮬레이션 검증 및 사양서 승격 — 정상 일괄 배포, 비행 상태 `NACK` 거부, 체크섬 불일치 중단, 부팅 크래시 자동 `/ota_backup/` 롤백 E2E 검증 완료 후 관련 사양서 `Implemented` 승격
+
+- [ ] **TASK-125: [2순위 / 프로토콜·아키텍처] 비행체 40채널 블록 사용 채널 개편 및 프로토콜·경합·검증 결함 12종 해소** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.31.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.15.1 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented), `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.21.0 Approved), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.1.0 Implemented), `docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md` (현재 v1.1.0 Implemented), `docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md` (현재 v2.7.0 Implemented))
+  - **권장 착수 순위**: **2순위** (`TASK-120`·`TASK-117` 다음, `TASK-302` Pocket PDA 비상 단말 및 `TASK-010` 플레이북 작성 전 채널 체계 정립을 위해 선행 권장)
+  - **사양서 상태**: 마스터 ICD 및 전체 구조도, 연관 5대 서브시스템 사양서 개정 필요 (Spec-First: Approved 승격 후 코드베이스 반영)
+  - **배경 및 필요성**: 현행 40채널 블록($BW=40$) 구조에서 고속 비행 유도(`Base+1`)와 비상 정지(`E_STOP`)의 패킷 혼재, 지상 교정(`Base+0`)과 비행 C2 패킷의 VAS 유입, ARP 유사 채널 충돌 프로브의 동시 부팅/오프라인 점유자 미탐지 결함, `Base+3` 이중 송신자 경합, `Base+30` 대역의 Payload 재편 및 편대 TBD, `reqBW` 가변 대역폭 vs `stride 40` 고정 불일치, GCS `REASSIGNED` 상태값 불일치, 비행 중 침범 감시 범위 누락(`Base+20~39`), Rule 3 수학적 중복, 그리고 다이어그램 의사코드 인자 불일치 버그를 해소함
+  - **주요 작업**:
+    - [ ] **TASK-125-1**: E_STOP 및 EMERGENCY_ALERT 전용 채널(`Base+9`) 격리 — `Base+1`(`CH_FLIGHT_GUIDANCE`)에서 혼재되던 `E_STOP` 및 `MSG_EMERGENCY_ALERT`를 Zone 1 예비 대역인 `Base+9`(`CH_EMERGENCY_CORE`) 전용 채널로 이동하여 20Hz 비행 유도 패킷과의 충돌 분리
+    - [ ] **TASK-125-2**: 동시 부팅 경합 방지 및 충돌 프로브 강화 — 단일 200ms 청취의 한계를 극복하기 위해 랜덤 백오프(Jitter 0~100ms) 및 다회 재프로브 시퀀스 도입, 충돌 응답(`CONFLICT_DETECTED`) 수신 시 회피 절차 정립
+    - [ ] **TASK-125-3**: 꺼진 점유자(Sleeping Occupant) 충돌 방지 체계 수립 — 기존 기체의 AMM 전원이 꺼져 있을 때 침묵을 빈 채널로 오판하는 결함을 방지하기 위해 GCS 레지스트리 영속 리스/클레임 검증, 디스크 캐시 점유 마커 및 부팅 시 재검증 핸드셰이크 규격 명세
+    - [ ] **TASK-125-4**: 프로브 응답자 리스닝 조건 명시 — 기체 AMM이 부팅 직후(Disarmed/대기 상태 포함) `Base+0`을 상시 개방하여 외부 충돌 프로브를 감청하고 즉시 응답하는 필수 수신 조건을 사양서에 명문화
+    - [ ] **TASK-125-5**: Base+3 이중 송신자 핸드오버 경합 해소 — `Base+3`(`CH_MFD_STATE`)의 평시 `AMM` 5Hz 송출과 `MFD_ACRO` 진입 시 `VAS` 20Hz 송출 간 소스 우선순위를 `VAS` 20Hz 우선으로 확정하고, AMM 송출 억제 및 복귀 시퀀스/히스테리시스 규칙 정의
+    - [ ] **TASK-125-6**: 지상 교정 중 패킷 혼재 해소 — `Base+0`에 C2 비행명령, 충돌 프로브, 격납고 교정 바인딩(`MSG_CALIBRATION_INIT`, VAS 수신)이 혼재되어 교정 중 C2 패킷이 VAS로 유입되는 문제를 전용 채널 분리(예: `Base+8` 등) 또는 엄격한 패킷 필터링으로 차단
+    - [ ] **TASK-125-7**: Base+30 채널대 Payload 용도 개편 및 편대 비행 채널 TBD 재정의 — `Base+30 ~ 39` 대역을 Zone 3 확장(Payload/특수 임무 버스)으로 통합 재편하고, 편대 비행(Formation Flight) 채널 개념은 차후 독립 광역 데이터링크로 재정의하기 위해 사양서상 `TBD`로 할당
+    - [ ] **TASK-125-8**: 전체 구조도 의사코드 인자 불일치 버그 수정 — `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` L798의 `checkCollision(existingCraft.baseChannel, reqBW, craftUuid)` (3개 인자) 호출부를 L827 정의(`baseA, bwA, baseB, bwB`, 4개 인자)에 부합하도록 정합화
+    - [ ] **TASK-125-9**: reqBW 가변 대역폭 vs stride 40 고정 불일치 해소 — $N$ 인덱스 간격이 $stride = 40$으로 고정된 상태에서 $reqBW > 40$ 시 인접 블록 침범 및 모순이 발생하므로, 대역폭을 $BW=40$ 고정 계약으로 단일화하고 가변 필드 유효성 검증 정합화
+    - [ ] **TASK-125-10**: GCS 재할당 상태값 불일치 정합화 (`REASSIGNED` vs `ASSIGNED`) — §6.3 안전 매트릭스에서 정의된 자동 재할당 회신 상태 `REASSIGNED`를 의사코드(L799, L820) 및 시퀀스 5 다이어그램과 일치하도록 상태값 체계 동기화
+    - [ ] **TASK-125-11**: 비행 중 채널 침범 감시 범위 전수 확대 (`Base+20~39` Payload 버스 포함) — §6.3 비행 중 침범 감지 대상이 `Base+0~5, +10~11`로 제한되어 누락된 `Base+20/21/30` 및 Zone 3 Payload 확장 버스(`Base+20~39`)를 비행 중 감시 대상에 전수 포함
+    - [ ] **TASK-125-12**: 채널 검증 규칙 Rule 3 수학적 중복 제거 및 경계 검증 단순화 — Rule 2($Base + BW - 1 \le 49999$) 만족 시 인프라 대역($[50000, 60020]$) 침범이 수학적으로 불가능하므로, Rule 3의 논리적 중복을 해소하고 검증 의사코드 단순화
+    - [ ] **TASK-125-13**: 전사 사양서 동기화, 정적 검증 및 하네스 회귀 테스트 — 마스터 ICD, 전체 구조도 및 연관 5대 사양서 개정, `verify_all_specs.py`, `verify_spec_status.py`, 단위/E2E 테스트 검증 및 컨텍스트 동기화
 
 - [ ] **TASK-403: [2순위 / 에디터·AMM 확장] AMM WebUI 미션 에디터 World Preset, 시설 기반 이착륙 지정 및 `ACT_TKL_LAND_NEAREST` 추가** (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md` (현재 v0.3.1 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented), `tools/amm_mission_editor.html`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
   - **권장 착수 순위**: **2순위** (`TASK-120`·`TASK-117` 다음, `TASK-011-4` 에디터 매뉴얼 작성 전 착수; Spec-First 절차 준수)
@@ -60,6 +81,23 @@
     - [ ] **TASK-403-3**: 에디터 월드 프리셋 스토어 & 이중 영속성 구현 (`tools/amm_mission_editor.html`) — `WorldStore` 모듈(멀티 월드 생성/전환/수정/삭제, 시설 CRUD, `localStorage` 영속화, `.json` Import/Export 병합, DOM XSS 안전 렌더링) 구현
     - [ ] **TASK-403-4**: 에디터 `#worldPresetDrawer`·2D 캔버스·시설 지정·`ACT_TKL_LAND_NEAREST` UI 구현 (`tools/amm_mission_editor.html`) — 상단 `World` 컨트롤, 2D 4변(상하 `X`·좌우 `Z`) 격자 좌표 눈금 & 배경 핀 레이어/토글, `PICK_FACILITY`, 이착륙/도킹 호환 시설 드롭다운·미등록 경고/1클릭 등록, `'From World…'` 퀵픽·`'Save as Facility'` 등록, `ACT_TKL_LAND_NEAREST` 폼/검증, `Undo` 보호
     - [ ] **TASK-403-5**: 전수 회귀 테스트(CraftOS-PC 라운드트립 포함) 및 사양서 승격 — `test_amm_mission_editor.py`·`run_unit_tests.py`·`run_e2e_tests.py` 통과 후 `AMM_PROGRAM_SPECIFICATION.md` (`v2.1.0`) 및 `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.4.0`) `Implemented` 승격
+
+- [ ] **TASK-404: [2순위 / 에디터·GCS 실시간 연동] GCS WebSocket 브리지 및 실시간 전술 지도·원클릭 미션 무선 푸시** (`tools/gcs_live_bridge.py`, `tools/amm_mission_editor.html`)
+  - **권장 착수 순위**: **2순위** (`TASK-403` 완료 이후 착수)
+  - **선행 의존성**: `TASK-403` (`tools/amm_mission_editor.html`의 `WorldStore` 및 2D 캔버스 완료 이후)
+  - **배경 및 필요성**: 브라우저 에디터에서 작성한 미션 JSON을 매번 월드 세이브 폴더로 복사하는 수작업을 제거하고, `TASK-403`의 월드 시설물 지도 위에 실제 비행 중인 기체의 실시간 궤적을 오버레이함
+  - **주요 작업**:
+    - [ ] **TASK-404-1**: 로컬 Python WebSocket 브리지(`tools/gcs_live_bridge.py`) 구축 — 인게임 `GCS` 컴퓨터(`http.websocket`)와 외부 브라우저 WebUI 간 양방향 JSON 중계 서버 구현
+    - [ ] **TASK-404-2**: `amm_mission_editor.html` Live Mode 확장 — `WorldStore` 2D 캔버스 위에 다중 기체 실시간 위치·기수각·계획 경로 대비 실제 궤적(`Trail`) 렌더링 및 상단 헤더 `'Push to Aircraft'` 원클릭 무선 미션 전송·즉시 로드 기능 구현
+
+- [ ] **TASK-302: [2순위 / 현장 운용 HMI] CC:Tweaked 포켓 컴퓨터(Pocket PDA) 휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말** (`src/0_infra/pocket_pda/`)
+  - **권장 착수 순위**: **2순위** (`TASK-120` 완료 후 FDR 동적 바인딩·원격 덤프 트리거 연동 시 시너지 극대화)
+  - **선행 의존성**: `TASK-120` (FDR 원격 바인딩·덤프 트리거 연동 시 시너지 극대화)
+  - **배경 및 필요성**: 인게임 시험 비행·정비 중 기체 이상 진동이나 경로 이탈 시 고정형 GCS·Alignment·FDR 콘솔까지 이동할 시간적 여유가 없음. 플레이어가 인벤토리에서 꺼내 즉시 기체 비상 제어뿐 아니라 `Alignment`, `FDR` 등 지상/온보드 시스템과의 무선 링크(기체 바인딩·세션 제어)까지 수행할 수 있는 무선 휴대 단말(`src/0_infra/pocket_pda/`)이 필요함.
+  - **주요 작업**:
+    - [ ] **TASK-302-1**: Pocket Computer 전용 경량 TUI 구현 — 소형 화면(26×20)에 최적화된 기체 선택기, 고도·속도·자세·연료 HUD, 링크 품질(RSSI/거리) 및 연결 대상(`Alignment`/`FDR`/`GCS`/`AMM`) 상태 표시
+    - [ ] **TASK-302-2**: 원격 비상 제어 및 FDR 연동 — 단일 키 입력으로 무선 `E_STOP` 송출 + `TASK-120` 블랙박스 로그 즉시 JSONL 덤프 트리거, `HOLD` / `RTB` / `LAND_NEAREST` 단축 명령 지원
+    - [ ] **TASK-302-3**: `Alignment`·`FDR` 등 원격 링크 및 세션 제어 연동 — Pocket PDA에서 기체 인덱스 $N$을 지정해 `Alignment`(격납고 베이 바인딩·교정 세션 개시/중단/해제)·`FDR`(`STANDBY`↔`LOGGING` 동적 기체 $N$ 바인딩 전환·로그 반출 트리거) 등 주요 노드 간 원격 링크·해제 수행 지원
 
 - [ ] **TASK-010: [2순위] 개별 코드베이스 사용 설명서(Playbook) 체계 구축 및 핵심 5종 매뉴얼 작성**
   - **권장 착수 순위**: **2순위** (`GPS`·`VAS`·`TCA`·`FCP`·`AMM`·`tools/amm_mission_editor.html` 모두 `Implemented` 승격 완료; 1순위 `TASK-120`·`TASK-117` 이후 또는 병렬 착수 가능, `TASK-011`의 선행 기반)
@@ -84,6 +122,21 @@
     - [ ] **TASK-011-4**: AMM WebUI 미션 에디터 운용 매뉴얼(`playbook/3_planning/amm_mission_editor.md`) 작성 (`tools/amm_mission_editor.html` 기준 2D 캔버스/인스펙터·조건/훅 빌더·프리플라이트 검증·JSON Export → `AMM` 다중 경로/드래그앤드롭 투입 연동 및 `amm.md` 상호 참조; `TASK-403` 완료 시 World Preset 기능 포함)
     - [ ] **TASK-011-5**: 블랙박스 FDR 및 오프라인 텔레메트리 분석기 매뉴얼(`playbook/0_development/fdr.md`) 작성 (`TASK-120` 완료 연동 — `src/0_development/fdr/` 감청/덤프 절차 및 `tools/analyze_flight_log.py` CLI 튜닝·진단 해석 가이드)
     - [ ] **TASK-011-6**: `playbook/README.md` 인덱스·`tools/verify_playbooks.py` 인가 목록 동기화 및 7대 섹션·링크 정적 검증 통과
+
+- [ ] **TASK-014: [2순위 / 검증 인프라] 전수 감사 3대 사각지대 방지 가드레일 구축 (SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크)** (`config/protocol_contracts.json`, `tools/verify_contracts.py`, `tools/verify_runtime_wiring.py`, `tools/run_boot_smoke.py`, `harness/simulation/virtual_bus.lua`, `tools/run_e2e_tests.py`, `.agent/`)
+  - **설계서 및 실행 계획서**: [2026-11-14-audit-prevention-guardrails-design.md](docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md), [2026-11-14-task-014-audit-prevention-guardrails.md](docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md)
+  - **확정 설계 결정 (`/brainstorming` · `/grill-me` 2026-11-14)**:
+    - **SSOT 원천**: `config/protocol_contracts.json`을 기계 판독형 계약 정본으로 신설하고, `tools/verify_contracts.py`가 16개 활성 사양서·활성 `src/` Lua/JSON·E2E 패킷을 교차 검증 (`Revision History`·`[DEPRECATED]` 배지 맥락 오탐 배제).
+    - **와이어 계약 검증**: `virtual_bus.lua` + `tools/run_e2e_tests.py`가 E2E 중 오가는 모든 패킷을 `result.json`으로 캡처해 엔벨로프·필수키·열거형·수치범위·Zero-Fallback을 자동 검증하며, 정적 `src/` 이중키 폴백 린트 병행.
+    - **미배선 런타임 경로 차단**: `tools/verify_runtime_wiring.py`로 `main.lua` 도달성·고아 모듈·깨진 `require`·미사용 임포트를 검출하고, `tools/run_boot_smoke.py`로 10개 활성 `main.lua`를 CraftOS-PC에서 실제 설치 레이아웃으로 약 7틱 부팅 스모크 검증.
+    - **유예 및 컨텍스트 게이트**: `src/1_control/asa`(`TASK-105`) 런타임 검사는 `--include-deferred` 전까지 기본 유예(사양서 16종 SSOT는 전수 검사); `.agent/hooks/`는 R1~R8 경량 유지하고 `skill-workflows.md`·스킬 지침으로 완료 게이트 통합.
+  - **주요 작업**:
+    - [ ] **TASK-014-1**: `config/protocol_contracts.json` SSOT 스키마 구축 및 로더 검증 (`tests/harness/test_verify_contracts.py`)
+    - [ ] **TASK-014-2**: `tools/verify_contracts.py` 사양서 SSOT 대조 및 정적 Zero-Fallback/폐기키 린터 구현
+    - [ ] **TASK-014-3**: `virtual_bus.lua` + `tools/run_e2e_tests.py` E2E 실전 패킷 캡처 계약 검증 연동 (`tests/harness/test_e2e_contract_validation.py`)
+    - [ ] **TASK-014-4**: `tools/verify_runtime_wiring.py` 정적 도달성·고아 모듈·미사용 임포트 검증기 구현 (`tests/harness/test_verify_runtime_wiring.py`)
+    - [ ] **TASK-014-5**: `tools/run_boot_smoke.py` 10개 활성 `main.lua` CraftOS-PC 실부팅 스모크 러너 구현 및 `test_tools_integrity.py` 등록
+    - [ ] **TASK-014-6**: `.agent/` 규칙·스킬 게이트 및 컨텍스트 문서 동기화
 
 - [ ] **TASK-501: [3순위 / 배포 인프라] Google Drive 전수 패키지(101종) 업로드·매핑 동기화 및 `--strict-gdrive-packages` 게이트 활성화** (`config/gdrive_mapping.json`, `tools/sync_gdrive.py`, `tools/verify_manifest_sync.py`, `dist_gdrive/`)
   - **등록 배경**: `TASK-013` Q8 결정(방안 A 우선 적용 + 방안 B 후속 과제 분리)에 따라 현행 9종 부트스트랩/공용 파일 해시 갱신만 우선 완료하고, 12개 서브시스템 전수 패키지 파일(`101`건; `manifest.lua` `109`경로 + 루트 `installer.lua` - 기매핑 `9`건)의 Google Drive 실업로드·매핑 등록 및 엄격 정합성 게이트 활성화를 별도 과제로 추적함.
@@ -120,9 +173,9 @@
     4. `[I-9]` 4계층 재바인딩 Option A 정렬: `MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK`(`transactionId`, `action`, `oldBaseChannel`, `newBaseChannel`, `500ms` 워치독, `"READY"`/`"COMMITTED"`/`"ROLLED_BACK"`/`"FAILED"`).
     5. `ASA §3.2` 설정 스키마 정합화: `schemaVersion` vs `version` 단일화, `ver == "1.9.5"` 및 `domainId` 검증 복원, `s.ELEV or s.elevator` 등 듀얼키 폴백(Zero-Fallback) 제거.
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
-  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.30.0 Approved) Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
+  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.31.0 Approved) Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
-- [ ] **[연기] TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.30.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.15.0 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented), `docs/specs/4_mission/`)
+- [ ] **[연기] TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.31.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.15.1 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.0.1 Implemented), `docs/specs/4_mission/`)
   - **상태 및 이관 사유**: 선행 우선순위 취소 및 로드맵 백로그 이관 (`TASK-204`는 `AMM v2.0.0` 기본 `ACT_PAY_BUS_CMD`/`ACT_PAY_REDSTONE`/`ACT_PAY_SET_ROI` 계약으로 독립 구현 완료; 세부 탑재체 행동은 `[로드맵: TASK-401]` `TBD`로 이관)
   - **사양서 상태**: PAYLOAD 계층 전용 사양서 미작성 (Draft → Approved 수립 및 마스터 ICD Interface I-11·전체 구조도·AMM 사양서 동기화 필요)
   - **배경 및 목적**: 현행 마스터 ICD Interface I-11(`Base+20~29`, Zone 3 탑재체 버스)에는 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK` 기본 예시 패킷만 정의되어 있으며, 전체 구조도의 세부 채널 구분(`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` 예비) 및 다양한 탑재체 노드(화물 투하, 마그넷 래치, 엄빌리컬 급유/충전, `CC:Radars`/터렛 무장 제어 등) 간 표준 통신 계약이 미비함. 탐색/기능 등록(Discovery & Capability), 상태/헬스 텔레메트리, 명령·응답(`ACK`/`NACK`)·오류 코드, 안전 인터록 및 채널 오프셋 배분 규칙을 포함한 PAYLOAD 계층 표준 통신 스키마를 정의함
