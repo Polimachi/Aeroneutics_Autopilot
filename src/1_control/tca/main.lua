@@ -156,6 +156,9 @@ local function main(cfgPathOrTable)
     local daemon = tca_daemon.init(cfg, modem)
     daemon.running = true
     daemon.sentinel:start_timer((cfg.watchdogTimeoutMs or 300) / 1000.0)
+    if os and os.startTimer then
+        daemon.otaTimerId = os.startTimer(0.05)
+    end
 
     local isDebug = not (cfg.debug == false)
 

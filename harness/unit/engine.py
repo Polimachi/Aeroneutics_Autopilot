@@ -121,6 +121,13 @@ def run_target_unit_tests(
                 if lua_file.name != "main.lua":
                     shutil.copy2(lua_file, lib_dest / lua_file.name)
 
+        # Stage shared slave OTA agent library at /lib/ota_agent.lua across all targets
+        shared_ota_agent = target.source_dir.parent.parent / "0_development" / "ota" / "ota_agent.lua"
+        if shared_ota_agent.is_file():
+            lib_dest = c0 / "lib"
+            lib_dest.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(shared_ota_agent, lib_dest / "ota_agent.lua")
+
         # Stage source codebase at /
         session.stage_tree(target.source_dir, computer_id=0, dest_subdir="")
 

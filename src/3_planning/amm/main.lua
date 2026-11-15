@@ -605,6 +605,8 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
         return
     elseif app.net.is_payload_channel and app.net:is_payload_channel(chan) and app.engine then
         app.engine:on_payload_ack(pkt, chan, now_ms)
+    elseif app.otaAgent then
+        app.otaAgent:handle_packet(chan, chan, pkt)
     end
 end
 
@@ -724,7 +726,7 @@ local function create_app(config, modems)
 
     bind_app_modems(net, modems, cfg.baseChannel, cfg)
 
-    return {
+    local app = {
         config = cfg,
         queue = queue,
         net = net,
@@ -742,6 +744,31 @@ local function create_app(config, modems)
         ctrlHeld = false,
         running = true,
     }
+    local okOta, ota_agent = pcall(require, "ota_agent")
+    if okOta and type(ota_agent) == "table" and type(ota_agent.new) == "function" then
+        local otaCfg = cfg.ota or {}
+        app.otaAgent = ota_agent.new({
+            moduleId = "amm",
+            domainId = cfg.domainId or net.domainId or "AIRCRAFT_01",
+            bayId = otaCfg.bayId,
+            bayIds = otaCfg.bayIds,
+            bootConfirmTicks = otaCfg.bootConfirmTicks,
+            rootDir = otaCfg.rootDir,
+            fsApi = otaCfg.fsApi,
+            onRebootFn = otaCfg.onRebootFn,
+            modemApi = net.infraModem or net.modem,
+            getStatusFn = function()
+                return {
+                    controlState = (app.arbiter and app.arbiter.fsmState) or "DISARMED",
+                    isAirborne = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.isAirborne == true) or false,
+                }
+            end,
+        })
+        if net.open_channels then
+            net:open_channels(app.otaAgent)
+        end
+    end
+    return app
 end
 
 local function step_5hz_downlink(app, now_ms)
@@ -914,6 +941,9 @@ local function step_20hz_tick(app, dt, now_ms)
     end
     if app.tickCount % 4 == 0 then
         step_5hz_downlink(app, now)
+    end
+    if app.otaAgent then
+        app.otaAgent:tick_boot_commit()
     end
     return setpoint
 end

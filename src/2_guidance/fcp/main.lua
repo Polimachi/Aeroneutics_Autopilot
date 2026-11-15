@@ -56,6 +56,68 @@ function fcp_main.load_config(path)
     return cfg
 end
 
+local AIRBORNE_TELEM_STATES = {
+    NORMAL = true,
+    FAILSAFE_HOLD = true,
+    EMERGENCY_LAND = true,
+    AIRBORNE_EMERGENCY = true,
+}
+
+local RESTRICTIVE_TELEM_STATES = {
+    ARMING = true,
+    NORMAL = true,
+    CALIBRATION = true,
+    FAILSAFE_HOLD = true,
+    EMERGENCY_LAND = true,
+    AIRBORNE_EMERGENCY = true,
+    E_STOP = true,
+}
+
+local function get_ota_status(ctx)
+    local telem = ctx.lastTelemPayload
+    local fsmState = (ctx.fsm and ctx.fsm.currentState) or "BOOT"
+    local telemState = (type(telem) == "table" and type(telem.controlState) == "string") and telem.controlState or nil
+    local isAirborne = (type(telem) == "table")
+        and (telem.isAirborne == true or (telemState ~= nil and AIRBORNE_TELEM_STATES[telemState] == true))
+        or false
+    local effectiveState = fsmState
+    if (fsmState == "BOOT" or fsmState == "IDLE_ARMED") and telemState and RESTRICTIVE_TELEM_STATES[telemState] then
+        effectiveState = telemState
+    end
+    return {
+        controlState = effectiveState,
+        isAirborne = isAirborne,
+    }
+end
+
+local function attach_ota_agent(ctx, cfg)
+    local okOta, ota_agent = pcall(require, "ota_agent")
+    if not okOta or type(ota_agent) ~= "table" or type(ota_agent.new) ~= "function" then
+        return
+    end
+    local otaCfg = (cfg and cfg.ota) or {}
+    local domainId = (ctx.net and ctx.net.domainId) or (cfg and cfg.system and cfg.system.domainId) or "AIRCRAFT_01"
+    local agent = ota_agent.new({
+        moduleId = "fcp",
+        domainId = domainId,
+        bayId = otaCfg.bayId,
+        bayIds = otaCfg.bayIds,
+        bootConfirmTicks = otaCfg.bootConfirmTicks,
+        rootDir = otaCfg.rootDir,
+        fsApi = otaCfg.fsApi,
+        onRebootFn = otaCfg.onRebootFn,
+        modemApi = ctx.net and ctx.net.modem,
+        getStatusFn = function()
+            return get_ota_status(ctx)
+        end,
+    })
+    ctx.otaAgent = agent
+    if ctx.net then
+        ctx.net.otaAgent = agent
+        network_manager.open_ota_channels(ctx.net, agent)
+    end
+end
+
 function fcp_main.create_context(config, modemResolver)
     local cfg = config or fcp_main.load_config()
     local safe = cfg.safety or {}
@@ -64,7 +126,7 @@ function fcp_main.create_context(config, modemResolver)
     local ctrl = outer_loop_controller.init(cfg)
     local nav = state_propagator.init(cfg)
 
-    return {
+    local ctx = {
         config = cfg,
         net = net,
         fsm = fsm,
@@ -80,6 +142,8 @@ function fcp_main.create_context(config, modemResolver)
         bumplessRampSec = tonumber(safe.bumplessRampSec) or 2.0,
         latestOuterLoopStatus = nil,
     }
+    attach_ota_agent(ctx, cfg)
+    return ctx
 end
 
 local function handle_bumpless_ramp(ctx, events, now)
@@ -241,6 +305,9 @@ function fcp_main.step_tick(ctx, dt, now_ms)
 
     ctx.tick = (ctx.tick or 0) + 1
     ctx.lastTickMs = now
+    if ctx.otaAgent then
+        ctx.otaAgent:tick_boot_commit()
+    end
     return ctx
 end
 

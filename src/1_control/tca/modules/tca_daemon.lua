@@ -28,6 +28,30 @@ function tca_daemon.init(cfg, modem, adapterState)
         logBuffer = { "TCA Daemon initialized", "Awaiting VAS telemetry..." }
     }, tca_daemon)
     inst.sentinel = watchdog_sentinel.init(cfg.watchdogTimeoutMs or 300, function() inst:handle_watchdog_timeout() end)
+    local okOta, ota_agent = pcall(require, "ota_agent")
+    if okOta and type(ota_agent) == "table" and type(ota_agent.new) == "function" then
+        local otaCfg = cfg.ota or {}
+        inst.otaAgent = ota_agent.new({
+            moduleId = "tca",
+            domainId = cfg.aircraftDomainId or "AIRCRAFT_01",
+            bayId = otaCfg.bayId,
+            bayIds = otaCfg.bayIds,
+            bootConfirmTicks = otaCfg.bootConfirmTicks,
+            rootDir = otaCfg.rootDir,
+            fsApi = otaCfg.fsApi,
+            onRebootFn = otaCfg.onRebootFn,
+            modemApi = modem,
+            getStatusFn = function()
+                return {
+                    controlState = inst.lastControlState or "DISARMED",
+                    isAirborne = (inst.adapterState and inst.adapterState.lastSignal or 0) > 0,
+                }
+            end,
+        })
+        if modem then
+            inst.otaAgent:open_channels()
+        end
+    end
     return inst
 end
 
@@ -197,6 +221,13 @@ function tca_daemon.dispatch_modem_message(inst, channel, replyChannel, rawMsg)
     return false
 end
 
+function tca_daemon.tick(inst)
+    if inst and inst.otaAgent then
+        return inst.otaAgent:tick_boot_commit()
+    end
+    return false, nil
+end
+
 function tca_daemon.step_event(inst, ev, p1, p2, p3, p4)
     if ev == "modem_message" then
         local bay, pulse = inst.adapterState and inst.adapterState.hangarBayChannel, inst.adapterState and inst.adapterState.hangarPulseChannel
@@ -204,10 +235,24 @@ function tca_daemon.step_event(inst, ev, p1, p2, p3, p4)
         local prepCh = inst.adapterState and inst.adapterState.preparedRebind and (inst.adapterState.preparedRebind.newBaseChannel + channel_rebind_handler.ACTUATION_OFFSET)
         if p2 == act or p2 == bay or p2 == pulse or (prepCh and p2 == prepCh) then
             inst:dispatch_modem_message(p2, p3, p4)
+        elseif inst.otaAgent then
+            inst.otaAgent:handle_packet(p2, p3, p4)
         end
     elseif ev == "timer" then
         inst.sentinel:handle_timer(p1)
         channel_rebind_handler.handle_timer(inst.modem, inst.cfg, inst.adapterState, p1)
+        if inst.otaTimerId ~= nil then
+            if p1 == inst.otaTimerId then
+                tca_daemon.tick(inst)
+                if inst.running and os and os.startTimer then
+                    inst.otaTimerId = os.startTimer(0.05)
+                end
+            end
+        else
+            tca_daemon.tick(inst)
+        end
+    elseif ev == "tick" then
+        tca_daemon.tick(inst)
     elseif ev == "peripheral" or ev == "peripheral_detach" then inst:handle_hardware_change()
     elseif ev == "terminate" then
         actuator_adapter.cut_thrust(inst.adapterState)

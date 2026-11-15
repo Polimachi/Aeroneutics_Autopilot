@@ -264,23 +264,44 @@ local function dispatch_guidance(ctx, pkt)
     return false
 end
 
+function network_manager.open_ota_channels(ctx, otaAgent)
+    if not ctx or not otaAgent then return false end
+    otaAgent.modemApi = ctx.modem
+    if ctx.modem then
+        otaAgent:open_channels()
+        return true
+    end
+    return false
+end
+
 function network_manager.ingest_modem_event(ctx, side, ch, reply_ch, msg, dist, now_ms)
     local pkt = safe_unserialize(msg)
-    if not pkt or not network_manager.verify_packet(ctx, pkt) then return false end
+    if not pkt then return false end
 
     local isTraj = (ch == ctx.channels.trajectory) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 4)
     local isTelem = (ch == ctx.channels.telemetry) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 2)
     local isGuid = (ch == ctx.channels.guidance) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 1)
 
-    if isTraj then
-        return dispatch_trajectory(ctx, pkt, now_ms)
-    elseif isTelem then
-        if pkt.type == "MSG_FLIGHT_TELEMETRY" then
-            ctx.inbound.telemetry = pkt
+    if isTraj or isTelem or isGuid then
+        if not network_manager.verify_packet(ctx, pkt) then return false end
+        if isTraj then
+            return dispatch_trajectory(ctx, pkt, now_ms)
+        elseif isTelem then
+            if pkt.type == "MSG_FLIGHT_TELEMETRY" then
+                ctx.inbound.telemetry = pkt
+                return true
+            end
+        elseif isGuid then
+            return dispatch_guidance(ctx, pkt)
+        end
+        return false
+    end
+
+    if ctx.otaAgent then
+        local handled, reason = ctx.otaAgent:handle_packet(ch, reply_ch, pkt)
+        if handled or (reason ~= "UNKNOWN_CHANNEL" and reason ~= "INVALID_ENVELOPE" and reason ~= "UNSUPPORTED_TYPE") then
             return true
         end
-    elseif isGuid then
-        return dispatch_guidance(ctx, pkt)
     end
     return false
 end

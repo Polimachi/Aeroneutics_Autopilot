@@ -33,6 +33,7 @@ function network_manager.new(config)
         modemFallbackActive = false,
         openPayloadChannels = {},
         openInfraChannels = {},
+        otaAgent = nil,
     }, network_manager)
     return self
 end
@@ -59,6 +60,21 @@ function network_manager:bind_modems(top_modem, back_modem, base_ch)
         open_ch_list(m, on_chs)
         open_ch_list(m, inf_chs)
     end
+    if self.otaAgent then
+        self:open_channels(self.otaAgent)
+    end
+end
+
+function network_manager:open_channels(ota_agent_inst)
+    if not ota_agent_inst then return false end
+    self.otaAgent = ota_agent_inst
+    local m = self.infraModem or self.modem
+    ota_agent_inst.modemApi = m
+    if m then
+        ota_agent_inst:open_channels()
+        return true
+    end
+    return false
 end
 
 function network_manager:bind_modem(modem_obj)

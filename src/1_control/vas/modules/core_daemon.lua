@@ -51,8 +51,50 @@ local function load_configs(configDir)
         pid = load_json(dir .. "/pid.json"),
         thrusters = load_json(dir .. "/thrusters.json"),
         surfaces = load_json(dir .. "/surfaces.json"),
-        system = load_json(dir .. "/system.json")
+        system = load_json(dir .. "/system.json"),
+        ota = load_json(dir .. "/ota.json")
     }
+end
+
+local function resolve_ota_config(cfg)
+    if type(cfg.ota) == "table" and next(cfg.ota) ~= nil then
+        return cfg.ota
+    end
+    if type(cfg.system) == "table" and type(cfg.system.ota) == "table" then
+        return cfg.system.ota
+    end
+    return cfg.ota or {}
+end
+
+local function init_ota_agent(cfg, net, fsm)
+    local okOta, ota_agent = pcall(require, "ota_agent")
+    if not okOta or type(ota_agent) ~= "table" or type(ota_agent.new) ~= "function" then
+        return nil
+    end
+    local otaCfg = resolve_ota_config(cfg)
+    local agent = ota_agent.new({
+        moduleId = "vas",
+        domainId = (net and net.aircraftDomainId) or "AIRCRAFT_01",
+        bayId = otaCfg.bayId,
+        bayIds = otaCfg.bayIds,
+        bootConfirmTicks = otaCfg.bootConfirmTicks,
+        rootDir = otaCfg.rootDir,
+        fsApi = otaCfg.fsApi,
+        onRebootFn = otaCfg.onRebootFn,
+        modemApi = net and net.wirelessModem,
+        getStatusFn = function()
+            return {
+                controlState = fsm.currentState,
+                isAirborne = fsm.isAirborne == true,
+            }
+        end,
+    })
+    if network_manager.open_ota_channels then
+        network_manager.open_ota_channels(net, agent)
+    elseif net and net.wirelessModem then
+        agent:open_channels()
+    end
+    return agent
 end
 
 local function resolve_debug_flag(cfg)
@@ -114,11 +156,12 @@ function core_daemon.init(configDirOrTable)
         end
     end
     if network_manager.broadcast_discovery then network_manager.broadcast_discovery(net) end
+    local otaAgent = init_ota_agent(cfg, net, fsm)
 
     return {
         cfg = cfg, sensors = sensors, fsm = fsm, net = net, fdCore = fdCore,
         policy = policy, adapter = adapter, adapterAsa = adapterAsa,
-        controller = fdCore, mixer = adapter, feeder = feeder,
+        controller = fdCore, mixer = adapter, feeder = feeder, otaAgent = otaAgent,
         lastTapOutputs = nil, lastAsaOutputs = nil,
         running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil
     }
@@ -247,6 +290,9 @@ function core_daemon.tick(state)
         state.feeder, state.net, comState, state.fsm, state.mixer,
         build_telemetry_diag(state, sensorOk, healthMap, tapOk, asaOk, state.fdCore.saturationStatus)
     )
+    if state.otaAgent then
+        state.otaAgent:tick_boot_commit()
+    end
     return true
 end
 
@@ -296,7 +342,16 @@ function core_daemon.handle_event(state, event, p1, p2, p3, p4)
         network_manager.step_rebind_watchdog(state.net)
         return true
     elseif event == "modem_message" then
-        return network_manager.dispatch(state.net, state.fsm, state.controller, state.mixer, p2, p3, p4)
+        if network_manager.dispatch(state.net, state.fsm, state.controller, state.mixer, p2, p3, p4) then
+            return true
+        end
+        if state.otaAgent then
+            local handled, reason = state.otaAgent:handle_packet(p2, p3, p4)
+            if handled or (reason ~= "UNKNOWN_CHANNEL" and reason ~= "INVALID_ENVELOPE" and reason ~= "UNSUPPORTED_TYPE") then
+                return true
+            end
+        end
+        return false
     elseif event == "terminate" then
         core_daemon.shutdown(state, "TERMINATE")
         return true

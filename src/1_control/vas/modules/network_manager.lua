@@ -429,6 +429,13 @@ local function handle_guidance_cmd(state, fsm, msgType, rawPacket)
     return true
 end
 
+function network_manager.open_ota_channels(state, otaAgent)
+    if not otaAgent or not state or not state.wirelessModem then return false end
+    otaAgent.modemApi = state.wirelessModem
+    otaAgent:open_channels()
+    return true
+end
+
 function network_manager.dispatch(state, fsm, controller, mixer, channel, replyChannel, rawPacket)
     local ok, _ = network_manager.verify_envelope(rawPacket, state.aircraftDomainId)
     if not ok then return false end
