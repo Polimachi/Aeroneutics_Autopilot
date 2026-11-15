@@ -171,6 +171,20 @@
   - Create/Avionics 아날로그 스틱 및 물리 컨트롤러 하드웨어 연동 (일정 연기)
   - `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 스트림 및 비행 제어 코어(VAS) 선점 제어 연동
 
+### 🧩 애드온 확장 백로그 (Addon Integration Backlog)
+
+- [ ] **TASK-901: 신규 애드온 통합 물리 센서 구현 및 온보드 항전(`avionics_sensors`·`VAS`) 연동** (`src/0_development/sensors/`, `src/1_control/vas/modules/sensor_pipeline.lua`)
+  - **배경 및 제약**: 기존 CC:Avionics 다중 센서(`gimbal`·`altitude`·`velocity`·`physics_assembler`)의 `yaw` 부재·6틱 yield·레버암 수동 설정 한계를 해소하기 위해 별도 애드온으로 단일 물리 센서를 구현하고 온보드에 통합함. 월드 절대 `X/Z` 좌표는 GPS(`CH 60001`/`Base+5`) 및 추측항법(DR) 아키텍처 유지를 위해 센서 출력에서 영구 제외함.
+  - **확정·반영 사항 (2026-11-15 세션 설계)**:
+    - 동적 일괄 스냅샷(`getKinematicsInfo()`)에 `dtSec`·`serverTps`, `quaternion`(`VAS` `quat.lua` 축 규약 `x=Roll, y=Pitch, z=Yaw`), `attitude`(`yaw`/`heading` 포함), `angularRates`, `dynamics`(`altitudeY`, `speed`, `groundSpeed`, `airPressure`, `velocity.world/body`, `acceleration.world/body`)를 중첩 계층까지 1:1 일치시켜 반영. 가속도는 중력·무중력 상태 감안 없이 현 기체의 최종 3축 가속도로 정의하며 `getBodyLinearAcceleration()` / `getWorldLinearAcceleration()`으로 분리.
+    - **`verticalSpeed` 폴백 메모**: 본 애드온 센서 사용 시 별도 `verticalSpeed` 필드를 요구하지 않으며, 온보드 어댑터(`avionics_sensors.lua` / `sensor_pipeline.lua`)에서 자동으로 `dynamics.velocity.world.vy`로 폴백 처리함.
+    - 정적 일괄 스냅샷(`getContraptionInfo()`)에 `assembled`, `mass`(`> 0.0 kg`, 미조립 시 `0.0` 하한 고정), `centerOfMass`, `inertiaTensor`, `boundsCenterOfMass`·`boundsLocalOrigin`, `sensorOffset`(`CoM -> Sensor` 벡터를 센서 `facing`=`front` 좌표계로 투영, `frame = "SENSOR_FACING"`), `subLevelId`, `subLevelName` 반영.
+    - **동체 기준 공통 규약**: `attitude`, `quaternion`, `angularRates`, `dynamics.velocity.body`, `dynamics.acceleration.body`, `sensorOffset` 전부 센서 블록 `facing`=`front` 좌표계를 공통 사용하며, `dynamics.acceleration` 서브키는 `velocity`와 대칭(`world: { ax, ay, az }`, `body: { forward, vertical, lateral }`)으로 확정.
+  - **주요 작업**:
+    - [ ] **TASK-901-1**: 센서 API 구현 전 최종 규약 확인 — `sensorOffset` (`dx, dy, dz`) 3축 매핑과 `sensor_pipeline.lua` `compute_lever_offsets` 간 부호·축 일치 검증 및 `speed`/`groundSpeed` 파생 규칙 문서화
+    - [ ] **TASK-901-2**: 마인크래프트 애드온 Java 페리페럴 구현 및 인게임 동작 검증 — 원자적 스냅샷(`getKinematicsInfo`, `getContraptionInfo`) 및 개별 fallback getter 구현
+    - [ ] **TASK-901-3**: 온보드 Lua 어댑터(`src/0_development/sensors/avionics_sensors.lua`, `src/1_control/vas/modules/sensor_pipeline.lua`) 통합 및 `VAS`/`FCP`/`AMM`/`Alignment` 단위·E2E·가드레일(`verify_contracts.py`·`verify_runtime_wiring.py`·`run_boot_smoke.py`) 검증 완료
+
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
