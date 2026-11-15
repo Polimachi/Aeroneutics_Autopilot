@@ -132,17 +132,18 @@ FCP는 20Hz(50ms) 주기로 `SE(3)` 벡터 연산과 단위 쿼터니언 투영�
 flowchart TD
     subgraph FCP_PORTS["[FCP 하드웨어 포트 구획 (Node 04 — 단일 top 모뎀)]"]
         direction TB
-        PORT_TOP["상단 포트 (top): 유일한 무선 엔더 모뎀 (온보드 내부 3채널 전용)<br/>* Base + 4 (CH_TRAJECTORY_CMD [I-12]: AMM 20Hz 궤적 세트포인트 수신 / 외루프 상태·리바인드 ACK 송출)<br/>* Base + 2 (CH_TELEMETRY [I-1]: VAS 20Hz 비행 텔레메트리 수신)<br/>* Base + 1 (CH_FLIGHT_GUIDANCE [I-2]: VAS 20Hz QUATERNION_RATE 지령 송출 / 비상 경보 수신)"]
+        PORT_TOP["상단 포트 (top): 유일한 무선 엔더 모뎀 (온보드 내부 3채널 + 지상 OTA 수신 1채널)<br/>* Base + 4 (CH_TRAJECTORY_CMD [I-12]: AMM 20Hz 궤적 세트포인트 수신 / 외루프 상태·리바인드 ACK 송출)<br/>* Base + 2 (CH_TELEMETRY [I-1]: VAS 20Hz 비행 텔레메트리 수신)<br/>* Base + 1 (CH_FLIGHT_GUIDANCE [I-2]: VAS 20Hz QUATERNION_RATE 지령 송출 / 비상 경보 수신)<br/>* Base_hangar + 4 (CH_OTA_CMD [I-13]: 격납고 OTA 명령 수신 / Base_hangar + 5 응답 송출)"]
         PC["FCP 메인보드 (Advanced Computer, 헤드리스 기본)"]
     end
 
     PORT_TOP --> PC
 ```
 
-- **활성 개방 채널 (Active Opened Channels — 3개 전용)**:
+- **활성 개방 채널 (Active Opened Channels — 온보드 비행 3채널 + 지상 OTA 수신 채널)**:
   - **`Base + 4` (`CH_TRAJECTORY_CMD`, `[I-12]`)**: `AMM`으로부터 `MSG_TRAJECTORY_SETPOINT` 및 `MSG_CHANNEL_REBIND` 수신, `AMM`으로 `MSG_OUTER_LOOP_STATUS` 및 `MSG_CHANNEL_REBIND_ACK` 송신.
   - **`Base + 2` (`CH_TELEMETRY`, `[I-1]`)**: `VAS`로부터 `MSG_FLIGHT_TELEMETRY` 20Hz 수신.
   - **`Base + 1` (`CH_FLIGHT_GUIDANCE`, `[I-2]`)**: `VAS`로 `MSG_ATTITUDE_CMD` (`QUATERNION_RATE`) 20Hz 송신 및 `MSG_CHANNEL_REBIND` 중계, `VAS`로부터 `MSG_EMERGENCY_ALERT` 및 `MSG_CHANNEL_REBIND_ACK` 수신.
+  - **`Base_hangar + 4` (`CH_OTA_CMD`, `[I-13]`)**: 지상 격납고 OTA 서버로부터 `MSG_OTA_*` 수신 및 `Base_hangar + 5` (`CH_OTA_ACK`)로 `ACK`/`NACK`/`MSG_OTA_BOOT_STATUS` 송신 (상세 규칙 §12.1).
 - **이관 및 폐기 채널 (`[DEPRECATED — Migrated to AMM v1.3.0]`)**:
   - `CH 50000`, `CH 50001~50004`, `CH 60001/60002`, $Base_{\text{sec}}+*$, `Base + 0`, `Base + 3`, `Base + 5`는 `AMM (Node 03)`이 전담하며, FCP `network_manager`는 해당 채널을 일체 `modem.open()` 하지 않습니다. 이를 통해 FCP 이벤트 큐에 외부/인프라 패킷이 유입되는 경로를 구조적으로 분리합니다.
 
