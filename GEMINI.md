@@ -3,11 +3,11 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-207~209`, `TASK-124`, `TASK-123`, `TASK-204`, `TASK-013`, `TASK-402`, `TASK-120`(지상 FDR `src/0_development/fdr/`, `VAS` `telemetryDiag` `v1.21.0`, `tools/analyze_flight_log.py`), `TASK-014`(3대 감사 가드레일: `config/protocol_contracts.json`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_boot_smoke.py`; 2026-11-15, `.agent/memory/workspace-root.md`).
+- **직전 완료**: `TASK-014`(3대 감사 가드레일: `config/protocol_contracts.json`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_boot_smoke.py`; 2026-11-15), `TASK-120`(지상 FDR·`VAS telemetryDiag`·오프라인 프로파일러; 2026-11-14). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
   1. `TASK-117` (1순위): 무선 OTA 배포 서버·슬레이브 원자적 롤백 가드 (선행 과제 전부 완료, 즉시 착수 가능).
   2. 2순위 후보: `TASK-125`(40채널 개편·결함 12종), `TASK-128`(GPS 헬스 감시·DR 가드), `TASK-132`(추력 상실 비상 활공), `TASK-403`→`404`(에디터 World Preset → GCS 브리지), `TASK-302`(Pocket PDA), `TASK-010`→`011`(플레이북; `011`은 `010` 완료 후).
-  3. `TASK-501`(3순위, GDrive 109패키지 동기화) / `TASK-210`(대기, `[연기] TASK-105` 재개 시).
+  3. 3순위: `TASK-501`(GDrive 109패키지 동기화), `TASK-129`(적응형 트림 보정) / `TASK-210`(대기, `[연기] TASK-105` 재개 시).
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -34,7 +34,7 @@
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (130/130 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (124 파일), `python tools/verify_spec_status.py` (17종 12 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (17/17 PASS).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (124 파일), `python tools/verify_spec_status.py` (17종 12 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (20/20 PASS).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants

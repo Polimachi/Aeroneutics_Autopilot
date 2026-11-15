@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 FDR·오프라인 분석기(`TASK-120`, `FDR v0.3.0`·`VAS v1.21.0`), AMM WebUI 미션 에디터(`TASK-402`, `v0.3.1 Implemented`), 전사 전수 감사 43건 교정 및 8대 사양서 `Implemented` 승격(`TASK-013`), `AMM v2.0.1` 표준 행동 체계·채터링 방지 가드(`TASK-124`, `TASK-204`), GPS 결함 수정(`TASK-123`), 4계층 `SE(3)` 연동(`TASK-207`~`209`), 사양서 역할 분리(`TASK-206`) 완료. 다음 1순위는 무선 OTA(`TASK-117`)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR·오프라인 분석기(`TASK-120`, `FDR v0.3.0`·`VAS v1.21.0`), AMM WebUI 미션 에디터(`TASK-402`, `v0.3.1 Implemented`), 전사 전수 감사 43건 교정 및 8대 사양서 `Implemented` 승격(`TASK-013`), `AMM v2.0.1` 표준 행동 체계·채터링 방지 가드(`TASK-124`, `TASK-204`), GPS 결함 수정(`TASK-123`), 4계층 `SE(3)` 연동(`TASK-207`~`209`), 사양서 역할 분리(`TASK-206`) 완료. 다음 1순위는 무선 OTA(`TASK-117`)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm`·`ASA` 본 구현 일정 보류)
@@ -22,7 +22,7 @@
 - **CraftOS-PC (`CraftOS-PC_console.exe`)**: 헤드리스 CC:Tweaked 게스트 세션 실행 필수 의존성
   - 기본 설치 경로(`C:\Program Files\CraftOS-PC\` 등)를 자동 탐색하며, 비표준 경로 설치 시 `CRAFTOS_PC_EXE` 환경변수로 실행 파일 경로를 지정합니다.
 - **Git**: 버전 관리 및 `.worktrees/` 격리 브랜치 운용 (Windows PowerShell `PATH` 미등록 환경에서는 `"C:\Program Files\Git\cmd\git.exe"` 호출)
-- **gdrive CLI** *(선택, §10 배포 시)*: Google Drive 공식 폴더 동기화(`tools/sync_gdrive.py`) 실행 시 `PATH` 등록 필요
+- **gdrive CLI** *(선택, §11 배포 시)*: Google Drive 공식 폴더 동기화(`tools/sync_gdrive.py`) 실행 시 `PATH` 등록 필요
 - **인게임 대상 모드 스택**:
   - **지원 모드**: `CC:Tweaked` (Lua 5.2 Cobalt), `Create`, `Create: Aeronautics`, `Create: Avionics`, `Create: Radars`, `Create Propulsion: Simulated` (`ion_thruster` 포함), `Advanced Peripherals`
   - **비호환·차단 모드**: `Valkyrien Skies (VS2)` 계열 및 `kontraption:` 네임스페이스 페리페럴
@@ -41,6 +41,7 @@ Create_Aeroneutics/
 ├── AGENTS.md                              # 에이전트 불변 행동 헌장
 ├── installer.lua                          # 통합 코드베이스 설치 프로그램 (화면 직접 업로드/플로피/wget)
 ├── config/gdrive_mapping.json             # GDrive 배포 파일 ID 매핑 (SSOT)
+├── config/protocol_contracts.json         # 와이어 프로토콜·채널·스키마 SSOT 계약 명세
 ├── dist_gdrive/                           # GDrive 업로드 격리 스테이징 (sync_gdrive.py 생성)
 │
 ├── docs/                                  # 시스템 사양서 및 아키텍처 문서
@@ -142,11 +143,11 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 ### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
 Windows PowerShell 5.1 (`&&` 미지원):
 ```powershell
-python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/verify_manifest_sync.py }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/verify_spec_status.py }; if ($?) { python tools/verify_context_docs.py }; if ($?) { python tools/validate_lua_syntax.py }
+python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/run_boot_smoke.py --clean-orphans }; if ($?) { python -m unittest discover -s tests/harness -p "test_*.py" }; if ($?) { python -m unittest tests/3_planning/amm/test_amm_mission_editor.py }; if ($?) { python tools/verify_contracts.py }; if ($?) { python tools/verify_runtime_wiring.py }; if ($?) { python tools/verify_manifest_sync.py }; if ($?) { python tools/verify_all_specs.py }; if ($?) { python tools/verify_spec_status.py }; if ($?) { python tools/verify_context_docs.py }; if ($?) { python tools/validate_lua_syntax.py }
 ```
 bash / PowerShell 7+:
 ```bash
-python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/verify_manifest_sync.py && python tools/verify_all_specs.py && python tools/verify_spec_status.py && python tools/verify_context_docs.py && python tools/validate_lua_syntax.py
+python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/run_boot_smoke.py --clean-orphans && python -m unittest discover -s tests/harness -p "test_*.py" && python -m unittest tests/3_planning/amm/test_amm_mission_editor.py && python tools/verify_contracts.py && python tools/verify_runtime_wiring.py && python tools/verify_manifest_sync.py && python tools/verify_all_specs.py && python tools/verify_spec_status.py && python tools/verify_context_docs.py && python tools/validate_lua_syntax.py
 ```
 
 ### 1. Lua 멀티 코드베이스 단위 테스트 실행
@@ -167,7 +168,7 @@ python tools/run_e2e_tests.py --clean-orphans
 ```
 
 ### 3. 테스트 실효성 검증 (돌연변이 살상 테스트)
-25개 결정론적 결함을 자동 주입하여 테스트 슈트의 결함 포착 능력(살상률 90% 이상 기준)을 검증합니다:
+결정론적 결함을 자동 주입하여 테스트 슈트의 결함 포착 능력(살상률 90% 이상 기준)을 검증합니다 (현행 주입 수·결과는 [GEMINI.md](GEMINI.md) §3):
 ```bash
 python tools/run_mutation_tests.py
 ```
@@ -179,7 +180,7 @@ python -m unittest discover -s tests/harness -p "test_*.py"
 ```
 
 ### 5. 사양서 전수 무결성 검증
-16대 활성 사양서의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
+16대 활성 사양서(`AMM_MISSION_EDITOR_SPECIFICATION.md` 제외 — 에디터는 `test_amm_mission_editor.py`로 검증)의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
 ```bash
 python tools/verify_all_specs.py
 ```
@@ -212,12 +213,27 @@ python tools/verify_manifest_sync.py
 python tools/verify_context_docs.py
 ```
 
-### 10. 인게임 배포 (GDrive)
+### 10. 와이어 계약 · 런타임 배선 · 실부팅 스모크 검증 (3대 감사 가드레일)
+`config/protocol_contracts.json` SSOT 기반 사양서·코드 교차 린트, `main.lua` 도달성/고아 모듈 검사, 및 활성 서브시스템 CraftOS-PC 실부팅 스모크를 실행합니다:
+```powershell
+python tools/verify_contracts.py
+python tools/verify_runtime_wiring.py
+python tools/run_boot_smoke.py --clean-orphans
+```
+
+### 11. 인게임 배포 (GDrive)
 배포 파일을 `dist_gdrive/`에 스테이징하고 Google Drive 공식 폴더와 동기화합니다 (`gdrive` CLI PATH 등록 필요). 상세 절차: [docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md](docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md)
 ```powershell
 python tools/sync_gdrive.py stage
 python tools/sync_gdrive.py sync --dry-run
 ```
+
+### 12. 인게임 설치 (Installer)
+CC:Tweaked 컴퓨터에서 아래 3가지 경로 중 하나로 통합 인스톨러를 실행합니다 (GitHub raw / Google Drive 이중 다운로드 지원):
+- **화면 직접 업로드**: `/installer.lua`
+- **플로피 디스크**: `/disk/installer.lua`
+- **원격 다운로드**: `wget run <url>`
+- 상세 규격: [INSTALLER_PROGRAM_SPECIFICATION.md](docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md)
 
 ---
 
