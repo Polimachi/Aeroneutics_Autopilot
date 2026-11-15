@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "ota": {
+    "bayId": 1,
+    "chunkSize": 2048,
+    "ackTimeoutSec": 1.5,
+    "maxRetries": 3,
+    "defaultSourceDir": "/ota_packages",
+    "autoSyncOnBoot": false,
+    "manifestUrl": "https://raw.githubusercontent.com/Polimachi/Aeroneutics_Autopilot/main/src/0_development/installer/modules/manifest.lua",
+    "githubRawBase": "https://raw.githubusercontent.com/Polimachi/Aeroneutics_Autopilot/main/"
+  },
+  "network": {
+    "domainId": "HANGAR-OTA-01"
+  }
+}

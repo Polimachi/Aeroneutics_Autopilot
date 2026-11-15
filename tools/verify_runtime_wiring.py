@@ -166,7 +166,7 @@ def resolve_require_target(
     Resolves a require target relative to subsystem roots (root, modules/, hal/, tools/).
     Returns resolved Path if found within the subsystem or repo, else None.
     """
-    if target in IGNORED_REQUIRE_TARGETS or target.startswith("/rom/") or target.startswith("rom/"):
+    if target.startswith("/rom/") or target.startswith("rom/"):
         return Path("/lib/avionics_sensors.lua")
 
     clean = target[:-4] if target.endswith(".lua") else target
@@ -201,6 +201,9 @@ def resolve_require_target(
     for candidate in candidates:
         if candidate.exists() and candidate.is_file():
             return candidate.resolve()
+
+    if target in IGNORED_REQUIRE_TARGETS:
+        return Path("/lib/avionics_sensors.lua")
 
     return None
 
