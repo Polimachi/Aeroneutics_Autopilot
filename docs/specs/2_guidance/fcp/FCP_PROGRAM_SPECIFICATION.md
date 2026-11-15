@@ -5,20 +5,21 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.1.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.2.0` |
+| **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 순수 온보드 SE(3) 외루프 유도 제어기 (FCP / Node 04) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.0.1)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.8.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.12.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.13.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.1)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.3.3)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
@@ -31,6 +32,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.2.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `network_manager`에 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 회신 추가(비행 채널 격리 원칙 유지), ② `ctx.fsm.currentState` 및 `lastTelemPayload` 기반 안전 게이트 연동, ③ `step_tick` 정상 루프 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/2_guidance/fcp/` 반영 후 `Implemented` 재승격 예정) |
 | `v2.1.0` | `2026-11-14` | **Wave 1 `[I-9]` 채널 재바인딩 ACK 표준화 및 교차참조 동기화 (`Implemented` $\to$ `Approved`)**: ① §1·§2·§8.3.3·§10.1의 `MSG_REBIND_ACK`를 `MSG_CHANNEL_REBIND_ACK` (`MSG_REBIND_ACK [DEPRECATED]`)로 단일화하고 ACK 페이로드 스키마(`transactionId`, `nodeId`, `action`, `status = "READY" \| "COMMITTED" \| "ROLLED_BACK" \| "FAILED"`, `oldBaseChannel`, `newBaseChannel`, `subNodesReady?`) 명시, ② 연관 문서 버전 배지(`ICD v1.30.0`, `VAS v1.20.0`, `AMM v2.0.1` 등) 동기화 및 메타데이터 일자(`2026-11-14`) 정합 | Q1 Option A 사용자 확정 결정 반영 (`src/2_guidance/fcp/` Wave 2 반영 후 `Implemented` 재승격 예정) |
 | `v2.0.0` | 2026-11-12 | **FCP-AMM 역할 분리 및 순수 온보드 SE(3) 외루프 제어기 전면 개편 (`Implemented`, 구현 과제 `TASK-208` 완료 · 2026-11-13 승격)**: 외부 인프라(`CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+5`), 오퍼레이터 C2(`Base+0`), 평시 MFD 다운링크(`Base+3`), GPS/DR 항법 융합(`nav_engine`), 3-Tier ATC/GAC/시설물 핸드오프(`facility_client`), 채널 부트스트랩/프로브(`channel_sentinel`) 및 전략 궤적 합성을 `AMM (Node 03, v1.3.0)`으로 이관(`[DEPRECATED]`); FCP를 단일 `top` 모뎀(`Base+4`, `Base+2`, `Base+1` 3채널 전용) 기반 5대 모듈 파이프라인, 통합 SE(3) 외루프 법칙($g=11.0\text{ m/s}^2$, 6대 기체 `QUATERNION_RATE` 투영), 6-State 외루프 FSM(`PASSIVE_TRACKING` 2.0s 범프리스 복귀, `AMM_TIMEOUT_HOLD` 500ms $\to$ 10s $\to$ `EMERGENCY_LAND`)으로 축소 정립; 구 로컬 추진기 프로파일 직접 참조 및 `ATTITUDE_ANGLE`/`angleTargets`/`targetClimbRate`/`targetThrottle`/`translationBias.heave` 폐기(`[DEPRECATED]`) | AMM-FCP-VAS 계층 직교성 확립 및 순수 외루프 실시간 제어기 경량화 |
 | `v1.16.0` | 2026-11-11 | 외루프 유도 프리미티브(`LOITER` 반경/방향 선회 및 `POI_HOLD` 관심점 지속 조준 호버) 확장, 3종 통합 기수 지향 모드(`AUTO`/`FACE_PATH`, `FIXED`, `POI`/`TARGET_LOCK`) 및 `Base+0` `MSG_OPERATOR_CMD` 확장 파라미터(`loiterRadius`, `loiterDirection`, `poiTarget`, `headingMode`, `fixedHeading`) 수신·범프리스 전환 인터록 명세 반영 (`Implemented` $\to$ `Approved`) | TASK-201 FCP 외루프 유도 프리미티브 확장 및 AMM v1.1.0 연동 |
@@ -1186,8 +1188,9 @@ end
 
 ### 12.1 `v2.0.0` 단위 테스트 검증 기준 (Unit Verification Criteria — `TASK-208` 대상)
 1. **3채널 격리 및 ICD 엔벨로프 검증 (`network_manager`)**:
-   - 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1` 3개 채널만 `modem.open()` 되며, `CH 50000~50004`, `60001/60002`, `Base+0`, `Base+3`, `Base+5`는 열리지 않는지 검증.
+   - 단일 `top` 모뎀에서 비행용 3채널(`Base+4`, `Base+2`, `Base+1`) 외에 `[I-13]` 격납고 OTA 채널(`Base_hangar + 4`, 기본 Bay 1 = `105` 및 선택 `ota.bayIds`)만 개방되며, `CH 50000~50004`, `60001/60002`, `Base+0`, `Base+3`, `Base+5`는 열리지 않는지 검증.
    - 송출 패킷이 `ver = "1.9.5"`, `seq`, `domainId`, `type`, `time`, `payload` 필드를 정확히 포함하고, `[DEPRECATED]` 구 필드(`angleTargets`, `targetThrottle`, `targetClimbRate`, `translationBias.heave`)를 송출하지 않는지 검증.
+   - `[I-13]` 무선 OTA 연동(`ota_agent.new({ moduleId = "fcp", ... })`): `getStatusFn`은 `controlState = ctx.fsm.currentState` 및 `isAirborne = (ctx.lastTelemPayload and ctx.lastTelemPayload.isAirborne == true) or (ctx.lastTelemPayload and (ctx.lastTelemPayload.controlState == "NORMAL" or ctx.lastTelemPayload.controlState == "FAILSAFE_HOLD" or ctx.lastTelemPayload.controlState == "EMERGENCY_LAND" or ctx.lastTelemPayload.controlState == "AIRBORNE_EMERGENCY")) or false`를 반환하여 `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true` 외 상태에서 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 `MSG_OTA_NACK` (`NOT_DISARMED`)로 거부하고, `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK`, `step_tick` `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 정상 처리하는지 검증.
 2. **로컬 속도 전파 및 `posEpoch` 병합 검증 (`state_propagator`)**:
    - `AMM` `posEpoch` 갱신 사이 틱에서 `VAS Base+2` 속도 적분이 $\Delta t \le 0.1\text{ s}$ 가드를 준수해 위치를 연속 전파하는지 검증.
    - `posEpoch` 정체 또는 `navValid == false`가 `500ms` 초과 시 `navStale = true`가 `MSG_OUTER_LOOP_STATUS`로 보고되는지 검증.

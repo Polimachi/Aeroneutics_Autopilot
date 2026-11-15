@@ -5,15 +5,16 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.1.1` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.2.0` |
+| **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/0_development/installer/` |
 | **주관 도메인 (Domain)** | 통합 코드베이스 배포 및 계층형 패키지 매니저 (`0_development/installer`) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 §9 통합 인스톨러 연계)
 > - [GDRIVE_DEPLOYMENT_GUIDE.md](../../../guides/GDRIVE_DEPLOYMENT_GUIDE.md) (Google Drive 배포 운영 가이드)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 프로젝트 컨텍스트 및 불변 규칙)
@@ -22,6 +23,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.2.0` | `2026-11-15` | **`startup_generator.lua` 2단계 OTA 부팅 커밋 워치독 및 자가 복구 후크 사양 신설 (`Implemented` $\to$ `Approved`)**: ① 생성된 `/startup.lua` 후크 내부에 `/.ota_pending.json` (`maxBootAttempts = 1`) 기반 로드 오류(`BOOT_LOAD_ERROR`), 런타임 크래시(`BOOT_RUNTIME_CRASH`), 조기 재부팅 루프(`BOOT_WATCHDOG_TIMEOUT`) 감지 및 `/ota_backup/<txId>/` + `/.version.json` 자동 복원·`/.ota_rollback.json` 기록 로직 명세(외부 `require()` 비의존), ② 온보드 모듈(`vas`, `tca`, `fcp`, `amm`) 파일 매니페스트의 `/lib/ota_agent.lua` 동반 등록 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 2단계 원자적 롤백 가드 지원 (`src/0_development/installer/` 구현 후 `Implemented` 재승격 예정) |
 | `v1.1.1` | 2026-11-14 | 연관 마스터 ICD(`v1.30.0`) 및 전체 구조도(`v2.15.0`) 버전 배지 동기화 (`Implemented` 유지, 코드 변경 없음) | Wave 1 전역 사양서 참조 배지 일괄 정합화 |
 | `v1.1.0` | 2026-11-10 | 역할/도메인별 2계층 TUI 폴더 탐색(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU`), 12행 뷰포트 스크롤링(`computeViewport`), `manifest.CATEGORY_ORDER`·`CATEGORIES`·조회 API(`getCategory`, `listCategories`, `listModulesByCategory`) 규격 추가 | 12개 이상 모듈 확장에 따른 `51x19` TUI 메뉴 행 포화 해소 (`TASK-116`) |
 | `v1.0.0` | 2026-11-08 | 통합 코드베이스 인스톨러 제정: 3종 배포 경로(`/installer.lua`, `/disk/installer.lua`, `wget run`), GitHub/GDrive 이중 소스, 스테이징 원자적 다운로드, Deep-Merge 설정 마이그레이션, 멀티부트 `/startup/00_<id>.lua` 후크 및 `/.version.json` 고아 파일 정리 (`TASK-005`) | 개별 서브시스템 배포 일원화 및 구 `gps/installer.lua` `[DEPRECATED]` 대체 |
@@ -84,7 +86,7 @@
 
 | 순서 | 카테고리 ID (`id`) | 계층 코드 (`code`) | 표시 명칭 (`name`) | 요약 명칭 (`shortName`) | 관할 서브시스템 예시 |
 | :---: | :--- | :--- | :--- | :--- | :--- |
-| 1 | `development` | `0_development` | `Development & Calibration` | `Dev & Align` | `alignment`, `sensors` |
+| 1 | `development` | `0_development` | `Development & Calibration` | `Dev & Align` | `alignment`, `fdr`, `ota`, `sensors` |
 | 2 | `infra` | `0_infra` | `Ground Infrastructure` | `Ground Infra` | `gps_server`, `gps_node`, `gps_client`, `gac`, `landing_pad`, `gcs` |
 | 3 | `control` | `1_control` | `Flight Control` | `Flight Control` | `vas`, `tca` |
 | 4 | `guidance` | `2_guidance` | `Guidance & Navigation` | `Guidance (FCP)` | `fcp` |
@@ -100,7 +102,7 @@
 ### 3.3 패키지 독립성 범위 제한
 
 - 인스톨러는 단일 CC:Tweaked 컴퓨터 루트(`/`)에 하나의 독립 완결형 서브시스템을 배포하는 원칙을 따르며, 단일 컴퓨터용 복합 패키지 프리셋 일괄 설치 기능은 제공하지 않습니다.
-- 모든 모듈은 공용 센서 API(`src/0_development/sensors/avionics_sensors.lua` $\to$ `/lib/avionics_sensors.lua`)를 함께 번들링합니다.
+- 모든 모듈은 공용 센서 API(`src/0_development/sensors/avionics_sensors.lua` $\to$ `/lib/avionics_sensors.lua`)를 함께 번들링하며, 무선 OTA 대상 온보드 모듈(`vas`, `tca`, `fcp`, `amm`)은 `src/0_development/ota/ota_agent.lua` $\to$ `/lib/ota_agent.lua`를 각 모듈 `files` 항목으로 동반 배포합니다 (`SHARED_LIBS` 편입은 `TASK-501` GDrive 동기화 시 일괄 처리).
 
 ---
 
@@ -154,6 +156,14 @@ stateDiagram-v2
 4. **멀티부트 스타트업 후크 (`startup_generator.installHook`)**: `mod.startup.enabled == true`인 모듈에 한해 `/startup/00_<id>.lua`를 생성하며, `cc.require.make` 기반으로 `modules/`, `modules/drivers/`, `hal/`, `tools/`, `/lib/`, `/apis/` 검색 경로와 `args`(예: `fcp`의 `"--daemon"`)를 주입합니다. 기존 루트 `/startup.lua`는 덮어쓰지 않습니다.
 5. **안전한 고아 파일 정리 (`version_registry.getOrphanFiles`)**: 이전 설치 파일 목록 중 신규 목록에 없고 `/.version.json` 내 타 공존 모듈(`gps_client` 등)이 소유하지 않는 파일만 선별 삭제합니다.
 6. **레지스트리 커밋 (`version_registry.save`)**: `/.version.json.tmp`를 거쳐 `/.version.json`을 원자적으로 갱신합니다.
+
+### 5.2 2단계 OTA 부팅 커밋 워치독 (`startup_generator.generateHookContent`)
+
+생성된 스타트업 후크는 OTA 업데이트로 `/lib/ota_agent.lua` 자체가 손상된 상황에서도 복구할 수 있도록 **외부 `require()` 호출 없이** CC `fs`와 `textutils`만을 사용한 자가 복구 블록을 내장합니다:
+
+1. **사전 루프 차단 (`bootAttempts >= maxBootAttempts`)**: `/.ota_pending.json`이 존재하고 `bootAttempts >= maxBootAttempts` (기본 `1`)이면 대상 진입점 실행 전 즉시 `backupDir` 및 `versionBackupPath`(`/.version.json`)을 복원하고 `/.ota_pending.json`을 삭제한 뒤 `/.ota_rollback.json` (`reason = "BOOT_WATCHDOG_TIMEOUT"`)을 기록하고 복원된 본 프로그램을 기동합니다.
+2. **부팅 시도 횟수 선기록**: `bootAttempts < maxBootAttempts`이면 `bootAttempts = bootAttempts + 1`을 `/.ota_pending.json`에 즉시 저장한 뒤 `loadfile(target, nil, env)` 및 `pcall`로 대상 프로그램을 실행합니다.
+3. **로드/런타임 크래시 즉시 롤백**: `loadfile` 실패(`reason = "BOOT_LOAD_ERROR"`) 또는 `pcall` 실행 오류(`reason = "BOOT_RUNTIME_CRASH"`) 발생 시 `/.ota_pending.json`이 남아 있으면 즉시 백업 파일과 `/.version.json`을 복원하고, `/.ota_pending.json`을 삭제하며 `/.ota_rollback.json`을 기록한 뒤 `os.reboot()`를 호출합니다(테스트 환경에서는 `_G.__OTA_DISABLE_REBOOT` 가드 존중).
 
 ---
 

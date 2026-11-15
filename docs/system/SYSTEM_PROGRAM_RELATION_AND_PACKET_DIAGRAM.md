@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.15.1` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 버전 (Version)** | `v2.16.0` |
+| **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 시스템 프로그램 관계망 및 채널 토폴로지 구조도 (Architecture Map) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.16.0` | `2026-11-15` | **`[I-13]` 격납고 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 토폴로지 반영**: ① 마스터 ICD(`v1.32.0`)·`OTA`(`v0.1.0`)·`Installer`(`v1.2.0`)·`VAS`(`v1.22.0`)·`TCA`(`v1.13.0`)·`FCP`(`v2.2.0`)·`AMM`(`v2.1.0`)·`Alignment`(`v2.7.1`) 상호 참조 및 버전 배지 동기화, ② §2 도메인 관계도 `OTA` 격납고 노드 추가, §3 패킷 매트릭스에 `[I-13]` 10종 패킷 등재, ③ §5.1 노드 총괄표 및 §5.2 격납고 대역(`+4 CH_OTA_CMD`, `+5 CH_OTA_ACK`, `+6 ~ +9` 예비) 갱신 | `TASK-117-1` 무선 OTA 프로토콜 및 격납고 채널 할당 동기화 |
 | `v2.15.1` | `2026-11-14` | **FDR (`v0.3.0 Approved`) 패시브 계측 및 `VAS` `telemetryDiag` (`v1.21.0 Approved`) 교차 참조 동기화**: ① 마스터 ICD(`v1.31.0`)·`VAS`(`v1.21.0`) 버전 배지 및 `[FDR_PROGRAM_SPECIFICATION.md]` 링크 등재, ② §3 `I-1` `MSG_FLIGHT_TELEMETRY`에 선택 `satFlags`/`diag`(`telemetryDiag` Opt-In) 및 수신 전용 `FDR` 메모 추가 | `TASK-120` `FDR` 사양서 `Approved` 승격 및 `VAS` Opt-In 필드 ICD 동기화 |
 | `v2.15.0` | `2026-11-14` | **전역 사양 정합성 일괄 동기화 (마스터 ICD `v1.30.0`)**: ① 전 노드 버전 배지·상호 참조 링크 최신화(`AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `TCA v1.12.0`, `ASA v1.8.0`, `Alignment v2.7.0`, `GAC v1.5.0`, `LANDING_PAD v2.5.0`, `RUNWAY v1.11.0`, `DOCKING_ARM v1.12.0`, `GCS v1.1.0`, `GPS v2.3.3`), ② `[I-4]` `MSG_CALIB_PULSE`(`Base_hangar+0`)·`DISCOVER_REQ/ACK`(`Base_hangar+3`) 정정(`MSG_CALIBRATION_TAP_CMD/ACK` 제거) 및 선택 필드(`replyChannel`, `timeoutSec`, `saveProfile`, `currentFsmState`) 반영, ③ `[I-5]` `GAC` `CH 50003`/`Base_sec+2` 집약 비콘(`facilitiesSummary`)·3-시설 대칭형 `MSG_FACILITY_STATIC/DYNAMIC_GUIDE`·`MSG_RUNWAY_TOUCHDOWN`/`MSG_ATC_DEPARTURE_CLEARANCE` 분리 반영, ④ `[I-6]` `MSG_MISSION_ACK`·`CONFIRM`/`PRECONDITION_FAILED`/`INVALID_CMD`·`MSG_MFD_STATE`, `[I-9]` `MSG_CHANNEL_REBIND_ACK` Option A(`500ms`), `[I-10]` `interactionMode`, `[I-11]` `ACT_PAY_*`, `[I-7]` GPS `60001~60004` 활성 / `60005~60020` 예비 동기화 | Wave 1 전역 사양서 감사 피드백 일괄 해소 |
 | `v2.14.0` | `2026-11-14` | **`AMM v2.0.0` (`TASK-204` + `TASK-124`) 및 마스터 ICD (`v1.29.0`) 토폴로지·참조 동기화**: ① `AMM (Node 03)` 노드 설명 및 총괄표를 5모듈 미션 코어(`ACT_*`/`DEC_*`/`MAC_*`, `preconditions`, `chattering_guard`) 및 `CONFIRM` / `PRECONDITION_FAILED` (`Base+0`) 계약으로 갱신, ② 마스터 ICD `v1.29.0` 및 `AMM v2.0.0` 상호 참조 배지 동기화 | `TASK-204`·`TASK-124` `AMM v2.0.0` 사양 확정 동기화 |
@@ -32,16 +33,18 @@
 | `v2.7.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$, $N=1\sim 1000$), 4대 Zone(Zone 1: 코어, Zone 2: 구동계, Zone 3: 탑재체, Zone 4: 편대/확장) 전면 재편, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 20채널 및 `Base+6`, `Base+7`에 `[DEPRECATED]` 배지 부여, 하위 사양서 5종 `approved/` 승격 전이 상대 링크 동기화 | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.31.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.1.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.1.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.2.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.8.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (VAS 상세 규격서 v1.21.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.12.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (VAS 상세 규격서 v1.22.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.13.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (Alignment 상세 규격서 v2.7.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (Alignment 상세 규격서 v2.7.1)
 > - [FDR_PROGRAM_SPECIFICATION.md](../specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) (지상 실환경 비행 식별·계측기 FDR v0.3.0)
+> - [OTA_PROGRAM_SPECIFICATION.md](../specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 서버 및 롤백 가드 v0.1.0)
+> - [INSTALLER_PROGRAM_SPECIFICATION.md](../specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md) (통합 인스톨러 & 부팅 워치독 v1.2.0)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
@@ -105,8 +108,9 @@ flowchart TD
     %% ==========================================
     %% Domain 4: Engineering & Hangar Facility
     %% ==========================================
-    subgraph DOMAIN_CALIB["[인프라/정비] 격납고 베이 시험 시설 콘솔군 (101 ~ 200)"]
-        ALIGNMENT["격납고 콘솔 Alignment<br/>(startup.lua / Node 05 / v2.7.0)<br/>* Bay 1~10 독립 10채널 블록 (Base_hangar = 101+(BayID-1)*10)<br/>* Base_hangar+0(CMD), +1(TELEM), +2(FACILITY), +3(TCA/ASA 진단)<br/>* 기체 Base+0 직접 바인딩 & 3x2 대형 HUD"]
+    subgraph DOMAIN_CALIB["[인프라/정비] 격납고 베이 시험·배포 시설 콘솔군 (101 ~ 200)"]
+        ALIGNMENT["격납고 콘솔 Alignment<br/>(startup.lua / Node 05 / v2.7.1)<br/>* Bay 1~10 독립 10채널 블록 (Base_hangar = 101+(BayID-1)*10)<br/>* Base_hangar+0(CMD), +1(TELEM), +2(FACILITY), +3(TCA/ASA 진단)<br/>* 기체 Base+0 직접 바인딩 & 3x2 대형 HUD"]
+        OTA_SRV["격납고 무선 OTA 배포 서버<br/>(ota/main.lua / v0.1.0)<br/>* Base_hangar+4(CH_OTA_CMD) / +5(CH_OTA_ACK)<br/>* /ota_packages/ & GitHub Raw 원격 동기화"]
     end
 
     %% ==========================================
@@ -185,6 +189,9 @@ flowchart TD
     %% Connections - Channel Collision Probe & Dynamic Rebind
     AMM -.->|"Base + 0 (기동 전 선점 탐색)<br/>[I-9] 채널 충돌 프로브 (MSG_CHANNEL_PROBE)"| AMM
     AMM ==>|"Base+4 -> Base+1 -> Base+10/11<br/>[I-9] 4계층 채널 재바인딩 (MSG_CHANNEL_REBIND / MSG_CHANNEL_REBIND_ACK)"| FCP
+
+    %% Connections - Hangar Wireless OTA (I-13)
+    OTA_SRV <==>|"Base_hangar + 4/+5<br/>[I-13] 무선 OTA 배포·롤백 가드 (AMM/FCP/VAS/TCA)"| CORE
 ```
 
 ---
@@ -312,6 +319,16 @@ flowchart TD
 | **I-11** | `MSG_PAYLOAD_ACK` | `Payload Nodes` (Zone 3) | `AMM` (Node 03) | `Base + 20 ~ 29`<br>(`CH_PAYLOAD_BUS`) | 동작 완료 즉시 회신 | `checkpointId`, `command`, `status` (`PAYLOAD_RESP_MATCH` 대조용), `detail` |
 | **I-12** | `MSG_TRAJECTORY_SETPOINT` | `AMM` (Node 03) | `FCP` (Node 04) | `Base + 4`<br>(`CH_TRAJECTORY_CMD`, 구 `CH_NAV_SENSOR` `[DEPRECATED]`) | 20Hz (50ms) | `arm`, `flightActive`, `flightMode`, `constraintProfile`, `targetPos`, `targetVel`, `feedforwardAccel`, `targetHeading`, `currentPos`, `navValid`, `gpsTimedOut`, `hdop`, `posEpoch`, `flapHint`, `translationBiasHint` |
 | **I-12** | `MSG_OUTER_LOOP_STATUS` | `FCP` (Node 04) | `AMM` (Node 03) | `Base + 4`<br>(`CH_TRAJECTORY_CMD`) | 20Hz / On-Change | `fsmState`, `posError`, `velError`, `saturated`, `navStale`, `activeConstraintProfile`, `commandedCollectiveThrust` |
+| **I-13** | `MSG_OTA_DISCOVER_REQ` | `OTA Server` | `VAS`/`TCA`/`FCP`/`AMM` | $Base_{\text{hangar}} + 4$<br>(`CH_OTA_CMD`) | 탐색 요청 시 | `targetModuleId`, `targetDomainId` (`"*"` 허용) |
+| **I-13** | `MSG_OTA_DISCOVER_ACK` | `VAS`/`TCA`/`FCP`/`AMM` | `OTA Server` | $Base_{\text{hangar}} + 5$<br>(`CH_OTA_ACK`) | 탐색 즉시 회신 | `moduleId`, `versions`, `filesCount`, `controlState`, `isAirborne`, `freeSpace`, `agentVer` |
+| **I-13** | `MSG_OTA_BEGIN` | `OTA Server` | `VAS`/`TCA`/`FCP`/`AMM` | $Base_{\text{hangar}} + 4$<br>(`CH_OTA_CMD`) | 배포 세션 개시 | `txId`, `targetDomainId`, `targetModuleId`, `targetVersion`, `overwriteConfig`, `files`, `totalBytes`, `totalCrc32` |
+| **I-13** | `MSG_OTA_CHUNK` | `OTA Server` | `VAS`/`TCA`/`FCP`/`AMM` | $Base_{\text{hangar}} + 4$<br>(`CH_OTA_CMD`) | 파일 청크별 ($\le 2048\text{B}$) | `txId`, `targetDomainId`, `targetModuleId`, `fileIndex`, `chunkIndex`, `chunkCrc32`, `data` |
+| **I-13** | `MSG_OTA_COMMIT` | `OTA Server` | `VAS`/`TCA`/`FCP`/`AMM` | $Base_{\text{hangar}} + 4$<br>(`CH_OTA_CMD`) | 전 청크 전송 완료 시 | `txId`, `targetDomainId`, `targetModuleId`, `autoReboot` |
+| **I-13** | `MSG_OTA_ABORT` | `OTA Server` | `VAS`/`TCA`/`FCP`/`AMM` | $Base_{\text{hangar}} + 4$<br>(`CH_OTA_CMD`) | 오류/수동 중단 시 | `txId`, `targetDomainId`, `targetModuleId`, `reason` |
+| **I-13** | `MSG_OTA_REBOOT` | `OTA Server` | `VAS`/`TCA`/`FCP`/`AMM` | $Base_{\text{hangar}} + 4$<br>(`CH_OTA_CMD`) | 원격 재부팅 시 | `txId`, `targetDomainId`, `targetModuleId` |
+| **I-13** | `MSG_OTA_ACK` | `VAS`/`TCA`/`FCP`/`AMM` | `OTA Server` | $Base_{\text{hangar}} + 5$<br>(`CH_OTA_ACK`) | 단계 완료 즉시 | `txId`, `moduleId`, `phase` (`"BEGIN"`/`"CHUNK"`/`"APPLIED"`), `fileIndex`, `chunkIndex`, `status` |
+| **I-13** | `MSG_OTA_NACK` | `VAS`/`TCA`/`FCP`/`AMM` | `OTA Server` | $Base_{\text{hangar}} + 5$<br>(`CH_OTA_ACK`) | 거부/오류 즉시 | `txId`, `moduleId`, `phase`, `reason` (`NOT_DISARMED` 등 7종), `expectedIndex` |
+| **I-13** | `MSG_OTA_BOOT_STATUS` | `VAS`/`TCA`/`FCP`/`AMM` | `OTA Server` | $Base_{\text{hangar}} + 5$<br>(`CH_OTA_ACK`) | 부팅 커밋/롤백 시 | `txId`, `moduleId`, `status` (`"COMMITTED"`/`"ROLLED_BACK"`), `version`, `rollbackReason` |
 
 ---
 
@@ -663,11 +680,12 @@ sequenceDiagram
 | **착륙 패드 제어 노드** | `pad_node.lua` | 스마트 시설 (Tier 3) | $Base_{\text{sec}}+1$, $Base_{\text{sec}}+10+\text{Idx}$ | $Base_{\text{sec}}+1$, $Base_{\text{sec}}+10+\text{Idx}$, `Base+5` | 무선 모뎀 (Ender) | 순수 소프트웨어 비콘, 수직 착륙 전술 유도 벡터($Base_{\text{sec}}+10+\text{Idx}$) 송출, 직속 GAC 로컬 백본 연동 |
 | **도킹암 제어 노드** | `docking_arm_node.lua` | 스마트 시설 (Tier 3) | $Base_{\text{sec}}+1$, $Base_{\text{sec}}+10+\text{Idx}$ | `50001`, $Base_{\text{sec}}+1$, $Base_{\text{sec}}+10+\text{Idx}$, `Base+5` | 무선 모뎀 (Ender) | 2축 로봇 암 원거리 전개 포획, 정밀 전술 유도($Base_{\text{sec}}+10+\text{Idx}$), 엄빌리컬/래치 제어, GAC 에이프런 연동 |
 | **Alignment 격납고 콘솔**| `startup.lua` (Node 05)<br>[ALIGNMENT_PROGRAM_SPECIFICATION.md](../specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) | 지상 시설 | 기체 `Base+0`, $Base_{\text{hangar}}+0/3$ | $Base_{\text{hangar}}+1/3$ | 무선 모뎀 (Ender) | 베이별 10채널 블록($Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$, Bay 1~10), 기체 `Base+0` 직결 바인딩(domainId=AIRCRAFT_01), 다단 펄스 인가, 주 작용축 OLS 6-DoF/공력 통제성(`AERO_ASSISTED_PASS`) 식별, 3x2 대형 HUD |
-| **조종석 AMM / 외부 게이트웨이** | `main.lua` (Node 03)<br>[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `50000`, `50001`, `60001`, $Base_{\text{sec}}+0$, `Base+0` (프로브), `Base+1` (`E_STOP`), `Base+3` (평시 5Hz), `Base+4`, `Base+5`, `Base+20~29` (동적) | `50000`, `50001`, `50003`, `50004`, $Base_{\text{sec}}+0$, $Base_{\text{sec}}+2$, $Base_{\text{sec}}+10+\text{Idx}$, `Base+0`, `Base+1` (비상알림), `Base+2`, `Base+4`, `Base+5`, `Base+20~29` (동적) | 듀얼 무선 모뎀 (외부 + 내부) & 레드스톤 I/O | 외부 도메인(`GCS`/`GPS`/`ATC`/`GAC`/시설물) 단일 종단, C2 단일 진입(`Base+0`), 평시 5Hz MFD 다운링크(`Base+3`, ACRO 시 양보), GPS+DR 항법 융합 및 20Hz 궤적 생성(`Base+4`), `ACT_*`/`DEC_*`/`MAC_*` 미션 코어, 채터링 가드, Zone 3 탑재체(`Base+20~29`), 51x19 TUI / 헤드리스 겸용 |
+| **OTA 무선 배포 서버** | `ota/main.lua`<br>[OTA_PROGRAM_SPECIFICATION.md](../specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md) | 지상 시설 | $Base_{\text{hangar}}+4$ (`CH_OTA_CMD`) | $Base_{\text{hangar}}+5$ (`CH_OTA_ACK`) | 무선 모뎀 & HTTP (선택) | `/ota_packages/` 스테이징 & GitHub Raw 원격 동기화, CRC32 청크 배포, 안전 게이트 준수, CLI & 51x19 TUI |
+| **조종석 AMM / 외부 게이트웨이** | `main.lua` (Node 03)<br>[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `50000`, `50001`, `60001`, $Base_{\text{sec}}+0$, `Base+0` (프로브), `Base+1` (`E_STOP`), `Base+3` (평시 5Hz), `Base+4`, `Base+5`, `Base+20~29` (동적), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `50000`, `50001`, `50003`, `50004`, $Base_{\text{sec}}+0$, $Base_{\text{sec}}+2$, $Base_{\text{sec}}+10+\text{Idx}$, `Base+0`, `Base+1` (비상알림), `Base+2`, `Base+4`, `Base+5`, `Base+20~29` (동적), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 듀얼 무선 모뎀 (외부 + 내부) & 레드스톤 I/O | 외부 도메인(`GCS`/`GPS`/`ATC`/`GAC`/시설물) 단일 종단, C2 단일 진입(`Base+0`), 평시 5Hz MFD 다운링크(`Base+3`, ACRO 시 양보), GPS+DR 항법 융합 및 20Hz 궤적 생성(`Base+4`), `ACT_*`/`DEC_*`/`MAC_*` 미션 코어, 채터링 가드, Zone 3 탑재체(`Base+20~29`), `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋, 51x19 TUI / 헤드리스 겸용 |
 | **조종석 MFD / 직결 패널** | 조종석 콘솔 / 직결 패널 | 기체 온보드 | `Base + 0`, `Base + 1` (`E_STOP` / `MFD_ACRO`) | `Base + 3` (평시 5Hz / ACRO 20Hz) | 무선 모뎀 / 직결 패널 | 조종사 C2 명령 입력(`Base+0`), `E_STOP` 및 `RATE_COMMAND` 직결 선점 바이패스(`Base+1`), 계기 HUD 표출(`Base+3`) |
-| **외루프 제어기 FCP** | `startup.lua` (Node 04)<br>[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 1` (`QUATERNION_RATE`), `Base + 4` (`MSG_OUTER_LOOP_STATUS`, `MSG_CHANNEL_REBIND_ACK`) | `Base + 4` (`MSG_TRAJECTORY_SETPOINT`, `MSG_CHANNEL_REBIND`), `Base + 2` (`MSG_FLIGHT_TELEMETRY`), `Base + 1` (`MSG_EMERGENCY_ALERT`) | 단일 `top` 무선 모뎀 (Ender) | 순수 온보드 `SE(3)` 외루프 제어기($g=11.0\text{ m/s}^2$), 6-State 외루프 FSM, 6대 기체 제약 투영 및 `QUATERNION_RATE`(`Base+1`) 생성, `AMM_TIMEOUT`(500ms) 홀드/착륙, 채널 재할당 중계(`Base+4` $\to$ `Base+1`) |
-| **비행 제어 코어 VAS**| `startup.lua` (Node 01)<br>[VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 10`, `Base + 11`, `Base + 2`, `Base + 3` (ACRO 20Hz / `FCP_TIMEOUT` 5Hz), `Base + 1` (`MSG_EMERGENCY_ALERT`), $Base_{\text{hangar}}+1$ (CALIB 시) | `Base + 1`, `Base + 10`, `Base + 11`, `Base + 0` (CALIB INIT 시), $Base_{\text{hangar}}+0$ (CALIB 시) | 무선 모뎀 / 탑재 센서 버스 | VICD-Spec 3계층 드라이버(`actuator_adapter_tca` + `actuator_adapter_asa`), 단위 쿼터니언 `SO(3)` 제어, $V^2$ 동압 스케줄링, `Base+1` 선점 중재(`E_STOP > MFD_ACRO > FCP`), `FCP_TIMEOUT`(1,500ms) 홀드/착륙, ACRO 시 `Base+3` 20Hz HUD 직접 송출, 동적 베이 바인딩 하향 전파 |
-| **추력 어댑터 TCA 클러스터**| `tap_daemon.lua / main.lua` (Node 02-xx)<br/>[TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 10`, $Base_{\text{hangar}}+3$ (CALIB 시) | `Base + 10`, $Base_{\text{hangar}}+0/+3$ (CALIB 시) | 무선 모뎀 & 추진기 상호작용 모드(API/REDSTONE) | 동적 타이머 300ms 워치독, REDSTONE(0~15)/API(0.0~1.0) 인가, 단선/포화 회신, `MSG_CALIB_BAY_BIND` 동적 베이 개폐, `MSG_CHANNEL_REBIND` 처리 |
+| **외루프 제어기 FCP** | `startup.lua` (Node 04)<br>[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 1` (`QUATERNION_RATE`), `Base + 4` (`MSG_OUTER_LOOP_STATUS`, `MSG_CHANNEL_REBIND_ACK`), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 4` (`MSG_TRAJECTORY_SETPOINT`, `MSG_CHANNEL_REBIND`), `Base + 2` (`MSG_FLIGHT_TELEMETRY`), `Base + 1` (`MSG_EMERGENCY_ALERT`), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 단일 `top` 무선 모뎀 (Ender) | 순수 온보드 `SE(3)` 외루프 제어기($g=11.0\text{ m/s}^2$), 6-State 외루프 FSM, 6대 기체 제약 투영 및 `QUATERNION_RATE`(`Base+1`) 생성, `AMM_TIMEOUT`(500ms) 홀드/착륙, 채널 재할당 중계(`Base+4` $\to$ `Base+1`), `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
+| **비행 제어 코어 VAS**| `startup.lua` (Node 01)<br>[VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 10`, `Base + 11`, `Base + 2`, `Base + 3` (ACRO 20Hz / `FCP_TIMEOUT` 5Hz), `Base + 1` (`MSG_EMERGENCY_ALERT`), $Base_{\text{hangar}}+1$ (CALIB 시), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 1`, `Base + 10`, `Base + 11`, `Base + 0` (CALIB INIT 시), $Base_{\text{hangar}}+0$ (CALIB 시), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 무선 모뎀 / 탑재 센서 버스 | VICD-Spec 3계층 드라이버(`actuator_adapter_tca` + `actuator_adapter_asa`), 단위 쿼터니언 `SO(3)` 제어, $V^2$ 동압 스케줄링, `Base+1` 선점 중재(`E_STOP > MFD_ACRO > FCP`), `FCP_TIMEOUT`(1,500ms) 홀드/착륙, ACRO 시 `Base+3` 20Hz HUD 직접 송출, 동적 베이 바인딩 하향 전파, `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
+| **추력 어댑터 TCA 클러스터**| `tap_daemon.lua / main.lua` (Node 02-xx)<br/>[TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 10`, $Base_{\text{hangar}}+3$ (CALIB 시), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 10`, $Base_{\text{hangar}}+0/+3$ (CALIB 시), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 무선 모뎀 & 추진기 상호작용 모드(API/REDSTONE) | 동적 타이머 300ms 워치독, REDSTONE(0~15)/API(0.0~1.0) 인가, 단선/포화 회신, `MSG_CALIB_BAY_BIND` 동적 베이 개폐, `MSG_CHANNEL_REBIND` 처리, `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
 | **공력 조종면 ASA 클러스터**| `asa_daemon.lua` (Node 06-xx)<br/>[ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 11`, $Base_{\text{hangar}}+3$ (CALIB 시) | `Base + 11`, $Base_{\text{hangar}}+0/+3$ (CALIB 시) | 무선 모뎀 & 조종면 액추에이터 | VAS 산하 3구역 노드(06-L/R/T), 20Hz 타각 제어(`MSG_AERO_CMD`, 구 `MSG_SURFACE_CMD` `[DEPRECATED]`), 상태/포화 회신(`MSG_AERO_STATUS.interactionMode`, 구 `MSG_SURFACE_STATUS`/`mode` `[DEPRECATED]`), 300ms 안전 활공 트림, `MSG_CALIB_BAY_BIND` 동적 베이 개폐, `MSG_CHANNEL_REBIND` 처리 |
 
 ---
@@ -689,7 +707,9 @@ flowchart LR
         C_TLM["+1 : CH_CALIBRATION_TELEM (20Hz 동역학 텔레메트리)"]
         C_FAC["+2 : CH_HANGAR_FACILITY (설비/엄빌리컬 인터록)"]
         C_TAP["+3 : CH_CALIBRATION_TAP (TCA 추진기 및 ASA 직결 진단)"]
-        C_RES["+4 ~ +9 : 격납고 내부 예약 대역 (6개 채널)"]
+        C_OTA_CMD["+4 : CH_OTA_CMD (I-13 무선 OTA 배포 지령)"]
+        C_OTA_ACK["+5 : CH_OTA_ACK (I-13 무선 OTA 응답 및 부팅 상태)"]
+        C_RES["+6 ~ +9 : 격납고 내부 예약 대역 (4개 채널)"]
     end
 
     subgraph SPEC_RES200["201 ~ 9999 : 시스템 예약 대역"]

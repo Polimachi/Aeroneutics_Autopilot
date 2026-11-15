@@ -24,7 +24,7 @@ from tools.verify_contracts import (
 
 
 class TestProtocolContractsSchema(unittest.TestCase):
-    def test_load_contracts_contains_all_12_interfaces_and_envelope(self) -> None:
+    def test_load_contracts_contains_all_13_interfaces_and_envelope(self) -> None:
         contracts_path = WORKSPACE_ROOT / "config" / "protocol_contracts.json"
         contracts = load_contracts(contracts_path)
 
@@ -36,11 +36,11 @@ class TestProtocolContractsSchema(unittest.TestCase):
             ["ver", "domainId", "seq", "type", "time", "payload"],
         )
 
-        # Interfaces I-1 through I-12
+        # Interfaces I-1 through I-13
         ifaces = contracts.get("interfaces", [])
-        self.assertEqual(len(ifaces), 12)
+        self.assertEqual(len(ifaces), 13)
         ids = {iface["id"] for iface in ifaces}
-        self.assertEqual(ids, {f"I-{i}" for i in range(1, 13)})
+        self.assertEqual(ids, {f"I-{i}" for i in range(1, 14)})
 
         # Each interface has required fields
         for iface in ifaces:
@@ -60,6 +60,8 @@ class TestProtocolContractsSchema(unittest.TestCase):
         self.assertIn("hangar", channels)
         self.assertEqual(channels["hangar"]["baseMin"], 101)
         self.assertEqual(channels["hangar"]["bandwidth"], 10)
+        self.assertEqual(channels["hangar"]["offsets"]["otaCmd"], 4)
+        self.assertEqual(channels["hangar"]["offsets"]["otaAck"], 5)
         self.assertIn("global", channels)
         self.assertIn(50000, channels["global"]["fixed"])
 

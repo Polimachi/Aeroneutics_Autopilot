@@ -5,17 +5,18 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.0.1` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.1.0` |
+| **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획, 외부 인프라 게이트웨이, 항법·궤적 생성 및 조종석 통합 단말 (AMM / Node 03) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.2.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사 v1.5.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS v2.3.3)
 > - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.1.0)
@@ -29,6 +30,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.1.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `network_manager.open_channels`에 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 회신 추가, ② `app.arbiter.fsmState` 및 `app.arbiter.latest_telem.isAirborne` 안전 게이트 연동, ③ 메인 루프 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/3_planning/amm/` 반영 후 `Implemented` 재승격 예정) |
 | `v2.0.1` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Approved` 유지)**: ① `[I-9]` `MSG_CHANNEL_REBIND` Option A 단일화(`transactionId`/`action`/`oldBaseChannel`/`newBaseChannel`/`bandwidth=40`, `MSG_CHANNEL_REBIND_ACK` · `MSG_REBIND_ACK [DEPRECATED]`, 500ms 롤백), ② `[I-6]`/`[I-1]` `actuatorHealth = { tap, asa, allOk }` 및 `MSG_MFD_STATE` 필드(`sensorOk`, `controlState`, `groundSpeed`) 정렬, ③ §3.2 `MSG_MISSION_CMD` `CONFIRM` 명령 보강, 조건 표 14종(`SYS_ARMED`, `IMMEDIATE` 추가) 확장, `defaults.acceptanceRadius` `15.0`m 일원화, 연료 임계 부등호(`<= 0.20` / `<= 0.10`) 통일, ④ 연관 문서 버전 배지 일괄 동기화 | Q1~Q6 사용자 확정 결정 및 Wave 1 전역 사양 무결성 확보 (`TASK-402` 완료 시 `Implemented` 승격 예정) |
 | `v2.0.0` | `2026-11-14` | **`TASK-204` 표준 행동 아키텍처(`ACT_*`/`DEC_*`/`MAC_*`) 전면 개편 및 `TASK-124` 채터링 방지 가드 통합**: ① 구 13종 평면 액션(`FLY_OVER` 등) 및 `v1.0.0 items[]` 하위 호환 변환을 `[DEPRECATED - v2.0.0]` Zero-Fallback 전면 폐기, ② `action_registry.lua` 기반 3계층 조합 체계 신설: 9개 도메인 원자 행동(`ACT_*`: `[즉시]` 36종 + `[로드맵]` 19종 + `TBD [TASK-401]` `ACT_PAY_CARGO_DROP`/`FIRE_CTRL`/`GEO_SCAN`), 직교 데코레이터(`DEC_*`: `[즉시]` 6종 + `[로드맵]` 1종), 복합 매크로(`MAC_*`: `[즉시]` 3종 + `[로드맵]` 2종), ③ 4대 범주 사전 진입 조건(`preconditions`: `State Flag`, `Sensor & Est`, `Resource`, `Spatial & Safety`) 및 정적(`SCHEMA_INVALID`)·동적(`PRECONDITION_FAILED`) 검증 도입, ④ `DEC_HUMAN_AUTH` 승인 대기(`CONFIRM` 명령) 및 `Base+0` `MSG_MISSION_ACK` `PRECONDITION_FAILED` 코드 반영, ⑤ `chattering_guard.lua` 및 `amm_config.json` `safety.chattering`(20개 키) 신설(지오펜스 히스테리시스/디바운스/유지 틱, 단방향 연료 래치, 상향 우선순위 선점 예외, VTOL 천이 가드, `settleTicks` 도착 안착 틱) | `TASK-204` 상태 폭발 방지형 확장 행동 프리미티브 체계 확립 및 `TASK-124` 이산 틱 채터링 억제 규격 구현 착수 (`AMM v2.0.0` 사양 확정; WebUI 에디터 `TASK-402` 구현 전까지 `Approved` 유지) |
 | `v1.3.0` | `2026-11-12` | FCP-AMM 역할 분리 및 AMM(Node 03) 승격 개편: ① 듀얼 무선 엔더 모뎀(`top` 온보드 + `back` 외부 인프라, 단일 모뎀 폴백 포함) 기반 외부 인프라 게이트웨이(`CH 50000` 부트스트랩, `CH 50001~50004` ATC/GAC/비콘/디스패치, $Base_{\text{sec}}+*$ 섹터/전술, `CH 60001/60002` + `Base+5` GPS) 이관, ② 20Hz 항법 융합 엔진(`nav_engine`: GPS+DR 상보 필터 $\alpha=0.35$, 기구학 게이트 $8.0\text{m}$, 5,000ms GPS 두절 시 체공 전환) 및 20Hz 궤적 생성기(`trajectory_generator`: `TAKEOFF`/`CRUISE`/`LOITER`/`POI_HOLD`/`APPROACH_LAND`/`LANDING`/`DOCKING`/`FAILSAFE_RTH`/`HOVER_HOLD`/`EMERGENCY_LAND`, 4단계 도킹 및 `-0.8` Abort, 동적 갑판 2차 테일러 외삽, 가상 ILS) 신설, ③ `[I-12]` `Base+4` (`CH_TRAJECTORY_CMD`: `MSG_TRAJECTORY_SETPOINT` 20Hz 송출 / `MSG_OUTER_LOOP_STATUS` 수신 / `MSG_CHANNEL_REBIND` 개시) 신설 및 구 `AMM -> FCP` `MSG_OPERATOR_CMD` (`Base+0`) `[DEPRECATED]` 처리, ④ `Base+0` 단일 C2 수신 중재(`PILOT_PRIMARY` vs `GCS_OVERRIDE`), `Base+2` 20Hz 수신 및 `Base+3` 5Hz 단독 MFD 다운링크(`MFD_ACRO` 시 즉시 양보), ⑤ Coroutine A(20Hz 실시간 제어/통신) + Coroutine B(5Hz TUI 렌더러) 분리 및 Tier-1 외부 페일세이프 매트릭스 정립 | 계층 직교성(AMM: 임무·외부 게이트웨이·항법·궤적 / FCP: 순수 `SE(3)` 외루프 / VAS: `SO(3)` 내루프) 확립 및 마스터 ICD `v1.28.0` 동기화 |
@@ -968,3 +970,7 @@ src/3_planning/amm/
    - `tools/amm_mission_editor.html` (`TASK-402`): `v2.0.0` `ACT_*`/`DEC_*`/`MAC_*` 및 `preconditions`/`settleTicks` GUI 빌더 검증.
    - `python tools/run_e2e_tests.py --clean-orphans` 전 시나리오 PASS (`AMM -> Base+4 -> FCP -> Base+1 -> VAS -> TCA/ASA` 4계층 폐루프 `v2.0.0` 스키마 포함).
    - `python tools/run_mutation_tests.py` (`MUT-03`, `MUT-04`, `MUT-05` 포함 25/25 KILLED).
+
+### 11.3 `[I-13]` 무선 OTA 슬레이브 연동 및 안전 게이트 (`OTA_PROGRAM_SPECIFICATION.md`)
+- **채널 개방 및 라우팅**: `network_manager.open_channels`에서 설정된 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds`를 개방하고, `handle_modem_message`에서 수신 프레임을 `app.otaAgent:handle_packet(...)`으로 전달하며 `Base_hangar + 5` (`106`)로 응답합니다(비행·외부 채널 우선순위 유지).
+- **안전 게이트 (`getStatusFn`)**: `status = { controlState = (app.arbiter and app.arbiter.fsmState) or "DISARMED", isAirborne = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.isAirborne == true) or false }`를 기준으로 `DISARMED`, `BOOT`, `IDLE_ARMED` 및 `isAirborne ~= true`일 때만 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 허용하고 그 외에는 `MSG_OTA_NACK` (`NOT_DISARMED`)를 반환합니다. `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK` 및 메인 루프 틱 `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 처리합니다.

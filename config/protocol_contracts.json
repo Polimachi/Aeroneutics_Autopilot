@@ -97,7 +97,9 @@
         "calibCmd": 0,
         "calibTelem": 1,
         "facilityInterlock": 2,
-        "calibTap": 3
+        "calibTap": 3,
+        "otaCmd": 4,
+        "otaAck": 5
       },
       "deprecatedOffsets": [
         1001,
@@ -1514,6 +1516,165 @@
       "deprecatedTokens": [
         "CH_NAV_SENSOR"
       ]
+    },
+    {
+      "id": "I-13",
+      "name": "Wireless Hangar OTA Deployment & Atomic Rollback Guard",
+      "specs": [
+        "docs/specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+        "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+        "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+        "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+      ],
+      "channelMatchers": [
+        {
+          "kind": "hangar_offset",
+          "offset": 4
+        },
+        {
+          "kind": "hangar_offset",
+          "offset": 5
+        }
+      ],
+      "deprecatedOffsets": [],
+      "packets": {
+        "MSG_OTA_DISCOVER_REQ": {
+          "requiredKeys": [
+            "targetModuleId",
+            "targetDomainId"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_OTA_DISCOVER_ACK": {
+          "requiredKeys": [
+            "moduleId",
+            "versions",
+            "filesCount",
+            "controlState",
+            "isAirborne",
+            "freeSpace",
+            "agentVer"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_OTA_BEGIN": {
+          "requiredKeys": [
+            "txId",
+            "targetDomainId",
+            "targetModuleId",
+            "targetVersion",
+            "files",
+            "totalBytes",
+            "totalCrc32"
+          ],
+          "optionalKeys": [
+            "overwriteConfig"
+          ]
+        },
+        "MSG_OTA_CHUNK": {
+          "requiredKeys": [
+            "txId",
+            "targetDomainId",
+            "targetModuleId",
+            "fileIndex",
+            "chunkIndex",
+            "chunkCrc32",
+            "data"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_OTA_COMMIT": {
+          "requiredKeys": [
+            "txId",
+            "targetDomainId",
+            "targetModuleId",
+            "autoReboot"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_OTA_ABORT": {
+          "requiredKeys": [
+            "txId",
+            "targetDomainId",
+            "targetModuleId",
+            "reason"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_OTA_REBOOT": {
+          "requiredKeys": [
+            "txId",
+            "targetDomainId",
+            "targetModuleId"
+          ],
+          "optionalKeys": []
+        },
+        "MSG_OTA_ACK": {
+          "requiredKeys": [
+            "txId",
+            "moduleId",
+            "phase",
+            "status"
+          ],
+          "optionalKeys": [
+            "fileIndex",
+            "chunkIndex"
+          ],
+          "enums": {
+            "phase": [
+              "BEGIN",
+              "CHUNK",
+              "APPLIED"
+            ]
+          }
+        },
+        "MSG_OTA_NACK": {
+          "requiredKeys": [
+            "txId",
+            "moduleId",
+            "phase",
+            "reason"
+          ],
+          "optionalKeys": [
+            "expectedIndex"
+          ],
+          "enums": {
+            "reason": [
+              "NOT_DISARMED",
+              "MODULE_MISMATCH",
+              "DOMAIN_MISMATCH",
+              "CRC_MISMATCH",
+              "SEQ_OUT_OF_ORDER",
+              "DISK_ERROR",
+              "TX_NOT_FOUND"
+            ]
+          }
+        },
+        "MSG_OTA_BOOT_STATUS": {
+          "requiredKeys": [
+            "txId",
+            "moduleId",
+            "status",
+            "version"
+          ],
+          "optionalKeys": [
+            "rollbackReason"
+          ],
+          "enums": {
+            "status": [
+              "COMMITTED",
+              "ROLLED_BACK"
+            ]
+          }
+        }
+      },
+      "timeoutsMs": {
+        "ackTimeoutMs": 1500,
+        "bootCommitTicks": 20
+      },
+      "deprecatedPacketTypes": [],
+      "deprecatedPayloadKeys": []
     }
   ],
   "missionSchema": {

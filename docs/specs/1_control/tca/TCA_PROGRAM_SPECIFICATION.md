@@ -5,20 +5,21 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.12.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.13.0` |
+| **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.2.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.1)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
@@ -26,6 +27,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.13.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `tca_daemon` 초기화 시 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 응답, ② `controlState = inst.lastControlState or "DISARMED"` 및 `isAirborne = (inst.adapterState.lastSignal or 0) > 0` 안전 게이트 연동, ③ `step_event` 정상 틱 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/1_control/tca/` 반영 후 `Implemented` 재승격 예정) |
 | `v1.12.0` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Implemented` $\to$ `Approved`)**: ① `[I-9]` `MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) Option A 정합화 및 응답 상태 `"READY"`(`"PREPARED"` 제거), ② `[I-4]` `MSG_ACTUATOR_DISCOVER_REQ/ACK` 채널 `Base_hangar+3` (`replyChannel = Base_hangar+3`, `targetGroup`, 구 `targetGroupId [DEPRECATED]`) vs `MSG_CALIB_PULSE` 채널 `Base_hangar+0` 분리 명시 및 `MSG_CALIB_BAY_BIND` 키를 `baseHangarChannel`로 단일화, ③ §7.1 `IS-06.1` 채널 수식을 `10000 + (N - 1) * 40`으로 정정, ④ 연관 문서 버전 배지 동기화 | Q1·Q2 사용자 확정 결정 반영 (`src/1_control/tca/` Wave 2 반영 후 `Implemented` 재승격 예정) |
 | `v1.11.1` | 2026-11-12 | 문서·교차참조·채널 상수 정합성 수정(TCA Lua 런타임 동작 변경 없음): `config.json`(`10010`) 및 `MSG_CHANNEL_REBIND`(`oldBase + 10`, `newBaseChannel + 10`) 채널 오프셋 정정, `AMM -> FCP -> VAS` 재바인딩 캐스케이드 및 `TIMEOUT`/`TOTAL_LOSS` 비상 트리거 귀속 명확화, 구 `Base+6` `[DEPRECATED]` 이력 정정 및 과장 표현 제거, 연관 문서 버전(`ICD v1.28.0` 등) 동기화 | ICD `v1.28.0` 및 FCP-AMM 역할 분리 사양과의 문서 정합성 확보 |
 | `v1.11.0` | 2026-11-09 | ADVANCED_VTOL 2D 짐벌 벡터 추진기(vector_thruster) 구동 지원: setVector(x, y) 짐벌 편향 및 setPower(t) 추력 제어, 워치독/E_STOP 페일세이프 노즐 중립(0, 0) 복귀, discovery_handler 내 isVectorCapable 플래그 및 gimbalLimits 브로드캐스트, MSG_ACTUATOR_STATUS에 appliedGimbal/gimbalSaturated 반영 | 2D 짐벌 벡터 액추에이터 통합 구동 및 안전 규격 수립 |
@@ -594,6 +596,10 @@ end
 | **추력 포화 (Saturation)** | $S_{req} \cdot \frac{N_{total}}{N_{active}} > 15.0$ | 출력 15 클램핑 및 `isSaturated=true` 즉각 송출 | 해당 축 내루프 PID I-Gain(적분항) 즉시 동결 (안티 와인드업) |
 | **전체 상실 (`API_TOTAL_LOSS`)** | $N_{active} == 0$ (API 모드) | 출력 0 차단, `healthStatus="API_TOTAL_LOSS"` 즉각 송출 | 1차: VAS 6-DoF 믹서 재할당 시도<br/>2차: 주 추진/양력 축 상실 시 `Base+2`(`actuatorHealth.tap = false`) 전파를 통해 `AMM`(`EMERGENCY_LAND` 궤적 하달) 및 `FCP`(`Base+4`/`Base+1` 비상 착륙 외루프 추종)로 비상 착륙 발동 |
 | **E-STOP 지령 수신** | `controlState == "E_STOP"` | **2단계 안전 분기 집행**:<br/>1. 공중 완충 지령(`outputs[groupId] > 0`): 쿠션 추력 인가 유지(`CUSHION_HOLD`)로 자유낙하 방지<br/>2. 지상 접지 후 0 지령(`outputs == 0`) 또는 `HARD_CUT`: 즉각 전 출력 0 차단(`cut_thrust()`) | 공중 완충 강하 유도 후 지상 안착 시 전 기체 셧다운 시퀀스 돌입 |
+
+### 6.1 `[I-13]` 무선 OTA 슬레이브 연동 및 안전 게이트 (`OTA_PROGRAM_SPECIFICATION.md`)
+- **채널 개방**: `tca_daemon.init` 시 `ota_agent.new({ moduleId = "tca", ... })`를 생성하여 설정의 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds`를 개방하고, `dispatch_modem_message`에서 수신 프레임을 `inst.otaAgent:handle_packet(...)`으로 전달합니다.
+- **안전 게이트 (`getStatusFn`)**: `status = { controlState = inst.lastControlState or "DISARMED", isAirborne = (inst.adapterState and inst.adapterState.lastSignal or 0) > 0 }`를 기준으로 `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true`일 때만 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 허용하며, 비행·구동 중에는 `MSG_OTA_NACK` (`NOT_DISARMED`)를 반환합니다. `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK` 및 `step_event` 틱당 `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 처리합니다.
 
 ---
 

@@ -6,17 +6,18 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.7.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 버전 (Version)** | `v2.7.1` |
+| **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.12.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 서버 v0.1.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.2.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.13.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
@@ -123,7 +124,9 @@ flowchart TD
 | **$Base_{\text{hangar}} + 1$** | `CH_CALIBRATION_TELEM` | VAS $\rightarrow$ Align | `MSG_CALIBRATION_CLOSE_ACK` | 세션 종료 및 채널 해제 완료 회신 |
 | **$Base_{\text{hangar}} + 2$** | `CH_HANGAR_FACILITY` | Align $\leftrightarrow$ 시설물 | `MSG_FACILITY_*` | 격납고 설비, 엄빌리컬 충전/고정 래치/배기 센서 연동 |
 | **$Base_{\text{hangar}} + 3$** | `CH_CALIBRATION_TAP` | Align $\leftrightarrow$ TCA / ASA | `MSG_ACTUATOR_DISCOVER_*`<br/>`MSG_SURFACE_DISCOVER_*` | 추진기 클러스터 및 공력 조종면 노드/모드 직결 자동 탐색 |
-| **$Base_{\text{hangar}} + 4 \sim 9$**| `CH_RESERVED_04~09` | 예비 | - | **격납고 내부 확장 예비 대역 (총 6개 채널 예비 확보)** |
+| **$Base_{\text{hangar}} + 4$** | `CH_OTA_CMD` | OTA Server $\rightarrow$ Onboard | `MSG_OTA_*` (`[I-13]`) | 격납고 무선 OTA 배포 서버 지령 채널 (Bay 1 = `105`; Alignment 비사용) |
+| **$Base_{\text{hangar}} + 5$** | `CH_OTA_ACK` | Onboard $\rightarrow$ OTA Server | `MSG_OTA_ACK` / `NACK` / `BOOT_STATUS` | 격납고 무선 OTA 응답 및 부팅 커밋 보고 채널 (Bay 1 = `106`; Alignment 비사용) |
+| **$Base_{\text{hangar}} + 6 \sim 9$**| `CH_RESERVED_06~09` | 예비 | - | **격납고 내부 확장 예비 대역 (총 4개 채널 예비 확보)** |
 
 > [!IMPORTANT]
 > **전역 채널 완전 해제 원칙 (Strict Channel Release Rule)**:  
