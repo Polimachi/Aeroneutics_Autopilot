@@ -45,7 +45,7 @@ local function readFile(path)
 end
 
 describe("tui_view 51x19 terminal rendering and source toggle", function()
-    it("renders header, 13-module menu, progress bar, and source toggle within 51x19 bounds", function()
+    it("renders header, 14-module menu, progress bar, and source toggle within 51x19 bounds", function()
         -- 1. Source toggle logic
         assert_eq(tui_view.toggleSource("github"), "gdrive")
         assert_eq(tui_view.toggleSource("gdrive"), "github")
@@ -53,7 +53,7 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         assert_eq(tui_view.toggleSource("GDRIVE"), "github")
 
         local modules = manifest.listModules()
-        assert_eq(#modules, 13)
+        assert_eq(#modules, 14)
 
         -- 2. Color terminal rendering
         local termColor = mock.term(51, 19)

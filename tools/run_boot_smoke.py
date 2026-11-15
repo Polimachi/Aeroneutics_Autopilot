@@ -52,7 +52,7 @@ class TargetSmokeReport:
 def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) -> list[SmokeTarget]:
     """
     Constructs the standard list of boot smoke targets.
-    Active subsystems (11): alignment, fdr, installer, gps, gac, gcs, landing_pad, tca, vas, fcp, amm.
+    Active subsystems (12): alignment, fdr, installer, ota, gps, gac, gcs, landing_pad, tca, vas, fcp, amm.
     Deferred subsystems (1): asa (TASK-105).
     """
     root = workspace_root.resolve()
@@ -79,6 +79,14 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             target_id="0_development/installer",
             source_dir=src / "0_development" / "installer",
             expected_channels=[],
+            cli_args=[],
+            deferred=False,
+            workspace_root=root,
+        ),
+        SmokeTarget(
+            target_id="0_development/ota",
+            source_dir=src / "0_development" / "ota",
+            expected_channels=[106],
             cli_args=[],
             deferred=False,
             workspace_root=root,
@@ -169,6 +177,11 @@ def _stage_shared_sensors(computer_dir: Path, workspace_root: Path) -> None:
     lib_dest = computer_dir / "lib"
     lib_dest.mkdir(parents=True, exist_ok=True)
     shutil.copy2(shared_sensors, lib_dest / "avionics_sensors.lua")
+
+    shared_ota = workspace_root / "src" / "0_development" / "ota" / "ota_agent.lua"
+    if not shared_ota.is_file():
+        raise FileNotFoundError(f"Required shared OTA agent library missing at {shared_ota}")
+    shutil.copy2(shared_ota, lib_dest / "ota_agent.lua")
 
 
 def _stage_minimal_configs(computer_dir: Path) -> None:
@@ -287,6 +300,23 @@ def _stage_minimal_configs(computer_dir: Path) -> None:
         "storage": {"allowLocalFallback": True},
     }
     (config_dir / "fdr_config.json").write_text(json.dumps(fdr_cfg, indent=2), encoding="utf-8")
+
+    # 9. OTA config
+    ota_cfg = {
+        "version": "0.1.0",
+        "ota": {
+            "bayId": 1,
+            "chunkSize": 2048,
+            "ackTimeoutSec": 1.5,
+            "maxRetries": 3,
+            "defaultSourceDir": "/ota_packages",
+            "autoSyncOnBoot": False,
+        },
+        "network": {
+            "domainId": "HANGAR-OTA-01",
+        },
+    }
+    (config_dir / "ota_config.json").write_text(json.dumps(ota_cfg, indent=2), encoding="utf-8")
 
 
 def _build_guest_startup_lua() -> str:

@@ -26,9 +26,9 @@ from tools.run_boot_smoke import (
 
 
 class TestBootSmokeRunner(unittest.TestCase):
-    def test_build_smoke_targets_covers_11_active_subsystems_and_skips_deferred_asa(self) -> None:
+    def test_build_smoke_targets_covers_12_active_subsystems_and_skips_deferred_asa(self) -> None:
         targets = build_smoke_targets(WORKSPACE_ROOT, include_deferred=False)
-        self.assertEqual(len(targets), 11, f"Expected 11 active targets, got {len(targets)}")
+        self.assertEqual(len(targets), 12, f"Expected 12 active targets, got {len(targets)}")
 
         target_ids = [t.target_id for t in targets]
         self.assertNotIn("1_control/asa", target_ids)
@@ -37,6 +37,7 @@ class TestBootSmokeRunner(unittest.TestCase):
             "0_development/alignment",
             "0_development/fdr",
             "0_development/installer",
+            "0_development/ota",
             "0_infra/gps",
             "0_infra/gac",
             "0_infra/gcs",
@@ -60,7 +61,7 @@ class TestBootSmokeRunner(unittest.TestCase):
 
     def test_build_smoke_targets_includes_asa_when_include_deferred(self) -> None:
         targets = build_smoke_targets(WORKSPACE_ROOT, include_deferred=True)
-        self.assertEqual(len(targets), 12, f"Expected 12 targets, got {len(targets)}")
+        self.assertEqual(len(targets), 13, f"Expected 13 targets, got {len(targets)}")
 
         target_map = {t.target_id: t for t in targets}
         self.assertIn("1_control/asa", target_map)
@@ -80,6 +81,9 @@ class TestBootSmokeRunner(unittest.TestCase):
             staged_file = comp_dir / "lib" / "avionics_sensors.lua"
             self.assertTrue(staged_file.is_file())
             self.assertGreater(staged_file.stat().st_size, 0)
+            staged_ota = comp_dir / "lib" / "ota_agent.lua"
+            self.assertTrue(staged_ota.is_file(), "Expected lib/ota_agent.lua to be staged")
+            self.assertGreater(staged_ota.stat().st_size, 0)
 
             # 2. FileNotFoundError raised if missing
             empty_root = temp_path / "empty_ws"
@@ -238,6 +242,9 @@ class TestBootSmokeRunner(unittest.TestCase):
             staged_sensor = comp_dir / "lib" / "avionics_sensors.lua"
             self.assertTrue(staged_sensor.is_file(), "Expected lib/avionics_sensors.lua to be staged")
             self.assertGreater(staged_sensor.stat().st_size, 0)
+            staged_ota = comp_dir / "lib" / "ota_agent.lua"
+            self.assertTrue(staged_ota.is_file(), "Expected lib/ota_agent.lua to be staged")
+            self.assertGreater(staged_ota.stat().st_size, 0)
 
             # Verify valid JSON configs staged
             expected_json_files = [
@@ -247,6 +254,7 @@ class TestBootSmokeRunner(unittest.TestCase):
                 comp_dir / "config" / "amm_config.json",
                 comp_dir / "config" / "sensors.json",
                 comp_dir / "config" / "system.json",
+                comp_dir / "config" / "ota_config.json",
             ]
             for cfg_path in expected_json_files:
                 self.assertTrue(cfg_path.is_file(), f"Expected config file missing: {cfg_path}")

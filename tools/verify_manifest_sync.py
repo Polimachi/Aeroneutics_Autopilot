@@ -56,6 +56,9 @@ DEFERRED_SUBSYSTEM_DIRS = {
 SIMULATION_NODE_PATTERN = re.compile(r"^node_[a-z0-9_]+\.lua$")
 SHARED_SENSOR_REPO_PATH = "src/0_development/sensors/avionics_sensors.lua"
 SHARED_SENSOR_DEST = "/lib/avionics_sensors.lua"
+SHARED_OTA_AGENT_REPO_PATH = "src/0_development/ota/ota_agent.lua"
+SHARED_OTA_AGENT_DEST = "/lib/ota_agent.lua"
+OTA_AGENT_MANDATED_MODULES = {"ota", "vas", "tca", "fcp", "amm"}
 
 
 @dataclass
@@ -435,6 +438,7 @@ def verify_workspace(
             )
 
         has_shared_sensor = False
+        has_shared_ota_agent = False
         mod_subsys_dirs: Set[str] = set()
         for fentry in mod_info["files"]:
             repo_p = fentry["repoPath"]
@@ -446,8 +450,12 @@ def verify_workspace(
             if repo_p == SHARED_SENSOR_REPO_PATH and dest_p == SHARED_SENSOR_DEST:
                 has_shared_sensor = True
 
+            if repo_p == SHARED_OTA_AGENT_REPO_PATH and dest_p == SHARED_OTA_AGENT_DEST:
+                has_shared_ota_agent = True
+
             is_shared_injection = (
-                mod_key != "sensors" and repo_p == SHARED_SENSOR_REPO_PATH
+                (mod_key != "sensors" and repo_p == SHARED_SENSOR_REPO_PATH)
+                or (mod_key != "ota" and repo_p == SHARED_OTA_AGENT_REPO_PATH)
             )
             if not is_shared_injection:
                 m_layer = re.match(r"^src/([^/]+)/([^/]+)/", repo_p)
@@ -463,6 +471,11 @@ def verify_workspace(
         if not has_shared_sensor:
             report.errors.append(
                 f"MISSING_SHARED_SENSOR_LIB: module '{mod_key}' does not bundle {SHARED_SENSOR_REPO_PATH} -> {SHARED_SENSOR_DEST}"
+            )
+
+        if mod_key in OTA_AGENT_MANDATED_MODULES and not has_shared_ota_agent:
+            report.errors.append(
+                f"MISSING_SHARED_OTA_AGENT_LIB: module '{mod_key}' does not bundle {SHARED_OTA_AGENT_REPO_PATH} -> {SHARED_OTA_AGENT_DEST}"
             )
 
         for sub_dir in mod_subsys_dirs:

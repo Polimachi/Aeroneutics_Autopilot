@@ -117,6 +117,12 @@ def run_e2e_cli(
                 if lua_file.name != "main.lua":
                     shutil.copy2(lua_file, lib_dest / lua_file.name)
 
+        shared_ota = root / "src" / "0_development" / "ota" / "ota_agent.lua"
+        if shared_ota.is_file():
+            lib_dest = c0 / "lib"
+            lib_dest.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(shared_ota, lib_dest / "ota_agent.lua")
+
         # 2. Stage entire src/ tree at /src/
         session.stage_tree(root / "src", computer_id=0, dest_subdir="src")
 

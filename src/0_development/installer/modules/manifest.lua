@@ -93,6 +93,7 @@ manifest.MODULE_ORDER = {
     "fcp",
     "alignment",
     "fdr",
+    "ota",
     "gps_server",
     "gps_node",
     "gps_client",
@@ -158,6 +159,7 @@ manifest.MODULES = {
             { repoPath = "src/1_control/vas/modules/vec3.lua", dest = "/modules/vec3.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/vehicle_policy.lua", dest = "/modules/vehicle_policy.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
         },
     },
 
@@ -206,6 +208,7 @@ manifest.MODULES = {
             { repoPath = "src/1_control/tca/modules/tui_dashboard.lua", dest = "/modules/tui_dashboard.lua", gdriveId = nil },
             { repoPath = "src/1_control/tca/modules/watchdog_sentinel.lua", dest = "/modules/watchdog_sentinel.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
         },
     },
 
@@ -283,6 +286,7 @@ manifest.MODULES = {
             { repoPath = "src/2_guidance/fcp/modules/state_propagator.lua", dest = "/modules/state_propagator.lua", gdriveId = nil },
             { repoPath = "src/2_guidance/fcp/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
         },
     },
 
@@ -595,6 +599,7 @@ manifest.MODULES = {
             { repoPath = "src/3_planning/amm/modules/ui_renderer.lua", dest = "/modules/ui_renderer.lua", gdriveId = nil },
             { repoPath = "src/3_planning/amm/modules/trajectory_generator.lua", dest = "/modules/trajectory_generator.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
         },
     },
     gcs = {
@@ -671,6 +676,33 @@ manifest.MODULES = {
             { repoPath = "src/0_development/fdr/modules/jsonl_dumper.lua", dest = "/modules/jsonl_dumper.lua", gdriveId = nil },
             { repoPath = "src/0_development/fdr/modules/cloud_exporter.lua", dest = "/modules/cloud_exporter.lua", gdriveId = nil },
             { repoPath = "src/0_development/fdr/modules/fdr_ui.lua", dest = "/modules/fdr_ui.lua", gdriveId = nil },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+        },
+    },
+
+    ota = {
+        id = "ota",
+        name = "Wireless OTA Server",
+        category = "development",
+        version = "0.1.0",
+        installDir = "/ota",
+        entry = "main.lua",
+        autorun = false,
+        startup = {
+            enabled = false,
+            path = "/startup/00_ota.lua",
+            target = "/ota/main.lua",
+            name = "OTA Server",
+        },
+        description = "Hangar Wireless OTA Deployment Server & Atomic Rollback Guard",
+        roles = { "OTA Server", "Dev Layer 0" },
+        files = {
+            { repoPath = "src/0_development/ota/main.lua", dest = "/ota/main.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/config/ota_config.json", dest = "/ota/config/ota_config.json", isConfig = true, gdriveId = nil },
+            { repoPath = "src/0_development/ota/modules/ota_protocol.lua", dest = "/ota/modules/ota_protocol.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/modules/ota_server.lua", dest = "/ota/modules/ota_server.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/modules/ota_ui.lua", dest = "/ota/modules/ota_ui.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
         },
     },

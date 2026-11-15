@@ -20,6 +20,7 @@ def _build_minimal_workspace(root: Path) -> None:
     """Creates a minimal valid 3-way synced workspace inside root for fault-injection tests."""
     (root / "src" / "0_development" / "installer" / "modules").mkdir(parents=True)
     (root / "src" / "0_development" / "sensors").mkdir(parents=True)
+    (root / "src" / "0_development" / "ota").mkdir(parents=True)
     (root / "src" / "1_control" / "vas" / "modules").mkdir(parents=True)
     (root / "config").mkdir(parents=True)
 
@@ -39,6 +40,9 @@ def _build_minimal_workspace(root: Path) -> None:
         "return {}\n", encoding="utf-8"
     )
     (root / "src" / "0_development" / "sensors" / "avionics_sensors.lua").write_text(
+        "return {}\n", encoding="utf-8"
+    )
+    (root / "src" / "0_development" / "ota" / "ota_agent.lua").write_text(
         "return {}\n", encoding="utf-8"
     )
     (root / "src" / "1_control" / "vas" / "main.lua").write_text(
@@ -77,6 +81,7 @@ manifest.MODULES = {
             { repoPath = "src/1_control/vas/main.lua", dest = "/main.lua", gdriveId = nil },
             { repoPath = "src/1_control/vas/modules/core_daemon.lua", dest = "/modules/core_daemon.lua", gdriveId = nil },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
         },
     },
 }
@@ -285,6 +290,26 @@ return manifest''',
             self.assertTrue(
                 any("STALE_DEFERRED_EXEMPTION" in e and "src/1_control/asa" in e for e in report.errors),
                 f"Expected STALE_DEFERRED_EXEMPTION, got: {report.errors}",
+            )
+
+    def test_detects_missing_shared_ota_agent_lib_on_mandated_modules(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_minimal_workspace(root)
+            man_path = root / "src" / "0_development" / "installer" / "modules" / "manifest.lua"
+            content = man_path.read_text(encoding="utf-8")
+            # Remove ota_agent.lua from vas
+            content = content.replace(
+                '{ repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },\n',
+                "",
+            )
+            man_path.write_text(content, encoding="utf-8")
+
+            report = verify_workspace(root)
+            self.assertFalse(report.ok)
+            self.assertTrue(
+                any("MISSING_SHARED_OTA_AGENT_LIB" in e and "vas" in e for e in report.errors),
+                f"Expected MISSING_SHARED_OTA_AGENT_LIB error, got: {report.errors}",
             )
 
     def test_cli_returns_zero_on_live_workspace(self) -> None:
