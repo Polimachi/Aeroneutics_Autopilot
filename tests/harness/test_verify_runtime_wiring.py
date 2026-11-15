@@ -183,6 +183,20 @@ class TestVerifyRuntimeWiring(unittest.TestCase):
         self.assertEqual(len(dead_imports), 1)
         self.assertIn("setup_wizard", dead_imports[0].message)
 
+    def test_exempts_shared_lib_ota_agent_targets(self) -> None:
+        sub_dir = self.temp_dir / "src" / "1_control" / "sub_ota"
+        sub_dir.mkdir(parents=True)
+        (sub_dir / "main.lua").write_text(
+            'local ok, ota1 = pcall(require, "ota_agent")\n'
+            'local ota2 = require("/lib/ota_agent")\n'
+            'local ota3 = require("/lib/ota_agent.lua")\n'
+            'print(ok, ota1, ota2, ota3)\n',
+            encoding="utf-8",
+        )
+        violations = analyze_subsystem_wiring(sub_dir, self.temp_dir)
+        broken = [v for v in violations if v.code == "BROKEN_REQUIRE"]
+        self.assertEqual(broken, [])
+
     def test_cli_execution_and_json_output(self) -> None:
         cli_path = WORKSPACE_ROOT / "tools" / "verify_runtime_wiring.py"
         res = subprocess.run(
