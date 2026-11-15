@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-014`(3대 감사 가드레일: `config/protocol_contracts.json`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_boot_smoke.py`; 2026-11-15), `TASK-120`(지상 FDR·`VAS telemetryDiag`·오프라인 프로파일러; 2026-11-14). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **직전 완료**: `TASK-117`(무선 OTA 서버·`/lib/ota_agent.lua`·2단계 부트 워치독·4계층 연동·Scenario 10 E2E·6대 사양 승격; 2026-11-15), `TASK-014`(3대 감사 가드레일; 2026-11-15). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
-  1. `TASK-117` (1순위): 무선 OTA 배포 서버·슬레이브 원자적 롤백 가드 (선행 과제 전부 완료, 즉시 착수 가능).
-  2. 2순위 후보: `TASK-125`(40채널 개편·결함 12종), `TASK-128`(GPS 헬스 감시·DR 가드), `TASK-132`(추력 상실 비상 활공), `TASK-403`→`404`(에디터 World Preset → GCS 브리지), `TASK-302`(Pocket PDA), `TASK-010`→`011`(플레이북; `011`은 `010` 완료 후).
+  1. `TASK-125` (1순위): 40채널 블록 개편 및 프로토콜·경합·검증 결함 12종 해소 (Spec-First 착수).
+  2. 2순위 후보: `TASK-128`(GPS 헬스 감시·DR 가드), `TASK-132`(추력 상실 비상 활공), `TASK-403`→`404`(에디터 World Preset → GCS 브리지), `TASK-302`(Pocket PDA), `TASK-010`→`011`(플레이북; `011`은 `010` 완료 후).
   3. 3순위: `TASK-501`(GDrive 109패키지 동기화), `TASK-129`(적응형 트림 보정) / `TASK-210`(대기, `[연기] TASK-105` 재개 시).
 
 ## 2. Confirmed Architecture & Paths
@@ -15,7 +15,7 @@
 - `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
 - `docs/superpowers/{plans,specs}/`: 태스크별 실행 계획서 및 설계 청사진.
-- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
+- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `config/protocol_contracts.json`: 활성 사양서·코드베이스·E2E 패킷 교차 검증용 기계 판독형 SSOT 와이어 프로토콜 계약 명세.
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
 - `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_boot_smoke.py`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_mutation_tests.py`, `analyze_flight_log.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.3.1 Implemented`).
@@ -26,15 +26,15 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (17 활성 사양서·128 코드/설정 린트, 0 errors).
-- **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (11 활성 서브시스템 0 violations, 4 예외).
-- **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (11개 활성 `main.lua` 11/11 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (13개 타겟 524/524 PASS).
-- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (9개 스위트 14/14 PASS, 474패킷 계약 0 violations).
+- **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·134 코드/설정 린트, 0 errors).
+- **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (12 활성 서브시스템 0 violations, 4 예외).
+- **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (12개 활성 `main.lua` 12/12 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (14개 타겟 564/564 PASS).
+- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 18/18 PASS, 517패킷 계약 0 violations).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (130/130 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (132/132 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (16대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (124 파일), `python tools/verify_spec_status.py` (17종 12 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (20/20 PASS).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (17대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (129 파일), `python tools/verify_spec_status.py` (18종 13 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (20/20 PASS).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
 
 ## 4. Gotchas & Invariants

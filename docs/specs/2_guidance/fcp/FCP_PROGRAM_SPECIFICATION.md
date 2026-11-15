@@ -5,7 +5,7 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v2.2.0` |
 | **최종 수정일 (Date)** | `2026-11-15` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
@@ -126,7 +126,7 @@ FCP는 20Hz(50ms) 주기로 `SE(3)` 벡터 연산과 단위 쿼터니언 투영�
 - **전원 공급**: 비행체 온보드 주 전원 버스 직결.
 
 ### 2.2 단일 무선 모뎀(`top`) 및 온보드 3채널 격리 규격
-`v2.0.0` 아키텍처에서는 모든 외부 인프라 교신(GCS `50000`, ATC/GAC/시설물 `50001~50004` · $Base_{\text{sec}}+*$, GPS `60001/60002` · `Base+5`)과 C2/MFD 인터페이스(`Base+0`, `Base+3`)가 **`AMM (Node 03)`의 듀얼 모뎀 게이트웨이로 이관**되었습니다. 따라서 FCP는 **단일 상단 무선 엔더 모뎀(`top`, `primaryModemSide = "top"`)**만을 장착하고 **온보드 내부 3개 채널(`Base+4`, `Base+2`, `Base+1`)**만을 배타적으로 개방합니다(구 보조 인프라 모뎀 설정 제거).
+`v2.0.0` 아키텍처에서는 모든 외부 인프라 교신(GCS `50000`, ATC/GAC/시설물 `50001~50004` · $Base_{\text{sec}}+*$, GPS `60001/60002` · `Base+5`)과 C2/MFD 인터페이스(`Base+0`, `Base+3`)가 **`AMM (Node 03)`의 듀얼 모뎀 게이트웨이로 이관**되었습니다. 따라서 FCP는 **단일 상단 무선 엔더 모뎀(`top`, `primaryModemSide = "top"`)**만을 장착하고 **온보드 내부 3개 비행 채널(`Base+4`, `Base+2`, `Base+1`)**만을 배타적으로 개방합니다(구 보조 인프라 모뎀 설정 제거). 단, `v2.2.0` (`[I-13]`)부터는 지상 격납고 OTA 연동을 위해 동일 `top` 모뎀에서 격납고 OTA 수신 채널(`Base_hangar + 4`, 기본 Bay 1 = `105` 및 선택 `ota.bayIds`)을 추가 개방하며, 비행 중(`DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true` 외 상태)에는 모든 상태 변경 OTA 트랜잭션을 거부(`NOT_DISARMED`)해 비행 루프 격리를 유지합니다.
 
 ```mermaid
 flowchart TD
@@ -1186,7 +1186,7 @@ end
 
 ## 12. 검증 및 시뮬레이션 프로토콜 (Test & Verification Protocols)
 
-### 12.1 `v2.0.0` 단위 테스트 검증 기준 (Unit Verification Criteria — `TASK-208` 대상)
+### 12.1 `v2.2.0` 단위 테스트 검증 기준 (Unit Verification Criteria — `TASK-208` / `TASK-117-4`)
 1. **3채널 격리 및 ICD 엔벨로프 검증 (`network_manager`)**:
    - 단일 `top` 모뎀에서 비행용 3채널(`Base+4`, `Base+2`, `Base+1`) 외에 `[I-13]` 격납고 OTA 채널(`Base_hangar + 4`, 기본 Bay 1 = `105` 및 선택 `ota.bayIds`)만 개방되며, `CH 50000~50004`, `60001/60002`, `Base+0`, `Base+3`, `Base+5`는 열리지 않는지 검증.
    - 송출 패킷이 `ver = "1.9.5"`, `seq`, `domainId`, `type`, `time`, `payload` 필드를 정확히 포함하고, `[DEPRECATED]` 구 필드(`angleTargets`, `targetThrottle`, `targetClimbRate`, `translationBias.heave`)를 송출하지 않는지 검증.

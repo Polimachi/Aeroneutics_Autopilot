@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-15 — 무선 OTA 배포 서버·슬레이브 에이전트·2단계 부트 워치독 구현 및 다중 노드 E2E/사양 승격 (TASK-117)
+
+- **결정 배경**: 다중 CC:Tweaked 온보드 노드(`VAS`, 다수 `TCA`, `FCP`, `AMM`)의 수동 `installer.lua` 업데이트 비용을 해소하고 비행 중 OTA 재부팅 추락 및 패킷 유실 벽돌 장애를 방지하기 위해 `/grill-me`·실행 계획서(`docs/superpowers/plans/2026-11-15-task-117-wireless-ota-rollback.md`, 구 `TASK-117 + 119` 통합)를 수립해 Spec-First로 구현함.
+- **반영 내역**:
+  1. **사양서 및 SSOT 계약 통합 (`[I-13]`)**: `OTA_PROGRAM_SPECIFICATION.md` (`v0.1.0 Implemented`) 신설, `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.32.0 Approved`), `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (`v2.16.0 Approved`), `INSTALLER v1.2.0`·`VAS v1.22.0`·`TCA v1.13.0`·`FCP v2.2.0`·`AMM v2.1.0` (`Implemented`) 및 `config/protocol_contracts.json` (`Base_hangar + 4 = 105` / `106`, `MSG_OTA_ADVERTISE`·`OFFER`·`CHUNK`·`COMMIT`·`ABORT`·`ACK`·`NACK`·`STATUS`, `0x1010`·`ver "1.9.5"`) 동기화 (`1e40c6c`).
+  2. **2단계 부트 워치독 (`src/0_development/installer/modules/startup_generator.lua`)**: `/.ota_boot_pending` 카운터(`attempts >= 2`) 검사, `/ota_backup/` 원자적 복구(`fs.copy`/`fs.move` 롤백), `/.ota_rolled_back` 영속 기록 및 `reboot` 격리, `manifest.lua` 14모듈(`/lib/ota_agent.lua` 자동 배포 포함) 등록 (`a34dbd3`, `6ed916b`).
+  3. **독립 완결형 슬레이브 에이전트 (`src/0_development/ota/ota_agent.lua` → `/lib/ota_agent.lua`)**: 내장 IEEE 802.3 CRC32 검증, 5개 이상 온보드 파일 `/ota_staging/<txId>/` 다중 파일 스테이징, `require("ota_agent")` 콜백(`canApply`·`onBeforeReboot`·`getState`)을 통한 `NOT_DISARMED`·`STORAGE_LOW`·`CRC_MISMATCH`·`TX_CONFLICT`·`VERSION_REJECTED` `NACK` 거부, 부트 안정 20틱(`confirmStable(txId)`) 후 백업 정리 및 `ROLLED_BACK` 1회 보고 (`e880fe9`).
+  4. **온보드 4계층 통합 (`src/1_control/{vas,tca}/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)**: `VAS`(고정 `Base_hangar+4 = 105`·`isDisarmed` 안전 게이트·20Hz 루프 커밋), `TCA`(비행 중 `tca:disarmed` 게이트·재바인딩 차단), `FCP`(`top` 모뎀 `CH 105` 격리 수신·`FLIGHT_IDLE`/`GROUNDED` 게이트), `AMM`(듀얼 모뎀 환경에서 `back` 모뎀 우선 사용 + 단일 모뎀 폴백·`SAFE_GROUNDED` 게이트) 통합; `src/1_control/asa/**` `0 diff` 동결 유지 (`815b35e`).
+  5. **격납고 OTA 배포 서버 및 TUI (`src/0_development/ota/`)**: `ota_protocol.lua`·`ota_server.lua`·`ota_ui.lua`·`main.lua`·`ota_config.json` 구현 (`CH 105`·`CH 106` 슬레이브 상태·원자적 다중 타겟 배포·CRC32 중단 및 `MSG_OTA_ABORT` 롤백), `verify_runtime_wiring.py`(`/lib/ota_agent.lua` 배포 예외) 및 `run_unit_tests.py`·`run_e2e_tests.py`·`run_boot_smoke.py` 연동 (`90f6a03`, `fcbcdc5`, `6ed916b`).
+  6. **다중 노드 E2E 검증 (`tests/e2e/test_e2e_ota_deploy_rollback.lua`)**: Scenario 10 4케이스(정상 다중 노드 배포 및 20틱 재부팅 커밋, 비행 중 `NOT_DISARMED` 거부, CRC32 변조 중단 및 스테이징 정리, 2회 부팅 크래시 워치독 자동 롤백 및 `ROLLED_BACK` 보고) 구현·통과.
+- **검증**: 단위 14타겟 `564/564 PASS`(`0_development/ota` `24/24`, `0_development/installer` `44/44`, `vas` `61/61`, `tca` `37/37`, `fcp` `50/50`, `amm` `135/135`), E2E 10스위트 `18/18 PASS`(`517`패킷 `0` violations), 부트 스모크 `12/12 PASS`, `verify_contracts.py` 18 사양서·134 코드/설정 `0 errors`, `verify_runtime_wiring.py` 12 서브시스템 `0 violations` (`4` exemptions), `verify_manifest_sync.py` `0 Errors, 0 Warnings`, `verify_all_specs.py --check-readmes` 17 사양서 `0 Errors, 0 Warnings`, `verify_spec_status.py` `18`종(`13 Implemented, 5 Approved`) PASS, Lua 5.2 `129/129 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `132/132 PASS`, 에디터 `20/20 PASS`, `verify_context_docs.py` `0 findings`, `src/1_control/asa/` `0 diff`.
+
+---
+
 ## 2026-11-15 — 전수 감사 3대 사각지대 방지 가드레일(SSOT 계약·E2E 패킷 검증·런타임 배선/실부팅 스모크) 구축 (TASK-014)
 
 - **결정 배경**: `reports/reviewCompleted/Audit_Report_1_11142026.md`의 3대 사각지대(계층 간 와이어 계약 불일치, 미배선 런타임 경로, 사양서 SSOT 분열) 재발 방지를 위한 `/brainstorming` · `/grill-me` 확정안 구현 (`docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md`, `docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md`).
