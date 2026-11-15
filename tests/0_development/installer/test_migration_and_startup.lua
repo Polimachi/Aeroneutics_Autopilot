@@ -181,4 +181,344 @@ describe("startup_generator multi-boot hook generator", function()
         -- Clean up
         if fs.exists(bootRoot) then fs.delete(bootRoot) end
     end)
+
+    it("handles syntax/load error rollback, restores backup, cleans pending, writes rollback record, and invokes reboot", function()
+        local bootRoot = sdk.temp_path("boot_ota_loaderr")
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+        fs.makeDir(bootRoot)
+        fs.makeDir(bootRoot .. "/startup")
+        fs.makeDir(bootRoot .. "/modules")
+
+        local backupDir = bootRoot .. "/ota_backup/tx-101"
+        fs.makeDir(backupDir)
+
+        -- Backup original main.lua
+        local origMainPath = backupDir .. "/main.lua"
+        local bh = fs.open(origMainPath, "w")
+        bh.write("_G.__OTA_TEST_STAGE = 'RESTORED_MAIN'")
+        bh.close()
+
+        -- Backup version file
+        local versionBakPath = backupDir .. "/.version.json"
+        local vbh = fs.open(versionBakPath, "w")
+        vbh.write(textutils.serializeJSON({ version = "1.12.0" }))
+        vbh.close()
+
+        -- Target main.lua with broken syntax
+        local targetPath = bootRoot .. "/main.lua"
+        local th = fs.open(targetPath, "w")
+        th.write("this is invalid lua syntax !!! @@ ##")
+        th.close()
+
+        -- Active version file (updated by OTA)
+        local curVersionPath = bootRoot .. "/.version.json"
+        local cvh = fs.open(curVersionPath, "w")
+        cvh.write(textutils.serializeJSON({ version = "1.13.0-uncommitted" }))
+        cvh.close()
+
+        -- Orphan file created by failed OTA (existed = false)
+        local orphanPath = bootRoot .. "/modules/orphan.lua"
+        local oh = fs.open(orphanPath, "w")
+        oh.write("return 'orphan'")
+        oh.close()
+
+        -- Write /.ota_pending.json
+        local pending = {
+            txId = "tx-101",
+            moduleId = "tca",
+            targetVersion = "1.13.0",
+            backupDir = backupDir,
+            versionBackupPath = versionBakPath,
+            restoredFiles = {
+                { src = origMainPath, dest = targetPath, existed = true },
+                { src = "", dest = orphanPath, existed = false },
+            },
+            bootAttempts = 0,
+            maxBootAttempts = 1,
+            status = "PENDING_COMMIT",
+        }
+        local ph = fs.open(bootRoot .. "/.ota_pending.json", "w")
+        ph.write(textutils.serializeJSON(pending))
+        ph.close()
+
+        local spec = {
+            path = "/startup/00_tca.lua",
+            name = "TCA",
+            target = targetPath,
+            installDir = bootRoot,
+            otaRootPrefix = bootRoot,
+        }
+        local okInstall, errInstall = startup_generator.installHook(spec, bootRoot)
+        assert_true(okInstall, "installHook should succeed: " .. tostring(errInstall))
+
+        local hookPath = bootRoot .. "/startup/00_tca.lua"
+        assert_true(fs.exists(hookPath), "Hook file must exist")
+
+        -- Mock os.reboot
+        local origReboot = os.reboot
+        local rebootCount = 0
+        os.reboot = function()
+            rebootCount = rebootCount + 1
+        end
+
+        _G.__OTA_TEST_STAGE = nil
+        local okRun, runErr = pcall(dofile, hookPath)
+        os.reboot = origReboot
+
+        assert_true(okRun, "dofile should not throw unhandled error on rollback: " .. tostring(runErr))
+        assert_eq(rebootCount, 1, "os.reboot should have been invoked exactly once")
+
+        -- Verify pending removed
+        assert_false(fs.exists(bootRoot .. "/.ota_pending.json"), "pending transaction must be deleted")
+
+        -- Verify rollback record written
+        local rollbackPath = bootRoot .. "/.ota_rollback.json"
+        assert_true(fs.exists(rollbackPath), "rollback record must exist")
+        local rh = fs.open(rollbackPath, "r")
+        local rollbackData = textutils.unserializeJSON(rh.readAll())
+        rh.close()
+        assert_eq(rollbackData.txId, "tx-101")
+        assert_eq(rollbackData.moduleId, "tca")
+        assert_eq(rollbackData.targetVersion, "1.13.0")
+        assert_eq(rollbackData.reason, "BOOT_LOAD_ERROR")
+        assert_true(rollbackData.error ~= nil, "error message must be recorded")
+
+        -- Verify original main.lua restored
+        local rmh = fs.open(targetPath, "r")
+        local mainContent = rmh.readAll()
+        rmh.close()
+        assert_eq(mainContent, "_G.__OTA_TEST_STAGE = 'RESTORED_MAIN'")
+
+        -- Verify orphan file deleted
+        assert_false(fs.exists(orphanPath), "newly added orphan file must be deleted")
+
+        -- Verify version restored
+        local rvh = fs.open(curVersionPath, "r")
+        local restoredVersion = textutils.unserializeJSON(rvh.readAll())
+        rvh.close()
+        assert_eq(restoredVersion.version, "1.12.0")
+
+        -- Verify backupDir deleted
+        assert_false(fs.exists(backupDir), "backupDir must be cleaned up")
+
+        -- Clean up
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+    end)
+
+    it("handles runtime crash rollback, restores backup, cleans pending, writes rollback record, and invokes reboot", function()
+        local bootRoot = sdk.temp_path("boot_ota_runtime_crash")
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+        fs.makeDir(bootRoot)
+        fs.makeDir(bootRoot .. "/startup")
+
+        local backupDir = bootRoot .. "/ota_backup/tx-102"
+        fs.makeDir(backupDir)
+
+        -- Backup original main.lua
+        local origMainPath = backupDir .. "/main.lua"
+        local bh = fs.open(origMainPath, "w")
+        bh.write("_G.__OTA_TEST_STAGE = 'RESTORED_MAIN_RUNTIME'")
+        bh.close()
+
+        -- Target main.lua with runtime crash
+        local targetPath = bootRoot .. "/main.lua"
+        local th = fs.open(targetPath, "w")
+        th.write("error('nil deref in tca controller')")
+        th.close()
+
+        -- Write /.ota_pending.json
+        local pending = {
+            txId = "tx-102",
+            moduleId = "tca",
+            targetVersion = "1.13.0",
+            backupDir = backupDir,
+            restoredFiles = {
+                { src = origMainPath, dest = targetPath, existed = true },
+            },
+            bootAttempts = 0,
+            maxBootAttempts = 1,
+            status = "PENDING_COMMIT",
+        }
+        local ph = fs.open(bootRoot .. "/.ota_pending.json", "w")
+        ph.write(textutils.serializeJSON(pending))
+        ph.close()
+
+        local spec = {
+            path = "/startup/00_tca.lua",
+            name = "TCA",
+            target = targetPath,
+            installDir = bootRoot,
+            otaRootPrefix = bootRoot,
+        }
+        local okInstall, errInstall = startup_generator.installHook(spec, bootRoot)
+        assert_true(okInstall, "installHook should succeed: " .. tostring(errInstall))
+
+        local hookPath = bootRoot .. "/startup/00_tca.lua"
+
+        -- Mock os.reboot
+        local origReboot = os.reboot
+        local rebootCount = 0
+        os.reboot = function()
+            rebootCount = rebootCount + 1
+        end
+
+        local okRun, runErr = pcall(dofile, hookPath)
+        os.reboot = origReboot
+
+        assert_true(okRun, "dofile should not throw unhandled error on rollback: " .. tostring(runErr))
+        assert_eq(rebootCount, 1, "os.reboot should have been invoked exactly once")
+
+        -- Verify pending removed
+        assert_false(fs.exists(bootRoot .. "/.ota_pending.json"), "pending transaction must be deleted")
+
+        -- Verify rollback record written
+        local rollbackPath = bootRoot .. "/.ota_rollback.json"
+        assert_true(fs.exists(rollbackPath), "rollback record must exist")
+        local rh = fs.open(rollbackPath, "r")
+        local rollbackData = textutils.unserializeJSON(rh.readAll())
+        rh.close()
+        assert_eq(rollbackData.txId, "tx-102")
+        assert_eq(rollbackData.moduleId, "tca")
+        assert_eq(rollbackData.reason, "BOOT_RUNTIME_CRASH")
+        assert_true(rollbackData.error ~= nil and rollbackData.error:find("nil deref") ~= nil, "error message must contain crash reason")
+
+        -- Verify original main.lua restored
+        local rmh = fs.open(targetPath, "r")
+        local mainContent = rmh.readAll()
+        rmh.close()
+        assert_eq(mainContent, "_G.__OTA_TEST_STAGE = 'RESTORED_MAIN_RUNTIME'")
+
+        -- Verify backupDir deleted
+        assert_false(fs.exists(backupDir), "backupDir must be cleaned up")
+
+        -- Clean up
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+    end)
+
+    it("handles pre-commit reboot loop timeout, restores backup before run, and executes restored target cleanly without reboot", function()
+        local bootRoot = sdk.temp_path("boot_ota_timeout")
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+        fs.makeDir(bootRoot)
+        fs.makeDir(bootRoot .. "/startup")
+
+        local backupDir = bootRoot .. "/ota_backup/tx-103"
+        fs.makeDir(backupDir)
+
+        -- Backup original main.lua that executes cleanly
+        local origMainPath = backupDir .. "/main.lua"
+        local bh = fs.open(origMainPath, "w")
+        bh.write("_G.__OTA_TEST_STAGE = 'WATCHDOG_TIMEOUT_RECOVERED'")
+        bh.close()
+
+        -- Target main.lua has crashing code (would fail if executed)
+        local targetPath = bootRoot .. "/main.lua"
+        local th = fs.open(targetPath, "w")
+        th.write("error('broken target code should not execute')")
+        th.close()
+
+        -- Write /.ota_pending.json with bootAttempts = 1, maxBootAttempts = 1
+        local pending = {
+            txId = "tx-103",
+            moduleId = "tca",
+            targetVersion = "1.13.0",
+            backupDir = backupDir,
+            restoredFiles = {
+                { src = origMainPath, dest = targetPath, existed = true },
+            },
+            bootAttempts = 1,
+            maxBootAttempts = 1,
+            status = "PENDING_COMMIT",
+        }
+        local ph = fs.open(bootRoot .. "/.ota_pending.json", "w")
+        ph.write(textutils.serializeJSON(pending))
+        ph.close()
+
+        local spec = {
+            path = "/startup/00_tca.lua",
+            name = "TCA",
+            target = targetPath,
+            installDir = bootRoot,
+            otaRootPrefix = bootRoot,
+        }
+        local okInstall, errInstall = startup_generator.installHook(spec, bootRoot)
+        assert_true(okInstall, "installHook should succeed: " .. tostring(errInstall))
+
+        local hookPath = bootRoot .. "/startup/00_tca.lua"
+
+        -- Mock os.reboot
+        local origReboot = os.reboot
+        local rebootCount = 0
+        os.reboot = function()
+            rebootCount = rebootCount + 1
+        end
+
+        _G.__OTA_TEST_STAGE = nil
+        local okRun, runErr = pcall(dofile, hookPath)
+        os.reboot = origReboot
+
+        assert_true(okRun, "dofile should succeed: " .. tostring(runErr))
+        assert_eq(rebootCount, 0, "os.reboot must NOT be invoked when timeout rolls back prior to target run")
+        assert_eq(_G.__OTA_TEST_STAGE, "WATCHDOG_TIMEOUT_RECOVERED", "restored target must have executed cleanly")
+
+        -- Verify pending removed
+        assert_false(fs.exists(bootRoot .. "/.ota_pending.json"), "pending transaction must be deleted")
+
+        -- Verify rollback record written
+        local rollbackPath = bootRoot .. "/.ota_rollback.json"
+        assert_true(fs.exists(rollbackPath), "rollback record must exist")
+        local rh = fs.open(rollbackPath, "r")
+        local rollbackData = textutils.unserializeJSON(rh.readAll())
+        rh.close()
+        assert_eq(rollbackData.txId, "tx-103")
+        assert_eq(rollbackData.reason, "BOOT_WATCHDOG_TIMEOUT")
+
+        -- Verify backupDir deleted
+        assert_false(fs.exists(backupDir), "backupDir must be cleaned up")
+
+        -- Clean up
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+    end)
+
+    it("preserves normal boot behavior when /.ota_pending.json is absent", function()
+        local bootRoot = sdk.temp_path("boot_ota_normal")
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+        fs.makeDir(bootRoot)
+        fs.makeDir(bootRoot .. "/startup")
+
+        local targetPath = bootRoot .. "/main.lua"
+        local th = fs.open(targetPath, "w")
+        th.write("_G.__OTA_TEST_STAGE = 'NORMAL_BOOT_SUCCESS'")
+        th.close()
+
+        local spec = {
+            path = "/startup/00_tca.lua",
+            name = "TCA",
+            target = targetPath,
+            installDir = bootRoot,
+            otaRootPrefix = bootRoot,
+        }
+        local okInstall, errInstall = startup_generator.installHook(spec, bootRoot)
+        assert_true(okInstall, "installHook should succeed: " .. tostring(errInstall))
+
+        local hookPath = bootRoot .. "/startup/00_tca.lua"
+
+        local origReboot = os.reboot
+        local rebootCount = 0
+        os.reboot = function()
+            rebootCount = rebootCount + 1
+        end
+
+        _G.__OTA_TEST_STAGE = nil
+        local okRun, runErr = pcall(dofile, hookPath)
+        os.reboot = origReboot
+
+        assert_true(okRun, "dofile should succeed: " .. tostring(runErr))
+        assert_eq(rebootCount, 0, "os.reboot must not be invoked during normal boot")
+        assert_eq(_G.__OTA_TEST_STAGE, "NORMAL_BOOT_SUCCESS")
+        assert_false(fs.exists(bootRoot .. "/.ota_pending.json"), "no pending file should exist")
+        assert_false(fs.exists(bootRoot .. "/.ota_rollback.json"), "no rollback file should exist")
+
+        -- Clean up
+        if fs.exists(bootRoot) then fs.delete(bootRoot) end
+    end)
 end)

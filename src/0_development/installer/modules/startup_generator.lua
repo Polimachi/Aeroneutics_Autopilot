@@ -49,8 +49,8 @@ end
 
 --- Generates pure Lua 5.2 startup hook code for a module specification.
 -- Emits cc.require environment scoping, package.path search path extension,
--- and argument forwarding to loadfile without invoking printError.
--- @param spec table Hook specification ({ name, target, installDir, args })
+-- argument forwarding to loadfile, and a self-contained 2-stage OTA boot watchdog.
+-- @param spec table Hook specification ({ name, target, installDir, args, otaRootPrefix })
 -- @return string Generated Lua code
 function startup_generator.generateHookContent(spec)
     spec = spec or {}
@@ -58,6 +58,19 @@ function startup_generator.generateHookContent(spec)
     local target = spec.target or "/main.lua"
     local installDir = spec.installDir or "/"
     local args = spec.args or {}
+
+    local otaRoot = spec.otaRootPrefix or ""
+    otaRoot = otaRoot:gsub("\\", "/")
+    while #otaRoot > 1 and otaRoot:sub(-1) == "/" do
+        otaRoot = otaRoot:sub(1, -2)
+    end
+    if otaRoot == "/" then
+        otaRoot = ""
+    end
+
+    local pendingPath = otaRoot .. "/.ota_pending.json"
+    local rollbackPath = otaRoot .. "/.ota_rollback.json"
+    local versionDest = otaRoot .. "/.version.json"
 
     local serializedArgs = {}
     for _, a in ipairs(args) do
@@ -76,6 +89,9 @@ function startup_generator.generateHookContent(spec)
         "local target = " .. string.format("%q", target),
         "local installDir = " .. string.format("%q", installDir),
         "local hookArgs = " .. argsLiteral,
+        "local otaPendingPath = " .. string.format("%q", pendingPath),
+        "local otaRollbackPath = " .. string.format("%q", rollbackPath),
+        "local otaVersionDest = " .. string.format("%q", versionDest),
         "",
         "local env = setmetatable({}, { __index = _ENV or _G })",
         "local ok_cc, cc_req = pcall(require, \"cc.require\")",
@@ -118,8 +134,108 @@ function startup_generator.generateHookContent(spec)
         "    package.path = searchPath .. package.path",
         "end",
         "",
+        "-- Self-contained OTA Rollback Recovery Helper (zero require dependencies)",
+        "local function rollbackOTA(pRecord, reasonStr, errStr)",
+        "    pRecord = (type(pRecord) == \"table\") and pRecord or {}",
+        "    if type(pRecord.restoredFiles) == \"table\" then",
+        "        for _, item in ipairs(pRecord.restoredFiles) do",
+        "            if type(item) == \"table\" then",
+        "                if item.existed == true then",
+        "                    if item.dest and item.src and fs and fs.exists and fs.exists(item.src) then",
+        "                        local pDir = fs.getDir(item.dest)",
+        "                        if pDir and pDir ~= \"\" and not fs.exists(pDir) then",
+        "                            pcall(fs.makeDir, pDir)",
+        "                        end",
+        "                        if fs.exists(item.dest) then",
+        "                            pcall(fs.delete, item.dest)",
+        "                        end",
+        "                        pcall(fs.copy, item.src, item.dest)",
+        "                    end",
+        "                elseif item.existed == false then",
+        "                    if item.dest and fs and fs.exists and fs.exists(item.dest) then",
+        "                        pcall(fs.delete, item.dest)",
+        "                    end",
+        "                end",
+        "            end",
+        "        end",
+        "    end",
+        "    if pRecord.versionBackupPath and fs and fs.exists and fs.exists(pRecord.versionBackupPath) then",
+        "        if fs.exists(otaVersionDest) then",
+        "            pcall(fs.delete, otaVersionDest)",
+        "        end",
+        "        local vDir = fs.getDir(otaVersionDest)",
+        "        if vDir and vDir ~= \"\" and not fs.exists(vDir) then",
+        "            pcall(fs.makeDir, vDir)",
+        "        end",
+        "        pcall(fs.copy, pRecord.versionBackupPath, otaVersionDest)",
+        "    end",
+        "    local rollbackRecord = {",
+        "        txId = pRecord.txId,",
+        "        moduleId = pRecord.moduleId,",
+        "        targetVersion = pRecord.targetVersion,",
+        "        reason = reasonStr,",
+        "        timestamp = (os and os.epoch and os.epoch(\"utc\")) or 0,",
+        "    }",
+        "    if errStr ~= nil then",
+        "        rollbackRecord.error = tostring(errStr)",
+        "    end",
+        "    if fs and textutils and textutils.serializeJSON then",
+        "        local rwh = fs.open(otaRollbackPath, \"w\")",
+        "        if rwh then",
+        "            rwh.write(textutils.serializeJSON(rollbackRecord))",
+        "            rwh.close()",
+        "        end",
+        "    end",
+        "    if pRecord.backupDir and fs and fs.exists and fs.exists(pRecord.backupDir) then",
+        "        pcall(fs.delete, pRecord.backupDir)",
+        "    end",
+        "    if fs and fs.exists and fs.exists(otaPendingPath) then",
+        "        pcall(fs.delete, otaPendingPath)",
+        "    end",
+        "end",
+        "",
+        "-- 2-Stage OTA Boot Watchdog Pre-Check",
+        "local pending = nil",
+        "if fs and fs.exists and fs.exists(otaPendingPath) then",
+        "    local rh = fs.open(otaPendingPath, \"r\")",
+        "    if rh then",
+        "        local raw = rh.readAll()",
+        "        rh.close()",
+        "        if raw and textutils and textutils.unserializeJSON then",
+        "            local okParse, parsed = pcall(textutils.unserializeJSON, raw)",
+        "            if okParse and type(parsed) == \"table\" then",
+        "                pending = parsed",
+        "            end",
+        "        end",
+        "    end",
+        "end",
+        "",
+        "if pending then",
+        "    local maxBootAttempts = tonumber(pending.maxBootAttempts) or 1",
+        "    local bootAttempts = tonumber(pending.bootAttempts) or 0",
+        "    if bootAttempts >= maxBootAttempts then",
+        "        rollbackOTA(pending, \"BOOT_WATCHDOG_TIMEOUT\", nil)",
+        "    else",
+        "        pending.bootAttempts = bootAttempts + 1",
+        "        if fs and textutils and textutils.serializeJSON then",
+        "            local wh = fs.open(otaPendingPath, \"w\")",
+        "            if wh then",
+        "                wh.write(textutils.serializeJSON(pending))",
+        "                wh.close()",
+        "            end",
+        "        end",
+        "    end",
+        "end",
+        "",
         "local fn, loadErr = loadfile(target, nil, env)",
         "if not fn then",
+        "    if fs and fs.exists and fs.exists(otaPendingPath) then",
+        "        rollbackOTA(pending, \"BOOT_LOAD_ERROR\", loadErr)",
+        "        if not _G.__OTA_DISABLE_REBOOT and os and os.reboot then",
+        "            os.reboot()",
+        "        end",
+        "        return",
+        "    end",
         "    print(\"[\" .. " .. string.format("%q", name) .. " .. \"] Failed to load: \" .. tostring(loadErr))",
         "    return",
         "end",
@@ -127,6 +243,13 @@ function startup_generator.generateHookContent(spec)
         "local unpackFn = table.unpack or unpack",
         "local okRun, runErr = pcall(fn, unpackFn(hookArgs))",
         "if not okRun then",
+        "    if fs and fs.exists and fs.exists(otaPendingPath) then",
+        "        rollbackOTA(pending, \"BOOT_RUNTIME_CRASH\", runErr)",
+        "        if not _G.__OTA_DISABLE_REBOOT and os and os.reboot then",
+        "            os.reboot()",
+        "        end",
+        "        return",
+        "    end",
         "    print(\"[\" .. " .. string.format("%q", name) .. " .. \"] Runtime error: \" .. tostring(runErr))",
         "end",
     }
@@ -135,7 +258,7 @@ function startup_generator.generateHookContent(spec)
 end
 
 --- Installs a multi-boot startup hook atomically into <targetRoot>/startup/<hookName>.
--- @param spec table Hook specification ({ path, name, target, installDir, args })
+-- @param spec table Hook specification ({ path, name, target, installDir, args, otaRootPrefix })
 -- @param targetRoot string|nil Target root directory (defaults to "/")
 -- @param fsApi table|nil Optional injected fs API (defaults to _G.fs)
 -- @return boolean success
@@ -159,6 +282,7 @@ function startup_generator.installHook(spec, targetRoot, fsApi)
         installDir = startup_generator.resolveTargetPath(root, spec.installDir or "/"),
         args = spec.args,
         enabled = spec.enabled,
+        otaRootPrefix = spec.otaRootPrefix or (root ~= "/" and root or nil),
     }
 
     local content = startup_generator.generateHookContent(effectiveSpec)
