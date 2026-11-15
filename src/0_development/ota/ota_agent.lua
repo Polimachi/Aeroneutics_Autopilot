@@ -431,7 +431,9 @@ local function send_boot_status(self, txId, moduleId, statusStr, versionStr, rol
     if rollbackReason ~= nil then
         payload.rollbackReason = tostring(rollbackReason)
     end
-    transmit_reply(self, self.primaryCmdCh, "MSG_OTA_BOOT_STATUS", payload)
+    for _, pair in ipairs(self.bayPairs) do
+        transmit_reply(self, pair.cmdCh, "MSG_OTA_BOOT_STATUS", payload)
+    end
 end
 
 -- =========================================================================
@@ -932,9 +934,12 @@ local function handle_abort(self, cmdCh, p)
         cleanup_active_tx(self)
         return true, "ABORTED"
     end
-    local orphanStaging = resolve_path(self.rootDir, "/ota_staging/" .. tostring(p.txId or ""))
-    if orphanStaging then
-        safe_delete(self.fsApi, orphanStaging)
+    if type(p.txId) == "string" and p.txId ~= "" then
+        local stagingRoot = resolve_path(self.rootDir, "/ota_staging")
+        local orphanStaging = resolve_path(self.rootDir, "/ota_staging/" .. p.txId)
+        if orphanStaging and orphanStaging ~= stagingRoot then
+            safe_delete(self.fsApi, orphanStaging)
+        end
     end
     return true, "ABORTED"
 end

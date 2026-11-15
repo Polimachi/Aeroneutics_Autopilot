@@ -622,11 +622,11 @@ end
 
 --- Broadcasts MSG_OTA_DISCOVER_REQ on the target bay and collects MSG_OTA_DISCOVER_ACK responses.
 -- @param opts table|nil { targetModuleId, targetDomainId, bayId, windowSec }
--- @return table discoveredNodes
+-- @return table discoveredNodes, string|nil waitErr
 function ServerMT:discover(opts)
     opts = opts or {}
     if not self.modem or type(self.modem.transmit) ~= "function" then
-        return {}
+        return {}, "NO_MODEM"
     end
 
     local bayId, cmdCh, ackCh = self:_ensure_bay_channels(opts.bayId)
@@ -638,7 +638,7 @@ function ServerMT:discover(opts)
     local byKey = {}
     local windowSec = tonumber(opts.windowSec) or self.ackTimeoutSec
 
-    self:_wait_for_packet(ackCh, windowSec, function(pkt)
+    local _, waitErr = self:_wait_for_packet(ackCh, windowSec, function(pkt)
         if pkt.type ~= "MSG_OTA_DISCOVER_ACK" then
             return false
         end
@@ -680,7 +680,7 @@ function ServerMT:discover(opts)
         end
         return a.moduleId < b.moduleId
     end)
-    return nodes
+    return nodes, waitErr
 end
 
 function ServerMT:_abort_tx(cmdCh, ackCh, txId, targetDomainId, targetModuleId, reason)
@@ -692,7 +692,7 @@ function ServerMT:_abort_tx(cmdCh, ackCh, txId, targetDomainId, targetModuleId, 
     })
 end
 
-function ServerMT:_send_with_retry(cmdCh, ackCh, txId, targetDomainId, targetModuleId, msgType, payload, matchFn, maxRetries, ackTimeoutSec, progressInfo)
+function ServerMT:_send_with_retry(cmdCh, ackCh, txId, targetDomainId, targetModuleId, msgType, payload, matchFn, maxRetries, ackTimeoutSec, progressInfo, expectedNext)
     local lastReason = "TIMEOUT"
     for attempt = 0, maxRetries do
         self:_transmit(cmdCh, ackCh, msgType, payload)
@@ -716,9 +716,11 @@ function ServerMT:_send_with_retry(cmdCh, ackCh, txId, targetDomainId, targetMod
             local reason = tostring(p.reason or "NACK")
             lastReason = reason
             if msgType == "MSG_OTA_CHUNK" and reason == "SEQ_OUT_OF_ORDER"
-                and attempt > 0 and type(p.expectedIndex) == "number"
-                and p.expectedIndex == payload.chunkIndex + 1 then
-                return true, replyPkt, nil
+                and attempt > 0 and type(p.expectedIndex) == "number" then
+                local targetNext = expectedNext or (payload.chunkIndex + 1)
+                if p.expectedIndex == targetNext then
+                    return true, replyPkt, nil
+                end
             end
             if FATAL_NACK_REASONS[reason] or msgType ~= "MSG_OTA_CHUNK" then
                 return false, nil, reason
@@ -830,7 +832,9 @@ function ServerMT:deploy(targetSpec, package, opts)
     -- 2. MSG_OTA_CHUNK loop
     local sentChunks = 0
     for fileIdx, chunks in ipairs(fileChunks) do
+        local chunkCount = #chunks
         for _, chunk in ipairs(chunks) do
+            local expectedNext = (chunk.chunkIndex == chunkCount) and 1 or (chunk.chunkIndex + 1)
             local okChunk, _, chunkErr = self:_send_with_retry(
                 cmdCh, ackCh, txId, targetDomainId, targetModuleId,
                 "MSG_OTA_CHUNK",
@@ -853,7 +857,8 @@ function ServerMT:deploy(targetSpec, package, opts)
                 end,
                 maxRetries,
                 ackTimeoutSec,
-                { onProgress = onProgress, sentChunks = sentChunks, totalChunks = totalChunks }
+                { onProgress = onProgress, sentChunks = sentChunks, totalChunks = totalChunks },
+                expectedNext
             )
             if not okChunk then
                 self:_abort_tx(cmdCh, ackCh, txId, targetDomainId, targetModuleId, chunkErr)

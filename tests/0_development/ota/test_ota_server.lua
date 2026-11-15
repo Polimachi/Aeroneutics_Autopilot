@@ -42,6 +42,7 @@ local function make_virtual_bus(opts)
         events = {},
         serverTxLog = {},
         txHook = opts.txHook,
+        ackHook = opts.ackHook,
         clockMs = 1763210000000,
     }
 
@@ -76,6 +77,12 @@ local function make_virtual_bus(opts)
         local origNodeTransmit = nodeModem.transmit
         nodeModem.transmit = function(txCh, replyCh, pkt)
             origNodeTransmit(txCh, replyCh, pkt)
+            if type(bus.ackHook) == "function" then
+                local allow = bus.ackHook(txCh, replyCh, pkt)
+                if allow == false then
+                    return
+                end
+            end
             if serverModem.isOpen(txCh) then
                 bus.events[#bus.events + 1] = { "modem_message", "top", txCh, replyCh, pkt, 0 }
             end
@@ -574,6 +581,61 @@ describe("ota_server chunked deploy, retry, safety abort, and corruption abort",
         node.cleanup()
         fs.delete(srvRoot)
     end)
+
+    it("recovers when final-chunk ACK of file 1 (and last file) in a multi-file deploy is dropped once", function()
+        local droppedF1FinalAck = false
+        local droppedF2FinalAck = false
+        local bus = make_virtual_bus({
+            ackHook = function(_txCh, _replyCh, pkt)
+                if pkt.type == "MSG_OTA_ACK" and pkt.payload.phase == "CHUNK" then
+                    if pkt.payload.fileIndex == 1 and pkt.payload.chunkIndex == 2 and not droppedF1FinalAck then
+                        droppedF1FinalAck = true
+                        return false
+                    end
+                    if pkt.payload.fileIndex == 2 and pkt.payload.chunkIndex == 2 and not droppedF2FinalAck then
+                        droppedF2FinalAck = true
+                        return false
+                    end
+                end
+                return true
+            end,
+        })
+        local srvRoot = make_temp_dir("final_chunk_ack_drop")
+        local node = bus.add_node("tca_final_ack_drop", {
+            moduleId = "tca",
+            domainId = "UAV-01",
+            bayId = 1,
+            status = { controlState = "DISARMED", isAirborne = false },
+        })
+        write_text(node.rootDir .. "/main.lua", "print('old')")
+
+        local srv = make_server(bus, srvRoot, { bayId = 1, chunkSize = 16, maxRetries = 3 })
+        local file1Content = "1234567890123456_FILE1_END"
+        local file2Content = "ABCDEFGHIJKLMNOP_FILE2_END"
+        local pkg = {
+            moduleId = "tca",
+            version = "1.9.3",
+            files = {
+                { path = "/main.lua", content = file1Content },
+                { path = "/modules/helper.lua", content = file2Content },
+            },
+        }
+
+        local ok, res = srv:deploy(
+            { domainId = "UAV-01", moduleId = "tca", bayId = 1 },
+            pkg,
+            { chunkSize = 16 }
+        )
+        assert_true(ok, "multi-file deploy should recover from final-chunk ACK drop: " .. tostring(res and res.reason))
+        assert_true(droppedF1FinalAck)
+        assert_true(droppedF2FinalAck)
+        assert_eq(res.phase, "APPLIED")
+        assert_eq(read_text(node.rootDir .. "/main.lua"), file1Content)
+        assert_eq(read_text(node.rootDir .. "/modules/helper.lua"), file2Content)
+
+        node.cleanup()
+        fs.delete(srvRoot)
+    end)
 end)
 
 describe("ota_ui 51x19 TUI rendering", function()
@@ -659,6 +721,36 @@ describe("ota main CLI and headless shutdown", function()
         assert_false(state.running)
         assert_false(bus.serverModem.isOpen(106))
 
+        -- discover() propagates ABORTED_BY_SIGNAL and interactive TUI exits cleanly
+        local srvRootAbort = make_temp_dir("discover_abort")
+        local abortModem = mock.modem({ wireless = true })
+        local abortSrv = make_server(nil, srvRootAbort, { modem = abortModem })
+        abortSrv.pollEventFn = function()
+            return "terminate"
+        end
+        local abortedNodes, abortErr = abortSrv:discover({ bayId = 1, windowSec = 0.2 })
+        assert_eq(#abortedNodes, 0)
+        assert_eq(abortErr, "ABORTED_BY_SIGNAL")
+
+        local tuiStep = 0
+        local okTuiAbort, tuiState = mainMod.run({}, {
+            modem = abortModem,
+            fs = fs,
+            term = mock.term(51, 19),
+            rootDir = srvRootAbort,
+            pollEventFn = function()
+                tuiStep = tuiStep + 1
+                if tuiStep == 1 then
+                    return "char", "d"
+                end
+                return "terminate"
+            end,
+        })
+        assert_true(okTuiAbort)
+        assert_false(tuiState.running)
+        assert_eq(tuiState.statusMsg, "DISCOVER ABORTED")
+
+        fs.delete(srvRootAbort)
         bay2Node.cleanup()
         fs.delete(srvRoot)
     end)

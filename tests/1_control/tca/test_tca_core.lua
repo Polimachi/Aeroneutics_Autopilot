@@ -649,4 +649,25 @@ describe("tca mutation hardening invariants", function()
         -- Legacy targetThrusterId without targetGroup does not override single-key matching
         assert_true(discovery_handler.is_target_matched({ targetThrusterId = "OTHER_GROUP" }, "THR_MAIN_L"))
     end)
+
+    it("refreshes inst.otaAgent.domainId in tca_daemon.resume when newCfg provides aircraftDomainId", function()
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 }
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        assert_not_nil(daemon.otaAgent)
+        assert_eq(daemon.otaAgent.domainId, "AIRCRAFT_01")
+
+        tca_daemon.resume(daemon, {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_09",
+            baseChannel = 10320,
+            channels = { thrustActuation = 10330 }
+        })
+        assert_eq(daemon.otaAgent.domainId, "AIRCRAFT_09")
+    end)
 end)

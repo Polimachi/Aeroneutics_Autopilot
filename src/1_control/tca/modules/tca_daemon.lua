@@ -182,6 +182,9 @@ function tca_daemon.resume(inst, newCfg)
         inst.cfg = newCfg
         local actChan = newCfg.channels and newCfg.channels.thrustActuation or (newCfg.baseChannel + 10)
         inst.reporter = status_reporter.init(newCfg.groupId, inst.modem, actChan, newCfg.aircraftDomainId)
+        if inst.otaAgent and type(newCfg.aircraftDomainId) == "string" and newCfg.aircraftDomainId ~= "" then
+            inst.otaAgent.domainId = newCfg.aircraftDomainId
+        end
     end
     inst.sentinel:start_timer((inst.cfg.watchdogTimeoutMs or 300) / 1000.0)
     inst:push_log("[RESUME] Config reloaded")

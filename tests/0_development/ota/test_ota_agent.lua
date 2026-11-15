@@ -152,6 +152,24 @@ describe("ota_agent hangar bay channel allocation and routing", function()
         assert_eq(ctx.modem._transmitted[2].tx, 106)
         assert_eq(ctx.modem._transmitted[2].rx, 105)
 
+        -- Post-reboot BOOT_STATUS broadcasts across all configured bays (Bay 1 + Bay 2)
+        write_text(ctx.rootDir .. "/.ota_pending.json", textutils.serializeJSON({
+            txId = "tx-multibay-1",
+            moduleId = "vas",
+            targetVersion = "1.22.0",
+            backupDir = "",
+        }))
+        local reported, rec = ctx.agent:confirm_boot_commit()
+        assert_true(reported)
+        assert_eq(rec.status, "COMMITTED")
+        assert_eq(#ctx.modem._transmitted, 4)
+        local bootChannels = {
+            [ctx.modem._transmitted[3].tx] = ctx.modem._transmitted[3].pkt.type,
+            [ctx.modem._transmitted[4].tx] = ctx.modem._transmitted[4].pkt.type,
+        }
+        assert_eq(bootChannels[106], "MSG_OTA_BOOT_STATUS")
+        assert_eq(bootChannels[116], "MSG_OTA_BOOT_STATUS")
+
         ctx.cleanup()
     end)
 end)
@@ -465,6 +483,13 @@ describe("ota_agent nominal chunked staging, atomic apply, and abort paths", fun
             txId = "tx-bad-1", targetDomainId = "AIRCRAFT_01", targetModuleId = "vas", reason = "RETRY_EXHAUSTED",
         })))
         assert_false(fs.exists(ctx.rootDir .. "/ota_staging/tx-bad-1"))
+
+        -- Abort with empty txId must not delete parent /ota_staging directory
+        write_text(ctx.rootDir .. "/ota_staging/tx-sibling/file_1.part", "keep_me")
+        assert_true(ctx.agent:handle_packet(105, 106, make_env_envelope("HANGAR", 4, "MSG_OTA_ABORT", {
+            txId = "", targetDomainId = "AIRCRAFT_01", targetModuleId = "vas", reason = "MALFORMED",
+        })))
+        assert_true(fs.exists(ctx.rootDir .. "/ota_staging/tx-sibling/file_1.part"))
 
         -- Second transaction: valid chunk, wrong totalCrc32 at COMMIT
         assert_true(ctx.agent:handle_packet(105, 106, make_env_envelope("HANGAR", 5, "MSG_OTA_BEGIN", {

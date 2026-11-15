@@ -29,7 +29,7 @@
 - **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·134 코드/설정 린트, 0 errors).
 - **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (12 활성 서브시스템 0 violations, 4 예외).
 - **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (12개 활성 `main.lua` 12/12 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (14개 타겟 564/564 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (14개 타겟 566/566 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 18/18 PASS, 517패킷 계약 0 violations).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (132/132 PASS).

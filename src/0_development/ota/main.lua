@@ -92,11 +92,17 @@ end
 local function run_discover_action(appState)
     appState.statusMsg = "DISCOVERING BAY " .. tostring(appState.server.bayId) .. "..."
     render_if_available(appState)
-    appState.nodes = appState.server:discover({ bayId = appState.server.bayId })
+    local nodes, waitErr = appState.server:discover({ bayId = appState.server.bayId })
+    appState.nodes = nodes
     if #appState.nodes > 0 then
         appState.selectedIdx = math.max(1, math.min(#appState.nodes, appState.selectedIdx))
     else
         appState.selectedIdx = 1
+    end
+    if waitErr == "ABORTED_BY_SIGNAL" then
+        appState.statusMsg = "DISCOVER ABORTED"
+        appState.running = false
+        return
     end
     appState.statusMsg = "FOUND " .. tostring(#appState.nodes) .. " NODE(S)"
 end
@@ -162,7 +168,11 @@ end
 local function run_cli(server, positional, flags)
     local cmd = positional[1]
     if cmd == "discover" then
-        local nodes = server:discover({ bayId = flags.bayId or server.bayId })
+        local nodes, waitErr = server:discover({ bayId = flags.bayId or server.bayId })
+        if waitErr == "ABORTED_BY_SIGNAL" then
+            close_server_channels(server)
+            return false, { reason = "ABORTED_BY_SIGNAL", nodes = nodes }
+        end
         if #nodes == 0 then
             print("No OTA nodes discovered on bay " .. tostring(flags.bayId or server.bayId))
         else
