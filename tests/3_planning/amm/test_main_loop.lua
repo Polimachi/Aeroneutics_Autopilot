@@ -719,10 +719,15 @@ describe("AMM Main Event Pump and Command Processing", function()
         local main_mod = require("main")
         local left_m = mock.modem({ wireless = true })
         local right_m = mock.modem({ wireless = true })
+        local test_lease_wiring = "config/test_lease_main_wiring.json"
+        if fs.exists(test_lease_wiring) then fs.delete(test_lease_wiring) end
         local app = main_mod.create_app({
             domainId = "AIRCRAFT_01",
             baseChannel = 10000,
             headless = true,
+            clock_ms = 1000,
+            leasePath = test_lease_wiring,
+            safety = { probeJitterMaxMs = 0, probeRetryCount = 2, channelProbeWaitMs = 200 },
             system = { primaryModemSide = "left", infraModemSide = "right" },
         }, { left = left_m, right = right_m })
         assert_eq(app.net.onboardModem, left_m)
@@ -738,13 +743,16 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
         assert_true(saw_boot)
 
-        -- Assign candidate 10040 -> step_20hz_tick emits MSG_CHANNEL_PROBE on 10040 -> wait 200ms -> ACQUIRED
+        -- Assign candidate 10040 -> 2 rounds of 200ms probing -> ACQUIRED
+        app.clock_ms = 1050
         main_mod.process_event(app, "modem_message", "right", 50000, 50000, {
-            ver = "1.9.5", type = "MSG_BLOCK_ASSIGN", payload = { baseChannel = 10040 }
+            ver = "1.9.5", type = "MSG_BLOCK_ASSIGN", payload = { baseChannel = 10040, status = "ASSIGNED" }
         }, 1050)
         main_mod.step_20hz_tick(app, 0.05, 1100)
         assert_eq(app.sentinel.status, "PROBING")
-        main_mod.step_20hz_tick(app, 0.05, 1350)
+        main_mod.step_20hz_tick(app, 0.05, 1300)
+        assert_eq(app.sentinel.status, "PROBING")
+        main_mod.step_20hz_tick(app, 0.05, 1550)
         assert_eq(app.sentinel.status, "ACQUIRED")
 
         -- Commit rebind to 10080 -> config, nav, engine, net all update
@@ -752,6 +760,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         app.net:apply_rebind(10000)
         local channel_sentinel = require("channel_sentinel")
         channel_sentinel.initiate_rebind(app.sentinel, 10080, 1400)
+        app.clock_ms = 1450
         main_mod.process_event(app, "modem_message", "left", 10004, 10004, {
             ver = "1.9.5", type = "MSG_CHANNEL_REBIND_ACK",
             payload = { transactionId = "REBIND-TX-10000-10080", status = "READY" },
@@ -762,7 +771,10 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(app.nav.baseChannel, 10080)
         assert_eq(app.engine.baseChannel, 10080)
 
-        -- 2. [I-6] MFD downlink fields (tick 4)
+        -- 2. [I-6] MFD downlink fields (next 5Hz tick: tickCount % 4 == 0)
+        for i = 1, 3 do
+            main_mod.step_20hz_tick(app, 0.05, 1500 + i * 50)
+        end
         local mfd_pkt = nil
         for _, tx in ipairs(left_m._transmitted) do
             if tx.tx == 10083 and tx.pkt and tx.pkt.type == "MSG_MFD_STATE" then
@@ -777,12 +789,14 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_not_nil(mfd_pkt.payload.angularRates)
 
         -- 3. [I-5] ATC clearance opens GAC/Pad channels & watchdog FAILSAFE_RTH after 10 denials
+        app.clock_ms = 1600
         main_mod.process_event(app, "modem_message", "right", 50001, 50001, {
             ver = "1.9.5", type = "MSG_ATC_APPROACH_CLEARANCE",
             payload = { status = "CLEARED", assignedFacilityId = "PAD_01", gacChannel = 51000, assignedGuidanceChannel = 51010, padMobility = "DYNAMIC" },
         }, 1600)
         assert_true(app.net.openInfraChannels[51000] == true)
         assert_true(app.net.openInfraChannels[51010] == true)
+        app.clock_ms = 1650
         main_mod.process_event(app, "modem_message", "right", 51010, 51010, {
             ver = "1.9.5", type = "MSG_FACILITY_DYNAMIC_GUIDE",
             payload = { facilityId = "PAD_01", touchdownPoint = { x = 10, y = 64, z = 20 }, deckStatus = "STABLE" },
@@ -790,6 +804,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(app.fac.dynamicGuide.facilityId, "PAD_01")
         app.fac.touchdownAborted = true
         assert_true(app.fac.touchdownAborted)
+        app.clock_ms = 1700
         main_mod.process_event(app, "modem_message", "right", 51000, 51000, {
             ver = "1.9.5", type = "MSG_GAC_ABORT_CLEAR",
             payload = { reason = "WAVEOFF" },
@@ -803,6 +818,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(app.engine:count(), 1)
         assert_eq(app.engine.checkpoints[1].params.targetAlt, 210)
 
+        app.clock_ms = 1770
         app.input:set_mode("CLI")
         main_mod.process_event(app, "key", keys.leftCtrl or 29)
         main_mod.process_event(app, "char", "x")
@@ -813,6 +829,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(estop_tx.pkt.type, "MSG_EMERGENCY_OVERRIDE")
 
         -- 5. ATC denial triggers retry transmission MSG_ATC_APPROACH_REQ without crashing, and CH 50004 dispatch is ignored by update_beacons
+        app.clock_ms = 1780
         main_mod.process_event(app, "modem_message", "right", 50004, 50004, {
             ver = "1.9.5", type = "MSG_GAC_DISPATCH",
             payload = { facilityId = "PAD_IGNORED", pos = { x = 999, y = 64, z = 999 } },
@@ -834,5 +851,141 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
         assert_not_nil(retry_pkt)
         assert_eq(retry_pkt.payload.targetFacilityId, "PAD_01")
+        if fs.exists(test_lease_wiring) then fs.delete(test_lease_wiring) end
+    end)
+
+    it("drives Base+0 boot probe responder, GCS reassign loop, and LOCKED_CONFLICT arming lockout in main loop", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease_path = "config/test_lease_main_sentinel.json"
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 1000,
+            leasePath = lease_path,
+            system = { hardwareUuid = "AMM-MAIN-01", primaryModemSide = "top", infraModemSide = "back" },
+            safety = { probeJitterMaxMs = 0, probeRetryCount = 2, channelProbeWaitMs = 200, maxReassignAttempts = 3 },
+        }, { top = top_m, back = back_m })
+
+        -- 1. Self-UUID probe on Base+0 must NOT emit CONFLICT_DETECTED ACK
+        app.sentinel.status = "DISARMED"
+        app.clock_ms = 1000
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_CHANNEL_PROBE", time = 1000,
+            payload = { hardwareUuid = "AMM-MAIN-01", candidateBase = 10000, bandwidth = 40 },
+        }, 1000)
+        assert_eq(#top_m._transmitted, 0)
+
+        -- 2. Foreign probe on Base+0 during DISARMED immediately emits MSG_CHANNEL_PROBE_ACK
+        app.clock_ms = 1010
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 2, type = "MSG_CHANNEL_PROBE", time = 1010,
+            payload = { hardwareUuid = "AMM-OTHER-02", candidateBase = 10000, bandwidth = 40 },
+        }, 1010)
+        assert_eq(#top_m._transmitted, 1)
+        assert_eq(top_m._transmitted[1].tx, 10000)
+        assert_eq(top_m._transmitted[1].pkt.type, "MSG_CHANNEL_PROBE_ACK")
+        assert_eq(top_m._transmitted[1].pkt.payload.status, "CONFLICT_DETECTED")
+        assert_eq(top_m._transmitted[1].pkt.payload.responderUuid, "AMM-MAIN-01")
+
+        -- 3. Probe conflict during PROBING emits MSG_BLOCK_REQUEST(conflictBase=10040) via step_20hz_tick
+        app.sentinel.status = "INIT"
+        main_mod.step_20hz_tick(app, 0.05, 1100)
+        app.clock_ms = 1120
+        main_mod.process_event(app, "modem_message", "back", 50000, 50000, {
+            ver = "1.9.5", domainId = "GCS_01", seq = 1, type = "MSG_BLOCK_ASSIGN", time = 1120,
+            payload = { baseChannel = 10040, status = "ASSIGNED" },
+        }, 1120)
+        main_mod.step_20hz_tick(app, 0.05, 1150) -- emits Round 1 probe on 10040
+        assert_eq(app.sentinel.status, "PROBING")
+        app.clock_ms = 1170
+        main_mod.process_event(app, "modem_message", "top", 10040, 10040, {
+            ver = "1.9.5", domainId = "AIRCRAFT_99", seq = 9, type = "MSG_CHANNEL_PROBE_ACK", time = 1170,
+            payload = { conflict = true, status = "CONFLICT_DETECTED", occupiedBase = 10040, existingDomain = "AIRCRAFT_99", responderUuid = "OTHER-99" },
+        }, 1170)
+        assert_eq(app.sentinel.status, "REASSIGN_REQUEST")
+        main_mod.step_20hz_tick(app, 0.05, 1200)
+        local reassign_req = nil
+        for _, tx in ipairs(back_m._transmitted) do
+            if tx.tx == 50000 and tx.pkt and tx.pkt.type == "MSG_BLOCK_REQUEST" and tx.pkt.payload.conflictBase == 10040 then
+                reassign_req = tx.pkt
+            end
+        end
+        assert_not_nil(reassign_req)
+        assert_eq(app.sentinel.status, "GCS_WAIT")
+
+        -- 4. When sentinel is locked (LOCKED_NO_GCS), step_20hz_tick forces arm=false, flightActive=false
+        app.sentinel.status = "LOCKED_NO_GCS"
+        app.sentinel.locked = true
+        app.arbiter:handle_gcs_packet({
+            payload = { authority = "GCS_OVERRIDE", flightMode = "HOVER_HOLD" },
+        }, 1250)
+        local sp_locked = main_mod.step_20hz_tick(app, 0.05, 1300)
+        assert_false(sp_locked.arm)
+        assert_false(sp_locked.flightActive)
+
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+    end)
+
+    it("passes own domainId in O(1), blocks foreign Base+0..39 intrusion packets, and escalates to HOVER_HOLD at 30000ms", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease_path = "config/test_lease_main_intrusion.json"
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 1000,
+            leasePath = lease_path,
+            system = { hardwareUuid = "AMM-MAIN-INT", primaryModemSide = "top", infraModemSide = "back" },
+            safety = { intrusionAlertWindowMs = 30000 },
+        }, { top = top_m, back = back_m })
+        app.sentinel.status = "ACQUIRED"
+
+        -- 1. Own domainId on Base+2 and infra GPS response on Base+5 pass with 0 intrusions
+        app.clock_ms = 1000
+        main_mod.process_event(app, "modem_message", "top", 10002, 10002, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_FLIGHT_TELEMETRY", time = 1000,
+            payload = { fuel = 0.9, controlState = "NORMAL", activeSource = "FCP", dynamics = { altitudeY = 100, velocity = { vx = 0, vy = 0, vz = 0 } } },
+        }, 1000)
+        app.nav.gpsReqSeq = 1
+        main_mod.process_event(app, "modem_message", "back", 10005, 10005, {
+            ver = "1.9.5", domainId = "GPS_BASE_NET", seq = 1, type = "MSG_GPS_RESPONSE", time = 1000,
+            payload = { targetClient = "AIRCRAFT_01", status = "FIX_OK", clientSeq = 1, position = { x = 10, y = 100, z = 20 }, hdop = 1.0 },
+        }, 1000)
+        assert_eq(app.sentinel.intrusionCount, 0)
+
+        -- 2. Foreign domainId across Base+8, Base+9, Base+10, Base+20, Base+30, Base+39 blocks dispatch & counts
+        local rogue_channels = { 10008, 10009, 10010, 10020, 10030, 10039 }
+        for idx, ch in ipairs(rogue_channels) do
+            app.clock_ms = 1000 + idx * 1000
+            main_mod.process_event(app, "modem_message", "top", ch, ch, {
+                ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = idx, type = "MSG_OPERATOR_CMD", time = 1000 + idx * 1000,
+                payload = { authority = "GCS_OVERRIDE", command = "LAND" },
+            }, 1000 + idx * 1000)
+        end
+        assert_eq(app.sentinel.intrusionCount, 6)
+        assert_eq(app.arbiter.authority, "PILOT_PRIMARY") -- Blocked, never reached arbiter
+
+        -- 3. Continuous intrusion reaching >= 30,000ms triggers HOVER_HOLD failsafe
+        app.clock_ms = 32050
+        main_mod.process_event(app, "modem_message", "top", 10039, 10039, {
+            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 99, type = "MSG_TRAJECTORY_SETPOINT", time = 32050,
+            payload = {},
+        }, 32050)
+        assert_true(app.sentinel.intrusionFailsafeTriggered)
+        assert_not_nil(app.arbiter.emergencyGoal)
+        assert_eq(app.arbiter.emergencyGoal.flightMode, "HOVER_HOLD")
+        local sp = main_mod.step_20hz_tick(app, 0.05, 32100)
+        assert_eq(sp.flightMode, "HOVER_HOLD")
+
+        if fs.exists(lease_path) then fs.delete(lease_path) end
     end)
 end)

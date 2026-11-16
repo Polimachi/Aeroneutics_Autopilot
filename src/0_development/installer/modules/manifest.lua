@@ -583,6 +583,12 @@ manifest.MODULES = {
                 arrivalRadius = 15.0,
                 safety = {
                     acroRecoveryHoldMs = 300,
+                    channelProbeWaitMs = 200,
+                    probeJitterMaxMs = 100,
+                    probeRetryCount = 2,
+                    maxReassignAttempts = 3,
+                    gcsBootstrapTimeoutMs = 2000,
+                    intrusionAlertWindowMs = 30000,
                 },
             }
         },

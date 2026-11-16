@@ -43,10 +43,18 @@ function network_manager:set_arbiter(arbiter)
     self.arbiter = arbiter
 end
 
+local function build_block_channels(base)
+    local list = {}
+    for off = 0, 39 do
+        list[off + 1] = base + off
+    end
+    return list
+end
+
 function network_manager:bind_modems(top_modem, back_modem, base_ch)
     if base_ch then self.baseChannel = base_ch end
     local base = self.baseChannel
-    local on_chs = { base + 0, base + 1, base + 2, base + 3, base + 4 }
+    local on_chs = build_block_channels(base)
     local inf_chs = { base + 5, 50000, 50001, 50003, 50004, 60002 }
 
     if top_modem and back_modem and top_modem ~= back_modem then
@@ -91,8 +99,8 @@ function network_manager:apply_rebind(new_base)
     local old_base = self.baseChannel
     local on_m = self.onboardModem or self.modem
     local inf_m = self.infraModem or self.modem
-    close_ch_list(on_m, { old_base + 0, old_base + 1, old_base + 2, old_base + 3, old_base + 4 })
-    open_ch_list(on_m, { new_base + 0, new_base + 1, new_base + 2, new_base + 3, new_base + 4 })
+    close_ch_list(on_m, build_block_channels(old_base))
+    open_ch_list(on_m, build_block_channels(new_base))
     close_ch_list(inf_m, { old_base + 5 })
     open_ch_list(inf_m, { new_base + 5 })
 
@@ -103,8 +111,6 @@ function network_manager:apply_rebind(new_base)
         end
     end
     for _, off in ipairs(offsets) do
-        close_ch_list(on_m, { old_base + off })
-        open_ch_list(on_m, { new_base + off })
         self.openPayloadChannels[old_base + off] = nil
         self.openPayloadChannels[new_base + off] = true
     end
@@ -330,7 +336,7 @@ function network_manager:send_payload_req(channel_or_offset, checkpointId, comma
     local ok, tx_err = pcall(function()
         m.transmit(ch, ch, pkt)
     end)
-    if not was_open and not options.keepOpen and self.openPayloadChannels[ch] then
+    if not was_open and not options.keepOpen then
         self:close_payload_channel(ch)
     end
     if not ok then return false, tx_err end

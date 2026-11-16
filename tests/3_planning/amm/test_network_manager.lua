@@ -65,19 +65,17 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(transmitted[1].payload.payload.source, "AMM")
     end)
 
-    it("binds dual modems opening onboard Base+0,1,2,3,4 and infra Base+5,50000,50001,50003,50004,60002", function()
+    it("binds dual modems opening onboard Base+0..39 (40 channels <= 128) and infra Base+5,50000,50001,50003,50004,60002", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local top_m = mock.modem({ wireless = true })
         local back_m = mock.modem({ wireless = true })
 
         net:bind_modems(top_m, back_m, 10000)
         assert_false(net.modemFallbackActive)
-        assert_true(top_m.isOpen(10000))
-        assert_true(top_m.isOpen(10001))
-        assert_true(top_m.isOpen(10002))
-        assert_true(top_m.isOpen(10003))
-        assert_true(top_m.isOpen(10004))
-        assert_false(top_m.isOpen(10005))
+        for offset = 0, 39 do
+            assert_true(top_m.isOpen(10000 + offset), "Expected onboard channel open: " .. tostring(10000 + offset))
+        end
+        assert_false(top_m.isOpen(10040))
         assert_false(top_m.isOpen(50000))
 
         assert_true(back_m.isOpen(10005))
@@ -87,20 +85,36 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_true(back_m.isOpen(50004))
         assert_true(back_m.isOpen(60002))
         assert_false(back_m.isOpen(10000))
+
+        local open_count = 0
+        for ch = 9990, 10050 do
+            if top_m.isOpen(ch) then open_count = open_count + 1 end
+        end
+        assert_eq(open_count, 40)
+        assert_true(open_count <= 128)
     end)
 
-    it("falls back to single modem binding when only one modem is provided", function()
+    it("falls back to single modem binding when only one modem is provided within 128-channel limit", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local single_m = mock.modem({ wireless = true })
 
         net:bind_modems(single_m, nil, 10000)
         assert_true(net.modemFallbackActive)
-        assert_true(single_m.isOpen(10000))
-        assert_true(single_m.isOpen(10001))
-        assert_true(single_m.isOpen(10004))
-        assert_true(single_m.isOpen(10005))
+        for offset = 0, 39 do
+            assert_true(single_m.isOpen(10000 + offset))
+        end
         assert_true(single_m.isOpen(50000))
         assert_true(single_m.isOpen(60002))
+
+        local open_count = 0
+        for ch = 9990, 10050 do
+            if single_m.isOpen(ch) then open_count = open_count + 1 end
+        end
+        for _, inf_ch in ipairs({ 50000, 50001, 50003, 50004, 60002 }) do
+            if single_m.isOpen(inf_ch) then open_count = open_count + 1 end
+        end
+        assert_eq(open_count, 45)
+        assert_true(open_count <= 128)
     end)
 
     it("transmits MSG_TRAJECTORY_SETPOINT on Base+4 via onboard modem", function()
@@ -135,14 +149,12 @@ describe("AMM Network Manager and Packet Protocol", function()
         local reb_ok = net:apply_rebind(10040)
         assert_true(reb_ok)
         assert_eq(net.baseChannel, 10040)
-        assert_false(top_m.isOpen(10000))
-        assert_false(top_m.isOpen(10004))
+        for offset = 0, 39 do
+            assert_false(top_m.isOpen(10000 + offset), "Expected old channel closed: " .. tostring(10000 + offset))
+            assert_true(top_m.isOpen(10040 + offset), "Expected new channel open: " .. tostring(10040 + offset))
+        end
         assert_false(back_m.isOpen(10005))
-        assert_true(top_m.isOpen(10040))
-        assert_true(top_m.isOpen(10044))
         assert_true(back_m.isOpen(10045))
-        assert_false(top_m.isOpen(10020)) -- Old Zone 3 channel closed
-        assert_true(top_m.isOpen(10060)) -- Zone 3 offset 20 migrated to new base 10040+20
     end)
 
     it("suppresses MSG_MFD_STATE transmission when activeSource is MFD_ACRO", function()
@@ -194,7 +206,8 @@ describe("AMM Network Manager and Packet Protocol", function()
         net:bind_modem(m)
         assert_true(m.isOpen(10000))
         assert_true(m.isOpen(10003))
-        assert_false(m.isOpen(10020))
+        assert_true(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
 
         local invalid_inputs = { -1, 0, 3, 19, 30, 20.5, 0 / 0, math.huge, 9999, 10000, 10010, 10030, "20" }
         for _, bad in ipairs(invalid_inputs) do
