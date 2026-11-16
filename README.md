@@ -164,7 +164,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(18개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(19개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```

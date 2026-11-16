@@ -607,6 +607,70 @@ class TestContractsVerification(unittest.TestCase):
         }
         self.assertEqual(validate_captured_packets([valid_reassigned], contracts), [])
 
+        valid_denied = {
+            "suite": "test_i8.lua",
+            "channel": 50000,
+            "replyChannel": 50000,
+            "from": "GCS",
+            "time": 12.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "GCS_01",
+                "seq": 3,
+                "type": "MSG_BLOCK_ASSIGN",
+                "time": 12.0,
+                "payload": {
+                    "status": "DENIED",
+                    "bandwidth": 40,
+                    "reason": "INVALID_BANDWIDTH",
+                },
+            },
+        }
+        valid_failed = {
+            "suite": "test_i8.lua",
+            "channel": 50000,
+            "replyChannel": 50000,
+            "from": "GCS",
+            "time": 13.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "GCS_01",
+                "seq": 4,
+                "type": "MSG_BLOCK_ASSIGN",
+                "time": 13.0,
+                "payload": {
+                    "status": "FAILED",
+                    "bandwidth": 40,
+                    "reason": "NO_FREE_BLOCK",
+                },
+            },
+        }
+        self.assertEqual(validate_captured_packets([valid_denied, valid_failed], contracts), [])
+
+        missing_status = {
+            "suite": "test_i8.lua",
+            "channel": 50000,
+            "replyChannel": 50000,
+            "from": "GCS",
+            "time": 14.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "GCS_01",
+                "seq": 5,
+                "type": "MSG_BLOCK_ASSIGN",
+                "time": 14.0,
+                "payload": {
+                    "bandwidth": 40,
+                    "reason": "INVALID_BANDWIDTH",
+                },
+            },
+        }
+        missing_errs = validate_captured_packets([missing_status], contracts)
+        self.assertTrue(
+            any("Missing required payload key 'status'" in e for e in missing_errs),
+            f"Expected missing 'status' error, got: {missing_errs}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

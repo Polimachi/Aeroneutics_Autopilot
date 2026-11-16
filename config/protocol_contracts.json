@@ -1176,13 +1176,13 @@
         },
         "MSG_BLOCK_ASSIGN": {
           "requiredKeys": [
-            "blockId",
-            "baseChannel",
-            "bandwidth",
             "status",
-            "channelRange"
+            "bandwidth"
           ],
           "optionalKeys": [
+            "blockId",
+            "baseChannel",
+            "channelRange",
             "leaseState",
             "reassignedFrom",
             "reason"

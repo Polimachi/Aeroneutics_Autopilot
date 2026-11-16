@@ -119,6 +119,7 @@ describe("Scenario 9: FDR Ground In-Flight Aligner E2E", function()
         assert_eq(st.mode, "LOGGING")
         assert_true(fdr.modem:isOpen(10001))
         assert_true(fdr.modem:isOpen(10002))
+        assert_true(fdr.modem:isOpen(10009))
         assert_true(fdr.modem:isOpen(10010))
 
         -- VAS telemetry_feeder with telemetryDiag=true + FCP attitude commands
@@ -182,8 +183,20 @@ describe("Scenario 9: FDR Ground In-Flight Aligner E2E", function()
         assert_true(#st.stream.parts >= 2)
         assert_eq(txSpy, 0)
 
-        -- Edge-latched E_STOP auto-flush on Base+1
-        fcp.modem:transmit(10001, 10001, {
+        -- Negative Zero-Fallback check: E_STOP arriving on legacy Base+1 (10001) is ignored by FDR
+        local legacy_rejected = fdr_main.handle_event(st, "modem_message", "top", 10001, 10001, {
+            ver = "1.9.5",
+            domainId = "CRAFT_E2E_01",
+            seq = 998,
+            time = 2490,
+            type = "MSG_EMERGENCY_OVERRIDE",
+            payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "GCS" },
+        })
+        assert_false(legacy_rejected)
+        assert_false(st.estopFlushed)
+
+        -- Edge-latched E_STOP auto-flush on Base+9 (10009)
+        fcp.modem:transmit(10009, 10009, {
             ver = "1.9.5",
             domainId = "CRAFT_E2E_01",
             seq = 999,
@@ -191,17 +204,29 @@ describe("Scenario 9: FDR Ground In-Flight Aligner E2E", function()
             type = "MSG_EMERGENCY_OVERRIDE",
             payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "GCS" },
         })
+        vas.modem:transmit(10009, 10009, {
+            ver = "1.9.5",
+            domainId = "CRAFT_E2E_01",
+            seq = 1000,
+            time = 2505,
+            type = "MSG_EMERGENCY_ALERT",
+            payload = { reason = "E_STOP", isAirborne = true, fsmState = "E_STOP", altitude = 120.0 },
+        })
         bus:step(0.05)
         for _, msg in ipairs(fdr.modem:drain()) do
             fdr_main.handle_event(st, "modem_message", "top", msg.channel, msg.replyChannel, msg.payload)
         end
         assert_true(st.estopFlushed)
+        assert_eq(st.tap.countsByOffset[9], 2)
+        assert_eq(txSpy, 0)
 
         -- Dynamic [N] rebind to N=2 (Base=10040)
         assert_true(fdr_main.switch_aircraft(st, 2, "*"))
         assert_eq(st.tap.baseChannel, 10040)
         assert_true(fdr.modem:isOpen(10042))
+        assert_true(fdr.modem:isOpen(10049))
         assert_false(fdr.modem:isOpen(10002))
+        assert_false(fdr.modem:isOpen(10009))
         assert_not_nil(st.lastSessionManifest)
         assert_true(fsApi.exists(st.lastSessionManifest.manifestPath))
         assert_eq(txSpy, 0)

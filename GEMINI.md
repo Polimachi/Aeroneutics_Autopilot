@@ -3,10 +3,10 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라 및 온보드 유도/제어기 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-117`(무선 OTA 서버·`/lib/ota_agent.lua`·2단계 부트 워치독·4계층 연동·Scenario 10 E2E·6대 사양 승격; 2026-11-15), `TASK-014`(3대 감사 가드레일; 2026-11-15). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **직전 완료**: `TASK-125`(40채널 블록 개편·경합·검증 결함 12종 해소·6대 사양 승격; 2026-11-16), `TASK-117`(무선 OTA 서버·`/lib/ota_agent.lua`·워치독; 2026-11-15). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
-  1. `TASK-125` (1순위): 40채널 블록 개편 및 프로토콜·경합·검증 결함 12종 해소 (Spec-First 착수).
-  2. 2순위 후보: `TASK-128`(GPS 헬스 감시·DR 가드), `TASK-132`(추력 상실 비상 활공), `TASK-403`→`404`(에디터 World Preset → GCS 브리지), `TASK-302`(Pocket PDA), `TASK-010`→`011`(플레이북; `011`은 `010` 완료 후).
+  1. `TASK-128` (1순위): GPS 위성군 헬스 감시 및 청크 경계 DR 블렌딩 가드 (`TASK-132` 비상 활공과 동순위).
+  2. 2순위 후보: `TASK-403`→`404`(에디터 World Preset → GCS 브리지), `TASK-302`(Pocket PDA), `TASK-010`→`011`(플레이북; `011`은 `010` 완료 후).
   3. 3순위: `TASK-501`(GDrive 109패키지 동기화), `TASK-129`(적응형 트림 보정) / `TASK-210`(대기, `[연기] TASK-105` 재개 시).
 
 ## 2. Confirmed Architecture & Paths
@@ -29,10 +29,10 @@
 - **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·134 코드/설정 린트, 0 errors).
 - **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (12 활성 서브시스템 0 violations, 4 예외).
 - **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (12개 활성 `main.lua` 12/12 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (14개 타겟 566/566 PASS).
-- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 18/18 PASS, 517패킷 계약 0 violations).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (14개 타겟 585/585 PASS).
+- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 19/19 PASS, 528패킷 계약 0 violations).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (132/132 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (135/135 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
 - **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py` (0 Errors, 0 Warnings), `python tools/verify_all_specs.py --check-readmes` (17대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (129 파일), `python tools/verify_spec_status.py` (18종 13 Implemented, 5 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (20/20 PASS).
 - **GDrive 배포**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행, `gdrive` CLI PATH 등록 필요).
@@ -43,7 +43,7 @@
 - **통합 인스톨러 배포 삼총사**: 화면 직접 업로드 `/installer.lua`, 플로피 `/disk/installer.lua`, 원격 `wget run <url>`. GitHub raw / Google Drive 이중 다운로드 지원.
 - **CraftOS-PC 런타임 의존성**: `tools/run_unit_tests.py` 및 `tools/run_e2e_tests.py`는 `CraftOS-PC_console.exe` 설치 필요 (`CRAFTOS_PC_EXE` 환경변수 지정 가능).
 - **PowerShell 5.1 체이닝**: 기본 셸은 Windows PowerShell 5.1이며 `&&` 미지원 → `; if ($?) { ... }` 사용.
-- **전역 RF 스펙트럼 및 40채널 규격**: 기체 $Base = 10000 + (N-1) \times 40$ ($N=1\sim 1000$, `10000~49999`): Zone 1(`0` C2/Alignment, `1` `QUATERNION_RATE`, `2` 텔레메트리, `3` MFD/ACRO 양보, `4` `AMM<->FCP` `CH_TRAJECTORY_CMD`, `5` `GPS` 응답), Zone 2(`10` TCA, `11` ASA `MSG_AERO_*`), Zone 3(`20~29` 탑재체), Zone 4(`30~39` 편대). `AMM`은 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`) 전담, `FCP`는 `Base+4/+2/+1` 3채널만 사용; 격납고(`101~200`), GCS/관제(`50000~59999`), GPS(`60001~60020`).
+- **전역 RF 스펙트럼 및 40채널 규격**: 기체 $Base = 10000 + (N-1) \times 40$ ($N=1\sim 1000$, `10000~49999`): Zone 1(`0` C2/프로브, `1` `QUATERNION_RATE`, `2` 텔레메트리, `3` MFD/ACRO 우선권, `4` `AMM<->FCP` `CH_TRAJECTORY_CMD`, `5` `GPS` 응답, `8` `CH_CALIBRATION_INIT`, `9` `CH_EMERGENCY_CORE` `E_STOP`), Zone 2(`10` TCA, `11` ASA `MSG_AERO_*`), Zone 3(`20~39` 탑재체·특수 임무 확장; 편대 `TBD` 광역 데이터링크 이관). `AMM`은 외부 RF(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`) 전담, `FCP`는 `Base+4/+2/+1` 3채널 + `Base+9` E_STOP만 사용; 격납고(`101~200`), GCS/관제(`50000~59999`), GPS(`60001~60020`).
 - **Zero-Fallback & 영구 단일 경로**: 수신단 듀얼키 폴백 금지(구 필드는 사양서 `[DEPRECATED]` 표기); 사양서는 디렉토리 이동 없이 상단 메타데이터 표로만 상태를 전이한다.
 - **`ion_thruster` 충돌 조정**: `Create Propulsion: Simulated`의 `ion_thruster` 페리페럴은 허용하며, 금지 규칙은 `kontraption:` 네임스페이스만 차단한다.
 - **온보드 제어기 20Hz 헤드리스 원칙**: VAS/TCA/ASA는 터미널 UI 블로킹 방지를 위해 헤드리스가 기본이며, 디버그 TUI는 `config.json`의 `debug: true` 시 비동기(`parallel`)로만 격리 구동한다.

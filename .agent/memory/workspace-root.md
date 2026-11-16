@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-16 — 40채널 블록 개편·프로토콜·경합·검증 결함 12종 해소 및 E2E/사양 승격 (TASK-125)
+
+- **결정 배경**: 기존 40채널 블록(`BW=40`)의 `Base+1` 유도/`E_STOP` 혼재, `Base+0` C2/교정 바인딩 혼재, 동시 부팅 및 꺼진 점유자(Sleeping Occupant) 프로브 누락, `Base+3` 이중 송신자 경합, `Base+30..39` Zone 3 vs 편대 혼재, `reqBW` 가변 필드 vs `stride 40` 불일치, `REASSIGNED` 상태값 불일치, `Base+20~39` 침범 감시 누락, `Rule 3` 중복 및 구조도 `checkCollision` 인자 불일치 등 12종 결함(`TASK-125-1..13`)을 Spec-First로 해소함 (`docs/superpowers/plans/2026-11-16-task-125-40ch-remediation.md`).
+- **반영 내역**:
+  1. **전사 사양서 및 계약 SSOT 동기화**: `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.33.0 Approved`), `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (`v2.17.0 Approved`), `AMM v2.2.0`, `VAS v1.23.0`, `FCP v2.3.0`, `GCS v1.2.0`, `ALIGNMENT v2.8.0`, `FDR v0.4.0` 개정 및 `config/protocol_contracts.json` (`zone1` `[0,1,2,3,4,5,8,9]`, `zone3_payload_ext` `30..39`, `I-2` `MSG_EMERGENCY_*` → `Base+9`, `I-4` `MSG_CALIBRATION_INIT` → `Base+8`, `I-8` `requestedBandwidth: [40,40]`·`MSG_BLOCK_ASSIGN` `status`/`bandwidth` 필수 및 `DENIED`/`FAILED` 블록 필드 선택화) 갱신.
+  2. **GCS 채널 관리자 (`src/0_infra/gcs/`)**: `BW=40` 고정 검증(`DENIED`/`INVALID_BANDWIDTH`), `REASSIGNED` + `reassignedFrom`, 영속 리스 레지스트리(`OFFLINE_RESERVED` / `ACTIVE_LEASE` / `preferredBase` / `conflictBase`), 4인자 `ranges_overlap` 및 `OFFSET_ESTOP = 9` 반영.
+  3. **AMM (`src/3_planning/amm/`)**: `channel_sentinel.lua` 프로브 지터(0~100ms)·2회 프로브(50ms 인터라운드 지터)·부팅 직후 `Base+0` 응답자·디스크 리스 캐시·전 블록(`Base+0..39`) 침범 감시 및 5000ms 무음 리셋·`Base+8` 교정 패킷 예외·`main.lua` 40채널 전수 개방/cross-domain 필터 및 `Base+3` `250ms` 타이머 기반 MFD 양보 히스테리시스·`c2_arbiter.lua` `Base+9` `E_STOP` 송출 구현.
+  4. **VAS·FCP·Alignment·FDR 및 동결 보호**: `VAS` (`Base+8` 교정/`Base+9` 비상 전용 및 `Base+0` 런타임 미개방·`Base+3` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 우선권·`formationLink` 제거), `FCP` (`Base+9` `MSG_EMERGENCY_OVERRIDE` 수신 및 비상 전이), `Alignment` (`Base+8` `MSG_CALIBRATION_INIT` 송신), `FDR` (`Base+9` `E_STOP`/`MSG_EMERGENCY_ALERT` 감청·`autoFlushOnEstop`) 구현. `src/1_control/asa/**` 및 `tests/1_control/asa/**`는 `0 diff` 동결 유지.
+  5. **E2E·가드레일 정합 및 승격**: `test_e2e_c2_and_estop.lua`, `test_e2e_hangar_alignment.lua`, `test_e2e_fdr_blackbox.lua`, `test_e2e_advanced_vtol_flight.lua`, `test_e2e_bootstrap_and_telemetry.lua`(꺼진 점유자 `preferredBase`, `REASSIGNED`, 2회 프로브 `CONFLICT_DETECTED`→`conflictBase` 재협상, `DENIED` `requestedBandwidth=20`), `test_verify_contracts.py` 갱신 후 6대 사양서 `Implemented` 승격(`13 Implemented, 5 Approved`).
+- **검증**: 단위 14타겟 `585/585 PASS`, E2E 10스위트 `19/19 PASS`(`528`패킷 `0` violations), 부트 스모크 `12/12 PASS`, `verify_contracts.py` 18사양서·134코드/설정 `0 errors`, `verify_runtime_wiring.py` 12서브시스템 `0 violations`(`4` exemptions), `verify_all_specs.py --check-readmes` 17사양서 `0 Errors, 0 Warnings`, `verify_spec_status.py` `13 Implemented, 5 Approved PASS`, `verify_manifest_sync.py` `0 Errors, 0 Warnings`, Lua 5.2 `129/129 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `135/135 PASS`, 에디터 `20/20 PASS`, `verify_context_docs.py` `0 findings`, `src/1_control/asa/**` `0 diff`.
+
+---
+
 ## 2026-11-15 — 무선 OTA 배포 서버·슬레이브 에이전트·2단계 부트 워치독 구현 및 다중 노드 E2E/사양 승격 (TASK-117)
 
 - **결정 배경**: 다중 CC:Tweaked 온보드 노드(`VAS`, 다수 `TCA`, `FCP`, `AMM`)의 수동 `installer.lua` 업데이트 비용을 해소하고 비행 중 OTA 재부팅 추락 및 패킷 유실 벽돌 장애를 방지하기 위해 `/grill-me`·실행 계획서(`docs/superpowers/plans/2026-11-15-task-117-wireless-ota-rollback.md`, 구 `TASK-117 + 119` 통합)를 수립해 Spec-First로 구현함.
