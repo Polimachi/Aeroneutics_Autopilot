@@ -6,21 +6,21 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v0.3.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v0.4.0` |
+| **최종 수정일 (Date)** | `2026-11-16` |
 | **구현 코드 (Source)** | `src/0_development/fdr/ & tools/analyze_flight_log.py` |
 | **주관 도메인 (Domain)** | 지상 상주형 실환경 비행 동역학 식별·계측 및 PID/트림 프로파일 튜닝 콘솔 (FDR / In-Flight Aligner) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.31.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.1)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔 v2.7.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.21.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.12.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.33.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.17.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔 v2.8.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.13.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 외루프 유도 규격서 v2.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무·궤적 규격서 v2.0.1)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 외루프 유도 규격서 v2.3.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무·궤적 규격서 v2.2.0)
 > - [GDRIVE_DEPLOYMENT_GUIDE.md](../../../guides/GDRIVE_DEPLOYMENT_GUIDE.md) (Google Drive 배포 가이드)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
@@ -28,6 +28,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.4.0` | 2026-11-16 | **`TASK-125` 40채널 비상 코어(`Base+9`) 패시브 감청 추가 (`Implemented` $\to$ `Approved`)**: ① 패시브 감청 채널 목록에 `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT`) 필수 추가, ② `Base+1` (`CH_FLIGHT_GUIDANCE`)을 순수 `MSG_ATTITUDE_CMD` 전용으로 갱신, ③ 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `Alignment v2.8.0`, `VAS v1.23.0`, `FCP v2.3.0`, `AMM v2.2.0`) 동기화 | `TASK-125` 유도/비상 버스 분리에 따른 FDR 비상 엣지 감청 정합화 (`src/0_development/fdr/` 반영 후 `Implemented` 승격 예정) |
 | `v0.3.0` | 2026-11-14 | **`Draft` $\to$ `Approved` 승격 및 사용자 결정 확정**: ① `VAS` Opt-in `telemetryDiag` 포함 확정 (`VAS v1.21.0` 및 `ICD v1.31.0` 양방향 동기화), ② `config/fdr_config.json`의 `export.mode` 기본값을 `"GDRIVE_WEBHOOK"`으로 전환하고 대상 Google Drive 폴더 `FDR_Reports` (`gdriveFolderId = "1C3ZWMoXjsba1QE8ksgWG0LSfxzW_nMWI"`) 지정 및 `webhookUrl` 미설정 시 안내 가드 명문화 | 사용자 설계 리뷰 승인 (`TASK-120` 구현 착수) |
 | `v0.2.0` | 2026-11-14 | **실환경 Alignmenter 모델 전면 재정의 (`Draft`)**: (1) 지상 콘솔·다중 디스크 어레이(`drive` 페리페럴 `/disk*` Spanned VFS `storage_pool.lua`, 파트 롤오버·핫플러그·세션 매니페스트) 추가, (2) `Alignment`형 `STANDBY` $\leftrightarrow$ `LOGGING` 동적 기체 인덱스 $N$ 바인딩(`[N]` 핫키) 및 `domainId` 자동 탐지 추가, (3) `tools/analyze_flight_log.py --emit-profile` 기반 `VAS` `pid.json`/`system.json` 및 `FCP` `fcp_config.json` 보정 패치·신규 프로필 JSON 산출 알고리즘 명세, (4) CC:Tweaked `http.post` 기반 외부 전송(`GDRIVE_WEBHOOK` Google Apps Script / `HTTP_POST` / 로컬 월드 디스크 직결) 아키텍처 추가 | 블랙박스 중심에서 지상 상주형 실환경 비행 식별·프로파일 튜닝 콘솔(In-Flight Aligner) 방향으로 정렬 |
 | `v0.1.0` | 2026-11-14 | `TASK-120` 신규 사양서 초안(`Draft`) 작성: 수신 전용 패시브 감청(`Base+1`/`Base+2`/`Base+10` 필수 + 선택 `Base+11`/`Base+4`), `STREAMING` 기본 및 `RING_BUFFER` 선택 이중 기록 모드, 배치 `flush()`·디스크 여유 공간 가드, `VAS` Opt-in `telemetryDiag` 진단 필드 확장, `tools/analyze_flight_log.py` 통합 리포트(`--json`/`--csv`) 명세 | `TASK-120` (`/grill-me` 5대 설계 결정 반영) 기반 구현 착수 전 Spec-First 사양 수립 |
@@ -46,7 +47,7 @@
 
 ```mermaid
 flowchart LR
-    AIR["실비행 기체 N<br/>AMM(Base+4) · FCP(Base+1) · VAS(Base+2,10,11)"] -->|"무선 엔더 모뎀<br/>수신 전용 패시브 감청"| TAP["지상 FDR 콘솔 (src/0_development/fdr/)<br/>STANDBY ↔ LOGGING (동적 N 바인딩)"]
+    AIR["실비행 기체 N<br/>AMM(Base+4,9) · FCP(Base+1) · VAS(Base+2,9,10,11)"] -->|"무선 엔더 모뎀<br/>수신 전용 패시브 감청"| TAP["지상 FDR 콘솔 (src/0_development/fdr/)<br/>STANDBY ↔ LOGGING (동적 N 바인딩)"]
     TAP -->|"STREAMING 배치 flush<br/>(또는 RING_BUFFER)"| VFS["Multi-Disk VFS 풀 (storage_pool.lua)<br/>/disk, /disk2, ... 자동 스패닝 & 롤오버"]
     VFS -->|"파트별 JSONL<br/>(part001..N, session_manifest)"| EXP["외부 반출 (선택 3경로)<br/>1) 월드 disk 폴더 직접 읽기<br/>2) [U] GDrive Apps Script Webhook<br/>3) [U] 로컬 HTTP Ingest 서버"]
     EXP -->|"호스트 PC"| CLI["tools/analyze_flight_log.py<br/>오차·포화·추력분배 리포트 + --json/--csv"]
@@ -74,7 +75,8 @@ flowchart LR
 
 | 오프셋 | 채널명 (`ICD`) | 필수 여부 | `fdr_config.json` 토글 (기본값) | 감청 패킷 타입 (`type`) | 주요 분석 및 프로필 산출 용도 |
 | :---: | :--- | :---: | :--- | :--- | :--- |
-| **`Base + 1`** | `CH_FLIGHT_GUIDANCE` (`[I-2]`) | **필수** | 상시 활성 | `MSG_ATTITUDE_CMD`, `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT` | 목표 쿼터니언/각속도/집합추력 지령, `ACRO` 전환, `E_STOP` 트리거 |
+| **`Base + 1`** | `CH_FLIGHT_GUIDANCE` (`[I-2]`) | **필수** | 상시 활성 | `MSG_ATTITUDE_CMD` *(순수 유도 전용)* | 목표 쿼터니언/각속도/집합추력 지령, `ACRO` 전환 |
+| **`Base + 9`** | `CH_EMERGENCY_CORE` (`[I-2]`) | **필수** | 상시 활성 | `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT` | `E_STOP` 비상 정지 엣지 및 공중 비상 셧다운 경보 감청 |
 | **`Base + 2`** | `CH_TELEMETRY` (`[I-1]`) | **필수** | 상시 활성 | `MSG_FLIGHT_TELEMETRY` | 실제 자세/각속도/속도/고도, `dynamicLoad`, `controlState`, 선택 `diag` |
 | **`Base + 10`** | `CH_THRUST_ACTUATION` (`[I-3]`) | **필수** | 상시 활성 | `MSG_THRUST_CMD`, `MSG_ACTUATOR_STATUS` | 추력기 그룹별 분배율, `ADVANCED_VTOL` 짐벌 각도, `isSaturated`/`gimbalSaturated` |
 | **`Base + 11`** | `CH_SURFACE_ACTUATION` (`[I-10]`) | 선택 | `tapOptions.aero = true` | `MSG_AERO_CMD`, `MSG_AERO_STATUS` | 공력 조종면(`AIL`/`ELEV`/`RUDD`/`FLAP`) 타각, 동압 스케줄링, 타각 포화/`isJammed` |
@@ -264,7 +266,7 @@ CC:Tweaked 인게임 컴퓨터의 로그/프로필 반출 환경(싱글플레이
 ### 7.2 51×19 TUI 및 핫키 컨트롤
 - `debug == false` 또는 `--headless` 실행 시 TUI 없이 콘솔 1줄 상태 출력 후 패시브 감청만 구동합니다.
 - `debug == true` 시 `parallel.waitForAny`로 감청·스패닝 I/O 코루틴과 1Hz TUI 코루틴을 격리하며, 모든 `term.blit` 행은 `51`자(`#text == #fg == #bg == 51`)를 유지합니다.
-- **표시 정보**: 연결 기체 (`N` / `Base` / 잠금 `domainId`), 상태 (`STANDBY` | `LOGGING` | `PAUSED` | `DISK_FULL`), 활성 VFS 볼륨 (`disk2` / 잔여 KB / 풀 총 여유 KB), 현재 파트(`part003`), 수신 카운터 (`B+1/2/10/11/4`).
+- **표시 정보**: 연결 기체 (`N` / `Base` / 잠금 `domainId`), 상태 (`STANDBY` | `LOGGING` | `PAUSED` | `DISK_FULL`), 활성 VFS 볼륨 (`disk2` / 잔여 KB / 풀 총 여유 KB), 현재 파트(`part003`), 수신 카운터 (`B+1/2/9/10/11/4`).
 - **운용 핫키**:
   - `[N]`: 대상 기체 인덱스 $N$ 입력 및 동적 채널 재바인딩 (Alignment형 연결)
   - `[D]`: 즉시 `flush()` (`STREAMING`) 또는 즉시 덤프 (`RING_BUFFER`)

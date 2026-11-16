@@ -35,9 +35,11 @@
             2,
             3,
             4,
-            5
+            5,
+            8,
+            9
           ],
-          "description": "Core C2, guidance, telemetry, MFD, trajectory setpoints, external comms"
+          "description": "Core C2, guidance, telemetry, MFD, trajectory setpoints, external comms, 8=CH_CALIBRATION_INIT, 9=CH_EMERGENCY_CORE"
         },
         "zone2_inner_actuation": {
           "start": 10,
@@ -65,7 +67,7 @@
           ],
           "description": "Dynamic payload nodes: cargo, magnets, radar, weapons"
         },
-        "zone4_swarm_formation": {
+        "zone3_payload_ext": {
           "start": 30,
           "end": 39,
           "offsets": [
@@ -80,7 +82,7 @@
             38,
             39
           ],
-          "description": "Swarm & formation broadcast bus"
+          "description": "Zone 3 Payload & Special Mission Extension (CH_PAYLOAD_EXT_30..39); Zone 4 Formation Link moved to TBD wide-area datalink"
         }
       },
       "deprecatedOffsets": [
@@ -226,8 +228,22 @@
         {
           "kind": "aircraft_offset",
           "offset": 1
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 9
         }
       ],
+      "packetChannelOverrides": {
+        "MSG_EMERGENCY_OVERRIDE": {
+          "kind": "aircraft_offset",
+          "offset": 9
+        },
+        "MSG_EMERGENCY_ALERT": {
+          "kind": "aircraft_offset",
+          "offset": 9
+        }
+      },
       "deprecatedOffsets": [],
       "packets": {
         "MSG_ATTITUDE_CMD": {
@@ -418,7 +434,7 @@
       "channelMatchers": [
         {
           "kind": "aircraft_offset",
-          "offset": 0
+          "offset": 8
         },
         {
           "kind": "hangar_offset",
@@ -433,6 +449,12 @@
           "offset": 3
         }
       ],
+      "packetChannelOverrides": {
+        "MSG_CALIBRATION_INIT": {
+          "kind": "aircraft_offset",
+          "offset": 8
+        }
+      },
       "deprecatedOffsets": [
         1001,
         1002
@@ -1041,7 +1063,10 @@
           ]
         }
       },
-      "timeoutsMs": {},
+      "timeoutsMs": {
+        "acroTimeoutMs": 250,
+        "acroRecoveryHoldMs": 300
+      },
       "deprecatedPacketTypes": [],
       "deprecatedPayloadKeys": []
     },
@@ -1138,7 +1163,16 @@
             "hardwareUuid",
             "requestedBandwidth"
           ],
-          "optionalKeys": []
+          "optionalKeys": [
+            "preferredBase",
+            "conflictBase"
+          ],
+          "numericBounds": {
+            "requestedBandwidth": [
+              40,
+              40
+            ]
+          }
         },
         "MSG_BLOCK_ASSIGN": {
           "requiredKeys": [
@@ -1148,10 +1182,16 @@
             "status",
             "channelRange"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "leaseState",
+            "reassignedFrom",
+            "reason"
+          ],
           "enums": {
             "status": [
               "ASSIGNED",
+              "REASSIGNED",
+              "DENIED",
               "FAILED"
             ]
           }
@@ -1186,11 +1226,24 @@
         },
         {
           "kind": "aircraft_offset",
+          "offset": 8
+        },
+        {
+          "kind": "aircraft_offset",
+          "offset": 9
+        },
+        {
+          "kind": "aircraft_offset",
           "offset": 10
         },
         {
           "kind": "aircraft_offset",
           "offset": 11
+        },
+        {
+          "kind": "aircraft_offset_range",
+          "minOffset": 20,
+          "maxOffset": 39
         }
       ],
       "deprecatedOffsets": [
@@ -1216,7 +1269,10 @@
             "occupiedBase",
             "status"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "responderUuid",
+            "responderStatus"
+          ],
           "enums": {
             "status": [
               "CONFLICT_DETECTED"
@@ -1282,7 +1338,13 @@
       },
       "timeoutsMs": {
         "rebindWatchdogMs": 500,
-        "probeListenMs": 200
+        "rebindAckTimeoutMs": 500,
+        "probeListenMs": 200,
+        "probeJitterMaxMs": 100,
+        "probeRetryCount": 2,
+        "maxReassignAttempts": 3,
+        "gcsBootstrapTimeoutMs": 2000,
+        "intrusionAlertWindowMs": 30000
       },
       "deprecatedPacketTypes": [
         "MSG_REBIND_ACK"
@@ -1400,7 +1462,7 @@
         {
           "kind": "aircraft_offset_range",
           "minOffset": 20,
-          "maxOffset": 29
+          "maxOffset": 39
         }
       ],
       "deprecatedOffsets": [],

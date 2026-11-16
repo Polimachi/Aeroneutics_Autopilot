@@ -18,6 +18,7 @@ from tools.verify_contracts import (
     load_contracts,
     strip_lua_comments,
     strip_revision_history,
+    validate_captured_packets,
     verify_code_against_contracts,
     verify_specs_against_contracts,
 )
@@ -459,6 +460,152 @@ class TestContractsVerification(unittest.TestCase):
 
         code_errors = verify_code_against_contracts(WORKSPACE_ROOT, contracts, include_deferred=False)
         self.assertEqual(code_errors, [], f"Live code contract errors: {code_errors}")
+
+    def test_zone1_and_zone3_ext_and_strict_packet_channel_bindings(self) -> None:
+        contracts_path = WORKSPACE_ROOT / "config" / "protocol_contracts.json"
+        contracts = load_contracts(contracts_path)
+
+        zones = contracts["channels"]["aircraft"]["zones"]
+        self.assertEqual(zones["zone1_flight_core"]["offsets"], [0, 1, 2, 3, 4, 5, 8, 9])
+        self.assertNotIn("zone4_swarm_formation", zones)
+        self.assertIn("zone3_payload_ext", zones)
+        self.assertEqual(zones["zone3_payload_ext"]["offsets"], list(range(30, 40)))
+
+        ifaces = {iface["id"]: iface for iface in contracts["interfaces"]}
+
+        i2 = ifaces["I-2"]
+        i2_offsets = {m["offset"] for m in i2["channelMatchers"] if m.get("kind") == "aircraft_offset"}
+        self.assertEqual(i2_offsets, {1, 9})
+        i2_overrides = i2.get("packetChannelOverrides", {})
+        self.assertEqual(i2_overrides.get("MSG_EMERGENCY_OVERRIDE", {}).get("offset"), 9)
+        self.assertEqual(i2_overrides.get("MSG_EMERGENCY_ALERT", {}).get("offset"), 9)
+
+        i4 = ifaces["I-4"]
+        i4_ac_offsets = {m["offset"] for m in i4["channelMatchers"] if m.get("kind") == "aircraft_offset"}
+        self.assertEqual(i4_ac_offsets, {8})
+        i4_overrides = i4.get("packetChannelOverrides", {})
+        self.assertEqual(i4_overrides.get("MSG_CALIBRATION_INIT", {}).get("offset"), 8)
+
+    def test_strict_interface_binding_mismatch_fails_in_e2e_validation(self) -> None:
+        contracts_path = WORKSPACE_ROOT / "config" / "protocol_contracts.json"
+        contracts = load_contracts(contracts_path)
+
+        bad_estop_on_ch1 = {
+            "suite": "test_strict_binding.lua",
+            "channel": 10001,
+            "replyChannel": 10001,
+            "from": "AMM",
+            "time": 100.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "AIRCRAFT_01",
+                "seq": 1,
+                "type": "MSG_EMERGENCY_OVERRIDE",
+                "time": 100.0,
+                "payload": {"action": "E_STOP", "authKey": "ESTOP_CONFIRM_KEY", "source": "PILOT_PRIMARY"},
+            },
+        }
+        bad_alert_on_ch1 = {
+            "suite": "test_strict_binding.lua",
+            "channel": 10001,
+            "replyChannel": 10001,
+            "from": "VAS",
+            "time": 100.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "AIRCRAFT_01",
+                "seq": 2,
+                "type": "MSG_EMERGENCY_ALERT",
+                "time": 100.0,
+                "payload": {"reason": "E_STOP", "isAirborne": True, "fsmState": "ESTOP", "altitude": 10.0},
+            },
+        }
+        bad_calib_on_ch0 = {
+            "suite": "test_strict_binding.lua",
+            "channel": 10000,
+            "replyChannel": 10000,
+            "from": "ALIGNMENT",
+            "time": 100.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "ALIGN_01",
+                "seq": 3,
+                "type": "MSG_CALIBRATION_INIT",
+                "time": 100.0,
+                "payload": {"stationId": "ST1", "bayId": 1, "baseHangarChannel": 101},
+            },
+        }
+
+        for bad_pkt in (bad_estop_on_ch1, bad_alert_on_ch1, bad_calib_on_ch0):
+            errs = validate_captured_packets([bad_pkt], contracts)
+            self.assertTrue(
+                any("channel mismatch for strict interface binding" in e for e in errs),
+                f"Expected strict channel mismatch error for {bad_pkt['payload']['type']}, got: {errs}",
+            )
+
+        valid_packets = [
+            {**bad_estop_on_ch1, "channel": 10009, "replyChannel": 10009},
+            {**bad_alert_on_ch1, "channel": 10009, "replyChannel": 10009},
+            {**bad_calib_on_ch0, "channel": 10008, "replyChannel": 10008},
+            {**bad_calib_on_ch0, "channel": 101, "replyChannel": 101},
+        ]
+        self.assertEqual(validate_captured_packets(valid_packets, contracts), [])
+
+    def test_i8_fixed_bandwidth_and_reassigned_denied_enums(self) -> None:
+        contracts_path = WORKSPACE_ROOT / "config" / "protocol_contracts.json"
+        contracts = load_contracts(contracts_path)
+
+        ifaces = {iface["id"]: iface for iface in contracts["interfaces"]}
+        i8 = ifaces["I-8"]
+        req_pkt = i8["packets"]["MSG_BLOCK_REQUEST"]
+        assign_pkt = i8["packets"]["MSG_BLOCK_ASSIGN"]
+
+        self.assertEqual(req_pkt.get("numericBounds", {}).get("requestedBandwidth"), [40, 40])
+        self.assertEqual(assign_pkt["enums"]["status"], ["ASSIGNED", "REASSIGNED", "DENIED", "FAILED"])
+
+        bad_req = {
+            "suite": "test_i8.lua",
+            "channel": 50000,
+            "replyChannel": 50000,
+            "from": "AMM",
+            "time": 10.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "AIRCRAFT_01",
+                "seq": 1,
+                "type": "MSG_BLOCK_REQUEST",
+                "time": 10.0,
+                "payload": {"domainId": "AIRCRAFT_01", "hardwareUuid": "UUID-1", "requestedBandwidth": 20},
+            },
+        }
+        errs = validate_captured_packets([bad_req], contracts)
+        self.assertTrue(any("requestedBandwidth" in e and "out of bounds" in e for e in errs), f"Got: {errs}")
+
+        valid_reassigned = {
+            "suite": "test_i8.lua",
+            "channel": 50000,
+            "replyChannel": 50000,
+            "from": "GCS",
+            "time": 11.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "GCS_01",
+                "seq": 2,
+                "type": "MSG_BLOCK_ASSIGN",
+                "time": 11.0,
+                "payload": {
+                    "blockId": 2,
+                    "baseChannel": 10040,
+                    "bandwidth": 40,
+                    "status": "REASSIGNED",
+                    "channelRange": [10040, 10079],
+                    "leaseState": "ACTIVE",
+                    "reassignedFrom": 10000,
+                    "reason": "CONFLICT_REPORTED",
+                },
+            },
+        }
+        self.assertEqual(validate_captured_packets([valid_reassigned], contracts), [])
 
 
 if __name__ == "__main__":
