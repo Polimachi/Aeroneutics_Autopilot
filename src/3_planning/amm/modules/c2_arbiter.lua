@@ -6,8 +6,22 @@ local chattering_guard = require("chattering_guard")
 local c2_arbiter = {}
 c2_arbiter.__index = c2_arbiter
 
+local function resolve_now_ms(self, now_ms)
+    if type(now_ms) == "number" then
+        return now_ms
+    end
+    if self and type(self.clockFn) == "function" then
+        local t = self.clockFn()
+        if type(t) == "number" then
+            return t
+        end
+    end
+    return (os.epoch and os.epoch("utc")) or (os.time() * 1000)
+end
+
 function c2_arbiter.new(queue, net, config, engine, guard)
     local cfg = config or {}
+    local safe = cfg.safety or {}
     local eng = engine or (cfg and cfg.engine) or nil
     local g = guard or (eng and eng.guard) or chattering_guard.init(cfg)
     local self = setmetatable({
@@ -16,6 +30,7 @@ function c2_arbiter.new(queue, net, config, engine, guard)
         config = cfg,
         engine = eng,
         guard = g,
+        clockFn = cfg.clockFn,
         authority = "PILOT_PRIMARY",
         armed = false,
         fsmState = "DISARMED",
@@ -29,9 +44,19 @@ function c2_arbiter.new(queue, net, config, engine, guard)
         lastOuterStatusMs = 0,
         lastTelemMs = 0,
         fcpTimedOut = false,
+        acroRecoveryHoldMs = safe.acroRecoveryHoldMs or cfg.acroRecoveryHoldMs or 300,
+        lastVasPriorityMs = nil,
+        vasMfdPriorityUntilMs = 0,
         emergencyGoal = nil,
         activeGoal = nil,
     }, c2_arbiter)
+    if type(net) == "table" then
+        if net.set_arbiter then
+            net:set_arbiter(self)
+        else
+            net.arbiter = self
+        end
+    end
     if self.engine then
         self.engine.authority = self.authority
     end
@@ -367,16 +392,40 @@ local function handle_engine_telemetry(self, p, now_ms)
     end
 end
 
-local function sync_state_and_step(self, p, now_ms, allow_engine)
-    self.fsmState = p.fsmState or p.controlState or self.fsmState
-    local ctrl = p.controlState or p.fsmState
-    if ctrl == "DISARMED" then
-        self.armed = false
-    elseif ctrl ~= nil then
-        self.armed = true
+function c2_arbiter:update_acro_yield_window(state_val, active_source, source_tag, now_ms)
+    local now = resolve_now_ms(self, now_ms)
+    local is_acro = (active_source == "MFD_ACRO") or (source_tag == "CORE_ACRO_TAKEOVER")
+    local is_vas_failsafe = (state_val == "FAILSAFE_HOLD") or (state_val == "EMERGENCY_LAND") or (source_tag == "CORE_FAILSAFE")
+    if is_acro or is_vas_failsafe then
+        self.lastVasPriorityMs = now
+        self.vasMfdPriorityUntilMs = now + (self.acroRecoveryHoldMs or 300)
     end
-    self.activeSource = p.activeSource or self.activeSource
+end
+
+function c2_arbiter:can_transmit_mfd(now_ms)
+    if self.activeSource == "MFD_ACRO" then
+        return false, "YIELDED_TO_MFD_ACRO"
+    end
+    local now = resolve_now_ms(self, now_ms)
+    if self.lastVasPriorityMs ~= nil and now < (self.vasMfdPriorityUntilMs or 0) then
+        return false, "ACRO_RECOVERY_HOLD"
+    end
+    if self.fsmState == "FAILSAFE_HOLD" or self.fsmState == "EMERGENCY_LAND" then
+        return false, "YIELDED_TO_VAS_FAILSAFE"
+    end
+    return true
+end
+
+local function sync_state_and_step(self, p, state_val, source_val, now_ms, allow_engine)
+    if state_val ~= nil then
+        self.fsmState = state_val
+        self.armed = (state_val ~= "DISARMED")
+    end
+    if source_val ~= nil then
+        self.activeSource = source_val
+    end
     self.airframeType = p.airframeType or p.airframe or self.airframeType
+    self:update_acro_yield_window(state_val, source_val, p.source, now_ms)
 
     if self.fcpTakeoffActive and self.fsmState == "CRUISE" then
         self.fcpTakeoffActive = false
@@ -405,7 +454,11 @@ function c2_arbiter:handle_mfd_state(packet, now_ms)
     local p = packet.payload
     if p.source == "AMM_INTEGRATED" then return end
     self.latest_mfd_payload = p
-    sync_state_and_step(self, p, now_ms, false)
+    local src = p.activeSource
+    if src == nil and (p.source == "CORE_ACRO_TAKEOVER" or p.acroActive == true) then
+        src = "MFD_ACRO"
+    end
+    sync_state_and_step(self, p, p.fsmState, src, resolve_now_ms(self, now_ms), false)
 end
 
 local PILOT_ACTION_HANDLERS = {
@@ -483,7 +536,7 @@ function c2_arbiter:handle_outer_loop_status(packet, now_ms)
     if not packet or type(packet.payload) ~= "table" then return end
     local p = packet.payload
     self.latest_outer_status = p
-    self.lastOuterStatusMs = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
+    self.lastOuterStatusMs = resolve_now_ms(self, now_ms)
     self.fcpTimedOut = false
     if self.emergencyGoal and self.emergencyGoal._fcpTimeout then
         self.emergencyGoal = nil
@@ -494,9 +547,10 @@ end
 function c2_arbiter:handle_flight_telemetry(packet, now_ms)
     if not packet or type(packet.payload) ~= "table" then return end
     local p = packet.payload
+    local t_ms = resolve_now_ms(self, now_ms)
     self.latest_telem = p
-    self.lastTelemMs = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
-    sync_state_and_step(self, p, now_ms, true)
+    self.lastTelemMs = t_ms
+    sync_state_and_step(self, p, p.controlState, p.activeSource, t_ms, true)
     local fuel = p.fuel
     if type(fuel) == "number" then
         local latches = chattering_guard.update_fuel_latches(self.guard, fuel, self.config, not self.armed)
@@ -515,7 +569,7 @@ function c2_arbiter:handle_flight_telemetry(packet, now_ms)
 end
 
 function c2_arbiter:check_timeouts(now_ms)
-    local now = now_ms or ((os.epoch and os.epoch("utc")) or (os.time() * 1000))
+    local now = resolve_now_ms(self, now_ms)
     if self.lastOuterStatusMs and self.lastOuterStatusMs > 0 then
         if (now - self.lastOuterStatusMs) > 500 then
             self.fcpTimedOut = true

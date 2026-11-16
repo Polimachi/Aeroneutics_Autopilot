@@ -4,7 +4,7 @@ local virtual_bus = require("virtual_bus")
 local node_sandbox = require("node_sandbox")
 
 describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
-    it("handles GCS remote override without AMM echo and executes direct Base+1 E-STOP thruster shutdown", function()
+    it("handles GCS remote override without AMM echo and executes direct Base+9 E-STOP thruster shutdown", function()
         local bus = virtual_bus.create_bus({ clock = 1000.0 })
 
         local gcs = node_sandbox.create_node(bus, "GCS", "src/0_infra/gcs")
@@ -39,11 +39,13 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         -- 3. Setup VAS context
         local vas_net = vas:require("network_manager")
         local vas_state = vas_net.init({
-            system = { domainId = "AIRCRAFT_01" },
-            channels = { c2 = 10000, guidance = 10001, telemetry = 10002, actuation = 10010, aero = 10011 },
-        }, vas.modem)
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+        })
         vas_state.baseChannel = 10000
         vas_state.aircraftDomainId = "AIRCRAFT_01"
+        vas_state.channels.calibration = 10008
+        vas_state.channels.emergency = 10009
 
         local state_machine = vas:require("state_machine")
         local vas_fsm = state_machine.init({}, true)
@@ -53,7 +55,8 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         -- Open channels
         amm.modem:open(10000) -- Base+0 (C2 snoop)
         fcp.modem:open(10000) -- Base+0 (C2)
-        vas.modem:open(10001) -- Base+1 (Direct Guidance / Hard E-STOP)
+        vas.modem:open(10001) -- Base+1 (Attitude Cmd)
+        vas.modem:open(10009) -- Base+9 (Hard E-STOP)
         tca.modem:open(10010) -- Base+10 (Thrust)
 
         -- 4. Part 1: GCS issues remote C2 override HOLD on Base+0 (10000)
@@ -85,12 +88,13 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         local pkts_after = #bus.packet_log
         assert_eq(pkts_before, pkts_after, "AMM must not echo or retransmit when GCS_OVERRIDE is active")
 
-        -- 5. Part 2: Emergency Hard E-STOP Cutoff on Base+1 (10001)
+        -- 5. Part 2: Emergency Hard E-STOP Cutoff on Base+9 (10009)
         -- 5a. AMM pilot E_STOP preemption verification
         arbiter:handle_pilot_action("ESTOP")
         bus:step(0.05)
-        local amm_estop_pkts = bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10001 })
+        local amm_estop_pkts = bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10009 })
         assert_true(#amm_estop_pkts >= 1)
+        assert_eq(#bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10001 }), 0)
         local amm_estop_p = amm_estop_pkts[#amm_estop_pkts].payload.payload
         assert_eq(amm_estop_p.action, "E_STOP")
         assert_eq(amm_estop_p.authKey, "ESTOP_CONFIRM_KEY")
@@ -102,20 +106,34 @@ describe("Scenario 5: GCS C2 Override & Hard E-STOP Cutoff", function()
         assert_eq(estop_payload.source, "GCS")
         assert_eq(estop_payload.authKey, "ESTOP_CONFIRM_KEY")
 
-        -- GCS transmits directly to Base+1 (10001) bypassing FCP
+        -- Zero-Fallback negative check: VAS must reject legacy Base+1 (10001) MSG_EMERGENCY_OVERRIDE
+        local ok_legacy_estop, err_legacy_estop = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10001, 10001, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 98,
+            type = "MSG_EMERGENCY_OVERRIDE",
+            time = 1019,
+            payload = estop_payload,
+        })
+        assert_false(ok_legacy_estop)
+        assert_eq(err_legacy_estop, "WRONG_CHANNEL")
+        assert_eq(vas_fsm.currentState, "NORMAL")
+
+        -- GCS transmits directly to Base+9 (10009) bypassing FCP
         gcs_net_mod.send_emergency_override(gcs_ctx, 10000, estop_payload)
         bus:step(0.05)
 
-        local estop_pkts = bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10001 })
+        local estop_pkts = bus:find_packets({ type = "MSG_EMERGENCY_OVERRIDE", channel = 10009 })
         assert_true(#estop_pkts >= 2)
 
-        -- VAS receives packet on Base+1 and immediately trips failsafe
+        -- VAS receives packet on Base+9 and immediately trips failsafe
         local vas_inbox = vas.modem:drain()
         assert_true(#vas_inbox >= 1)
+        assert_eq(vas_inbox[#vas_inbox].channel, 10009)
         assert_eq(vas_inbox[#vas_inbox].payload.type, "MSG_EMERGENCY_OVERRIDE")
 
         -- Note: For emergency override, envelope verification uses sender domain
-        local ok_estop = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10001, 10001, {
+        local ok_estop = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10009, 10009, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01", -- aircraft target routing
             seq = 99,

@@ -6,17 +6,17 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.7.1` |
-| **최종 수정일 (Date)** | `2026-11-15` |
+| **문서 버전 (Version)** | `v2.8.0` |
+| **최종 수정일 (Date)** | `2026-11-16` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 서버 v0.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.2.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.3.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.13.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
@@ -26,6 +26,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.8.0` | `2026-11-16` | **`TASK-125` `MSG_CALIBRATION_INIT` 송신 채널 `Base+8` (`CH_CALIBRATION_INIT`) 이관 (`Implemented` $\to$ `Approved`)**: ① `MSG_CALIBRATION_INIT` 송신 대상 채널을 `Base+0` (`CH_OPERATOR_C2`)에서 **`Base+8` (`CH_CALIBRATION_INIT`)**로 변경(`AMM` 프로브/C2 채널과의 경합 분리, 구 `Base+0` `[DEPRECATED]`), ② §1/§2/§3/§5/§10 다이어그램·매핑·의사코드 및 연관 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `VAS v1.23.0`, `FCP v2.3.0`) 동기화 | `TASK-125` C2/교정 채널 경합 분리 (`src/0_development/alignment/` 반영 후 `Implemented` 승격 예정) |
 | `v2.7.1` | 2026-11-15 | `[I-13]` 격납고 무선 OTA 배포 서버(`OTA_PROGRAM_SPECIFICATION.md` v0.1.0)·마스터 ICD(`v1.32.0`)·전체 구조도(`v2.16.0`) 및 온보드 규격서(`VAS v1.22.0`, `FCP v2.2.0`, `TCA v1.13.0`) 상호 참조 배지 동기화 (`Implemented` 유지, Alignment 코드 변경 없음) | `TASK-117-1` 격납고 베이 10채널 대역(`Base_hangar + 4/+5` OTA 할당) 참조 정합성 유지 |
 | `v2.7.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `[I-4]` `MSG_CALIBRATION_INIT`(`timeoutSec`, `targetThruster`)·`INIT_ACK`(`baseChannel`)·`MSG_CALIBRATION_CLOSE`(`saveProfile`)·`CLOSE_ACK`(`currentFsmState`)·`MSG_ACTUATOR_DISCOVER_REQ`(`replyChannel = 104` / `Base_hangar+3`) 및 `mode [DEPRECATED]` Zero-Fallback 정렬, §11.1 실제 구현 파일명(`ols_regression_engine.lua`, `multi_pulse_sequencer.lua`, `hud_renderer.lua`, `main.lua`) 반영 및 연관 문서 버전(`ICD v1.30.0`, `Diagram v2.15.0`, `VAS v1.20.0`, `FCP v2.1.0`, `TCA v1.12.0`, `ASA v1.8.0`, `GPS v2.3.3`) 동기화 | 마스터 ICD v1.30.0 및 `[I-4]` 구현 코드 정합성 확립 |
 | `v2.6.1` | 2026-11-12 | 문서·교차참조·패킷 예시 정합성 수정(Alignment Lua 런타임 변경 없음): `MSG_CALIBRATION_INIT_ACK` 내 `hardwareUuid`를 `"VAS-NODE-01-4402"`로 정정(VAS `Base_hangar+1` 직접 응답 기준), `MSG_SURFACE_DISCOVER_REQ/ACK` 정합 확인 및 연관 문서 버전(`ICD v1.28.0`, `Diagram v2.13.0`, `VAS v1.19.0`, `FCP v2.0.0`, `TCA v1.11.1`, `ASA v1.7.0`, `GPS v2.3.1`) 동기화, 과장 표현 제거 | ICD `v1.28.0` 및 VAS 직결 교정 아키텍처와의 문서 정합성 확보 |
@@ -48,7 +49,7 @@
 
 ```mermaid
 flowchart LR
-    BAY["1. 기체 격납고 입고<br/>(시험 베이 거치/공중 정지)"] --> BIND["2. 기체 Base+0 직결 바인딩<br/>(MSG_CALIBRATION_INIT)"]
+    BAY["1. 기체 격납고 입고<br/>(시험 베이 거치/공중 정지)"] --> BIND["2. 기체 Base+8 직결 바인딩<br/>(MSG_CALIBRATION_INIT)"]
     BIND --> TUNE["3. 베이 채널 개방<br/>(Base_hangar+0~+3)"]
     TUNE --> ALIGN["4. 다단 펄스 & 적분<br/>(사다리꼴 충격량 J 산출)"]
     ALIGN --> OLS["5. 주 작용축 OLS 회귀<br/>(Slope, Deadband, R²)"]
@@ -57,11 +58,11 @@ flowchart LR
 ```
 
 ### 1.2 핵심 개발 배경 및 정밀화 목표
-1. **격납고 베이별 10채널 블록군(101~200) 및 기체 Base+0 직결 바인딩 체계 (방안 A)**:
+1. **격납고 베이별 10채널 블록군(101~200) 및 기체 `Base+8` 직결 바인딩 체계 (방안 A)**:
    - 격납고 컴퓨터에 상주 설치되어 평상시에는 채널을 점유하지 않고 `STANDBY` 상태로 대기합니다.
-   - 각 격납고 베이는 독립 10채널 블록($Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$, $\text{BayID}=1\sim 10$)을 관할하며, 엔지니어가 콘솔에서 기체 번호 $N$을 입력하고 [교정 바인딩]을 실행하면 기체 고유 상시 개방 채널인 **기체 `Base + 0` (`CH_OPERATOR_C2`)**으로 직접 **`MSG_CALIBRATION_INIT`**를 발송하여 1:1 직결 바인딩을 수립합니다.
-   - 기체(VAS)는 `Base + 0` 수신 즉시 지정된 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 동적으로 개방하고, 시험 완료/중단 시 즉시 `modem.close()`로 완전 해제하여 채널 간섭을 방지합니다.
-   - 구버전의 기체 번호 $N$별 `Base+4`/`Base+2` 동적 튜닝 방식 및 임시 단일 채널(`1001`/`1002`)은 영구 폐지되고 `[DEPRECATED]` 처리되었습니다. 입고된 임의의 기체는 평상시 비행 중에는 격납고 채널을 열지 않으며, 오직 `Base+0` 바인딩 지령 수신 시에만 지정 베이 채널을 동적으로 개방합니다.
+   - 각 격납고 베이는 독립 10채널 블록($Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$, $\text{BayID}=1\sim 10$)을 관할하며, 엔지니어가 콘솔에서 기체 번호 $N$을 입력하고 [교정 바인딩]을 실행하면 기체 전용 교정 개시 채널인 **기체 `Base + 8` (`CH_CALIBRATION_INIT`)**으로 직접 **`MSG_CALIBRATION_INIT`**를 발송하여 1:1 직결 바인딩을 수립합니다 (`Base + 0` 직결 바인딩은 `[DEPRECATED]`).
+   - 기체(VAS)는 `Base + 8` 수신 즉시 지정된 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 동적으로 개방하고, 시험 완료/중단 시 즉시 `modem.close()`로 완전 해제하여 채널 간섭을 방지합니다.
+   - 구버전의 기체 번호 $N$별 `Base+4`/`Base+2` 동적 튜닝 방식, 구 `Base+0` 직결 바인딩, 임시 단일 채널(`1001`/`1002`)은 영구 폐지되고 `[DEPRECATED]` 처리되었습니다. 입고된 임의의 기체는 평상시 비행 중에는 격납고 채널을 열지 않으며, 오직 `Base+8` 바인딩 지령 수신 시에만 지정 베이 채널을 동적으로 개방합니다.
 2. **시간 영역 사다리꼴 수치 적분(Trapezoidal Impulse Integration)**:
    - Create: Aeronautics의 물리 갱신 틱(50ms) 지터 환경에서 1회성 피크값($\Delta \omega_{peak}$)의 왜곡을 방지하기 위해, 시간 영역 사다리꼴 적분을 적용하여 순수 각충격량($\mathbf{J}_\omega$) 및 선충격량($\mathbf{J}_v$)을 산출합니다.
 3. **주 작용축(Dominant Axis) 자동 선정 OLS 선형 회귀**:
@@ -93,13 +94,13 @@ flowchart TD
     end
 
     subgraph AIRCRAFT["[시험 대상 입고 비행체] 임의의 기체 (N = 1 ~ 1000)"]
-        VC["VAS (Node 01)<br/>* Base+0: 직결 바인딩 리스닝<br/>* Base_hangar+1: 20Hz 텔레메트리 피드<br/>* Base_hangar+0: CALIBRATION 지령 수신"]
+        VC["VAS (Node 01)<br/>* Base+8: 직결 바인딩 리스닝<br/>* Base_hangar+1: 20Hz 텔레메트리 피드<br/>* Base_hangar+0: CALIBRATION 지령 수신"]
         TCA["TCA 클러스터 (Node 02-xx)<br/>* Base_hangar+3: 직결 디스커버리<br/>* Base_hangar+0: 펄스(4, 8, 12) 구동 수신<br/>* 상호작용 모드: API / REDSTONE"]
         ASA["ASA 클러스터 (Node 06-xx)<br/>* Base_hangar+3: 조종면 디스커버리/스위프 검증<br/>* 모드: API / REDSTONE"]
     end
 
-    CONSOLE -.->|"1. 기체 Base+0 포트로 바인딩 전송<br/>send(Base+0, MSG_CALIBRATION_INIT)<br/>modem.open(Base_hangar+0, +1, +3)"| MODEM
-    MODEM ==>|"2. 기체 Base+0 [CH_OPERATOR_C2]<br/>MSG_CALIBRATION_INIT 바인딩 하달"| VC
+    CONSOLE -.->|"1. 기체 Base+8 포트로 바인딩 전송<br/>send(Base+8, MSG_CALIBRATION_INIT)<br/>modem.open(Base_hangar+0, +1, +3)"| MODEM
+    MODEM ==>|"2. 기체 Base+8 [CH_CALIBRATION_INIT]<br/>MSG_CALIBRATION_INIT 바인딩 하달"| VC
     VC -->|"3. Base_hangar+1 [CH_CALIBRATION_TELEM]<br/>MSG_CALIBRATION_INIT_ACK (READY) 회신"| MODEM
     MODEM <==>|"4. Base_hangar+0 [CH_CALIBRATION_CMD]<br/>MSG_CALIB_START, MSG_CALIB_PULSE, MSG_PROFILE_SYNC"| VC
     MODEM <==>|"5. Base_hangar+3 [CH_CALIBRATION_TAP]<br/>MSG_ACTUATOR_DISCOVER & MSG_SURFACE_DISCOVER"| TCA
@@ -110,11 +111,11 @@ flowchart TD
 
 ### 2.1 무선 통신 채널 및 인터페이스 매핑
 
-격납고 지상 시험 시설은 10개 독립 베이 블록($Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$, $\text{BayID} = 1\sim 10$) 및 기체 `Base+0` 직결 바인딩 방식을 표준 채택합니다.
+격납고 지상 시험 시설은 10개 독립 베이 블록($Base_{\text{hangar}} = 101 + (\text{BayID}-1)\times 10$, $\text{BayID} = 1\sim 10$) 및 기체 `Base+8` (`CH_CALIBRATION_INIT`) 직결 바인딩 방식을 표준 채택합니다.
 
 | 채널 번호 | 채널 식별 상수 | 통신 방향 | 패킷 타입 (`type`) | 주기 및 라이프사이클 규칙 |
 | :---: | :---: | :---: | :---: | :--- |
-| **기체 `Base+0`** | `CH_OPERATOR_C2` | Align $\rightarrow$ VAS | `MSG_CALIBRATION_INIT` | 엔지니어 바인딩 실행 시 베이 번호 및 Base_hangar 직결 지령 |
+| **기체 `Base+8`** | `CH_CALIBRATION_INIT` | Align $\rightarrow$ VAS | `MSG_CALIBRATION_INIT` | 엔지니어 바인딩 실행 시 베이 번호 및 Base_hangar 직결 지령 (구 `Base+0` `[DEPRECATED]`) |
 | **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Align $\rightarrow$ Core/TCA | `MSG_CALIB_START` | 교정 개시(`ENTER`) 및 비상 중단(`ABORT`) 통보 (구버전 `1001`, `Base+4` [DEPRECATED]) |
 | **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Align $\rightarrow$ TCA | `MSG_CALIB_PULSE` | 3단 미세 시험 펄스(신호 4, 8, 12, 지속 300ms) 인가 |
 | **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Align $\rightarrow$ VAS | `MSG_PROFILE_SYNC` | OLS 회귀 6-DoF 프로파일 동기화 및 비행 복귀 |
@@ -137,16 +138,16 @@ flowchart TD
 
 ## 3. 14단계 유한 상태 머신 (FSM Lifecycle)
 
-Alignment은 격납고 상주 대기부터 기체 Base+0 바인딩, 인터록 핸드셰이크, 추진기 탐색, 펄스 인가, 적분, 정착, 회귀, 이상치 일시정지, 권능 진단, 승인 대기, 동기화, 비상 중단, 세션 종료 해제까지 총 14단계의 명확한 상태 전이 체계를 가집니다.
+Alignment은 격납고 상주 대기부터 기체 Base+8 바인딩, 인터록 핸드셰이크, 추진기 탐색, 펄스 인가, 적분, 정착, 회귀, 이상치 일시정지, 권능 진단, 승인 대기, 동기화, 비상 중단, 세션 종료 해제까지 총 14단계의 명확한 상태 전이 체계를 가집니다.
 
 ```mermaid
 stateDiagram-v2
     [*] --> STANDBY: 콘솔 부팅 (모든 베이 채널 미개방)
     
-    STANDBY --> TUNING: 시험 개시 (기체 Base+0 바인딩 지령 전송)
+    STANDBY --> TUNING: 시험 개시 (기체 Base+8 바인딩 지령 전송)
     note right of TUNING
       modem.open(Base_hangar+0, +1, +3)
-      send(기체 Base+0, MSG_CALIBRATION_INIT)
+      send(기체 Base+8, MSG_CALIBRATION_INIT)
     end note
     
     TUNING --> HANDSHAKE: 기체 MSG_CALIBRATION_INIT_ACK (READY) 수신
@@ -190,7 +191,7 @@ stateDiagram-v2
 | 상태 식별자 | 상태 명칭 | 진입 조건 및 핵심 실행 로직 | 차기 전이 조건 및 대상 상태 |
 | :--- | :--- | :--- | :--- |
 | **`STANDBY`** | 격납고 대기 | 콘솔 부팅 또는 이전 세션 클린업 완료. 모든 베이 채널 닫힘 유지. 대형 모니터에 Standby HUD 표출. | 기체 번호 $N$ 입력 및 [바인딩 시작] $\rightarrow$ **`TUNING`** |
-| **`TUNING`** | 바인딩 및 조율 | 베이 채널($Base_{\text{hangar}}+0, +1, +3$) 동적 개방 및 기체 `Base+0`으로 `MSG_CALIBRATION_INIT` 송출. | 기체 `MSG_CALIBRATION_INIT_ACK` (READY) 수신 $\rightarrow$ **`HANDSHAKE`**<br/>3초 타임아웃 $\rightarrow$ **`CLEANUP`** |
+| **`TUNING`** | 바인딩 및 조율 | 베이 채널($Base_{\text{hangar}}+0, +1, +3$) 동적 개방 및 기체 `Base+8` (`CH_CALIBRATION_INIT`)으로 `MSG_CALIBRATION_INIT` 송출. | 기체 `MSG_CALIBRATION_INIT_ACK` (READY) 수신 $\rightarrow$ **`HANDSHAKE`**<br/>3초 타임아웃 $\rightarrow$ **`CLEANUP`** |
 | **`HANDSHAKE`** | 인터록 교신 | VAS로 `MSG_CALIB_START` 송출($Base_{\text{hangar}}+0$). VAS가 `CALIBRATION` 상태로 진입하고 정상 출력을 0으로 동결했는지 감시. | Core ACK 수신 $\rightarrow$ **`DISCOVERY`**<br/>3초 타임아웃 $\rightarrow$ **`CLEANUP`** |
 | **`DISCOVERY`** | 추진기/조종면 탐색 | $Base_{\text{hangar}}+3$으로 `MSG_ACTUATOR_DISCOVER_REQ` 및 `MSG_SURFACE_DISCOVER_REQ` 브로드캐스트. 온라인 TCA 클러스터 및 ASA 조종면 제원 동시 수집 및 시험 순서 큐 생성. | 필수 노드 ACK 수신 $\rightarrow$ **`PULSE_EXEC`**<br/>노드 부재/결함 $\rightarrow$ **`ANOMALY_PAUSE`** |
 | **`PULSE_EXEC`** | 펄스 인가 | 현재 추진기 및 단계($S \in \{4, 8, 12\}$)에 맞춰 `MSG_CALIB_PULSE`($Base_{\text{hangar}}+0$) 송출. 300ms 고정밀 타이머 가동. | 펄스 송출 즉시 $\rightarrow$ **`INTEGRATING`** |
@@ -450,7 +451,7 @@ function align_master.init_bay_session(cfg, aircraftNumber) -> sessionContext
     local bayId = cfg.station.bayId or 1
     local baseHangarCh = cfg.station.baseHangarChannel or (101 + (bayId - 1) * 10)
     local craftBase = 10000 + (aircraftNumber - 1) * 40 -- 40채널 기준 (구 20채널 [DEPRECATED])
-    local craftC2Ch = craftBase + 0
+    local craftCalibInitCh = craftBase + 8 -- CH_CALIBRATION_INIT (구 Base+0 [DEPRECATED])
     
     local modem = peripheral.wrap(cfg.station.modemSide)
     local calibCmdCh = baseHangarCh + 0
@@ -461,7 +462,7 @@ function align_master.init_bay_session(cfg, aircraftNumber) -> sessionContext
     modem.open(calibTelemCh)
     modem.open(tapDirectCh)
     
-    -- 기체 Base+0 포트로 MSG_CALIBRATION_INIT 직결 전송
+    -- 기체 Base+8 (CH_CALIBRATION_INIT) 포트로 MSG_CALIBRATION_INIT 직결 전송
     local initPacket = {
         ver = "1.9.5", domainId = string.format("AIRCRAFT_%02d", aircraftNumber), seq = 1,
         type = "MSG_CALIBRATION_INIT", time = os.epoch("utc"),
@@ -472,7 +473,7 @@ function align_master.init_bay_session(cfg, aircraftNumber) -> sessionContext
             targetCraftDomain = string.format("AIRCRAFT_%02d", aircraftNumber)
         }
     }
-    modem.transmit(craftC2Ch, calibTelemCh, initPacket)
+    modem.transmit(craftCalibInitCh, calibTelemCh, initPacket)
     
     return {
         aircraftNumber = aircraftNumber,
@@ -600,9 +601,9 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
 
 모든 패킷은 최상위 공통 엔벨로프(`ver = "1.9.5"`, `domainId`, `seq`, `type`, `time`, `payload`)를 준수합니다.
 
-### 10.1 기체 직결 바인딩 지령 및 확인 (`MSG_CALIBRATION_INIT / _ACK`, CH: 기체 Base+0 / Base_hangar+1)
+### 10.1 기체 직결 바인딩 지령 및 확인 (`MSG_CALIBRATION_INIT / _ACK`, CH: 기체 Base+8 / Base_hangar+1)
 ```lua
--- 1. Align -> Core (기체 Base+0 포트로 전송)
+-- 1. Align -> Core (기체 Base+8 CH_CALIBRATION_INIT 포트로 전송)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",

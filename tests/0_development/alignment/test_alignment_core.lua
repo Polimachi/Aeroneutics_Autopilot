@@ -63,7 +63,7 @@ describe("alignment master bay session and HUD renderer", function()
         assert_nil(align_master.compute_craft_base(1001))
     end)
 
-    it("auto-resolves craft Base+0 from domain id and sends MSG_CALIBRATION_INIT to Base+0", function()
+    it("auto-resolves craft base from domain id and sends MSG_CALIBRATION_INIT to Base+8", function()
         local mockModem = mock.modem()
         local stationCfg = {
             stationId = "BAY_01",
@@ -77,12 +77,17 @@ describe("alignment master bay session and HUD renderer", function()
         assert_eq(master.craft_base_ch, 10040)
         assert_eq(#mockModem._transmitted, 1)
         local t1 = mockModem._transmitted[1]
-        assert_eq(t1.tx, 10040)
+        assert_eq(t1.tx, 10048) -- Base+8 (CH_CALIBRATION_INIT)
         assert_eq(t1.rx, 102)
         assert_not_nil(t1.pkt)
         assert_eq(t1.pkt.type, "MSG_CALIBRATION_INIT")
         assert_eq(t1.pkt.payload.stationId, "BAY_01")
         assert_eq(t1.pkt.payload.targetCraftDomain, "AIRCRAFT_02")
+
+        local mockModem1 = mock.modem()
+        local master1 = align_master.init_bay_session(stationCfg, "AIRCRAFT_01", 10000, mockModem1)
+        assert_not_nil(master1)
+        assert_eq(mockModem1._transmitted[1].tx, 10008)
     end)
 
     it("emits MSG_CALIB_START on Base_hangar+0 and discovery requests on Base_hangar+3 upon INIT_ACK", function()

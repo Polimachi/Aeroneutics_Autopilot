@@ -210,7 +210,7 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
     end)
 
     it("delegates abortWhen fallbackPolicy (SKIP_NEXT, RTH, HOVER_HOLD, LOITER) and cleans up Zone 3 on abort/stop", function()
-        local eng, _, m, rs = create_engine_fixture()
+        local eng, net, m, rs = create_engine_fixture()
         assert_true(eng:load_table({
             missionId = "ABORT_TEST",
             version = "2.0.0",
@@ -234,11 +234,13 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         }))
 
         assert_true(eng:start("SINGLE", 1000))
+        assert_true(net.openPayloadChannels[10020])
         assert_true(m.isOpen(10020))
 
         local st_skip = eng:tick(6000)
         assert_eq(st_skip, "SKIPPED")
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
         assert_eq(eng.checkpoints[1].status, "ABORTED")
         assert_eq(eng.active_index, 2)
         assert_eq(eng.state, "EN_ROUTE")
@@ -454,5 +456,38 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_eq(t2, "ABORTED")
         assert_eq(eng2.state, "ABORTED")
         assert_eq(eng2:get_fallback_goal().flightMode, "FAILSAFE_RTH")
+    end)
+
+    it("passes preconditions.channelBound for ACQUIRED_OFFLINE while rejecting LOCKED_NO_GCS", function()
+        local mission = {
+            missionId = "OFFLINE_LEASE_PRECOND",
+            version = "2.0.0",
+            fallbackPolicy = "HOVER_HOLD",
+            checkpoints = {
+                {
+                    checkpointId = "CP_OFFLINE",
+                    action = "ACT_NAV_GOTO_WP",
+                    params = { targetPos = { x = 100, z = 200 } },
+                    preconditions = { channelBound = true },
+                },
+            },
+        }
+
+        local eng_ok = create_engine_fixture({
+            sentinel = { status = "ACQUIRED_OFFLINE", locked = false, baseChannel = 10040 },
+        })
+        assert_true(eng_ok:load_table(mission))
+        local ok_off, err_off = eng_ok:start("SINGLE", 1000)
+        assert_true(ok_off, tostring(err_off))
+        assert_eq(eng_ok.state, "EN_ROUTE")
+
+        local eng_locked = create_engine_fixture({
+            sentinel = { status = "LOCKED_NO_GCS", locked = true, baseChannel = 10000 },
+        })
+        assert_true(eng_locked:load_table(mission))
+        local ok_lock, err_lock = eng_locked:start("SINGLE", 1000)
+        assert_false(ok_lock)
+        assert_eq(err_lock, "PRECONDITION_FAILED")
+        assert_eq(eng_locked.state, "ABORTED")
     end)
 end)

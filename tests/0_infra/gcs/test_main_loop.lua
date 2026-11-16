@@ -81,7 +81,7 @@ describe("GCS main application loop and event dispatcher", function()
         -- Press 'X' for Emergency E_STOP
         app:process_key(nil, "x")
         assert_eq(#modem.transmissions, 2)
-        assert_eq(modem.transmissions[2].channel, 10001) -- Base+1 direct to VAS
+        assert_eq(modem.transmissions[2].channel, 10009) -- Base+9 CH_EMERGENCY_CORE direct to VAS
         assert_eq(modem.transmissions[2].payload.payload.action, "E_STOP")
         assert_eq(modem.transmissions[2].payload.payload.source, "GCS")
 

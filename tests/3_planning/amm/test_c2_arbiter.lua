@@ -77,7 +77,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- FCP still taking off
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "TAKEOFF",
+                controlState = "TAKEOFF",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
@@ -86,7 +86,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- FCP reaches clearance altitude and transitions to CRUISE
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
@@ -105,7 +105,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Craft arrives at WP1
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 100, z = 100 } }
             }
         })
@@ -116,7 +116,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Craft arrives at WP2 (final waypoint with facilityId)
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 200, z = 200 } }
             }
         })
@@ -311,10 +311,11 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         fs.delete("/disk/disk_sortie.json")
     end)
 
-    it("emits E_STOP with ESTOP_CONFIRM_KEY and source AMM on ESTOP pilot action", function()
+    it("emits E_STOP with ESTOP_CONFIRM_KEY and source AMM on Base+9 on ESTOP pilot action", function()
         local q, net, arb, tx = create_fixture()
         arb:handle_pilot_action("ESTOP", {}, 1000)
         assert_eq(#tx, 1)
+        assert_eq(tx[1].chan, 10009)
         assert_eq(tx[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(tx[1].payload.payload.action, "E_STOP")
         assert_eq(tx[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")
@@ -581,7 +582,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Base+2 MSG_FLIGHT_TELEMETRY drives mission_engine progression (4 ticks satisfy PROXIMITY_3D settleTicks = 4)
         for i = 1, 4 do
             arb:handle_flight_telemetry({
-                payload = { fsmState = "CRUISE", activeSource = "FCP", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
+                payload = { controlState = "CRUISE", activeSource = "FCP", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
             }, 1300 + (i - 1) * 50)
         end
         assert_eq(eng.active_index, 2)
@@ -664,5 +665,83 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_false(fs.exists("/missions/INLINE_NO_SAVE.json"))
 
         if fs.exists("/missions/LIVE_PUSH_01.json") then fs.delete("/missions/LIVE_PUSH_01.json") end
+    end)
+
+    it("enforces acroRecoveryHoldMs=300ms Base+3 yield hysteresis across MFD_ACRO, FAILSAFE_HOLD, and EMERGENCY_LAND recovery", function()
+        local q = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local transmitted = {}
+        net.modem = {
+            transmit = function(chan, _reply, payload)
+                table.insert(transmitted, { chan = chan, payload = payload })
+            end
+        }
+        local arb = c2_arbiter.new(q, net, { safety = { acroRecoveryHoldMs = 300 } })
+
+        assert_true(arb:can_transmit_mfd(900))
+
+        -- 1. MFD_ACRO entry via canonical Base+3 (I-6) sets yield window [1000, 1300)
+        arb:handle_mfd_state({
+            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", acroActive = true },
+        }, 1000)
+        assert_eq(arb.activeSource, "MFD_ACRO")
+        assert_eq(arb.lastVasPriorityMs, 1000)
+
+        local ok_acro, err_acro = arb:can_transmit_mfd(1050)
+        assert_false(ok_acro)
+        assert_eq(err_acro, "YIELDED_TO_MFD_ACRO")
+
+        -- 2. Return to FCP via canonical Base+2 (I-1) at t=1100: still inside t < 300ms recovery hold window (1100..1299)
+        arb:handle_flight_telemetry({
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
+        }, 1100)
+        assert_eq(arb.activeSource, "FCP")
+
+        local ok_hold1, err_hold1 = arb:can_transmit_mfd(1150)
+        assert_false(ok_hold1)
+        assert_eq(err_hold1, "ACRO_RECOVERY_HOLD")
+
+        local ok_net1, err_net1 = net:send_mfd_state({ fsmState = "CRUISE" }, arb.activeSource, 1299)
+        assert_false(ok_net1)
+        assert_eq(err_net1, "ACRO_RECOVERY_HOLD")
+        assert_eq(#transmitted, 0)
+
+        -- 3. At nowMs - lastVasPriorityMs >= 300 (t=1300), AMM resumes Base+3 downlink
+        assert_true(arb:can_transmit_mfd(1300))
+        local ok_resumed = net:send_mfd_state({ fsmState = "CRUISE" }, arb.activeSource, 1300)
+        assert_true(ok_resumed)
+        assert_eq(#transmitted, 1)
+        assert_eq(transmitted[1].chan, 10003)
+
+        -- 4. FAILSAFE_HOLD -> FCP recovery also enforces 300ms hold
+        arb:handle_mfd_state({
+            payload = { source = "CORE_FAILSAFE", fsmState = "FAILSAFE_HOLD" },
+        }, 2000)
+        arb:handle_flight_telemetry({
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
+        }, 2050)
+        local ok_fs_hold, err_fs_hold = arb:can_transmit_mfd(2299)
+        assert_false(ok_fs_hold)
+        assert_eq(err_fs_hold, "ACRO_RECOVERY_HOLD")
+        local ok_fs_net, err_fs_net = net:send_mfd_state({ fsmState = "CRUISE" }, "FCP", 2299)
+        assert_false(ok_fs_net)
+        assert_eq(err_fs_net, "ACRO_RECOVERY_HOLD")
+        assert_eq(#transmitted, 1)
+
+        assert_true(arb:can_transmit_mfd(2300))
+        assert_true(net:send_mfd_state({ fsmState = "CRUISE" }, "FCP", 2300))
+        assert_eq(#transmitted, 2)
+
+        -- 5. EMERGENCY_LAND -> FCP recovery also enforces 300ms hold
+        arb:handle_mfd_state({
+            payload = { source = "CORE_FAILSAFE", fsmState = "EMERGENCY_LAND" },
+        }, 3000)
+        arb:handle_flight_telemetry({
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
+        }, 3050)
+        local ok_em_hold, err_em_hold = arb:can_transmit_mfd(3299)
+        assert_false(ok_em_hold)
+        assert_eq(err_em_hold, "ACRO_RECOVERY_HOLD")
+        assert_true(arb:can_transmit_mfd(3300))
     end)
 end)

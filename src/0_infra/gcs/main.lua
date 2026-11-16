@@ -113,17 +113,24 @@ end
 local function handle_bootstrap_message(self, replyChannel, msg)
     if msg.type ~= "MSG_BLOCK_REQUEST" then return false end
     local p = msg.payload
-    local res = channel_manager.allocate_block(self.channel_mgr, p.domainId, p.hardwareUuid, p.requestedBandwidth)
-    channel_manager.save_registry(self.channel_mgr)
+    local res = channel_manager.allocate_block(
+        self.channel_mgr,
+        p.domainId,
+        p.hardwareUuid,
+        p.requestedBandwidth,
+        p.preferredBase,
+        p.conflictBase,
+        get_time_ms()
+    )
     if res.status == "ASSIGNED" or res.status == "REASSIGNED" then
         fleet_tracker.register_craft(self.fleet, p.domainId, res.baseChannel, res.blockId)
         network_manager.register_craft_channels(self.net_mgr, res.baseChannel)
         if not self.net_mgr.active_base then
             network_manager.set_active_craft(self.net_mgr, res.baseChannel)
         end
-        self.status_msg = string.format("ASSIGNED: %s -> CH %d", p.domainId, res.baseChannel)
+        self.status_msg = string.format("%s: %s -> CH %d", res.status, tostring(p.domainId), res.baseChannel)
     else
-        self.status_msg = string.format("DENIED: %s (%s)", p.domainId, tostring(res.reason))
+        self.status_msg = string.format("%s: %s (%s)", tostring(res.status), tostring(p.domainId), tostring(res.reason))
     end
     local reply_ch = replyChannel or self.config.channels.bootstrapChannel
     network_manager.send_block_assign(self.net_mgr, reply_ch, res)

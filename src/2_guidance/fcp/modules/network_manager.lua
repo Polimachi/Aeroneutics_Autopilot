@@ -48,6 +48,7 @@ local function persist_config(ctx)
     cfg.channels.trajectoryOffset = ctx.channels.trajectory - ctx.baseChannel
     cfg.channels.telemetryOffset = ctx.channels.telemetry - ctx.baseChannel
     cfg.channels.guidanceOffset = ctx.channels.guidance - ctx.baseChannel
+    cfg.channels.emergencyOffset = ctx.channels.emergency - ctx.baseChannel
     local ser = textutils and (textutils.serializeJSON or textutils.serialiseJSON)
     if not ser then return false end
     local ok, content = pcall(ser, cfg)
@@ -71,12 +72,14 @@ function network_manager.init(config, modem_lookup_fn)
         trajectory = base_ch + (chs.trajectoryOffset or 4),
         telemetry = base_ch + (chs.telemetryOffset or 2),
         guidance = base_ch + (chs.guidanceOffset or 1),
+        emergency = base_ch + (chs.emergencyOffset or 9),
     }
 
     if m and m.open then
         m.open(channels.trajectory)
         m.open(channels.telemetry)
         m.open(channels.guidance)
+        m.open(channels.emergency)
     end
 
     return {
@@ -134,6 +137,7 @@ local function handle_rebind_prepare(ctx, payload, now_ms)
         m.open(newBase + 4)
         m.open(newBase + 2)
         m.open(newBase + 1)
+        m.open(newBase + 9)
     end
     local txId = payload.transactionId or ("REBIND-" .. tostring(newBase))
     ctx.rebindTx = {
@@ -175,15 +179,17 @@ local function handle_rebind_commit(ctx, payload, now_ms)
         m.close(oldBase + 4)
         m.close(oldBase + 2)
         m.close(oldBase + 1)
+        m.close(oldBase + 9)
     end
     if m and m.open then
         m.open(newBase + 4)
         m.open(newBase + 2)
         m.open(newBase + 1)
+        m.open(newBase + 9)
     end
 
     ctx.baseChannel = newBase
-    ctx.channels = { trajectory = newBase + 4, telemetry = newBase + 2, guidance = newBase + 1 }
+    ctx.channels = { trajectory = newBase + 4, telemetry = newBase + 2, guidance = newBase + 1, emergency = newBase + 9 }
     persist_config(ctx)
     ctx.rebindTx = nil
     return true
@@ -208,6 +214,7 @@ local function handle_rebind_rollback(ctx, payload)
         ctx.modem.close(newBase + 4)
         ctx.modem.close(newBase + 2)
         ctx.modem.close(newBase + 1)
+        ctx.modem.close(newBase + 9)
     end
     ctx.rebindTx = nil
     return true
@@ -257,9 +264,6 @@ local function dispatch_guidance(ctx, pkt)
             end
         end
         return true
-    elseif t == "MSG_EMERGENCY_ALERT" then
-        ctx.inbound.emergencyAlert = pkt
-        return true
     end
     return false
 end
@@ -281,8 +285,9 @@ function network_manager.ingest_modem_event(ctx, side, ch, reply_ch, msg, dist, 
     local isTraj = (ch == ctx.channels.trajectory) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 4)
     local isTelem = (ch == ctx.channels.telemetry) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 2)
     local isGuid = (ch == ctx.channels.guidance) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 1)
+    local isEmg = (ch == ctx.channels.emergency) or (ctx.rebindTx and ch == ctx.rebindTx.newBase + 9)
 
-    if isTraj or isTelem or isGuid then
+    if isTraj or isTelem or isGuid or isEmg then
         if not network_manager.verify_packet(ctx, pkt) then return false end
         if isTraj then
             return dispatch_trajectory(ctx, pkt, now_ms)
@@ -293,6 +298,11 @@ function network_manager.ingest_modem_event(ctx, side, ch, reply_ch, msg, dist, 
             end
         elseif isGuid then
             return dispatch_guidance(ctx, pkt)
+        elseif isEmg then
+            if pkt.type == "MSG_EMERGENCY_ALERT" then
+                ctx.inbound.emergencyAlert = pkt
+                return true
+            end
         end
         return false
     end
@@ -370,12 +380,13 @@ end
 function network_manager.bind_aircraft_channels(ctx, base_ch)
     local b = base_ch or ctx.baseChannel
     ctx.baseChannel = b
-    ctx.channels = { trajectory = b + 4, telemetry = b + 2, guidance = b + 1 }
+    ctx.channels = { trajectory = b + 4, telemetry = b + 2, guidance = b + 1, emergency = b + 9 }
     local m = ctx.modem
     if m and m.open then
         m.open(ctx.channels.trajectory)
         m.open(ctx.channels.telemetry)
         m.open(ctx.channels.guidance)
+        m.open(ctx.channels.emergency)
     end
 end
 
@@ -386,6 +397,7 @@ function network_manager.rebind_aircraft_channels(ctx, new_base)
         m.close(old_b + 4)
         m.close(old_b + 2)
         m.close(old_b + 1)
+        m.close(old_b + 9)
     end
     network_manager.bind_aircraft_channels(ctx, new_base)
 end

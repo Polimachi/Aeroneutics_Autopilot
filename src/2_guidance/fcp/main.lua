@@ -53,6 +53,7 @@ function fcp_main.load_config(path)
     if not cfg.channels.trajectoryOffset then cfg.channels.trajectoryOffset = 4 end
     if not cfg.channels.telemetryOffset then cfg.channels.telemetryOffset = 2 end
     if not cfg.channels.guidanceOffset then cfg.channels.guidanceOffset = 1 end
+    if not cfg.channels.emergencyOffset then cfg.channels.emergencyOffset = 9 end
     return cfg
 end
 
@@ -252,7 +253,7 @@ local function dispatch_outputs(ctx, dt, posErr, velErr)
     local currState = ctx.fsm.currentState or "BOOT"
     local sp = ctx.lastAmmSetpoint or {}
 
-    if currState == "PASSIVE_TRACKING" then
+    if currState == "PASSIVE_TRACKING" or currState == "EMERGENCY_HOLD" then
         local status_payload = {
             fsmState = currState,
             posError = posErr,

@@ -850,7 +850,10 @@ local function build_precond_ctx(self)
     local pctx = type(self.precondCtx) == "table" and self.precondCtx or {}
     local ch_bound = pctx.channelBound
     if ch_bound == nil then
-        ch_bound = (self.sentinel == nil) or (self.sentinel.status == "ACQUIRED" and not self.sentinel.locked)
+        ch_bound = (self.sentinel == nil) or (
+            (self.sentinel.status == "ACQUIRED" or self.sentinel.status == "ACQUIRED_OFFLINE")
+            and not self.sentinel.locked
+        )
     end
     local atc_ok = pctx.atcCleared
     if atc_ok == nil then

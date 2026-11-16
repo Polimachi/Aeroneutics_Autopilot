@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-16 — 40채널 블록 개편·프로토콜·경합·검증 결함 12종 해소 및 E2E/사양 승격 (TASK-125)
+
+- **결정 배경**: 기존 40채널 블록(`BW=40`)의 `Base+1` 유도/`E_STOP` 혼재, `Base+0` C2/교정 바인딩 혼재, 동시 부팅 및 꺼진 점유자(Sleeping Occupant) 프로브 누락, `Base+3` 이중 송신자 경합, `Base+30..39` Zone 3 vs 편대 혼재, `reqBW` 가변 필드 vs `stride 40` 불일치, `REASSIGNED` 상태값 불일치, `Base+20~39` 침범 감시 누락, `Rule 3` 중복 및 구조도 `checkCollision` 인자 불일치 등 12종 결함(`TASK-125-1..13`)을 Spec-First로 해소함 (`docs/superpowers/plans/2026-11-16-task-125-40ch-remediation.md`).
+- **반영 내역**:
+  1. **전사 사양서 및 계약 SSOT 동기화**: `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.35.0 Approved`), `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (`v2.19.0 Approved`), `AMM v2.4.0`, `VAS v1.23.0`, `FCP v2.3.0`, `GCS v1.3.0`, `ALIGNMENT v2.8.0`, `FDR v0.4.0` 개정 및 `config/protocol_contracts.json` (`zone1` `[0,1,2,3,4,5,8,9]`, `zone3_payload_ext` `30..39`, `I-2` `MSG_EMERGENCY_*` → `Base+9`, `I-4` `MSG_CALIBRATION_INIT` → `Base+8`, `I-8` `requestedBandwidth: [40,40]`·`MSG_BLOCK_ASSIGN` `status`/`bandwidth` 필수 및 `DENIED`/`FAILED` 블록 필드 선택화) 갱신.
+  2. **GCS 채널 관리자 (`src/0_infra/gcs/`)**: `BW=40` 고정 검증(`DENIED`/`INVALID_BANDWIDTH`), `REASSIGNED` + `reassignedFrom`, 영속 리스 레지스트리(`OFFLINE_RESERVED` / `ACTIVE_LEASE` / `preferredBase` / `conflictBase`), 4인자 `ranges_overlap` 및 `OFFSET_ESTOP = 9` 반영.
+  3. **AMM (`src/3_planning/amm/`)**: `channel_sentinel.lua` 프로브 지터(0~100ms)·2회 프로브(50ms 인터라운드 지터)·부팅 직후 `Base+0` 응답자·디스크 리스 캐시·전 블록(`Base+0..39`) 침범 감시 및 5000ms 무음 리셋·`Base+8` 교정 패킷 예외·`main.lua` 40채널 전수 개방/cross-domain 필터 및 `Base+3` `250ms` 타이머 기반 MFD 양보 히스테리시스·`c2_arbiter.lua` `Base+9` `E_STOP` 송출 구현.
+  4. **VAS·FCP·Alignment·FDR 및 동결 보호**: `VAS` (`Base+8` 교정/`Base+9` 비상 전용 및 `Base+0` 런타임 미개방·`Base+3` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 우선권·`formationLink` 제거), `FCP` (`Base+9` `MSG_EMERGENCY_OVERRIDE` 수신 및 비상 전이), `Alignment` (`Base+8` `MSG_CALIBRATION_INIT` 송신), `FDR` (`Base+9` `E_STOP`/`MSG_EMERGENCY_ALERT` 감청·`autoFlushOnEstop`) 구현. `src/1_control/asa/**` 및 `tests/1_control/asa/**`는 `0 diff` 동결 유지.
+  5. **E2E·가드레일 정합 및 승격**: `test_e2e_c2_and_estop.lua`, `test_e2e_hangar_alignment.lua`, `test_e2e_fdr_blackbox.lua`, `test_e2e_advanced_vtol_flight.lua`, `test_e2e_bootstrap_and_telemetry.lua`(꺼진 점유자 `preferredBase`, `REASSIGNED`, 2회 프로브 `CONFLICT_DETECTED`→`conflictBase` 재협상, `DENIED` `requestedBandwidth=20`), `test_verify_contracts.py` 갱신 후 6대 사양서 `Implemented` 승격(`14 Implemented, 4 Approved`).
+- **검증**: 병합 통합 후 단위 15타겟 `608/608 PASS`, E2E 10스위트 `20/20 PASS`(`534`패킷 `0` violations), 부트 스모크 `13/13 PASS`, `verify_contracts.py` `0 errors`, `verify_runtime_wiring.py` 13서브시스템 `0 violations`(`4` exemptions), `verify_all_specs.py --check-readmes` 17사양서 `0 Errors, 0 Warnings`, `verify_spec_status.py` `14 Implemented, 4 Approved PASS`, `verify_manifest_sync.py --strict-gdrive-packages` `0 Errors, 0 Warnings`, Lua 5.2 `140/140 PASS`, 돌연변이 `25/25 KILLED`(`100.0%`), 하네스 `139/139 PASS`, 에디터 `24/24 PASS`, `verify_context_docs.py` `0 findings`, `src/1_control/asa/**` `0 diff`.
+
+---
+
 ## 2026-11-16 — Google Drive 전수 패키지 135파일 업로드·매핑 동기화 및 엄격 정합성 게이트 기본 활성화 (TASK-501)
 
 - **결정 배경**: `manifest.lua` 15개 모듈 전수 파일의 Google Drive 단일 폴더(`1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9`) 업로드 시 동일 파일명(`main.lua`, `network_manager.lua`, `tui_view.lua` 등) 충돌을 방지하고, 모든 패키지 `gdriveId` 임베드 및 `verify_manifest_sync.py` 기본 게이트를 `--strict-gdrive-packages`로 강화하기 위해 수행함.

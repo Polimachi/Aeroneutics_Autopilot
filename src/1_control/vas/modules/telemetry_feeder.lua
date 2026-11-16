@@ -53,6 +53,7 @@ local function build_telem_payload(state, comState, fsmState, mixerState, diagSt
 end
 
 local function build_mfd_payload(comState, fsmState, mixerState, diagState, isAcro)
+    local d = diagState or {}
     return {
         source = isAcro and "CORE_ACRO_TAKEOVER" or "CORE_FAILSAFE",
         fsmState = fsmState.currentState,
@@ -64,9 +65,9 @@ local function build_mfd_payload(comState, fsmState, mixerState, diagState, isAc
         dynamics = build_mfd_dynamics(comState),
         fuel = comState.fuel,
         dynamicLoad = (mixerState and mixerState.dynamicLoad) or 0.0,
-        sensorOk = diagState.sensorOk == true,
-        sensorHealth = diagState.sensorHealth,
-        actuatorHealth = normalize_actuator_health(diagState)
+        sensorOk = d.sensorOk == true,
+        sensorHealth = d.sensorHealth,
+        actuatorHealth = normalize_actuator_health(d)
     }
 end
 

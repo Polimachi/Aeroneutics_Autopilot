@@ -627,6 +627,35 @@ def validate_captured_packets(
                 f"[{suite}] Packet #{idx} on channel {channel}: Prohibited deprecated packet type '{pkt_type}' transmitted"
             )
 
+        # Strict per-packet aircraft channel binding check (packetChannelOverrides)
+        if (
+            isinstance(channel, (int, float))
+            and not isinstance(channel, bool)
+            and isinstance(pkt_type, str)
+        ):
+            ch_num = int(channel)
+            if ac_base_min <= ch_num < (ac_base_min + ac_max_craft * ac_bandwidth):
+                ac_offset = (ch_num - ac_base_min) % ac_bandwidth
+                iface_override_match, _ = packet_defs.get(pkt_type, (None, None))
+                if iface_override_match:
+                    overrides = iface_override_match.get("packetChannelOverrides", {})
+                    if pkt_type in overrides:
+                        spec_override = overrides[pkt_type]
+                        allowed_offsets: list[int] = []
+                        if isinstance(spec_override, int):
+                            allowed_offsets = [spec_override]
+                        elif isinstance(spec_override, dict):
+                            if spec_override.get("kind") == "aircraft_offset" and isinstance(spec_override.get("offset"), int):
+                                allowed_offsets = [spec_override["offset"]]
+                        elif isinstance(spec_override, list):
+                            allowed_offsets = [x for x in spec_override if isinstance(x, int)]
+
+                        if allowed_offsets and ac_offset not in allowed_offsets:
+                            errors.append(
+                                f"[{suite}] Packet #{idx} on channel {ch_num} ({pkt_type}): "
+                                f"channel mismatch for strict interface binding (expected aircraft offset {allowed_offsets}, got +{ac_offset})"
+                            )
+
         inner_payload = raw_payload.get("payload")
         if isinstance(inner_payload, dict):
             iface_match, pkt_spec_match = packet_defs.get(pkt_type, (None, None))

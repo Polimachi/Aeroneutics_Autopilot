@@ -6,20 +6,20 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.3.0` |
+| **문서 버전 (Version)** | `v2.4.0` |
 | **최종 수정일 (Date)** | `2026-11-16` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획, 외부 인프라 게이트웨이, 항법·궤적 생성 및 조종석 통합 단말 (AMM / Node 03) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.34.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.18.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.2.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.3.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사 v1.6.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS v2.3.3)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.2.0)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.3.0)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
@@ -30,6 +30,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.4.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로브·리스·히스테리시스 규격 반영 (`Implemented`)**: ① `Base+9` (`CH_EMERGENCY_CORE`) `E_STOP` (`MSG_EMERGENCY_OVERRIDE`) 송신 및 `MSG_EMERGENCY_ALERT` 수신 분리(`Base+1` 미사용), ② `Base+3` `acroRecoveryHoldMs = 300ms` 복귀 히스테리시스 및 `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 즉시 양보, ③ `Base+0` 부팅 즉시 상시 개방·자기 UUID 무시·랜덤 지터(`0~100ms`)·`2`회 재프로브(`200ms`/회)·GCS `conflictBase` 재할당 회피(`maxReassignAttempts = 3` $\to$ `LOCKED_CONFLICT`), ④ `config/channel_lease.json` 영속 리스 캐시 및 GCS `preferredBase` 재검증(`gcsBootstrapTimeoutMs = 2000ms`, 무응답 시 `[NO_GCS_LEASE]` / `LOCKED_NO_GCS`), ⑤ `Base+0..39` 전 블록 침범 감시(`30,000ms`) 및 Zone 3 확장(`Base+20~39`, 편대 `TBD` 이관), ⑥ 연관 배지(`ICD v1.35.0`, `Diagram v2.19.0`, `FCP v2.3.0`, `VAS v1.23.0`, `GCS v1.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`) 동기화 | `TASK-125` 40채널 스펙트럼 충돌·경합·검증 결함 해소 및 `TASK-403`/`404` 통합 반영 |
 | `v2.3.0` | `2026-11-16` | **`TASK-404` `MSG_MISSION_CMD` 원격 인라인 적재·저장(`action = "LOAD"`) 확장 (`Implemented` $\to$ `Approved`)**: ① `Base+0` (`CH_OPERATOR_C2`) `MSG_MISSION_CMD`에 `"LOAD"` 액션 및 선택 필드 `missionData` (테이블), `saveToDisk` (불리언, 기본 `true`) 추가, ② 수신 시 `EN_ROUTE` 충돌 검사(`BUSY_REJECTED`)·스키마 검증(`SCHEMA_INVALID`)·`/missions/<missionId>.json` 원자적 저장·`mission_engine:load_table` 적재 후 `MSG_MISSION_ACK` (`ACCEPTED`) 회신 규격화, ③ `GCS v1.2.0` / `AMM_MISSION_EDITOR v0.5.0` / `ICD v1.34.0` / `Diagram v2.18.0` 동기화 | WebUI Live Mode `'Push to Aircraft'` 원클릭 무선 미션 전송 및 즉시 적재 지원 |
 | `v2.2.0` | `2026-11-16` | **`TASK-403` `ACT_TKL_LAND_NEAREST` (`37`종) 신설 및 `MSG_FACILITY_BEACON.facilities[]` 수집 연동 (`Implemented` $\to$ `Approved`)**: ① `action_registry.lua` `ACT_TKL_*`에 `ACT_TKL_LAND_NEAREST` 추가(활성 `ACT_*` `36종` $\to$ `37종`), 파라미터 `facilityTypeFilter` (`"ANY"`\|`"LANDING_PAD"`\|`"RUNWAY"`), 선택 `maxRangeM > 0`, 선택 `targetPos`, 기본 완료 조건 `FACILITY_TOUCHDOWN`, ② `facility_client.update_beacons()`에서 GAC 비콘 `facilities[]` 일괄 수집 및 `find_nearest_free_landing_facility()`에서 `dedicated == true` 제외·`facilityTypeFilter`/`maxRangeM` 필터링, ③ `mission_engine` 실행 시점 최근접 무료 착륙 시설 동적 배정 및 가용 시설 부재 시 Abort 폴백(`DEC_RETRY_N` 재시도 루프 방지 가드 포함), ④ `AMM_MISSION_EDITOR_SPECIFICATION.md v0.4.0` 및 `GAC v1.6.0`/`ICD v1.33.0`/`Diagram v2.17.0` 동기화 | `TASK-403` 동적 최근접 착륙 행동 및 월드 프리셋 시설 연동 |
 | `v2.1.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `network_manager.open_channels`에 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 회신 추가, ② `app.arbiter.fsmState` 및 `app.arbiter.latest_telem.isAirborne` 안전 게이트 연동, ③ 메인 루프 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/3_planning/amm/` 반영 후 `Implemented` 재승격 예정) |
@@ -51,9 +52,9 @@
 자율 비행 생태계에서 하위 **FCP (Node 04)**가 `Base+4` $\leftrightarrow$ `Base+1` 구간에 격리된 **순수 온보드 `SE(3)` 외루프 추종 제어기** 역할에 전념하고, **VAS (Node 01)**가 `SO(3)` 내루프 자세·추력·공력면 믹싱을 전담하는 구조로 개편됨에 따라, **AMM (Node 03)**은 다음 **5대 핵심 책임**을 총괄합니다:
 
 1. **전략 임무 계획 및 `ACT_*`/`DEC_*`/`MAC_*` 체크포인트 시퀀서 (`v2.0.0`)**:
-   - 5모듈 미션 코어(`mission_engine.lua`, `action_registry.lua`, `chattering_guard.lua`, `condition_evaluator.lua`, `hook_runner.lua`) 기반 3계층 행동 시퀀싱(37종 `[즉시]` + 19종 `[로드맵]` + `TBD [TASK-401]` `ACT_*`, 6종 `[즉시]` + 1종 `[로드맵]` `DEC_*`, 3종 `[즉시]` + 2종 `[로드맵]` `MAC_*`), 4대 범주 진입 조건(`preconditions`), 14종 복합 완료/중단 조건(`completeWhen`/`abortWhen`) 및 `settleTicks`, 0-tick 라이프사이클 훅(`onEnter`/`onExit`/`onAbort`), Zone 3(`Base+20~29`) 동적 탑재체 제어, 로컬 레드스톤 입출력, **호스트 PC 무설치 웹 GUI 미션 에디터(`tools/amm_mission_editor.html`)** 및 **외부 파일 즉시 구동 파이프라인(`resolve_path`, `validate_mission_table`, `file_transfer`, 셸 부팅 인자)**을 통합 관장합니다.
+   - 5모듈 미션 코어(`mission_engine.lua`, `action_registry.lua`, `chattering_guard.lua`, `condition_evaluator.lua`, `hook_runner.lua`) 기반 3계층 행동 시퀀싱(37종 `[즉시]` + 19종 `[로드맵]` + `TBD [TASK-401]` `ACT_*`, 6종 `[즉시]` + 1종 `[로드맵]` `DEC_*`, 3종 `[즉시]` + 2종 `[로드맵]` `MAC_*`), 4대 범주 진입 조건(`preconditions`), 14종 복합 완료/중단 조건(`completeWhen`/`abortWhen`) 및 `settleTicks`, 0-tick 라이프사이클 훅(`onEnter`/`onExit`/`onAbort`), Zone 3(`Base+20~39`) 동적 탑재체·특수 임무 제어, 로컬 레드스톤 입출력, **호스트 PC 무설치 웹 GUI 미션 에디터(`tools/amm_mission_editor.html`)** 및 **외부 파일 즉시 구동 파이프라인(`resolve_path`, `validate_mission_table`, `file_transfer`, 셸 부팅 인자)**을 통합 관장합니다.
 2. **외부 인프라 단일 무선 게이트웨이 (`facility_client`, `channel_sentinel`)**:
-   - **GCS 부트스트랩 및 채널 무결성**: `CH 50000` (`[I-8]`, `MSG_BLOCK_REQUEST`/`ASSIGN`), `Base+0` 채널 선점 프로브(`MSG_CHANNEL_PROBE`/`ACK`), 4계층 채널 재바인딩(`MSG_CHANNEL_REBIND` via `Base+4 -> Base+1 -> Base+10/11`)을 주도합니다.
+   - **GCS 부트스트랩 및 채널 무결성**: `CH 50000` (`[I-8]`, `MSG_BLOCK_REQUEST`/`ASSIGN`, `BW=40` 고정, `config/channel_lease.json` 영속 리스 재검증, `2000ms` 타임아웃), `Base+0` 부팅 즉시 상시 개방·랜덤 지터(`0~100ms`)·다회 충돌 프로브(`2`회 × `200ms`, 자기 UUID 무시)·GCS `conflictBase` 재할당 회피 루프(`maxReassignAttempts = 3`), `Base+0..39` 침범 감시(`30,000ms`) 및 4계층 채널 재바인딩(`MSG_CHANNEL_REBIND` via `Base+4 -> Base+1 -> Base+10/11`)을 주도합니다.
    - **3-Tier 공항·시설물 관제 연동 (`[I-5]`)**: `CH 50003` 1Hz 섹터 대표 비콘(`MSG_FACILITY_BEACON`), `CH 50004` GAC 디스패치, `CH 50001` Tower ATC 접근/이륙 관제, $Base_{\text{sec}} + 0$ GAC 섹터 체크인/패드 배정/로컬 복행 중재, $Base_{\text{sec}} + 10 + \text{Idx}$ 전술 정밀 유도(`MSG_FACILITY_STATIC_GUIDE` 1Hz / `MSG_FACILITY_DYNAMIC_GUIDE` 20Hz) 및 `Base+5` 도킹 체결/엄빌리컬 통보를 전담 종단합니다.
    - **고정밀 GPS 클라이언트 (`[I-7]`)**: `CH 60001`(`MSG_GPS_REQUEST`, `VAS Base+2` 실측 `altitudeY` 주입), `CH 60002`(`MSG_GPS_STATUS_REQ`/`RESP`) 및 `Base+5`(`MSG_GPS_RESPONSE`) 교신을 전담합니다.
 3. **20Hz 항법 상태 추정 엔진 (`nav_engine`)**:
@@ -63,9 +64,9 @@
    - 미션 시퀀서, C2 조종 명령, 시설물 전술 유도 벡터를 통합하여 `FCP (Node 04)`로 송출할 20Hz 목표 궤적 `{ targetPos, targetVel, feedforwardAccel, targetHeading }` 및 `{ arm, flightActive, flightMode, constraintProfile, flapHint, translationBiasHint }`를 산출합니다.
    - 지원 비행 모드(11종): `IDLE_ARMED`, `TAKEOFF`, `CRUISE`, `LOITER` (방사+접선 벡터 합성), `POI_HOLD` ($\le 30.0^\circ/\text{s}$ 표적 조준), `APPROACH_LAND`, `LANDING` (2단계 감속 착륙 및 가상 ILS 로컬라이저/3° 글라이드슬로프), `DOCKING` (4단계 정밀 랑데부 $>20\text{m} \to 20\sim 5\text{m} \to 5\sim 0.5\text{m}$ 크립 $\le 0.4\text{m/s}$, 허용공차 $|e_y|,|e_z|\le 0.15\text{m}$, $|\Delta\psi|\le 2.0^\circ \to$ 포획 및 `surge = -0.8` 비상 이탈 Abort), `FAILSAFE_RTH`, `HOVER_HOLD`, `EMERGENCY_LAND` ($-2.0\text{m/s}$).
    - 동적 모선/함상 시설물 접근 시 2차 테일러 외삽($\vec{r}_{deck}(t+\Delta t) \approx \vec{r}_{deck} + \vec{v}_{deck}\Delta t + \frac{1}{2}\vec{a}_{deck}\Delta t^2$, $\vec{v}_{deck}(t+\Delta t) \approx \vec{v}_{deck} + \vec{a}_{deck}\Delta t$)을 통해 이동 갑판의 위치·속도·가속도 피드포워드를 생성합니다.
-5. **온보드 C2 단일 진입(`Base+0`) 및 평시 5Hz MFD 단독 송출(`Base+3`)**:
-   - `Cockpit MFD` 및 `GCS`의 모든 비행 모드(`TAKEOFF`~`DOCKING`), `RTH`/`HOVER_HOLD`/`EMERGENCY_LAND`, 원격 미션 제어(`MSG_MISSION_CMD`)를 `Base+0` 단일 관문에서 수신해 `c2_arbiter`로 중재(`GCS_OVERRIDE` > `PILOT_PRIMARY`)합니다.
-   - `VAS` `Base+2` (`MSG_FLIGHT_TELEMETRY`, 20Hz) 및 `FCP` `Base+4` (`MSG_OUTER_LOOP_STATUS`)를 통합해 평시 **5Hz `Base+3` (`MSG_MFD_STATE`)**을 단독 송출하며, `VAS Base+2`에서 `activeSource == "MFD_ACRO"` 감지 시 `Base+3` 송출을 즉시 일시 중단(Yield)하여 `VAS`의 20Hz ACRO HUD가 채널을 단독 사용하도록 양보합니다.
+5. **온보드 C2 단일 진입(`Base+0`), `Base+9` 비상 코어 및 평시 5Hz MFD 단독 송출(`Base+3`)**:
+   - `Cockpit MFD` 및 `GCS`의 모든 비행 모드(`TAKEOFF`~`DOCKING`), `RTH`/`HOVER_HOLD`/`EMERGENCY_LAND`, 원격 미션 제어(`MSG_MISSION_CMD`)를 `Base+0` 단일 관문에서 수신해 `c2_arbiter`로 중재(`GCS_OVERRIDE` > `PILOT_PRIMARY`)하며, 하드 `E_STOP`은 `Base+9` (`CH_EMERGENCY_CORE`)로 직결 송출합니다.
+   - `VAS` `Base+2` (`MSG_FLIGHT_TELEMETRY`, 20Hz) 및 `FCP` `Base+4` (`MSG_OUTER_LOOP_STATUS`)를 통합해 평시 **5Hz `Base+3` (`MSG_MFD_STATE`)**을 단독 송출하며, `VAS Base+2`에서 `activeSource == "MFD_ACRO"` 또는 `FAILSAFE_HOLD`/`EMERGENCY_LAND` 감지 시 `Base+3` 송출을 즉시 일시 중단(Yield)하고, `"FCP"` 복귀 시 **`acroRecoveryHoldMs = 300ms`** 히스테리시스 유예 후 재개합니다.
 
 ```mermaid
 flowchart TD
@@ -95,9 +96,9 @@ flowchart TD
     end
 
     subgraph ONBOARD_BUS["[온보드 실시간 비행 계층 (top 모뎀)]"]
-        FCP["FCP 외루프 제어기 (Node 04)<br/>* Base+4 <-> Base+1 순수 SE(3) 추종 (g=11.0m/s2)"]
-        VAS["VAS 내루프 코어 (Node 01)<br/>* Base+1(QUATERNION_RATE/E_STOP), Base+2(20Hz), Base+10/11"]
-        PAYLOAD["탑재체 노드 (Zone 3: Base+20~29)"]
+        FCP["FCP 외루프 제어기 (Node 04)<br/>* Base+4 <-> Base+1 순수 SE(3) 추종 (g=11.0m/s2), Base+9 경보 구독"]
+        VAS["VAS 내루프 코어 (Node 01)<br/>* Base+1(QUATERNION_RATE), Base+2(20Hz), Base+8(교정), Base+9(E_STOP), Base+10/11"]
+        PAYLOAD["탑재체·특수임무 노드 (Zone 3: Base+20~39)"]
         FCP -->|"Base+1 [I-2] QUATERNION_RATE"| VAS
         VAS -->|"Base+2 [I-1] 20Hz 텔레메트리"| FCP
     end
@@ -108,8 +109,8 @@ flowchart TD
     ATC_GAC <==>|"CH 50001~50004 / Base_sec+* / Base+5"| AMM_GW
     AMM_TRAJ <==>|"Base+4 [I-12] MSG_TRAJECTORY_SETPOINT / MSG_OUTER_LOOP_STATUS"| FCP
     VAS -->|"Base+2 [I-1] 20Hz 텔레메트리"| AMM_GW
-    AMM_TRAJ -.->|"Base+1 [I-2] E_STOP 비상차단"| VAS
-    AMM_CORE <==>|"Base+20~29 [I-11] MSG_PAYLOAD_REQ/ACK"| PAYLOAD
+    AMM_TRAJ -.->|"Base+9 [I-2] E_STOP 비상차단"| VAS
+    AMM_CORE <==>|"Base+20~39 [I-11] MSG_PAYLOAD_REQ/ACK"| PAYLOAD
 ```
 
 ### 1.2 8대 설계 목표 (Goals)
@@ -122,7 +123,7 @@ flowchart TD
 4. **14종 복합 조건 평가 (`settleTicks` 포함) 및 기본 완료 조건 자동 보강**:
    - `completeWhen` 및 `abortWhen`에 `logic: "ANY" | "ALL"` 복합 논리 연산과 `PROXIMITY_2D`/`PROXIMITY_3D`/`ALTITUDE_REACHED` 안착 유지(`settleTicks`)를 지원하고, `completeWhen` 생략 시 `ACT_*`별 표준 기본 조건을 자동 생성합니다.
 5. **0-Tick 비차단 라이프사이클 훅 및 동적 Zone 3 채널 관리**:
-   - `onEnter`, `onExit`, `onAbort` 훅은 타이머 데드라인 큐를 통해 이벤트 루프 블로킹 없이 실행하며, Zone 3(`Base + 20 ~ 29`) 탑재체 채널은 해당 스텝 활성 중에만 동적으로 개방(`modem.open`) 및 해제(`modem.close`)합니다.
+   - `onEnter`, `onExit`, `onAbort` 훅은 타이머 데드라인 큐를 통해 이벤트 루프 블로킹 없이 실행하며, Zone 3(`Base + 20 ~ 39`) 탑재체·특수임무 채널은 해당 스텝 활성 중에만 동적으로 개방(`modem.open`) 및 해제(`modem.close`)합니다. (기존 Zone 4 편대 링크는 향후 독립 광역 데이터링크 `TBD`로 이관)
 6. **20Hz 실시간 코어 + 5Hz 51x19 TUI 코루틴 격리 및 헤드리스 겸용**:
    - Coroutine A(20Hz)와 Coroutine B(5Hz TUI: 우측 6행 스크롤 뷰포트 + 5행 조건/데코레이터/사전조건 상세)를 `parallel.waitForAny`로 격리하며, `config.headless = true` 시 Coroutine B를 생략하되 Coroutine A는 `Base+3` 5Hz 원격 HUD 송출을 유지합니다.
 7. **`Base+0` 단일 C2 진입(`CONFIRM` 포함) 및 `Base+3` MFD 다운링크(`MFD_ACRO` 양보)**:
@@ -133,7 +134,7 @@ flowchart TD
 ### 1.3 비목표 및 반목표 (Non-Goals & Anti-Goals)
 - **Non-Goals (보류/제외 범위)**:
   - 3차원 A* 격자/그래프 전역 재계획(`ACT_PER_REPLAN_GLB`) 및 하방 레이저 지형 추종(`ACT_NAV_TERRAIN_FLW`).
-  - CC:Radars/GeoScanner 기반 동적 회피·표적 추적·광역 스캔(`[로드맵]` `ACT_PER_*`, `ACT_PAT_FIG_EIGHT`/`GRID_SURVEY`/`EXP_SPIRAL`, `Zone 4` `ACT_COM_SWARM_FOLLOW`/`HANDOVER`, `ACT_MUMT_*`).
+  - CC:Radars/GeoScanner 기반 동적 회피·표적 추적·광역 스캔(`[로드맵]` `ACT_PER_*`, `ACT_PAT_FIG_EIGHT`/`GRID_SURVEY`/`EXP_SPIRAL`, 편대 광역 데이터링크 `TBD` `ACT_COM_SWARM_FOLLOW`/`HANDOVER`, `ACT_MUMT_*`).
   - Zone 3 세부 탑재체 통신 스키마(`TBD [TASK-401]` `ACT_PAY_CARGO_DROP`, `ACT_PAY_FIRE_CTRL`, `ACT_PAY_GEO_SCAN`) 및 활주로/도킹암 물리 노드 연동(`TASK-103` `ACT_TKL_*_RWY`, `TASK-104` `ACT_MOB_ARM_*`, `ACT_NRG_REFUEL_DOCK`) — 모두 `[로드맵]`/`DEFERRED_ACTION_UNSUPPORTED` 처리.
   - 수동 급기동 ACRO 20Hz 직결 조종간 (`Base + 1`, `TASK-301` 물리 컨트롤러 과제로 분리).
 - **Anti-Goals (금지 사항)**:
@@ -170,7 +171,7 @@ flowchart TD
 
 | 구분 | 실행 주기 | 구동 조건 | 소속 모듈 및 담당 파이프라인 |
 | :--- | :---: | :---: | :--- |
-| **Coroutine A (`runtime_loop`)** | **20Hz (50ms 틱)** + 이벤트 | 상시 가동 (`headless` 무관) | • `network_manager`: `top`/`back` 모뎀 수신 라우팅 (`Base+0`, `Base+1`, `Base+2`, `Base+4`, `Base+5`, `Base+20~29`, `50000~50004`, `Base_sec+*`, `60001/60002`)<br>• `channel_sentinel`: 기동 부트스트랩(`50000`), 프로브(`Base+0`), 동적 재바인딩(`Base+4`)<br>• `nav_engine`: 5~10Hz GPS 핑 + `gpsClient.handleMessage` + 20Hz `Base+2` DR 상보 필터($\alpha=0.35$)<br>• `facility_client`: 3-Tier ATC/GAC/전술 유도(`Base_sec+10+Idx`) + 도킹 상태 수신(`Base+5`)<br>• `mission_engine` / `condition_evaluator` / `hook_runner`: 체크포인트 FSM, 20Hz 조건 판정, 0-tick 훅 데드라인 큐<br>• `c2_arbiter`: `Base+0` 권한 중재 (`GCS_OVERRIDE` > `PILOT_PRIMARY`) 및 `Base+1` `E_STOP`<br>• `trajectory_generator`: 20Hz `MSG_TRAJECTORY_SETPOINT` (`Base+4`) 산출·송출<br>• 5Hz MFD 다운링크(매 4틱): `Base+3` `MSG_MFD_STATE` 송출 (`activeSource == "MFD_ACRO"` 시 즉시 양보) |
+| **Coroutine A (`runtime_loop`)** | **20Hz (50ms 틱)** + 이벤트 | 상시 가동 (`headless` 무관) | • `network_manager`: `top`/`back` 모뎀 수신 라우팅 (`Base+0`, `Base+2`, `Base+4`, `Base+5`, `Base+9`, `Base+20~39`, `50000~50004`, `Base_sec+*`, `60001/60002`, `Base+0..39` 침범 감시)<br>• `channel_sentinel`: 기동 부트스트랩(`50000`, `channel_lease.json`), `Base+0` 부팅 즉시 개방·지터(`0~100ms`)·2회 프로브·재할당(`maxReassignAttempts=3`), 동적 재바인딩(`Base+4`)<br>• `nav_engine`: 5~10Hz GPS 핑 + `gpsClient.handleMessage` + 20Hz `Base+2` DR 상보 필터($\alpha=0.35$)<br>• `facility_client`: 3-Tier ATC/GAC/전술 유도(`Base_sec+10+Idx`) + 도킹 상태 수신(`Base+5`)<br>• `mission_engine` / `condition_evaluator` / `hook_runner`: 체크포인트 FSM, 20Hz 조건 판정, 0-tick 훅 데드라인 큐<br>• `c2_arbiter`: `Base+0` 권한 중재 (`GCS_OVERRIDE` > `PILOT_PRIMARY`) 및 `Base+9` `E_STOP`<br>• `trajectory_generator`: 20Hz `MSG_TRAJECTORY_SETPOINT` (`Base+4`) 산출·송출<br>• 5Hz MFD 다운링크(매 4틱): `Base+3` `MSG_MFD_STATE` 송출 (`activeSource == "MFD_ACRO"` 시 즉시 양보, `"FCP"` 복귀 시 `300ms` 히스테리시스 후 재개) |
 | **Coroutine B (`tui_loop`)** | **5Hz (200ms 틱)** + 입력 이벤트 | **`headless == false` 전용**<br>(`headless == true` 시 완전 미실행) | • `ui_renderer`: Coroutine A 상태 스냅샷 기반 51x19 `term.blit` 무깜빡임 렌더링<br>• `input_handler`: 로컬 `char`/`key`/`Ctrl+X` 모달 입력 큐잉 -> Coroutine A `c2_arbiter` 전달<br>• `file_transfer` 드래그 앤 드롭 수신 -> 스키마 검증 후 `missions/` 저장 및 큐 전달 |
 
 > [!NOTE]
@@ -183,7 +184,7 @@ flowchart TD
 ### 3.1 하드웨어 요구사항 및 듀얼 무선 엔더 모뎀 토폴로지
 - **컴퓨터 본체**: CC:Tweaked Advanced Computer (유인 조종석 51x19 컬러 터미널 구동 시) 또는 Standard/Advanced Computer (`headless: true` 무인기 탑재 시) 1대.
 - **무선 엔더 모뎀 (`modem`) 듀얼 구성 및 단일 모뎀 폴백**:
-  - **내부 온보드 모뎀 (`primaryModemSide = "top"`)**: 기체 내부 Zone 1 코어 채널(`Base + 0`, `Base + 1`, `Base + 2`, `Base + 3`, `Base + 4`) 및 Zone 3 탑재체 채널(`Base + 20 ~ 29` 동적 개방) 전담.
+  - **내부 온보드 모뎀 (`primaryModemSide = "top"`)**: 기체 내부 Zone 1 코어 채널(`Base + 0`, `Base + 2`, `Base + 3`, `Base + 4`, `Base + 9` `CH_EMERGENCY_CORE`) 및 Zone 3 탑재체·특수 임무 채널(`Base + 20 ~ 39` 동적 개방) 전담. (`Base + 1`은 `FCP`/`MFD` $\to$ `VAS` 전용이므로 `AMM`이 송신하지 않으며, 전 블록 `Base + 0..39` 침범 감시 지원)
   - **외부 인프라 모뎀 (`infraModemSide = "back"`)**: 지상/공역 인프라 채널(`CH 50000`, `CH 50001`, `CH 50003`, `CH 50004`, $Base_{\text{sec}} + 0$, $Base_{\text{sec}} + 10 + \text{Idx}$, `CH 60001`, `CH 60002`) 및 외부 1:1 회신 전용 채널(`Base + 5`, GPS/도킹/접지 응답) 전담.
   - **단일 모뎀 폴백 (Single-Modem Fallback)**: 기체 공간 제약으로 `back` 모뎀(`infraModemSide`)이 장착되지 않은 경우(`peripheral.wrap(infraModemSide) == nil`), `network_manager`는 부팅 시 경고를 기록하고 **`top` 단일 모뎀(`primaryModemSide`)에 온보드 채널과 외부 인프라 채널의 전체 합집합(Union)을 자동 개방**하여 무수정 동작합니다.
 - **레드스톤 인터페이스 (선택)**: 컴퓨터 6면(`top`, `bottom`, `left`, `right`, `front`, `back`) 일반 아날로그/디지털 레드스톤 또는 16색 번들 케이블(`redstone.setBundledOutput` / `getBundledInput`).
@@ -196,14 +197,14 @@ AMM은 기체 전용 40채널 블록(Zone 1/3)과 외부 인프라 대역을 모
 | :---: | :--- | :---: | :---: | :--- | :---: | :--- |
 | **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | Cockpit / GCS $\to$ AMM (수신) | `MSG_OPERATOR_CMD` | 이벤트 | 조종사/GCS 비행 모드·목표·`RTH`/`HOVER_HOLD`/`EMERGENCY_LAND` 단일 진입 *(구 `AMM -> FCP` `MSG_OPERATOR_CMD` `[DEPRECATED]`)* |
 | **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | GCS $\leftrightarrow$ AMM (송수신) | `MSG_MISSION_CMD` / `MSG_MISSION_ACK` | 이벤트 | GCS 원격 미션 제어(`LOAD`/`RUN`/`STOP`/`PAUSE`/`RESUME`/`NEXT`/`CONFIRM`) 및 상태 회신 |
-| **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | AMM $\leftrightarrow$ 인접 기체 (송수신) | `MSG_CHANNEL_PROBE` / `MSG_CHANNEL_PROBE_ACK` | Arming 전 200ms | 독립 기동 시 채널 선점 충돌 탐색 및 충돌 감지 시 `ARMING_LOCKED` |
-| **온보드 (`top`)** | **`CH_FLIGHT_GUIDANCE`** | `Base + 1` | AMM $\to$ VAS (송신)<br>VAS $\to$ AMM (수신) | `MSG_EMERGENCY_OVERRIDE`<br>`MSG_EMERGENCY_ALERT` | 비상 이벤트 | `[X]`/`Ctrl+X` 하드 킬스위치(`E_STOP`) 직결 차단 및 VAS 공중 셧다운 경보 수신 |
+| **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | AMM $\leftrightarrow$ 인접 기체 (송수신) | `MSG_CHANNEL_PROBE` / `MSG_CHANNEL_PROBE_ACK` | 부팅 즉시 상시 개방 · 지터(`0~100ms`)+2회(`200ms`/회) | 자기 UUID 무시, 충돌 시 GCS `conflictBase` 보고 재할당 회피(`maxReassignAttempts=3`), 3회 초과 시 `LOCKED_CONFLICT` |
+| **온보드 (`top`)** | **`CH_EMERGENCY_CORE`** | `Base + 9` | AMM $\to$ VAS (송신)<br>VAS $\to$ AMM (수신) | `MSG_EMERGENCY_OVERRIDE`<br>`MSG_EMERGENCY_ALERT` | 비상 이벤트 | `[X]`/`Ctrl+X` 하드 킬스위치(`E_STOP`) 직결 차단 및 VAS 공중 셧다운 경보 수신 (`Base + 1` 분리) |
 | **온보드 (`top`)** | **`CH_TELEMETRY`** | `Base + 2` | VAS $\to$ AMM (수신) | `MSG_FLIGHT_TELEMETRY` | 20Hz (50ms) | `nav_engine` DR 적분, `condition_evaluator` 조건/연료 평가, `activeSource == "MFD_ACRO"` 양보 감지, HUD 계측 |
-| **온보드 (`top`)** | **`CH_MFD_STATE`** | `Base + 3` | AMM $\to$ MFD / GCS (송신) | `MSG_MFD_STATE` | 5Hz (200ms) | 평시 계층 통합 계기판 다운링크 (`activeSource == "MFD_ACRO"` 시 즉시 송출 중단/양보) |
+| **온보드 (`top`)** | **`CH_MFD_STATE`** | `Base + 3` | AMM $\to$ MFD / GCS (송신) | `MSG_MFD_STATE` | 5Hz (200ms) | 평시 계층 통합 계기판 다운링크 (`MFD_ACRO`/`FAILSAFE` 시 양보, `"FCP"` 복귀 시 `acroRecoveryHoldMs=300ms` 후 재개) |
 | **온보드 (`top`)** | **`CH_TRAJECTORY_CMD`** *(구 `CH_NAV_SENSOR` `[DEPRECATED]`)* | `Base + 4` | AMM $\to$ FCP (송신)<br>FCP $\to$ AMM (수신)<br>AMM $\leftrightarrow$ FCP | `MSG_TRAJECTORY_SETPOINT`<br>`MSG_OUTER_LOOP_STATUS`<br>`MSG_CHANNEL_REBIND/_ACK` | 20Hz / On-Change / 이벤트 | `[I-12]` 20Hz 목표 궤적·융합 위치·비행모드 하달, 외루프 FSM/오차/포화 피드백 수신, 4계층 재바인딩 개시 |
-| **온보드 (`top`)** | **`CH_PAYLOAD_BUS`** | `Base + 20 ~ 29` | AMM $\leftrightarrow$ 탑재체 (송수신) | `MSG_PAYLOAD_REQ` / `MSG_PAYLOAD_ACK` | 스텝/훅 활성 시 | `[I-11]` Zone 3 탑재체 제어 요청 및 완료 응답 수신 (동적 오픈/해제) |
+| **온보드 (`top`)** | **`CH_PAYLOAD_BUS`** | `Base + 20 ~ 39` | AMM $\leftrightarrow$ 탑재체 (송수신) | `MSG_PAYLOAD_REQ` / `MSG_PAYLOAD_ACK` | 스텝/훅 활성 시 | `[I-11]` Zone 3 탑재체·특수 임무 제어 요청 및 완료 응답 수신 (동적 오픈/해제) |
 | **외부 (`back`)** | **`CH_EXTERNAL_COMM`** | `Base + 5` | GPS/시설물 $\leftrightarrow$ AMM | `MSG_GPS_RESPONSE`, `MSG_DOCK_CAPTURE_STAGE`, `MSG_UMBILICAL_STATUS`, `MSG_TOUCHDOWN_COMPLETE` | 5~10Hz / 이벤트 | GPS 서버 2D 측위 응답 수신(구 `10045` `[DEPRECATED]`), 도킹 결합·엄빌리컬·접지 통보 교환 |
-| **외부 (`back`)** | **`CH_BOOTSTRAP`** | `50000` | AMM $\leftrightarrow$ GCS 채널관리자 | `MSG_BLOCK_REQUEST` / `MSG_BLOCK_ASSIGN` | 부팅 1회 | `[I-8]` 기체 전용 40채널 블록($BW=40$) 최초 할당 및 영속화 |
+| **외부 (`back`)** | **`CH_BOOTSTRAP`** | `50000` | AMM $\leftrightarrow$ GCS 채널관리자 | `MSG_BLOCK_REQUEST` / `MSG_BLOCK_ASSIGN` | 부팅 리스 검증 / 재할당 (`2000ms`) | `[I-8]` `BW=40` 고정 계약, `preferredBase` 재검증, `channel_lease.json` 영속화, `"ASSIGNED"`/`"REASSIGNED"`/`"DENIED"`/`"FAILED"` |
 | **외부 (`back`)** | **`CH_ATC_COMM`** | `50001` | AMM $\leftrightarrow$ Tower ATC | `MSG_ATC_APPROACH_REQ`, `MSG_ATC_HANDOFF_CLEARANCE`, `MSG_ATC_DEPARTURE_COMPLETE` | 이벤트 / 15s 재시도 | `[I-5]` 광역 공역 접근 인가, 섹터 GAC 채널 수령, 공역 이탈 통보 |
 | **외부 (`back`)** | **`CH_FACILITY_BEACON`** | `50003` | GAC $\to$ AMM (수신) | `MSG_FACILITY_BEACON` | 1Hz (1000ms) | `[I-5]` 섹터 집약 가용 시설물 목록·중량/반경 제한·지상풍 인벤토리 수집 |
 | **외부 (`back`)** | **`CH_GAC_DISPATCH`** | `50004` | GAC $\to$ AMM (수신) | `MSG_GAC_DISPATCH` | 1Hz / 이벤트 | `[I-5]` 활성 섹터 주파수 디렉터리 수신 |
@@ -295,12 +296,12 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 }
 ```
 
-### 4.3 [송출/수신] Zone 3 탑재체 제어 및 응답 패킷 (`MSG_PAYLOAD_REQ` / `MSG_PAYLOAD_ACK`, AMM $\leftrightarrow$ Payload, Base + 20 ~ 29)
+### 4.3 [송출/수신] Zone 3 탑재체 제어 및 응답 패킷 (`MSG_PAYLOAD_REQ` / `MSG_PAYLOAD_ACK`, AMM $\leftrightarrow$ Payload, Base + 20 ~ 39)
 
-`ACT_PAY_BUS_CMD` / `ACT_PAY_SET_ROI` / `ACT_PAY_CLEAR_ROI` 체크포인트 또는 `ZONE3_PAYLOAD_CMD` 라이프사이클 훅 실행 시 기체 내부 Zone 3 버스(`Base + 20 ~ 29`)로 송수신되는 표준 패킷입니다:
+`ACT_PAY_BUS_CMD` / `ACT_PAY_SET_ROI` / `ACT_PAY_CLEAR_ROI` 체크포인트 또는 `ZONE3_PAYLOAD_CMD` 라이프사이클 훅 실행 시 기체 내부 Zone 3 버스(`Base + 20 ~ 39`, 특수 임무 확장 포함)로 송수신되는 표준 패킷입니다:
 
 ```lua
--- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Base + 20..29)
+-- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Zone 3 Base + 20..39 [표준 20..29 / 확장 30..39 EXT])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -310,12 +311,12 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
     payload = {
         checkpointId = "CP_02_CARGO_DROP",
         command = "RELEASE_BAY",       -- 탑재체 명령 식별자
-        replyChannel = 10020,          -- AMM이 동적 개방한 Zone 3 수신 채널 (Base + offset)
+        replyChannel = 10020,          -- AMM이 동적 개방한 Zone 3 수신 채널 (Base + 20..39)
         params = { bayId = 1 }         -- 탑재체별 세부 파라미터 테이블
     }
 }
 
--- 2. Payload Node -> AMM: 탑재체 동작 결과 회신 (MSG_PAYLOAD_ACK, Base + 20..29)
+-- 2. Payload Node -> AMM: 탑재체 동작 결과 회신 (MSG_PAYLOAD_ACK, Zone 3 Base + 20..39 [표준 20..29 / 확장 30..39 EXT])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -331,13 +332,13 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 }
 ```
 
-### 4.4 [송출/수신] 하드 비상 차단 및 공중 셧다운 경보 (`MSG_EMERGENCY_OVERRIDE` / `MSG_EMERGENCY_ALERT`, AMM $\leftrightarrow$ VAS, Base + 1)
+### 4.4 [송출/수신] 하드 비상 차단 및 공중 셧다운 경보 (`MSG_EMERGENCY_OVERRIDE` / `MSG_EMERGENCY_ALERT`, AMM $\leftrightarrow$ VAS, Base + 9)
 
-- **하드 킬스위치 직결 송출 (`AMM -> VAS`, `Base + 1`)**: 조종사 `[X]` / `Ctrl+X` 입력, 또는 공중 셧다운 경보 대응(`CUTOFF` / `CUSHION_STOP` 연동) 시 FCP를 우회하여 `VAS`로 `MSG_EMERGENCY_OVERRIDE`를 직결 송출하고 내부 시퀀서를 `SUSPENDED`로 전환합니다.
-- **공중 셧다운 경보 수신 (`VAS -> AMM`, `Base + 1`)**: `VAS`가 공중 비행(`isAirborne == true`) 중 런타임 패닉·엔진 화재·강제 종료를 감지해 송출한 `MSG_EMERGENCY_ALERT`를 수신하면, `AMM`은 TUI 17행 및 GCS로 긴급 경보를 표출하고 필요 시 `CUTOFF`/`CUSHION_STOP` 후속 비상 차단(`E_STOP` 또는 `EMERGENCY_LAND` 궤적)을 즉시 집행합니다.
+- **하드 킬스위치 직결 송출 (`AMM -> VAS`, `Base + 9` `CH_EMERGENCY_CORE`)**: 조종사 `[X]` / `Ctrl+X` 입력, 또는 공중 셧다운 경보 대응(`CUTOFF` / `CUSHION_STOP` 연동) 시 `Base + 1`(`CH_FLIGHT_GUIDANCE`)이 아닌 **`Base + 9` (`CH_EMERGENCY_CORE`)**로 `MSG_EMERGENCY_OVERRIDE`를 직결 송출하고 내부 시퀀서를 `SUSPENDED`로 전환합니다.
+- **공중 셧다운 경보 수신 (`VAS -> AMM`, `Base + 9` `CH_EMERGENCY_CORE`)**: `VAS`가 공중 비행(`isAirborne == true`) 중 런타임 패닉·엔진 화재·강제 종료를 감지해 `Base + 9`로 송출한 `MSG_EMERGENCY_ALERT`를 수신하면, `AMM`은 TUI 17행 및 GCS로 긴급 경보를 표출하고 필요 시 `CUTOFF`/`CUSHION_STOP` 후속 비상 차단(`E_STOP` 또는 `EMERGENCY_LAND` 궤적)을 즉시 집행합니다.
 
 ```lua
--- 1. AMM -> VAS: 하드 비상 차단 직결 패킷 (MSG_EMERGENCY_OVERRIDE, Base + 1)
+-- 1. AMM -> VAS: 하드 비상 차단 직결 패킷 (MSG_EMERGENCY_OVERRIDE, Base + 9)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -351,7 +352,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
     }
 }
 
--- 2. VAS -> AMM: 공중 비상 셧다운 경보 수신 (MSG_EMERGENCY_ALERT, Base + 1)
+-- 2. VAS -> AMM: 공중 비상 셧다운 경보 수신 (MSG_EMERGENCY_ALERT, Base + 9)
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -381,7 +382,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
    - `payload.sensorOk`, `payload.sensorHealth`, `payload.actuatorHealth` (`{ tap, asa, allOk }`)
 2. **`Base + 3` (`MSG_MFD_STATE`, AMM $\to$ Cockpit MFD / GCS, 평시 5Hz 단독 송출)**:
    - **평시 (Normal Flight)**: `AMM`이 `VAS Base+2` 텔레메트리, `FCP Base+4` 외루프 상태(`MSG_OUTER_LOOP_STATUS`), 그리고 `AMM` 자체 항법/미션 상태를 통합하여 매 4틱마다(5Hz, 200ms) `Base+3`으로 송출합니다(`source = "AMM_INTEGRATED"`).
-   - **`MFD_ACRO` 진입 시 즉시 양보(Yield)**: `VAS Base+2`의 `activeSource == "MFD_ACRO"`가 감지되면 `AMM`은 즉시 `Base+3` 송출을 일시 중단하여 `VAS`가 20Hz 고속 초저지연 HUD(`source = "CORE_ACRO_TAKEOVER"`)를 단독 송출하도록 양보하며, `activeSource == "FCP"` 복귀 시 5Hz `Base+3` 송출을 자동 재개합니다.
+   - **`MFD_ACRO` / `FAILSAFE` 진입 시 즉시 양보(Yield) 및 `300ms` 복귀 히스테리시스**: `VAS Base+2`의 `activeSource == "MFD_ACRO"` 또는 `controlState`가 `"FAILSAFE_HOLD"` / `"EMERGENCY_LAND"`로 감지되면 `AMM`은 즉시 `Base+3` 송출을 일시 중단하여 `VAS`가 20Hz 고속 HUD(`source = "CORE_ACRO_TAKEOVER"`) 또는 폴백 HUD를 단독 송출하도록 양보합니다. 이후 `activeSource == "FCP"`가 **`acroRecoveryHoldMs = 300ms`** 이상 연속 유지된 뒤에만 5Hz `Base+3` 송출을 재개합니다.
 
 ```lua
 -- AMM -> Cockpit MFD / GCS: 평시 5Hz 계층 통합 HUD 패킷 (MSG_MFD_STATE, Base + 3)
@@ -464,7 +465,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
-| `payload.fsmState` | string | FSM 상태 | 필수 | `FCP` 6-State 외루프 FSM (`"BOOT"`, `"IDLE_ARMED"`, `"ACTIVE_TRACKING"`, `"PASSIVE_TRACKING"`, `"AMM_TIMEOUT_HOLD"`, `"EMERGENCY_LAND"`) |
+| `payload.fsmState` | string | FSM 상태 | 필수 | `FCP` 7-State 외루프 FSM (`"BOOT"`, `"IDLE_ARMED"`, `"ACTIVE_TRACKING"`, `"PASSIVE_TRACKING"`, `"AMM_TIMEOUT_HOLD"`, `"EMERGENCY_LAND"`, `"EMERGENCY_HOLD"`) |
 | `payload.posError` | float | m | 필수 | 현재 3D 위치 추종 오차 노름 ($\|\mathbf{p}_{\text{ref}} - \mathbf{p}\|$) |
 | `payload.velError` | float | m/s | 필수 | 현재 3D 속도 추종 오차 노름 ($\|\mathbf{v}_{\text{ref}} - \mathbf{v}\|$) |
 | `payload.saturated` | boolean | `true`/`false` | 필수 | `FCP` 가속도/집합 추력 포화 여부 |
@@ -474,11 +475,13 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 
 ### 4.7 [I-5 / I-7 / I-8 / I-9] 인프라 게이트웨이, GPS, 부트스트랩 및 채널 재바인딩
 
-1. **GCS 채널 블록 부트스트랩 (`[I-8]`, `CH 50000`)**:
-   - `channel_sentinel`은 부팅 시 `CH 50000`으로 `MSG_BLOCK_REQUEST` (`hardwareUuid`, `domainId`, `requestedBandwidth = 40`)를 송출하고, 1,000ms 이내에 `MSG_BLOCK_ASSIGN` (`blockId`, `baseChannel`, `bandwidth = 40`, `status`)을 수신해 40채널 블록을 확정합니다(무응답 시 로컬 캐시 Base로 폴백).
-2. **채널 충돌 프로브 및 4계층 재바인딩 개시 (`[I-9]`, `Base + 0` & `Base + 4`)**:
-   - **독립/오프라인 프로브**: 비행 시동 전 후보 `Base + 0`으로 `MSG_CHANNEL_PROBE` (`candidateBase`, `bandwidth = 40`)를 송출해 200ms 동안 침묵을 감시합니다. `MSG_CHANNEL_PROBE_ACK` (`status = "CONFLICT_DETECTED"`) 수신 시 즉시 `ARMING_LOCKED`를 발동해 `Base+4`로 `arm = false`를 고정하고 MFD 경보를 표출합니다.
-   - **동적 채널 재바인딩**: `baseChannel` 변경 필요 시 `AMM`은 `Base_old + 4`로 `MSG_CHANNEL_REBIND` (`transactionId`, `action = "PREPARE" | "COMMIT" | "ROLLBACK"`, `oldBaseChannel`, `newBaseChannel`, `bandwidth = 40`)를 하달하여 `AMM -> FCP (Base+4) -> VAS (Base+1) -> TCA/ASA (Base+10/11, 구 Base+6/7 [DEPRECATED])` 4계층을 통해 새 채널을 사전 개방한 뒤 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`status = "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"`) 취합 완료 즉시 `"COMMIT"`(500ms 내 미응답·실패 시 `"ROLLBACK"`)을 전파합니다.
+1. **GCS 채널 블록 부트스트랩 및 영속 리스 재검증 (`[I-8]`, `CH 50000`)**:
+   - `channel_sentinel`은 부팅 시 로컬 영속 리스 파일 `config/channel_lease.json` 존재 시 `preferredBase`를 담아 `CH 50000`으로 `MSG_BLOCK_REQUEST` (`hardwareUuid`, `domainId`, `requestedBandwidth = 40`, `preferredBase?`, `conflictBase?`)를 송출하고 **`gcsBootstrapTimeoutMs = 2,000ms`** 이내에 `MSG_BLOCK_ASSIGN` (`blockId`, `baseChannel`, `bandwidth = 40`, `status = "ASSIGNED" | "REASSIGNED" | "DENIED" | "FAILED"`, `leaseState`, `reassignedFrom?`)을 수신해 40채널 블록을 확정합니다(`requestedBandwidth ~= 40` 또는 포화 시 `"DENIED"`).
+   - **무응답 오프라인 분리 가드**: `2,000ms` 무응답 시 `config/channel_lease.json`을 보유하고 충돌 프로브를 통과한 기체에 한해 **`[NO_GCS_LEASE]`** 경고로 오프라인 운용을 허용하며, 로컬 리스가 없는 기체는 **`LOCKED_NO_GCS`**로 시동을 잠금(`Base+4` `arm = false` 고정)합니다.
+2. **부팅 상시 개방, 지터 다회 프로브 및 4계층 재바인딩 개시 (`[I-9]`, `Base + 0` & `Base + 4`)**:
+   - **부팅 즉시 `Base + 0` 개방 및 지터·2회 프로브**: `channel_sentinel`은 지상 대기 상태에서도 부팅 즉시 후보/확정 `Base + 0`을 개방해 타 기체 프로브에 응답하며(`payload.hardwareUuid == self.hardwareUuid` 자기 패킷 무시), 동시 기동 경합을 분산하기 위해 **`0~100ms` (`probeJitterMaxMs = 100`) 랜덤 지터** 대기 후 `MSG_CHANNEL_PROBE` (`candidateBase`, `bandwidth = 40`)를 송출해 **`probeRetryCount = 2`회 × `probeListenMs = 200ms`** 동안 청취합니다.
+   - **충돌 회피 재할당 및 3회 초과 잠금**: `MSG_CHANNEL_PROBE_ACK` (`status = "CONFLICT_DETECTED"`) 수신 시 즉시 영구 잠금하지 않고 GCS에 `conflictBase`를 보고해 `"REASSIGNED"` 블록을 받아 재프로브하며, **`maxReassignAttempts = 3`회 연속 충돌 시에만 `LOCKED_CONFLICT`** 시동 잠금(`Base+4` `arm = false` 고정 및 MFD 경보)을 발동합니다.
+   - **동적 채널 재바인딩**: `baseChannel` 변경 필요 시 `AMM`은 `Base_old + 4`로 `MSG_CHANNEL_REBIND` (`transactionId`, `action = "PREPARE" | "COMMIT" | "ROLLBACK"`, `oldBaseChannel`, `newBaseChannel`, `bandwidth = 40`)를 하달하여 `AMM -> FCP (Base+4) -> VAS (Base+1) -> TCA/ASA (Base+10/11, 구 Base+6/7 [DEPRECATED])` 4계층(및 `AMM` 소관 `Base_old + 0/+2/+3/+5/+9`, `Base_old + 20~39`)을 통해 새 채널을 사전 개방한 뒤 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`status = "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"`) 취합 완료 즉시 `"COMMIT"`(500ms 내 미응답·실패 시 `"ROLLBACK"`)을 전파합니다.
 3. **고정밀 GPS 비동기 파이프라인 (`[I-7]`, `CH 60001/60002`, `Base + 5`)**:
    - `nav_engine`은 5~10Hz 간격으로 `VAS Base+2`의 실측 `altitudeY`를 주입한 `MSG_GPS_REQUEST` (`replyChannel = Base + 5`, 구 `10045` `[DEPRECATED]`)를 `CH 60001`로 송출하고, `Base + 5`에 도착한 `MSG_GPS_RESPONSE`를 `gpsClient.handleMessage()`로 직접 주입하여 이벤트 큐 오염 없이 2D 위치 `{ x, z }`, `accuracy`, `hdop`를 획득합니다(`CH 60002` `MSG_GPS_STATUS_REQ`/`RESP` 진단 조회 지원).
 4. **3-Tier 시설물 관제 및 전술 유도 (`[I-5]`, `CH 50001~50004`, $Base_{\text{sec}} + 0/+10+\text{Idx}$, `Base + 5`)**:
@@ -531,7 +534,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 ### 5.2 무인기 헤드리스 모드 (`config.headless == true`)
 - `config/amm_config.json`에서 `headless = true`로 설정된 경우:
   - **Coroutine B (`5Hz` TUI 렌더링 루틴 및 `ui_renderer.flush_buffer`)를 생략**하여 로컬 터미널 출력 오버헤드를 제거합니다.
-  - **Coroutine A (`20Hz` 실시간 루프)**는 동일하게 가동되어 외부 모뎀·온보드 채널(`Base+0/+1/+2/+4/+5`, `Base+20~29`, `50000~50004`, `Base_sec+*`, `60001/60002`), 비차단 훅 데드라인 큐, 그리고 `Base+3` 5Hz 원격 MFD 다운링크(`MFD_ACRO` 시 양보)를 지속 수행하며, GCS의 `MSG_MISSION_CMD`(`Base+0`) 또는 시작 설정(`autoStartMission`)으로 미션을 자율 수행합니다.
+  - **Coroutine A (`20Hz` 실시간 루프)**는 동일하게 가동되어 외부 모뎀·온보드 채널(`Base+0/+2/+4/+5/+9`, `Base+20~39`, `50000~50004`, `Base_sec+*`, `60001/60002`), 비차단 훅 데드라인 큐, 그리고 `Base+3` 5Hz 원격 MFD 다운링크(`MFD_ACRO` 시 양보)를 지속 수행하며, GCS의 `MSG_MISSION_CMD`(`Base+0`) 또는 시작 설정(`autoStartMission`)으로 미션을 자율 수행합니다.
 
 ---
 
@@ -554,11 +557,11 @@ flowchart TD
 
 | 도메인 | 행동 식별자 (`action`) | 수량 | AMM 궤적 / FCP 하달 모드 (`Base+4`) | 핵심 파라미터(`params`) 및 거동 요약 |
 | :--- | :--- | :---: | :---: | :--- |
-| **`ACT_SYS_*`** | `ACT_SYS_LOAD`, `ACT_SYS_PREFLIGHT`, `ACT_SYS_SET_HOME`, `ACT_SYS_ARM`, `ACT_SYS_DISARM`, `ACT_SYS_TERMINATE` | 6 | `DISARMED` / `IDLE_ARMED` / `Base+1` `E_STOP` | 스키마/BIT 점검, Home `(X,Y,Z)` 고정, 2단계 시동(`arm=true, flightActive=false`), 접지 시동 해제, 하드 `E_STOP`(`authKey = "ESTOP_CONFIRM_KEY"`) |
+| **`ACT_SYS_*`** | `ACT_SYS_LOAD`, `ACT_SYS_PREFLIGHT`, `ACT_SYS_SET_HOME`, `ACT_SYS_ARM`, `ACT_SYS_DISARM`, `ACT_SYS_TERMINATE` | 6 | `DISARMED` / `IDLE_ARMED` / `Base+9` `E_STOP` | 스키마/BIT 점검, Home `(X,Y,Z)` 고정, 2단계 시동(`arm=true, flightActive=false`), 접지 시동 해제, 하드 `E_STOP`(`authKey = "ESTOP_CONFIRM_KEY"`) |
 | **`ACT_TKL_*`** | `ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_TRANS_MC2FW`, `ACT_TKL_TRANS_FW2MC`, `ACT_TKL_LAND_NORM`, `ACT_TKL_LAND_PREC`, `ACT_TKL_LAND_NEAREST`, `ACT_TKL_ABORT_LAND` | 7 | `TAKEOFF` / `CRUISE` / `APPROACH_LAND` / `LANDING` | 수직 이륙(`targetAlt`, `facilityId`), `WINGED_VTOL` 천이(`18.0`/`8.0 m/s`, `10 Ticks` 디바운스, `100 Ticks` 유지), 일반/비콘 정밀 착륙(`Base_sec+10+Idx`), 실행 시점 최근접 무료 시설 자동 탐색 착륙(`facilityTypeFilter`, `maxRangeM`), 복행(`GO_AROUND`, `60 Ticks` 유지) |
 | **`ACT_NAV_*`** | `ACT_NAV_GOTO_WP`, `ACT_NAV_SPLINE_WP`, `ACT_NAV_CORRIDOR`, `ACT_NAV_CHANGE_ALT`, `ACT_NAV_CHANGE_SPD`, `ACT_NAV_CHANGE_YAW` | 6 | `CRUISE` / `HOVER_HOLD` | 정밀 3D 이동(`tangentEntryOffsetM` 접선 오프셋 지원), 무정지 통과(`settleTicks=0`), 항공 회랑(`startPos`~`endPos` 횡오차 제어), `Y` 고도/속도/기수 방위각(`FIXED`) 단독 변경 |
 | **`ACT_PAT_*`** | `ACT_PAT_HOLD_POS`, `ACT_PAT_POI_HOLD`, `ACT_PAT_LOITER_TIME`, `ACT_PAT_LOITER_TURNS`, `ACT_PAT_LOITER_ALT` | 5 | `HOVER_HOLD` / `POI_HOLD` / `LOITER` | 정밀 호버 대기, 표적 `poiPos` 지속 조준($\le 30^\circ/\text{s}$), 시간 지정 원궤도(`radius >= 5m`, `CW`/`CCW`), 회전 수(`turns >= 1`) 원궤도, 나선형 승강 선회 |
-| **`ACT_PAY_*`** | `ACT_PAY_BUS_CMD`, `ACT_PAY_REDSTONE`, `ACT_PAY_SET_ROI`, `ACT_PAY_CLEAR_ROI` | 4 | 현 궤적 유지 / `POI` 조준 | Zone 3(`Base+20~29`) `MSG_PAYLOAD_REQ/ACK` 송수신, 레드스톤/16색 번들 `EMIT`/`WAIT_INPUT`, 기수/Zone 3 터렛 `poiPos` 고정 및 중립 복귀(`AUTO`) |
+| **`ACT_PAY_*`** | `ACT_PAY_BUS_CMD`, `ACT_PAY_REDSTONE`, `ACT_PAY_SET_ROI`, `ACT_PAY_CLEAR_ROI` | 4 | 현 궤적 유지 / `POI` 조준 | Zone 3(`Base+20~39`) `MSG_PAYLOAD_REQ/ACK` 송수신, 레드스톤/16색 번들 `EMIT`/`WAIT_INPUT`, 기수/Zone 3 터렛 `poiPos` 고정 및 중립 복귀(`AUTO`) |
 | **`ACT_COM_*`** | `ACT_COM_ATC_HOLD` | 1 | `LOITER` / `HOVER_HOLD` | 공역·섹터 진입 전 대기하며 `Tower ATC`(`CH 50001`) 또는 `GAC`($Base_{\text{sec}}+0$) 인가 수신 대기 |
 | **`ACT_MOB_*`** | `ACT_MOB_RV_TRACK`, `ACT_MOB_DECK_SYNC`, `ACT_MOB_MOVING_TKOFF` | 3 | `APPROACH_LAND` / `TAKEOFF` | 이동 갑판 `MSG_FACILITY_DYNAMIC_GUIDE` 2차 테일러 외삽 추종, 요동 한계(`7.0° / 1.8 m/s`, `10 Ticks`) 동기화 착함 윈도우, 이동 갑판 피드포워드 동적 이륙 |
 | **`ACT_FS_*`** | `ACT_FS_RTL_HOME`, `ACT_FS_GOTO_RALLY`, `ACT_FS_FENCE_BRAKE`, `ACT_FS_HOVER_HOLD`, `ACT_FS_EMERG_LAND` | 5 | `FAILSAFE_RTH` / `HOVER_HOLD` / `LOITER` / `EMERGENCY_LAND` | 기지 안전 고도 복귀, `CH 50003` 최단 가용 패드 대피, 지오펜스 경계 급제동(`5.0m -> 15.0m`, `2/40 Ticks`), GPS 두절 안전 체공, `-2.0m/s` 비상 강하 착륙 |
@@ -725,7 +728,7 @@ flowchart TD
 
 | 단축키 | 명령 액션 | 전송 대상 및 통신 채널 | 설명 |
 | :---: | :--- | :--- | :--- |
-| **`[X]`** | `E_STOP` (긴급 차단) | VAS (`Base + 1`, 직결) | FCP를 우회하여 전 추진기 즉시 컷오프 (시퀀서 `SUSPENDED`) |
+| **`[X]`** | `E_STOP` (긴급 차단) | VAS (`Base + 9`, 직결) | FCP를 우회하여 `CH_EMERGENCY_CORE`로 전 추진기 즉시 컷오프 (시퀀서 `SUSPENDED`) |
 | **`[H]`** | `HOVER_HOLD` (호버 홀드) | AMM 궤적 $\to$ FCP (`Base + 4`) | `trajectory_generator` 현 위치 수평 복원·정지 세트포인트 송출 (`flightMode = "HOVER_HOLD"`, 시퀀서 `SUSPENDED`) |
 | **`[R]`** | `RTH` (기지 복귀) | AMM 궤적 $\to$ FCP (`Base + 4`) | `facility_client`(`CH 50003`) 최단거리 가용 패드 또는 홈으로 자동 회항 (`flightMode = "FAILSAFE_RTH"`, 시퀀서 `SUSPENDED`) |
 | **`[L]`** | `EMERGENCY_LAND` (비상착륙) | AMM 궤적 $\to$ FCP (`Base + 4`) | 정속 강하(`-2.0m/s`) 비상 착륙 궤적 송출 (`flightMode = "EMERGENCY_LAND"`, 시퀀서 `SUSPENDED`) |
@@ -763,7 +766,7 @@ flowchart TD
 ### 8.1 GCS 원격 지령 감청 및 원격 미션 제어 (`Base + 0` $\to$ `trajectory_generator` $\to$ `Base + 4`)
 1. **`MSG_OPERATOR_CMD` (`authority == "GCS_OVERRIDE"`) 수신 시**:
    - `c2_arbiter`는 내부 미션 시퀀서(`mission_engine` 및 `waypoint_queue`)를 즉시 **`SUSPENDED`**로 전환하고, 권한을 `GCS_OVERRIDE`로 잠급니다.
-   - GCS가 요청한 기동(`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `RTH`, `HOVER_HOLD`, `EMERGENCY_LAND`, `ABORT`)을 `AMM` 내부 `trajectory_generator`에 즉시 반영하고, `Base + 4` (`[I-12]`, `MSG_TRAJECTORY_SETPOINT`)를 통해 `arm`/`flightActive`/`flightMode`/3D 세트포인트만 `FCP`로 하달합니다(하드 킬스위치 `E_STOP`은 `Base + 1` 직결).
+   - GCS가 요청한 기동(`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `RTH`, `HOVER_HOLD`, `EMERGENCY_LAND`, `ABORT`)을 `AMM` 내부 `trajectory_generator`에 즉시 반영하고, `Base + 4` (`[I-12]`, `MSG_TRAJECTORY_SETPOINT`)를 통해 `arm`/`flightActive`/`flightMode`/3D 세트포인트만 `FCP`로 하달합니다(하드 킬스위치 `E_STOP`은 `Base + 9` 직결).
    - 화면 17행 배너에 `[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]`를 표시합니다.
 2. **`MSG_MISSION_CMD` 수신 시**:
    - `action == "LOAD"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`를 회신합니다. 그 외에는 `payload.missionData` 테이블을 `v2.0.0` 스키마 검증기로 검증하고(누락/스키마 오류 `"SCHEMA_INVALID"`, 예약 액션 포함 `"DEFERRED_ACTION_UNSUPPORTED"`), `saveToDisk ~= false`이면 `/missions/<missionId>.json`으로 원자적 저장한 뒤 `mission_engine:load_table`에 적재하고 `status = "ACCEPTED"` (`IDLE`)를 회신합니다.
@@ -773,7 +776,7 @@ flowchart TD
 ### 8.2 조종사 즉시 권한 탈환 (Pilot Takeover)
 - GCS 오버라이드 또는 원격 미션 수행 중이라도 조종석에서 로컬 키보드 핫키나 CLI 명령을 입력하면:
   1. `c2_arbiter` 내부 권한이 즉시 `PILOT_PRIMARY`로 복원됩니다.
-  2. 조종사 명령이 `trajectory_generator`에 즉시 적용되어 `Base + 4` (`MSG_TRAJECTORY_SETPOINT`, `E_STOP` 시 `Base + 1` `MSG_EMERGENCY_OVERRIDE`)로 송출됨으로써 로컬 제어권을 즉시 회복합니다.
+  2. 조종사 명령이 `trajectory_generator`에 즉시 적용되어 `Base + 4` (`MSG_TRAJECTORY_SETPOINT`, `E_STOP` 시 `Base + 9` `MSG_EMERGENCY_OVERRIDE`)로 송출됨으로써 로컬 제어권을 즉시 회복합니다.
 
 ---
 
@@ -804,14 +807,14 @@ src/3_planning/amm/
 │   ├── chattering_guard.lua     # 이산 틱 히스테리시스, debounce, dwell(상향 선점 예외), 단방향 연료 래치
 │   ├── nav_engine.lua           # 5~10Hz GPS + 20Hz Base+2 DR 상보 필터(alpha=0.35), 기구학 게이트, DEC_EMCON GPS 핑 억제
 │   ├── facility_client.lua      # CH 50003 비콘 수집, 3-Tier ATC/GAC 핸드셰이크, 전술 유도(1Hz/20Hz) 및 도킹 상태 처리
-│   ├── channel_sentinel.lua     # CH 50000 GCS 부트스트랩, Base+0 충돌 프로브(200ms), 4계층 재바인딩(Base+4) 개시
+│   ├── channel_sentinel.lua     # CH 50000 리스 재검증, Base+0 부팅 개방·지터·2회 프로브·3회 회피, Base+0..39 침범 감시, 4계층 재바인딩(Base+4)
 │   ├── trajectory_generator.lua # 20Hz 11종 비행모드 & ACT_NAV_CORRIDOR/PAT_LOITER_TURNS/TKL_TRANS/MOB_MOVING_TKOFF 궤적 생성
 │   ├── mission_engine.lua       # v2.0.0 ACT_*/DEC_*/MAC_* 시퀀서 FSM, 20Hz 비상 감독, DEC_HUMAN_AUTH/RETRY_N/TIMEOUT_GUARD
 │   ├── condition_evaluator.lua  # 14종 completeWhen/abortWhen 평가, ACT_* 기본 조건 보강, PROXIMITY/ALTITUDE settleTicks
 │   ├── hook_runner.lua          # 0-tick 비차단 훅, 레드스톤 펄스 큐, ACT_PAY_BUS_CMD/REDSTONE/SET_ROI/CLEAR_ROI 구동
 │   ├── waypoint_queue.lua       # 수동/CLI 웨이포인트 FIFO 큐 (v2.0.0 ACT_NAV_SPLINE_WP/ACT_TKL_LAND_PREC 매핑, MUT-04 유지)
-│   ├── c2_arbiter.lua           # PILOT_PRIMARY vs GCS_OVERRIDE 중재, MSG_MISSION_CMD(CONFIRM 포함), trajectory_generator 트리거
-│   ├── network_manager.lua      # 듀얼 모뎀(top/back + 단일 모뎀 폴백), ICD v1.9.5, Base+0~5/Base+20~29/50000~50004/60001~60002
+│   ├── c2_arbiter.lua           # PILOT_PRIMARY vs GCS_OVERRIDE 중재(`Base+0`), MSG_MISSION_CMD(CONFIRM 포함), Base+9 E_STOP 직결
+│   ├── network_manager.lua      # 듀얼 모뎀(top/back + 단일 모뎀 폴백), ICD v1.9.5, Base+0,2,3,4,5,9/Base+20~39/50000~50004/60001~60002
 │   ├── ui_renderer.lua          # 51x19 분할 TUI 렌더러 (Coroutine B 5Hz, 데코레이터/승인 대기 상태 표시)
 │   ├── input_handler.lua        # 모달 핫키(NAV) 및 CLI(run/load/files/stop/next/confirm/mission 등) 입력 파서
 │   └── mission_controller.lua   # 지원 기종 프로파일 및 constraintProfile 판별 유틸리티
@@ -826,14 +829,14 @@ src/3_planning/amm/
 | **`main.lua`** | `parallel.waitForAny` 코루틴 A(20Hz)/B(5Hz), `tickCount`, `queue_to_mission_table` `v2.0.0` 매핑 | `main_loop()`, `runtime_tick_20hz()`, `tui_loop_5hz()`, `handle_file_transfer()` |
 | **`nav_engine.lua`** | 5~10Hz GPS + DR 융합, 기구학 게이트, `DEC_EMCON` 시 `CH 60001` 핑 억제 | `init()`, `update()`, `inject_gps()`, `should_query_gps()`, `is_timed_out()` |
 | **`facility_client.lua`** | `CH 50003` 인벤토리, `CH 50001` ATC, GAC, $Base_{\text{sec}}+10+\text{Idx}$ 유도, `Base+5` 도킹 | `init()`, `on_beacon()`, `request_approach()`, `update_tactical()` |
-| **`channel_sentinel.lua`** | `CH 50000` 부트스트랩, `Base+0` 200ms 충돌 프로브, 4계층 `MSG_CHANNEL_REBIND` | `init()`, `negotiate_and_probe()`, `start_rebind()`, `on_rebind_ack()` |
+| **`channel_sentinel.lua`** | `CH 50000` 리스 재검증(`channel_lease.json`), `Base+0` 부팅 개방·지터(`0~100ms`)·2회 프로브·3회 재할당 회피, `Base+0..39` 침범 감시, 4계층 `MSG_CHANNEL_REBIND` | `init()`, `negotiate_and_probe()`, `handle_probe()`, `report_intrusion()`, `start_rebind()`, `on_rebind_ack()` |
 | **`trajectory_generator.lua`** | 20Hz `MSG_TRAJECTORY_SETPOINT` (`Base+4`) 생성 (`ACT_*`, 접선 진입, 회랑, 2차 테일러) | `init()`, `compute_setpoint()`, `compute_docking()`, `extrapolate_dynamic_deck()` |
 | **`mission_engine.lua`** | `v2.0.0` 미션 FSM, `action_registry`·`chattering_guard` 통합, 20Hz 비상 감독, `REPEAT` 스킵 | `new()`, `resolve_path()`, `validate_mission_table()`, `confirm_human_auth()`, `step_telemetry()` |
 | **`condition_evaluator.lua`** | `completeWhen`/`abortWhen` 14종 조건, `ACT_*` 기본 조건 생성, `settleTicks` 카운터 | `resolve_default_complete()`, `evaluate_group()`, `evaluate_condition()` |
 | **`hook_runner.lua`** | 0-tick 훅, 데드라인 펄스 큐, `ACT_PAY_BUS_CMD`/`REDSTONE`/`SET_ROI`/`CLEAR_ROI` 구동 | `new()`, `execute_hooks()`, `start_action()`, `tick()`, `on_payload_ack()` |
 | **`waypoint_queue.lua`** | 수동 웨이포인트 추가/삭제/2D 도달 판정 (`MUT-04` 보존) | `add()`, `del()`, `check_arrival()`, `save()`, `load()` |
-| **`c2_arbiter.lua`** | 조종사 vs GCS 중재(`Base+0`), `MSG_MISSION_CMD`(`CONFIRM` 포함), `Base+4` 상태 연동 | `handle_operator_cmd()`, `handle_mission_cmd()`, `handle_pilot_action()` |
-| **`network_manager.lua`** | 듀얼 모뎀(`top`/`back`) 및 단일 모뎀 폴백 채널 개폐, `MFD_ACRO` 시 `Base+3` 양보 | `init()`, `poll_all()`, `send_trajectory_setpoint()`, `send_mfd_state()` |
+| **`c2_arbiter.lua`** | 조종사 vs GCS 중재(`Base+0`), `MSG_MISSION_CMD`(`CONFIRM` 포함), `Base+9` `E_STOP` 직결, `Base+4` 상태 연동 | `handle_operator_cmd()`, `handle_mission_cmd()`, `handle_pilot_action()` |
+| **`network_manager.lua`** | 듀얼 모뎀(`top`/`back`) 및 단일 모뎀 폴백 채널 개폐, `Base+9` 비상 송수신, `MFD_ACRO` 시 `Base+3` 양보(`300ms` 히스테리시스) | `init()`, `poll_all()`, `send_trajectory_setpoint()`, `send_mfd_state()` |
 | **`ui_renderer.lua`** | Coroutine B(5Hz) 좌측 HUD + 우측 스크롤/상세 51x19 출력 | `render_screen()`, `compute_viewport()`, `flush_buffer()` |
 | **`input_handler.lua`** | `NAV`/`CLI` 모달 전환, `Ctrl+X` 하드킬, CLI(`confirm` 포함) 파싱 | `handle_char()`, `handle_key()`, `handle_ctrl_key()` |
 
@@ -864,8 +867,9 @@ src/3_planning/amm/
     "mfdStateOffset": 3,
     "trajectoryCmdOffset": 4,
     "externalCommOffset": 5,
+    "emergencyCoreOffset": 9,
     "payloadZone3Start": 20,
-    "payloadZone3End": 29,
+    "payloadZone3End": 39,
     "atcCommChannel": 50001,
     "facilityBeaconChannel": 50003,
     "gacDispatchChannel": 50004,
@@ -912,8 +916,13 @@ src/3_planning/amm/
     "emergencyLandFuelThreshold": 0.10,
     "vasTelemetryTimeoutMs": 500,
     "fcpStatusTimeoutMs": 500,
+    "acroRecoveryHoldMs": 300,
     "channelProbeWaitMs": 200,
-    "gcsBootstrapTimeoutMs": 1000,
+    "probeJitterMaxMs": 100,
+    "probeRetryCount": 2,
+    "maxReassignAttempts": 3,
+    "gcsBootstrapTimeoutMs": 2000,
+    "intrusionAlertWindowMs": 30000,
     "mfdBroadcastRateHz": 5,
     "chattering": {
       "fenceBrakeMarginM": 5.0,
@@ -958,7 +967,8 @@ src/3_planning/amm/
 | **연료/배터리 복합 비상 (`Base+2`)** | **<= 20% / <= 10%** | `nav_engine` / `c2_arbiter` | `fuel <= 0.20` 시 `FAILSAFE_RTH` 자동 강제 전환(ATC 거절 대기 중 포함); `fuel <= 0.10` 시 `EMERGENCY_LAND` ($-2.0\text{ m/s}$ 정속 강하) 전환 |
 | **FCP 외루프 상태 (`Base+4`, `[I-12]`)** | **500ms** (`fcpStatusTimeoutMs`) | `network_manager` / `c2_arbiter` | TUI 17행 및 GCS로 `FCP_STATUS_TIMEOUT` 경보, 미션 시퀀서 `SUSPENDED` 보호, 하위 `FCP`(`AMM_TIMEOUT_HOLD`) 및 `VAS`(`FCP_TIMEOUT` 1,500ms) 격리 감시 |
 | **VAS 비행 텔레메트리 (`Base+2`, `[I-1]`)** | **500ms** (`vasTelemetryTimeoutMs`) | `nav_engine` / `network_manager` | DR 적분 정지(`navValid = false`), TUI/GCS `VAS_TELEMETRY_TIMEOUT` 경보 표출 및 미션 시퀀서 `SUSPENDED` |
-| **GCS 부트스트랩 (`50000`) & 충돌 프로브 (`Base+0`)** | **1,000ms** / **200ms** | `channel_sentinel` | `CH 50000` 무응답 시 로컬 캐시 Base 폴백; `Base+0` `MSG_CHANNEL_PROBE_ACK` 수신 시 `ARMING_LOCKED` 발동(`Base+4` `arm = false` 고정) |
+| **GCS 부트스트랩 (`50000`) & 충돌 프로브 (`Base+0`)** | **2,000ms** / **200ms × 2회** | `channel_sentinel` | `CH 50000` `preferredBase` 재검증 및 `config/channel_lease.json` 저장; `2,000ms` 무응답 시 로컬 리스+프로브 통과 기체는 `[NO_GCS_LEASE]` 경고로 허용, 미보유 시 `LOCKED_NO_GCS`; 프로브 충돌(`Base+0`) 시 `conflictBase` 재할당(`maxReassignAttempts = 3`) 후 `3`회 초과 시 `LOCKED_CONFLICT` (`Base+4` `arm = false` 고정) |
+| **비행 중 블록 침범 감시 (`Base+0..39`)** | **30,000ms** (`intrusionAlertWindowMs`) | `channel_sentinel` / `network_manager` | Zone 1~3 전 블록(`Base+0..39`)에서 미등록 타 기체 `domainId` 유입 시 즉시 드롭·GCS 경고 및 30초 지속 시 `HOVER_HOLD` 또는 `RTH` 트리거 |
 
 ### 11.2 구현 및 검증 기준 (Verification Criteria)
 

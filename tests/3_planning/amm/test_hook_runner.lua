@@ -82,7 +82,8 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
 
         runner:cleanup()
         assert_false(rs.getOutput("front"))
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
         assert_true(m.isOpen(10000))
         assert_true(m.isOpen(10003))
         assert_nil(runner:get_last_payload_ack())
@@ -124,14 +125,16 @@ describe("AMM 0-Tick Hook Runner and Zone 3 / Redstone Driver", function()
         }, 10020)
         assert_true(m3)
         assert_eq(ack.status, "DROPPED")
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
         assert_eq(runner:get_last_payload_ack().status, "DROPPED")
 
-        -- Fire-and-forget ZONE3_PAYLOAD_CMD must transmit payload and leave channel closed
+        -- Fire-and-forget ZONE3_PAYLOAD_CMD transmits payload while preserving full-block modem subscription
         runner:execute_hooks({
             { type = "ZONE3_PAYLOAD_CMD", channelOffset = 21, command = "TRIGGER_RADAR", payload = { scan = true } },
         }, { checkpointId = "CP_05" }, 3000)
-        assert_false(m.isOpen(10021))
+        assert_nil(net.openPayloadChannels[10021])
+        assert_true(m.isOpen(10021))
         assert_eq(m._transmitted[2].tx, 10021)
         assert_eq(m._transmitted[2].pkt.type, "MSG_PAYLOAD_REQ")
         assert_true(m._transmitted[2].pkt.payload.params.scan)

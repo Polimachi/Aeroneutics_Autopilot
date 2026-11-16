@@ -100,7 +100,7 @@ describe("GCS network manager", function()
         assert_eq(tx.payload.payload.baseChannel, 10000)
     end)
 
-    it("sends MSG_OPERATOR_CMD on Base+0 and MSG_EMERGENCY_OVERRIDE on Base+1", function()
+    it("sends MSG_OPERATOR_CMD on Base+0 and MSG_EMERGENCY_OVERRIDE on Base+9", function()
         local modem = create_mock_modem()
         local ctx = network_manager.init(cfg, modem)
 
@@ -128,7 +128,7 @@ describe("GCS network manager", function()
         assert_true(ok_estop)
         assert_eq(#modem.transmissions, 2)
         local tx_estop = modem.transmissions[2]
-        assert_eq(tx_estop.channel, 10001) -- Base + 1
+        assert_eq(tx_estop.channel, 10009) -- Base + 9 (CH_EMERGENCY_CORE)
         assert_eq(tx_estop.payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(tx_estop.payload.payload.action, "E_STOP")
     end)

@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "folderId": "1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
   "folderUrl": "https://drive.google.com/drive/folders/1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
-  "lastSync": "2026-11-16T11:43:32Z",
+  "lastSync": "2026-11-16T13:24:01Z",
   "files": {
     "src/0_development/installer/installer_app.lua": {
       "id": "1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx",
@@ -18,8 +18,8 @@
       "name": "manifest.lua",
       "repoPath": "src/0_development/installer/modules/manifest.lua",
       "category": "bootstrap",
-      "sizeBytes": 47762,
-      "sha256": "15a5e5af394d0f0c6f92deda494eaa92d66d1aae3d3b4825e173298fc67ccc84",
+      "sizeBytes": 48304,
+      "sha256": "6a47d17ef3184298abad30d1814de36f6aba832bfb871f9ef92ffae6904c6aef",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX&export=download&confirm=t"
     },
     "src/0_development/installer/modules/version_registry.lua": {
@@ -126,8 +126,8 @@
       "name": "vas__modules__network_manager.lua",
       "repoPath": "src/1_control/vas/modules/network_manager.lua",
       "category": "packages",
-      "sizeBytes": 21512,
-      "sha256": "c33d8d2c9fd22f6bc34aaeb6e057f473f7622811e9e886bd98d38b7428bcca70",
+      "sizeBytes": 22087,
+      "sha256": "c95938ecc6aa4ba6f7f381b62b41643ee85f2e5f95902c0a85fcde0bc6e94acd",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1dA_g5anRkvP-wuRNN7wHrXw2IAGzyajH&export=download&confirm=t"
     },
     "src/1_control/vas/main.lua": {
@@ -189,8 +189,8 @@
       "name": "vas__modules__telemetry_feeder.lua",
       "repoPath": "src/1_control/vas/modules/telemetry_feeder.lua",
       "category": "packages",
-      "sizeBytes": 3754,
-      "sha256": "1e589a9760f06aa44e8a981922081cddfa5889330373c4c1ab06cfe1ff2829e1",
+      "sizeBytes": 3761,
+      "sha256": "71e168a87badbfbebb0cf3c14f6053e84949a2197a961db297abe0e90c1fd20e",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1FfcWK1tEuU66q8X1vs_jBqTTtfGq8T8U&export=download&confirm=t"
     },
     "src/1_control/vas/modules/vec3.lua": {
@@ -333,8 +333,8 @@
       "name": "fcp__main.lua",
       "repoPath": "src/2_guidance/fcp/main.lua",
       "category": "packages",
-      "sizeBytes": 13674,
-      "sha256": "b586f983de66f308030126604cd6450e579a8f55cd8966ef5df4b1a87abef8ae",
+      "sizeBytes": 13790,
+      "sha256": "e68d989c3f05223180c4dba349087547f8639f67bd721d0b6622e47842280dc6",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1sGLn5sHzvPIrHrJHG-zNvJ9sVwkrkL5U&export=download&confirm=t"
     },
     "src/2_guidance/fcp/config/fcp_config.json": {
@@ -342,8 +342,8 @@
       "name": "fcp__config__fcp_config.json",
       "repoPath": "src/2_guidance/fcp/config/fcp_config.json",
       "category": "packages",
-      "sizeBytes": 2256,
-      "sha256": "57892f9d189c3f6e1a9dc4e4857da4285914ee36995553f826a5360628eac795",
+      "sizeBytes": 2374,
+      "sha256": "07c68b5c804b0098fa795d11753b78bbd750980067c53a0232b23c3b71fe9c0b",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1HQpjGiZAfXbn4UqNriky_xYGwoF_4wyo&export=download&confirm=t"
     },
     "src/2_guidance/fcp/modules/flight_fsm.lua": {
@@ -351,8 +351,8 @@
       "name": "fcp__modules__flight_fsm.lua",
       "repoPath": "src/2_guidance/fcp/modules/flight_fsm.lua",
       "category": "packages",
-      "sizeBytes": 8699,
-      "sha256": "74f3194ed160036a9a0affb4c28cbae38317cb8311e1fbf19d3ea0983d95d835",
+      "sizeBytes": 9468,
+      "sha256": "a61858fe060e752de72634622befd31d046006ac305a0bce41322b0da3ea3c46",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1g8SmGdT8dY9Fm62fvg_adaJ9cWgxl4Ib&export=download&confirm=t"
     },
     "src/2_guidance/fcp/modules/network_manager.lua": {
@@ -360,8 +360,8 @@
       "name": "fcp__modules__network_manager.lua",
       "repoPath": "src/2_guidance/fcp/modules/network_manager.lua",
       "category": "packages",
-      "sizeBytes": 13979,
-      "sha256": "660e6b6ee3a074202f554c3c3f4f82f5c8a3423df41a348012e7058eb330b1bb",
+      "sizeBytes": 14572,
+      "sha256": "a63fa768af11d140522be1ae1c3f94e5f266a8fdd1dba0a8b35214cb8ebe6149",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1poah4I0VyHpkO5zyr-OD6wGCNQAjRY3D&export=download&confirm=t"
     },
     "src/2_guidance/fcp/modules/outer_loop_controller.lua": {
@@ -414,8 +414,8 @@
       "name": "alignment__modules__align_master.lua",
       "repoPath": "src/0_development/alignment/modules/align_master.lua",
       "category": "packages",
-      "sizeBytes": 15829,
-      "sha256": "508e020092edcfb490fd4eb37b01e894b974befcca152ad5be03f13de1ff61fc",
+      "sizeBytes": 16247,
+      "sha256": "3262faa95dad93cfc26dcce87bb72d815ca05f143d4831032099239df62e6bcf",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1J4a3Lq6GTSRBa3JMSJ57j5d556qO-CW1&export=download&confirm=t"
     },
     "src/0_development/alignment/modules/discovery_client.lua": {
@@ -882,8 +882,8 @@
       "name": "amm__config__amm_config.json",
       "repoPath": "src/3_planning/amm/config/amm_config.json",
       "category": "packages",
-      "sizeBytes": 2667,
-      "sha256": "1bc5b426cbb8794305e6289a864f7664480255aa2189b8801b8a7f92366b6c89",
+      "sizeBytes": 2825,
+      "sha256": "6fee6e66a9dc09edb4485bc5f13444b01b8361d666d59f7cd0d17d05f770a8fa",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1zqS8CSCfewvwEvBy-5lgIBk6avAp1-S6&export=download&confirm=t"
     },
     "src/3_planning/amm/modules/action_registry.lua": {
@@ -909,8 +909,8 @@
       "name": "amm__main.lua",
       "repoPath": "src/3_planning/amm/main.lua",
       "category": "packages",
-      "sizeBytes": 42019,
-      "sha256": "c1d69e233de0f0c24da2b0d0255d3046b1d8fe69ee51b7e8310bebb032c82698",
+      "sizeBytes": 48663,
+      "sha256": "a8211f911aa7de0dd52572fc1c3865d109f6bda7d125015a8cbe32342855edc2",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1bW8QGRKS3PZVNoLOhK1ddb-txD_lu7tK&export=download&confirm=t"
     },
     "src/3_planning/amm/modules/channel_sentinel.lua": {
@@ -918,8 +918,8 @@
       "name": "amm__modules__channel_sentinel.lua",
       "repoPath": "src/3_planning/amm/modules/channel_sentinel.lua",
       "category": "packages",
-      "sizeBytes": 8407,
-      "sha256": "b9ed393623367a1dd378fd187da0f46590dbdbb31ec9f2c2d2ba2899591ddfbf",
+      "sizeBytes": 22010,
+      "sha256": "551fa9234a074052f12239e0979349d7c2a5afcd366ba6f96d1c0bd20550b277",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1y1pOG4c0trA4iV-y_OViDhB-SMemaCLM&export=download&confirm=t"
     },
     "src/3_planning/amm/modules/facility_client.lua": {
@@ -954,8 +954,8 @@
       "name": "amm__modules__network_manager.lua",
       "repoPath": "src/3_planning/amm/modules/network_manager.lua",
       "category": "packages",
-      "sizeBytes": 11985,
-      "sha256": "0c5edc27c17f23b91dd11f74ae871e9be6177ec7f1dbfd3913d3d2699dead026",
+      "sizeBytes": 12483,
+      "sha256": "2c7b459c41a43d7e7306e9e25a0959029b38fe24c1efb1a5fa56c4e41ae6c0c8",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1UHA3CwFWuAbMTYOdlwbfHrUhHJmEfAkM&export=download&confirm=t"
     },
     "src/3_planning/amm/modules/condition_evaluator.lua": {
@@ -972,8 +972,8 @@
       "name": "amm__modules__mission_engine.lua",
       "repoPath": "src/3_planning/amm/modules/mission_engine.lua",
       "category": "packages",
-      "sizeBytes": 44656,
-      "sha256": "6f7168ff2bfd57900767fcaeae2d9ebbd83a8e9d279e5bfbc25f1804053e39ae",
+      "sizeBytes": 45861,
+      "sha256": "c8b9c07003472e62c5a7cdd4a5f53297a10fff5029b59073e5b64701efbd7dcc",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1s8NbAGcXLwh3T9Ht_v-CfhlmgnGugVuo&export=download&confirm=t"
     },
     "src/3_planning/amm/modules/hook_runner.lua": {
@@ -999,8 +999,8 @@
       "name": "amm__modules__c2_arbiter.lua",
       "repoPath": "src/3_planning/amm/modules/c2_arbiter.lua",
       "category": "packages",
-      "sizeBytes": 21705,
-      "sha256": "c83601cd0864d67cda53d78ececccf7387e24eef85327703049b6e80219ac733",
+      "sizeBytes": 23622,
+      "sha256": "88677a328121db01db52f3ebadb83afcff52524e00577297a02851a145370ee9",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1kT2slrUNo97veikRZHE_d3RN2Lsk3Hqr&export=download&confirm=t"
     },
     "src/3_planning/amm/modules/ui_renderer.lua": {
@@ -1026,8 +1026,8 @@
       "name": "gcs__main.lua",
       "repoPath": "src/0_infra/gcs/main.lua",
       "category": "packages",
-      "sizeBytes": 13035,
-      "sha256": "9c9022a07c51bbe0d6e106cbd069dc3eb749d00c200252b96750f2adcc6d2a2c",
+      "sizeBytes": 13485,
+      "sha256": "fdbdb142203201480d2c2fccf1bf6865a3e9f2471966dc7f6f95d5c3bf079cbd",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1mv0BYqmSdziuZFe77zxaW-F1NxXlEUb-&export=download&confirm=t"
     },
     "src/0_infra/gcs/config/gcs_config.json": {
@@ -1044,8 +1044,8 @@
       "name": "gcs__modules__channel_manager.lua",
       "repoPath": "src/0_infra/gcs/modules/channel_manager.lua",
       "category": "packages",
-      "sizeBytes": 6249,
-      "sha256": "5751064ec7ba3f8a6a3e6304c7f3cf845f8d8c739c417cd3491d24f60997279e",
+      "sizeBytes": 11337,
+      "sha256": "3a093e8706aa0089c45f3199bc0e110de042d48fb41b910aa32fada83c0de77e",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=14B8LSFjr8P2I5rfEW6RbK38Z3Ce-55Vc&export=download&confirm=t"
     },
     "src/0_infra/gcs/config/channel_registry.json": {
@@ -1062,8 +1062,8 @@
       "name": "gcs__modules__network_manager.lua",
       "repoPath": "src/0_infra/gcs/modules/network_manager.lua",
       "category": "packages",
-      "sizeBytes": 5328,
-      "sha256": "2081bd10068f0e592d0f8bec9a3afeb64b0d7707477d4106a8c3fd33d89a0886",
+      "sizeBytes": 5488,
+      "sha256": "036094bcdb735b0c1fe0b9d27ef5816db4c166ec8d79f0eb7d534157188d7b8d",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pb-62eLGHLl9oMTqZxAUoouyJEzsgaaA&export=download&confirm=t"
     },
     "src/0_infra/gcs/modules/c2_commander.lua": {
@@ -1107,8 +1107,8 @@
       "name": "fdr__main.lua",
       "repoPath": "src/0_development/fdr/main.lua",
       "category": "packages",
-      "sizeBytes": 12198,
-      "sha256": "2aadd83cccd6034a3007b7dd2d04dc34a9a47ef15b571f0c33fabd3aeac84e8c",
+      "sizeBytes": 12207,
+      "sha256": "e5eb87ffbff72ad8b70d88f011b5fdb55517dbe7eeca6b304578fcc22efe120d",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1v94Tzl5p043E8v-LPFBPesX6ByN6fU51&export=download&confirm=t"
     },
     "src/0_development/fdr/modules/packet_tap.lua": {
@@ -1116,8 +1116,8 @@
       "name": "fdr__modules__packet_tap.lua",
       "repoPath": "src/0_development/fdr/modules/packet_tap.lua",
       "category": "packages",
-      "sizeBytes": 6480,
-      "sha256": "c34a0f1f1977783762e1fd342d74b6478b1d1ffea8627b7d034c812aa6314a3a",
+      "sizeBytes": 6703,
+      "sha256": "c3662035a6af3f0b27f7d9ee4594de014e7361d88e6305f9db98eeb3916763b0",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1yLuvhPqD85rX0CqB97qzwLjRAvw1zsCT&export=download&confirm=t"
     },
     "src/0_development/fdr/modules/ring_buffer.lua": {

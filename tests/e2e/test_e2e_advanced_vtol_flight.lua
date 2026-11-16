@@ -92,15 +92,16 @@ describe("Scenario 7: ADVANCED_VTOL Gimbal Calibration & 6-DoF Closed-Loop Fligh
             vectorGroupOrder = { "THR_VEC_1", "THR_VEC_2", "THR_VEC_3", "THR_VEC_4" }
         })
 
-        vas.modem:open(10000)
         vas.modem:open(10001)
+        vas.modem:open(10008)
+        vas.modem:open(10009)
         vas.modem:open(10010)
         align.modem:open(101)
         align.modem:open(102)
         align.modem:open(104)
 
-        -- 3. Stage 1: Hangar Calibration Init & Bay Bind (Bay 1: 101/102/104)
-        align.modem:transmit(10000, 102, {
+        -- 3. Stage 1: Hangar Calibration Init & Bay Bind (Bay 1: 101/102/104) on Base+8 (10008)
+        align.modem:transmit(10008, 102, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 1,
@@ -117,7 +118,12 @@ describe("Scenario 7: ADVANCED_VTOL Gimbal Calibration & 6-DoF Closed-Loop Fligh
 
         local vas_init_in = vas.modem:drain()
         assert_eq(#vas_init_in, 1)
-        assert_true(vas_net.dispatch(vas_state, vas_fsm, nil, vas_tca, 10000, vas_init_in[1].replyChannel, vas_init_in[1].payload))
+        assert_eq(vas_init_in[1].channel, 10008)
+        -- Negative Zero-Fallback check: legacy Base+0 (10000) calibration init is rejected
+        local ok_legacy_calib, err_legacy_calib = vas_net.dispatch(vas_state, vas_fsm, nil, vas_tca, 10000, vas_init_in[1].replyChannel, vas_init_in[1].payload)
+        assert_false(ok_legacy_calib)
+        assert_eq(err_legacy_calib, "WRONG_CHANNEL")
+        assert_true(vas_net.dispatch(vas_state, vas_fsm, nil, vas_tca, 10008, vas_init_in[1].replyChannel, vas_init_in[1].payload))
         assert_eq(vas_fsm.currentState, "CALIBRATION")
         bus:step(0.05)
 

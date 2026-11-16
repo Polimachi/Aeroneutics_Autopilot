@@ -1,8 +1,8 @@
 -- tests/2_guidance/fcp/test_fcp_network_and_rebind.lua
 local network_manager = require("network_manager")
 
-describe("test_fcp_network_and_rebind|test_state_propagator: FCP 3-Channel Network Manager and Modem Binding", function()
-    it("binds single top modem and opens ONLY Base+4, Base+2, Base+1", function()
+describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Channel Network Manager and Modem Binding", function()
+    it("binds single top modem and opens ONLY Base+4, Base+2, Base+1, Base+9", function()
         local mock_modem = mock.modem({ wireless = true })
         local cfg = {
             system = { domainId = "AIRCRAFT_01", hardwareUuid = "FCP-04", primaryModemSide = "top" },
@@ -16,10 +16,12 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 3-Channel Netwo
         assert_not_nil(net, "network_manager.init must return net context")
         assert_eq(net.baseChannel, 10000)
 
-        -- ONLY 3 channels opened: 10004 (trajectory), 10002 (telemetry), 10001 (guidance)
+        -- ONLY 4 onboard channels opened: 10004 (trajectory), 10002 (telemetry), 10001 (guidance), 10009 (emergency)
         assert_true(mock_modem.isOpen(10004), "10004 (Base+4 trajectory) must be open")
         assert_true(mock_modem.isOpen(10002), "10002 (Base+2 telemetry) must be open")
         assert_true(mock_modem.isOpen(10001), "10001 (Base+1 guidance) must be open")
+        assert_true(mock_modem.isOpen(10009), "10009 (Base+9 emergency) must be open")
+        assert_eq(net.channels.emergency, 10009)
 
         -- All other channels MUST NOT be open
         assert_false(mock_modem.isOpen(50000), "50000 (bootstrap) must NOT be opened by FCP")
@@ -28,6 +30,7 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 3-Channel Netwo
         assert_false(mock_modem.isOpen(10000), "10000 (Base+0 C2) must NOT be opened by FCP")
         assert_false(mock_modem.isOpen(10003), "10003 (Base+3 MFD) must NOT be opened by FCP")
         assert_false(mock_modem.isOpen(10005), "10005 (Base+5 reply) must NOT be opened by FCP")
+        assert_false(mock_modem.isOpen(10008), "10008 (Base+8 calibration) must NOT be opened by FCP")
     end)
 
     it("encodes valid ICD v1.9.5 envelopes and validates domainId", function()
@@ -149,11 +152,29 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 3-Channel Netwo
         local polled_again = network_manager.poll_inbound(net)
         assert_nil(polled_again.trajectory)
         assert_nil(polled_again.telemetry)
+
+        -- MSG_EMERGENCY_ALERT on Base+1 (10001) MUST be ignored
+        local alert_pkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            type = "MSG_EMERGENCY_ALERT",
+            payload = { reason = "CORE_SHUTDOWN_AIRBORNE", isAirborne = true, fsmState = "FAILSAFE_HOLD", altitude = 80.0 },
+        }
+        local ok_legacy_alert = network_manager.ingest_modem_event(net, "top", 10001, 10001, alert_pkt, 0, 1100)
+        assert_false(ok_legacy_alert, "Base+1 MSG_EMERGENCY_ALERT must be rejected")
+        assert_nil(network_manager.poll_inbound(net).emergencyAlert)
+
+        -- MSG_EMERGENCY_ALERT on Base+9 (10009) MUST be accepted
+        local ok_alert = network_manager.ingest_modem_event(net, "top", 10009, 10009, alert_pkt, 0, 1110)
+        assert_true(ok_alert, "Base+9 MSG_EMERGENCY_ALERT must be accepted")
+        local polled_alert = network_manager.poll_inbound(net)
+        assert_not_nil(polled_alert.emergencyAlert)
+        assert_eq(polled_alert.emergencyAlert.payload.reason, "CORE_SHUTDOWN_AIRBORNE")
     end)
 end)
 
 describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHANNEL_REBIND Relay and Watchdog", function()
-    it("handles PREPARE by opening newBase 3 channels and forwarding to VAS on Base+1", function()
+    it("handles PREPARE by opening newBase 4 channels and forwarding to VAS on Base+1", function()
         local mock_modem = mock.modem({ wireless = true })
         local net = network_manager.init({
             system = { domainId = "AIRCRAFT_01" },
@@ -177,10 +198,11 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
         local ok = network_manager.ingest_modem_event(net, "top", 10004, 10004, rebind_prepare, 0, 1000)
         assert_true(ok)
 
-        -- Opens newBase 3 channels: 10044, 10042, 10041
+        -- Opens newBase 4 channels: 10044, 10042, 10041, 10049
         assert_true(mock_modem.isOpen(10044), "newBase+4 must be open")
         assert_true(mock_modem.isOpen(10042), "newBase+2 must be open")
         assert_true(mock_modem.isOpen(10041), "newBase+1 must be open")
+        assert_true(mock_modem.isOpen(10049), "newBase+9 must be open")
 
         -- Forwards PREPARE to VAS on oldBase+1 (10001)
         assert_eq(#mock_modem._transmitted, 1)
@@ -238,12 +260,14 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
         assert_false(mock_modem.isOpen(10004), "oldBase+4 must be closed after COMMIT")
         assert_false(mock_modem.isOpen(10002), "oldBase+2 must be closed after COMMIT")
         assert_false(mock_modem.isOpen(10001), "oldBase+1 must be closed after COMMIT")
+        assert_false(mock_modem.isOpen(10009), "oldBase+9 must be closed after COMMIT")
 
         -- Base channel switched
         assert_eq(net.baseChannel, 10040)
         assert_eq(net.channels.trajectory, 10044)
         assert_eq(net.channels.telemetry, 10042)
         assert_eq(net.channels.guidance, 10041)
+        assert_eq(net.channels.emergency, 10049)
     end)
 
     it("triggers ROLLBACK on 500ms watchdog timeout and closes newBase channels", function()
@@ -294,6 +318,7 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
         assert_false(mock_modem.isOpen(10044))
         assert_false(mock_modem.isOpen(10042))
         assert_false(mock_modem.isOpen(10041))
+        assert_false(mock_modem.isOpen(10049))
 
         -- Old baseChannel untouched
         assert_eq(net.baseChannel, 10000)

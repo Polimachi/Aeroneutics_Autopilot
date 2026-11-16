@@ -31,17 +31,31 @@ function network_manager.new(config)
         onboardModem = nil,
         infraModem = nil,
         modemFallbackActive = false,
+        fullBlockBound = false,
         openPayloadChannels = {},
         openInfraChannels = {},
         otaAgent = nil,
+        arbiter = cfg.arbiter or nil,
     }, network_manager)
     return self
+end
+
+function network_manager:set_arbiter(arbiter)
+    self.arbiter = arbiter
+end
+
+local function build_block_channels(base)
+    local list = {}
+    for off = 0, 39 do
+        list[off + 1] = base + off
+    end
+    return list
 end
 
 function network_manager:bind_modems(top_modem, back_modem, base_ch)
     if base_ch then self.baseChannel = base_ch end
     local base = self.baseChannel
-    local on_chs = { base + 0, base + 1, base + 2, base + 3, base + 4 }
+    local on_chs = build_block_channels(base)
     local inf_chs = { base + 5, 50000, 50001, 50003, 50004, 60002 }
 
     if top_modem and back_modem and top_modem ~= back_modem then
@@ -63,6 +77,7 @@ function network_manager:bind_modems(top_modem, back_modem, base_ch)
     if self.otaAgent then
         self:open_channels(self.otaAgent)
     end
+    self.fullBlockBound = true
 end
 
 function network_manager:open_channels(ota_agent_inst)
@@ -86,8 +101,8 @@ function network_manager:apply_rebind(new_base)
     local old_base = self.baseChannel
     local on_m = self.onboardModem or self.modem
     local inf_m = self.infraModem or self.modem
-    close_ch_list(on_m, { old_base + 0, old_base + 1, old_base + 2, old_base + 3, old_base + 4 })
-    open_ch_list(on_m, { new_base + 0, new_base + 1, new_base + 2, new_base + 3, new_base + 4 })
+    close_ch_list(on_m, build_block_channels(old_base))
+    open_ch_list(on_m, build_block_channels(new_base))
     close_ch_list(inf_m, { old_base + 5 })
     open_ch_list(inf_m, { new_base + 5 })
 
@@ -98,8 +113,6 @@ function network_manager:apply_rebind(new_base)
         end
     end
     for _, off in ipairs(offsets) do
-        close_ch_list(on_m, { old_base + off })
-        open_ch_list(on_m, { new_base + off })
         self.openPayloadChannels[old_base + off] = nil
         self.openPayloadChannels[new_base + off] = true
     end
@@ -165,9 +178,16 @@ function network_manager:send_rebind_command(action, txId, oldBase, newBase)
     return ok, err
 end
 
-function network_manager:send_mfd_state(payload, activeSource)
+function network_manager:send_mfd_state(payload, activeSource, now_ms)
     if activeSource == "MFD_ACRO" then
         return false, "YIELDED_TO_MFD_ACRO"
+    end
+    local arb = (type(activeSource) == "table" and activeSource) or self.arbiter
+    if arb and type(arb.can_transmit_mfd) == "function" then
+        local ok_tx, yield_reason = arb:can_transmit_mfd(now_ms)
+        if not ok_tx then
+            return false, yield_reason
+        end
     end
     local pkt = self:encode_envelope("MSG_MFD_STATE", payload)
     local m = self.onboardModem or self.modem
@@ -177,6 +197,8 @@ function network_manager:send_mfd_state(payload, activeSource)
     end)
     return ok, err
 end
+
+local OFFSET_EMERGENCY = 9
 
 function network_manager:send_emergency_override(action, reason, authKey, source)
     local now_ms = (os.epoch and os.epoch("utc")) or (os.time() * 1000)
@@ -191,7 +213,7 @@ function network_manager:send_emergency_override(action, reason, authKey, source
     local m = self.onboardModem or self.modem
     if not m then return false, "MODEM_UNBOUND" end
     local ok, err = pcall(function()
-        m.transmit(self.baseChannel + 1, self.baseChannel + 1, pkt)
+        m.transmit(self.baseChannel + OFFSET_EMERGENCY, self.baseChannel + OFFSET_EMERGENCY, pkt)
     end)
     return ok, err
 end
@@ -274,7 +296,7 @@ function network_manager:close_payload_channel(channel_or_offset)
     local ch, err = self:resolve_payload_channel(channel_or_offset)
     if not ch then return false, err end
     local m = self.onboardModem or self.modem
-    if m and type(m.close) == "function" then
+    if not self.fullBlockBound and m and type(m.close) == "function" then
         pcall(function()
             m.close(ch)
         end)
@@ -316,7 +338,7 @@ function network_manager:send_payload_req(channel_or_offset, checkpointId, comma
     local ok, tx_err = pcall(function()
         m.transmit(ch, ch, pkt)
     end)
-    if not was_open and not options.keepOpen and self.openPayloadChannels[ch] then
+    if not was_open and not options.keepOpen then
         self:close_payload_channel(ch)
     end
     if not ok then return false, tx_err end

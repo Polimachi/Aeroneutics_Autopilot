@@ -232,24 +232,47 @@ describe("vas 40-channel 4-zone layout and network manager initialization", func
 
         local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
         assert_eq(net.baseChannel, 10000)
-        assert_eq(net.channels.c2, 10000)
+        assert_nil(net.channels.c2)
         assert_eq(net.channels.guidance, 10001)
         assert_eq(net.channels.telemetry, 10002)
         assert_eq(net.channels.mfd, 10003)
         assert_eq(net.channels.trajectory, 10004)
         assert_eq(net.channels.clientReply, 10005)
+        assert_eq(net.channels.calibration, 10008)
+        assert_eq(net.channels.emergency, 10009)
         assert_eq(net.channels.actuation, 10010)
         assert_eq(net.channels.aero, 10011)
         assert_eq(net.channels.asaActuation, 10011)
         assert_eq(net.channels.payloadBus, 10020)
         assert_eq(net.channels.weaponBus, 10021)
-        assert_eq(net.channels.formationLink, 10030)
+        -- TASK-125-7: Formation flight moved to TBD wide-area datalink; Base+30..39 reclassified to Zone 3 payload ext
+        assert_nil(net.channels.formationLink)
 
-        assert_true(wirelessModem.isOpen(10000))
+        assert_false(wirelessModem.isOpen(10000))
         assert_true(wirelessModem.isOpen(10001))
+        assert_true(wirelessModem.isOpen(10008))
+        assert_true(wirelessModem.isOpen(10009))
         assert_true(wirelessModem.isOpen(10010))
         assert_true(wirelessModem.isOpen(10011))
         assert_false(wirelessModem.isOpen(10004))
+    end)
+
+    it("transmits MSG_EMERGENCY_ALERT on Base+9 (10009) instead of Base+1", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem }
+        })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local ok = network_manager.send_emergency_alert(net, {
+            reason = "CORE_SHUTDOWN_AIRBORNE",
+            isAirborne = true,
+            fsmState = "FAILSAFE_HOLD",
+            altitude = 120.5
+        })
+        assert_true(ok)
+        assert_eq(#wirelessModem._transmitted, 1)
+        assert_eq(wirelessModem._transmitted[1].tx, 10009)
+        assert_eq(wirelessModem._transmitted[1].pkt.type, "MSG_EMERGENCY_ALERT")
     end)
 end)
 
@@ -334,6 +357,27 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(lastFailsafePkt.payload.source, "CORE_FAILSAFE")
         assert_eq(lastFailsafePkt.payload.flightMode, "FAILSAFE_HOLD")
         assert_false(lastFailsafePkt.payload.acroActive)
+
+        -- EMERGENCY_LAND mode: transmits 1 every 4 ticks (5Hz)
+        wirelessModem._transmitted = {}
+        tf.tickCounter = 0
+        local fsmEmerg = { currentState = "EMERGENCY_LAND", activeSource = "FCP" }
+        for _ = 1, 4 do
+            telemetry_feeder.tick(tf, net, comState, fsmEmerg, mixerState, diagState)
+        end
+        local emerg10003 = 0
+        local lastEmergPkt = nil
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" then
+                emerg10003 = emerg10003 + 1
+                lastEmergPkt = tx.pkt
+            end
+        end
+        assert_eq(emerg10003, 1)
+        assert_not_nil(lastEmergPkt)
+        assert_eq(lastEmergPkt.payload.source, "CORE_FAILSAFE")
+        assert_eq(lastEmergPkt.payload.flightMode, "EMERGENCY_LAND")
+        assert_false(lastEmergPkt.payload.acroActive)
     end)
 end)
 
@@ -355,7 +399,7 @@ describe("vas dynamic hangar bay binding and calibration lifecycle", function()
         local diagState = { sensorOk = true, sensorHealth = {}, actuatorHealth = { tap = true, asa = true } }
         local mixer = {}
 
-        -- 1) Receive MSG_CALIBRATION_INIT on Base+0 (10000)
+        -- 1) Reject MSG_CALIBRATION_INIT on Base+0 (10000), accept only on Base+8 (10008)
         local initPkt = {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
             type = "MSG_CALIBRATION_INIT", time = 1000,
@@ -364,7 +408,13 @@ describe("vas dynamic hangar bay binding and calibration lifecycle", function()
                 baseHangarChannel = 111, targetCraftDomain = "AIRCRAFT_01"
             }
         }
-        network_manager.dispatch(net, fsm, nil, mixer, 10000, 10000, initPkt)
+        local okWrongCal, errWrongCal = network_manager.dispatch(net, fsm, nil, mixer, 10000, 10000, initPkt)
+        assert_false(okWrongCal)
+        assert_eq(errWrongCal, "WRONG_CHANNEL")
+        assert_eq(fsm.currentState, "DISARMED")
+
+        local okCal = network_manager.dispatch(net, fsm, nil, mixer, 10008, 10008, initPkt)
+        assert_true(okCal)
 
         -- Bay channels 111, 112, 114 dynamically opened
         assert_true(wirelessModem.isOpen(111))
@@ -453,7 +503,7 @@ describe("vas two-phase channel rebind cascade", function()
         local net = network_manager.init({
             aircraftDomainId = "AIRCRAFT_01",
             vehicleType = "WINGED_VTOL",
-            subchannels = { c2Command = 0, guidance = 1, actuation = 10, asaActuation = 11 }
+            subchannels = { guidance = 1, calibration = 8, emergency = 9, actuation = 10, asaActuation = 11 }
         })
         local fsm = state_machine.init({}, true)
         local mixer = {}
@@ -469,9 +519,11 @@ describe("vas two-phase channel rebind cascade", function()
         }
         network_manager.dispatch(net, fsm, nil, mixer, 10001, 10001, preparePkt)
 
-        -- New channels 10040, 10041, 10050, 10051 pre-opened
-        assert_true(wirelessModem.isOpen(10040))
+        -- New channels 10041, 10048, 10049, 10050, 10051 pre-opened; 10040 (Base+0) stays closed
+        assert_false(wirelessModem.isOpen(10040))
         assert_true(wirelessModem.isOpen(10041))
+        assert_true(wirelessModem.isOpen(10048))
+        assert_true(wirelessModem.isOpen(10049))
         assert_true(wirelessModem.isOpen(10050))
         assert_true(wirelessModem.isOpen(10051))
 
@@ -544,16 +596,19 @@ describe("vas two-phase channel rebind cascade", function()
         assert_true(commitRelay10)
         assert_true(commitRelay11)
 
-        -- Old channels 10000, 10001, 10010, 10011 must be closed
-        assert_false(wirelessModem.isOpen(10000))
+        -- Old channels 10001, 10008, 10009, 10010, 10011 must be closed
         assert_false(wirelessModem.isOpen(10001))
+        assert_false(wirelessModem.isOpen(10008))
+        assert_false(wirelessModem.isOpen(10009))
         assert_false(wirelessModem.isOpen(10010))
         assert_false(wirelessModem.isOpen(10011))
 
         -- State baseChannel and channels updated
         assert_eq(net.baseChannel, 10040)
-        assert_eq(net.channels.c2, 10040)
+        assert_nil(net.channels.c2)
         assert_eq(net.channels.guidance, 10041)
+        assert_eq(net.channels.calibration, 10048)
+        assert_eq(net.channels.emergency, 10049)
         assert_eq(net.channels.actuation, 10050)
         assert_eq(net.channels.aero, 10051)
         assert_nil(net.pendingRebind)
@@ -574,13 +629,13 @@ describe("vas two-phase channel rebind cascade", function()
             type = "MSG_CHANNEL_REBIND", time = 10000,
             payload = { transactionId = "TX-TO", action = "PREPARE", oldBaseChannel = 10000, newBaseChannel = 10040, bandwidth = 40 }
         })
-        assert_true(wirelessModem.isOpen(10040))
+        assert_true(wirelessModem.isOpen(10049))
 
         nowMs = 10550
         local timedOut = network_manager.step_rebind_watchdog(net, nowMs)
         assert_true(timedOut)
         assert_nil(net.pendingRebind)
-        assert_false(wirelessModem.isOpen(10040))
+        assert_false(wirelessModem.isOpen(10049))
 
         local failedSent = false
         for _, tx in ipairs(wirelessModem._transmitted) do
@@ -974,15 +1029,28 @@ describe("vas mutation hardening invariants", function()
         assert_eq(out.THR_MAIN, 12)
     end)
 
-    it("verifies network_manager dispatches MSG_EMERGENCY_OVERRIDE to transition to E_STOP (MUT-07)", function()
+    it("verifies network_manager dispatches MSG_EMERGENCY_OVERRIDE on Base+9 only to transition to E_STOP (MUT-07)", function()
         local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
         local fsm = state_machine.init({}, true)
         fsm.currentState = "NORMAL"
-        local ok = network_manager.dispatch(net, fsm, nil, nil, 10000, 10000, {
+        local estopPkt = {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 99,
             type = "MSG_EMERGENCY_OVERRIDE",
             payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", reason = "TEST_ESTOP" }
-        })
+        }
+        -- Reject on legacy Base+1 (10001) and Base+0 (10000)
+        local okLegacy1, errLegacy1 = network_manager.dispatch(net, fsm, nil, nil, 10001, 10001, estopPkt)
+        assert_false(okLegacy1)
+        assert_eq(errLegacy1, "WRONG_CHANNEL")
+        assert_eq(fsm.currentState, "NORMAL")
+
+        local okLegacy0, errLegacy0 = network_manager.dispatch(net, fsm, nil, nil, 10000, 10000, estopPkt)
+        assert_false(okLegacy0)
+        assert_eq(errLegacy0, "WRONG_CHANNEL")
+        assert_eq(fsm.currentState, "NORMAL")
+
+        -- Accept on Base+9 (10009)
+        local ok = network_manager.dispatch(net, fsm, nil, nil, 10009, 10009, estopPkt)
         assert_true(ok)
         assert_eq(fsm.currentState, "E_STOP")
     end)
@@ -1132,7 +1200,7 @@ describe("vas [I-10] surface discovery and attitude command type validation", fu
         assert_true(okQuat, "QUATERNION_RATE must be accepted")
         assert_eq(net.latestCommand.commandType, "QUATERNION_RATE")
 
-        -- RATE_COMMAND: accepted
+        -- RATE_COMMAND: accepted on Base+1
         local ratePacket = {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 13,
             type = "MSG_ATTITUDE_CMD",
@@ -1141,6 +1209,10 @@ describe("vas [I-10] surface discovery and attitude command type validation", fu
                 targetRates = { pitchRate = 5.0, rollRate = -2.0, yawRate = 0.0 }
             }
         }
+        local okWrongAtt, errWrongAtt = network_manager.dispatch(net, fsm, nil, nil, 10009, 10009, ratePacket)
+        assert_false(okWrongAtt)
+        assert_eq(errWrongAtt, "WRONG_CHANNEL")
+
         local okRate = network_manager.dispatch(net, fsm, nil, nil, 10001, 10001, ratePacket)
         assert_true(okRate, "RATE_COMMAND must be accepted")
         assert_eq(net.latestCommand.commandType, "RATE_COMMAND")

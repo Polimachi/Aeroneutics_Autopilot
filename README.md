@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge·실시간 전술 지도·원클릭 미션 푸시(`TASK-404`, `GCS v1.2.0`·`AMM v2.3.0`·`에디터 v0.5.0`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset·`ACT_TKL_LAND_NEAREST`(`TASK-403`), 무선 OTA 배포·롤백 가드(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-125`(40채널 블록 개편·결함 12종 해소)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 40채널 블록 개편·경합·검증 결함 12종 해소(`TASK-125`), GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge·실시간 전술 지도·원클릭 미션 푸시(`TASK-404`, `GCS v1.3.0`·`AMM v2.4.0`·`에디터 v0.5.0`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset·`ACT_TKL_LAND_NEAREST`(`TASK-403`), 무선 OTA 배포·롤백 가드(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-302`(Pocket PDA 원격 관제 단말) 및 `TASK-015`(전 계층 통합 플레이북 체계)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
@@ -134,10 +134,9 @@ Create_Aeroneutics/
 
 $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, } 1 \le N \le 1000)$$
 
-- **Zone 1 (`Base + 0 ~ 9`)**: 코어 C2 · 궤적/외루프 유도 · 텔레메트리 (`Base+0` 오퍼레이터/교정 바인딩 C2, `Base+1` FCP `QUATERNION_RATE` 외루프 지령 및 ACRO/비상 선점, `Base+2` VAS 20Hz 텔레메트리, `Base+3` MFD 다운링크 및 ACRO 양보, `Base+4` AMM↔FCP 20Hz 궤적 지령 `CH_TRAJECTORY_CMD`, `Base+5` GPS 측위 응답 수신)
+- **Zone 1 (`Base + 0 ~ 9`)**: 코어 C2 · 궤적/외루프 유도 · 텔레메트리 (`Base+0` 오퍼레이터/프로브 C2, `Base+1` FCP `QUATERNION_RATE` 외루프 지령 및 ACRO 선점, `Base+2` VAS 20Hz 텔레메트리, `Base+3` MFD 다운링크 및 ACRO 양보, `Base+4` AMM↔FCP 20Hz 궤적 지령 `CH_TRAJECTORY_CMD`, `Base+5` GPS 측위 응답 수신, `Base+8` `CH_CALIBRATION_INIT` 교정 개시, `Base+9` `CH_EMERGENCY_CORE` `E_STOP` 비상 코어)
 - **Zone 2 (`Base + 10 ~ 19`)**: 구동계 전용 버스 (`Base+10` `TCA` 추진기 분산 클러스터, `Base+11` `ASA` 공력 조종면·플랩 분산 클러스터, `Base+12~19` 구동계 예비)
-- **Zone 3 (`Base + 20 ~ 29`)**: 탑재체 전용 버스 (임무 장비 및 확장 페이로드 링크)
-- **Zone 4 (`Base + 30 ~ 39`)**: 편대 비행 데이터링크 (다중 기체 간 편대 동기화 및 협동 링크)
+- **Zone 3 (`Base + 20 ~ 39`)**: 탑재체 및 특수 임무 통합 버스 (임무 장비, 확장 페이로드 링크 `CH_PAYLOAD_EXT_30~39`; 기존 Zone 4 편대 비행 데이터링크는 향후 광역 데이터링크 `TBD` 이관)
 
 ---
 
@@ -165,7 +164,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(19개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(20개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```

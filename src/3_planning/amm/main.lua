@@ -40,7 +40,13 @@ local function load_config(path)
 end
 
 local function get_now_ms(app)
-    return (app and app.now_ms) or (os.epoch and os.epoch("utc")) or (os.time() * 1000)
+    if app and type(app.clock_ms) == "number" then
+        return app.clock_ms
+    end
+    if app and type(app.now_ms) == "number" then
+        return app.now_ms
+    end
+    return (os.epoch and os.epoch("utc")) or (os.time() * 1000)
 end
 
 local function is_config_path(str)
@@ -507,13 +513,14 @@ end
 
 local function handle_timer_event(app, timer_id, now_ms)
     if timer_id ~= app.render_timer and app.render_timer ~= nil then return end
+    local t_ms = now_ms or get_now_ms(app)
     if app.render_timer and os.startTimer then
         app.render_timer = os.startTimer(0.2)
     end
     if app.engine and not app.coroutineActive then
-        app.engine:tick(now_ms)
+        app.engine:tick(t_ms)
     end
-    render_ui_frame(app, now_ms)
+    render_ui_frame(app, t_ms)
 end
 
 local function open_fac_channels(app)
@@ -522,21 +529,38 @@ local function open_fac_channels(app)
     if app.fac.padChannel then app.net:open_infra_channel(app.fac.padChannel) end
 end
 
+local function trigger_intrusion_failsafe(app)
+    if not app or not app.arbiter then return end
+    if app.engine and app.engine.state == "EN_ROUTE" and app.engine.pause then
+        app.engine:pause()
+    end
+    app.arbiter.emergencyGoal = {
+        flightMode = "HOVER_HOLD",
+        arm = true,
+        flightActive = true,
+        _intrusionFailsafe = true,
+    }
+    app.arbiter.lastBanner = "[RF INTRUSION: FAILSAFE_HOLD]"
+end
+
 local function handle_sentinel_rx(app, chan, pkt, base, now_ms)
     if not app.sentinel then return false end
-    if chan == base + 0 and pkt.type == "MSG_CHANNEL_PROBE" then
+    local cand = app.sentinel.candidateBase
+    if (chan == base + 0 or (cand and chan == cand)) and pkt.type == "MSG_CHANNEL_PROBE" then
         local ack = channel_sentinel.handle_incoming_probe(app.sentinel, pkt)
         local m = app.net and (app.net.onboardModem or app.net.modem)
         if ack and m then
             local env = app.net:encode_envelope(ack.type, ack.payload)
-            pcall(function() m.transmit(base + 0, base + 0, env) end)
+            pcall(function() m.transmit(chan, chan, env) end)
         end
         return true
-    elseif pkt.type == "MSG_CHANNEL_PROBE_ACK" and (chan == base + 0 or chan == 50000 or chan == app.sentinel.candidateBase) then
+    elseif pkt.type == "MSG_CHANNEL_PROBE_ACK" and (chan == base + 0 or chan == 50000 or chan == cand) then
         channel_sentinel.on_probe_ack(app.sentinel, pkt)
         return true
-    elseif chan == 50000 and pkt.type == "MSG_BLOCK_ASSIGN" then
-        channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
+    elseif (chan == 50000 or chan == base + 0) and pkt.type == "MSG_BLOCK_ASSIGN" then
+        if app.sentinel.status == "GCS_WAIT" then
+            channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
+        end
         return true
     end
     return false
@@ -575,36 +599,140 @@ local function handle_facility_rx(app, chan, pkt, now_ms)
     return false
 end
 
+local BASE_PLUS_5_INFRA_RESPONSES = {
+    -- I-7 GPS
+    MSG_GPS_RESPONSE = true,
+    MSG_GPS_STATUS_RESP = true,
+    -- I-5 Facility / GAC / Pad / Runway / Docking Arm replies
+    MSG_FACILITY_BEACON = true,
+    MSG_FACILITY_LIST_ACK = true,
+    MSG_FACILITY_STATIC_GUIDE = true,
+    MSG_FACILITY_DYNAMIC_GUIDE = true,
+    MSG_ATC_APPROACH_CLEARANCE = true,
+    MSG_ATC_HANDOFF_CLEARANCE = true,
+    MSG_ATC_SECTOR_HANDOFF = true,
+    MSG_ATC_FACILITY_UPDATE = true,
+    MSG_ATC_DEPARTURE_CLEARANCE = true,
+    MSG_GAC_APPROACH_CLEARANCE = true,
+    MSG_GAC_DEPARTURE_CLEARANCE = true,
+    MSG_GAC_ABORT_CLEAR = true,
+    MSG_ABORT_APPROACH = true,
+    MSG_PAD_RESERVE_ACK = true,
+    MSG_PAD_TELEMETRY = true,
+    MSG_PAD_STATUS = true,
+    MSG_LANDING_STATUS = true,
+    MSG_LANDING_ACK = true,
+    MSG_RUNWAY_ACK = true,
+    MSG_ILS_BEACON = true,
+    MSG_DOCK_ACK = true,
+    MSG_DOCK_STATUS = true,
+    MSG_DOCKING_STATUS = true,
+    MSG_DOCK_CAPTURE_STAGE = true,
+    MSG_UMBILICAL_STATUS = true,
+    MSG_TOUCHDOWN_COMPLETE = true,
+}
+
+local function is_allowed_cross_domain_on_block(chan, pkt, base, sentinel, own_domain)
+    local cand = sentinel and sentinel.candidateBase
+    if (chan == base + 0 or (cand and chan == cand))
+        and (pkt.type == "MSG_CHANNEL_PROBE" or pkt.type == "MSG_CHANNEL_PROBE_ACK") then
+        return true
+    end
+    local p = type(pkt.payload) == "table" and pkt.payload or {}
+    local is_gcs_domain = string.sub(tostring(pkt.domainId), 1, 3) == "GCS"
+    if chan == base + 0 then
+        if pkt.type == "MSG_BLOCK_ASSIGN" and (is_gcs_domain or type(p.baseChannel) == "number") then
+            return true
+        end
+        if pkt.type == "MSG_OPERATOR_CMD"
+            and (p.authority == "GCS_OVERRIDE" or is_gcs_domain or p.targetCraft == own_domain) then
+            return true
+        end
+        if pkt.type == "MSG_MISSION_CMD"
+            and (is_gcs_domain or p.authority == "GCS_OVERRIDE" or p.targetCraft == own_domain) then
+            return true
+        end
+    end
+    if chan == base + 5 and BASE_PLUS_5_INFRA_RESPONSES[pkt.type] then
+        return true
+    end
+    if chan == base + 8 and pkt.type == "MSG_CALIBRATION_INIT" then
+        return true
+    end
+    if chan == base + 9 and pkt.type == "MSG_EMERGENCY_OVERRIDE"
+        and (is_gcs_domain or p.source == "GCS" or p.source == "MFD" or p.authority == "GCS_OVERRIDE") then
+        return true
+    end
+    return false
+end
+
+local function handle_base5_rx(app, pkt, t_ms)
+    if app.nav and pkt.type == "MSG_GPS_RESPONSE" then
+        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, t_ms)
+        return
+    end
+    if not app.fac then return end
+    local pt = pkt.type
+    if pt == "MSG_DOCKING_STATUS" or pt == "MSG_DOCK_CAPTURE_STAGE" or pt == "MSG_DOCK_STATUS" then
+        facility_client.on_docking_status(app.fac, pkt, t_ms)
+    elseif pt == "MSG_FACILITY_STATIC_GUIDE" or pt == "MSG_FACILITY_DYNAMIC_GUIDE" or pt == "MSG_ABORT_APPROACH" then
+        facility_client.on_tactical_guide(app.fac, pkt, t_ms)
+    elseif pt == "MSG_GAC_APPROACH_CLEARANCE" or pt == "MSG_ATC_APPROACH_CLEARANCE" or pt == "MSG_ATC_SECTOR_HANDOFF" then
+        facility_client.on_atc_clearance(app.fac, pkt, app.nav and app.nav.pos, t_ms)
+        open_fac_channels(app)
+    elseif pt == "MSG_GAC_ABORT_CLEAR" then
+        facility_client.on_gac_abort_clear(app.fac, pkt, t_ms)
+    end
+end
+
 local function handle_modem_message(app, chan, raw_msg, now_ms)
     if not app.net or not app.net.decode_envelope then return end
     local ok, pkt = app.net:decode_envelope(raw_msg)
     if not ok or not pkt then return end
-    local base = (app.config and app.config.baseChannel) or (app.net and app.net.baseChannel) or 10000
-    if chan == base + 3 and app.arbiter and app.arbiter.handle_mfd_state then
-        app.arbiter:handle_mfd_state(pkt, now_ms)
+    local t_ms = now_ms or get_now_ms(app)
+    local base = (app.net and app.net.baseChannel) or (app.config and app.config.baseChannel) or 10000
+    local own_domain = (app.config and app.config.domainId)
+        or (app.net and app.net.domainId)
+        or (app.sentinel and app.sentinel.domainId)
+
+    if app.sentinel and channel_sentinel.is_in_own_block(app.sentinel, chan) then
+        if pkt.domainId ~= nil and pkt.domainId ~= own_domain
+            and not is_allowed_cross_domain_on_block(chan, pkt, base, app.sentinel, own_domain) then
+            local _, status = channel_sentinel.record_intrusion_sample(app.sentinel, chan, pkt.domainId, t_ms)
+            if status == "FAILSAFE_ESCALATE" then
+                trigger_intrusion_failsafe(app)
+            end
+            return
+        end
+    end
+
+    if handle_sentinel_rx(app, chan, pkt, base, t_ms) then
+        return
+    elseif chan == base + 3 and app.arbiter and app.arbiter.handle_mfd_state then
+        app.arbiter:handle_mfd_state(pkt, t_ms)
     elseif chan == base + 2 then
         if app.arbiter and app.arbiter.handle_flight_telemetry then
-            app.arbiter:handle_flight_telemetry(pkt, now_ms)
+            app.arbiter:handle_flight_telemetry(pkt, t_ms)
         end
         if app.nav and nav_engine.integrate_dr then
-            nav_engine.integrate_dr(app.nav, pkt.payload, 0.05, now_ms)
+            nav_engine.integrate_dr(app.nav, pkt.payload, 0.05, t_ms)
         end
     elseif chan == base + 4 then
         if pkt.type == "MSG_OUTER_LOOP_STATUS" and app.arbiter and app.arbiter.handle_outer_loop_status then
-            app.arbiter:handle_outer_loop_status(pkt, now_ms)
+            app.arbiter:handle_outer_loop_status(pkt, t_ms)
         elseif pkt.type == "MSG_CHANNEL_REBIND_ACK" and app.sentinel then
-            channel_sentinel.on_rebind_ack(app.sentinel, pkt, now_ms)
+            channel_sentinel.on_rebind_ack(app.sentinel, pkt, t_ms)
         end
-    elseif chan == base + 5 and app.nav and pkt.type == "MSG_GPS_RESPONSE" then
-        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, now_ms)
-    elseif handle_sentinel_rx(app, chan, pkt, base, now_ms) then
-        return
+    elseif chan == base + 5 then
+        handle_base5_rx(app, pkt, t_ms)
     elseif chan == base + 0 and app.arbiter and app.arbiter.handle_gcs_packet then
-        app.arbiter:handle_gcs_packet(pkt, now_ms)
-    elseif handle_facility_rx(app, chan, pkt, now_ms) then
+        app.arbiter:handle_gcs_packet(pkt, t_ms)
+    elseif handle_facility_rx(app, chan, pkt, t_ms) then
         return
     elseif app.net.is_payload_channel and app.net:is_payload_channel(chan) and app.engine then
-        app.engine:on_payload_ack(pkt, chan, now_ms)
+        if not app.net.openPayloadChannels or app.net.openPayloadChannels[chan] then
+            app.engine:on_payload_ack(pkt, chan, t_ms)
+        end
     elseif app.otaAgent then
         app.otaAgent:handle_packet(chan, chan, pkt)
     end
@@ -704,9 +832,12 @@ end
 
 local function create_app(config, modems)
     local cfg = (type(config) == "string") and load_config(config) or config or load_config()
+    local sentinel = setmetatable(channel_sentinel.init(cfg, cfg.clock_ms, cfg.leasePath), { __index = channel_sentinel })
+    if sentinel.cachedBase then
+        cfg.baseChannel = sentinel.baseChannel
+    end
     local queue = waypoint_queue.new(cfg)
     local net = network_manager.new(cfg)
-    local sentinel = setmetatable(channel_sentinel.init(cfg), { __index = channel_sentinel })
     local nav = setmetatable(nav_engine.init(cfg), { __index = nav_engine })
     local fac = setmetatable(facility_client.init(cfg), { __index = facility_client })
     local traj = setmetatable(trajectory_generator.init(cfg), { __index = trajectory_generator })
@@ -724,7 +855,7 @@ local function create_app(config, modems)
     local input = input_handler.new()
     local screen_buf = (not cfg.headless) and ui_renderer.create_buffer(51, 19) or nil
 
-    bind_app_modems(net, modems, cfg.baseChannel, cfg)
+    bind_app_modems(net, modems, sentinel.baseChannel or cfg.baseChannel, cfg)
 
     local app = {
         config = cfg,
@@ -740,10 +871,14 @@ local function create_app(config, modems)
         input = input,
         screen_buf = screen_buf,
         render_timer = os.startTimer(0.2),
+        clock_ms = cfg.clock_ms,
         tickCount = 0,
         ctrlHeld = false,
         running = true,
     }
+    if arbiter then
+        arbiter.clockFn = function() return get_now_ms(app) end
+    end
     local okOta, ota_agent = pcall(require, "ota_agent")
     if okOta and type(ota_agent) == "table" and type(ota_agent.new) == "function" then
         local otaCfg = cfg.ota or {}
@@ -772,6 +907,13 @@ local function create_app(config, modems)
 end
 
 local function step_5hz_downlink(app, now_ms)
+    local t_ms = now_ms or get_now_ms(app)
+    if app.arbiter and app.arbiter.can_transmit_mfd then
+        local can_tx, yield_reason = app.arbiter:can_transmit_mfd(t_ms)
+        if not can_tx then
+            return false, yield_reason
+        end
+    end
     local act_src = (app.arbiter and app.arbiter.activeSource) or "FCP"
     if act_src == "MFD_ACRO" then
         return false, "YIELDED_TO_MFD_ACRO"
@@ -826,14 +968,28 @@ local function step_5hz_downlink(app, now_ms)
         },
     }
     if app.net and app.net.send_mfd_state then
-        return app.net:send_mfd_state(mfd_payload, act_src)
+        return app.net:send_mfd_state(mfd_payload, act_src, t_ms)
     end
     return true
 end
 
+local function sync_base_channel(app, new_base)
+    if type(new_base) ~= "number" then return end
+    if app.net and app.net.baseChannel ~= new_base then
+        app.net:apply_rebind(new_base)
+    end
+    if app.config then app.config.baseChannel = new_base end
+    if app.nav then app.nav.baseChannel = new_base end
+    if app.engine then app.engine.baseChannel = new_base end
+end
+
 local function step_sentinel_20hz(app, now)
     if not app.sentinel or not app.net then return end
+    local prev_status = app.sentinel.status
     local _, out_pkt = channel_sentinel.negotiate_and_probe(app.sentinel, now)
+    if prev_status ~= "ACQUIRED_OFFLINE" and app.sentinel.status == "ACQUIRED_OFFLINE" and app.arbiter then
+        app.arbiter.lastBanner = "[OFFLINE LEASE: " .. tostring(app.sentinel.offlineWarning or "NO_GCS_LEASE") .. "]"
+    end
     if out_pkt then
         if out_pkt.type == "MSG_BLOCK_REQUEST" then
             app.net:send_infra_packet(50000, out_pkt.type, out_pkt.payload)
@@ -848,18 +1004,21 @@ local function step_sentinel_20hz(app, now)
             end
         end
     end
+    if channel_sentinel.is_acquired(app.sentinel) and app.sentinel.baseChannel ~= app.net.baseChannel then
+        sync_base_channel(app, app.sentinel.baseChannel)
+    end
     if app.sentinel.rebindTx then
         local rebind_msg, status = channel_sentinel.step_rebind_transaction(app.sentinel, now)
         if rebind_msg then
             local p = rebind_msg.payload
             app.net:send_rebind_command(p.action, p.transactionId, p.oldBaseChannel, p.newBaseChannel)
             if status == "COMMITTED" then
-                app.net:apply_rebind(p.newBaseChannel)
-                if app.config then app.config.baseChannel = p.newBaseChannel end
-                if app.nav then app.nav.baseChannel = p.newBaseChannel end
-                if app.engine then app.engine.baseChannel = p.newBaseChannel end
+                sync_base_channel(app, p.newBaseChannel)
             end
         end
+    end
+    if channel_sentinel.step_intrusion_watchdog(app.sentinel, now) == "FAILSAFE_ESCALATE" then
+        trigger_intrusion_failsafe(app)
     end
 end
 
@@ -934,6 +1093,12 @@ local function step_20hz_tick(app, dt, now_ms)
         or { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
     step_facility_watchdog_20hz(app, goal, now)
     goal = (app.arbiter and app.arbiter.get_effective_goal and app.arbiter:get_effective_goal()) or goal
+    if app.sentinel and channel_sentinel.is_locked(app.sentinel) then
+        goal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
+        if app.arbiter then
+            app.arbiter.lastBanner = "[CHANNEL LOCKED: " .. tostring(app.sentinel.status) .. "]"
+        end
+    end
 
     local setpoint = trajectory_generator.compute(app.traj, app.nav, app.fac, goal, step_dt, now)
     if app.net and app.net.send_trajectory_setpoint then
@@ -1024,6 +1189,7 @@ return {
     create_app = create_app,
     step_20hz_tick = step_20hz_tick,
     step_5hz_downlink = step_5hz_downlink,
+    handle_modem_message = handle_modem_message,
     render_ui_frame = render_ui_frame,
     handle_timer_event = handle_timer_event,
     make_coroutine_a = make_coroutine_a,

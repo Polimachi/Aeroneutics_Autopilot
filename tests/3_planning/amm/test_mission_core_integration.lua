@@ -73,13 +73,15 @@ describe("AMM Mission Core Cross-Module Integration", function()
             ver = "1.9.5", type = "MSG_PAYLOAD_ACK",
             payload = { checkpointId = "CP_CARGO", command = "RELEASE_BAY", status = "DROPPED" },
         }, 10020))
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
 
         local post = condition_evaluator.evaluate_checkpoint(cp, { checkpoint = cp, payloadAck = runner:get_last_payload_ack(), enteredAtMs = 2000, nowMs = 2250 })
         assert_true(post.completed)
 
         runner:execute_hooks(cp.onExit, cp, 2250)
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
         assert_true(m.isOpen(10000))
         assert_true(m.isOpen(10003))
     end)

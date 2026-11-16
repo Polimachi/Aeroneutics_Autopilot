@@ -15,17 +15,13 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         -- 1. Setup VAS network state and channels
         local vas_net = vas:require("network_manager")
         local vas_state = vas_net.init({
-            system = { domainId = "AIRCRAFT_01" },
-            channels = {
-                c2 = 10000,
-                guidance = 10001,
-                telemetry = 10002,
-                actuation = 10010,
-                aero = 10011,
-            },
-        }, vas.modem)
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+        })
         vas_state.baseChannel = 10000
         vas_state.aircraftDomainId = "AIRCRAFT_01"
+        vas_state.channels.calibration = 10008
+        vas_state.channels.emergency = 10009
 
         local state_machine = vas:require("state_machine")
         local vas_fsm = state_machine.init({}, true)
@@ -37,13 +33,26 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         align.modem:open(102)
         align.modem:open(104)
 
-        -- VAS listens on Base+0 (10000) for operator/calibration binding
-        vas.modem:open(10000)
+        -- VAS listens on Base+8 (10008) for calibration binding (Base+0 is NOT opened on VAS)
+        vas.modem:open(10008)
         tca.modem:open(10010)
         asa.modem:open(10011)
 
-        -- 2. Stage 1: Alignment sends MSG_CALIBRATION_INIT to craft Base+0 (10000)
-        align.modem:transmit(10000, 102, {
+        -- Negative Check 0a: C2 packet on Base+0 (10000) is NOT received by VAS
+        align.modem:transmit(10000, 10000, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 0,
+            type = "MSG_OPERATOR_CMD",
+            time = 999,
+            payload = { authority = "PILOT_PRIMARY", command = "HOLD", params = {} },
+        })
+        bus:step(0.05)
+        assert_false(vas.modem:isOpen(10000))
+        assert_eq(#vas.modem:drain(), 0)
+
+        -- 2. Stage 1: Alignment sends MSG_CALIBRATION_INIT to craft Base+8 (10008)
+        align.modem:transmit(10008, 102, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 1,
@@ -58,9 +67,16 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         })
         bus:step(0.05)
 
-        -- VAS processes inbound message on 10000
+        -- VAS processes inbound message on 10008
         local vas_inbox = vas.modem:drain()
         assert_eq(#vas_inbox, 1)
+        assert_eq(vas_inbox[1].channel, 10008)
+
+        -- Negative Check 0b (Zero-Fallback): MSG_CALIBRATION_INIT delivered on legacy Base+0 (10000) is rejected
+        local ok_legacy_calib, err_legacy_calib = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10000, 102, vas_inbox[1].payload)
+        assert_false(ok_legacy_calib)
+        assert_eq(err_legacy_calib, "WRONG_CHANNEL")
+        assert_eq(vas_fsm.currentState, "IDLE_ARMED")
 
         -- Negative Check 1: Rogue domain spoofing (ROGUE_CRAFT) is rejected by envelope verification
         local rogue_init_pkt = {
@@ -76,7 +92,7 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
                 targetCraftDomain = "AIRCRAFT_01",
             },
         }
-        local ok_rogue = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10000, 102, rogue_init_pkt)
+        local ok_rogue = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10008, 102, rogue_init_pkt)
         assert_false(ok_rogue)
         assert_eq(vas_fsm.currentState, "IDLE_ARMED")
 
@@ -86,8 +102,8 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         assert_false(estop_fsm:transition_to("CALIBRATION", "ILLEGAL_CALIBRATION_ATTEMPT"))
         assert_eq(estop_fsm.currentState, "E_STOP")
 
-        -- Happy Path: Valid calibration init on Base+0 (10000)
-        local ok_init = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10000, vas_inbox[1].replyChannel, vas_inbox[1].payload)
+        -- Happy Path: Valid calibration init on Base+8 (10008)
+        local ok_init = vas_net.dispatch(vas_state, vas_fsm, nil, nil, 10008, vas_inbox[1].replyChannel, vas_inbox[1].payload)
         assert_true(ok_init)
         assert_eq(vas_fsm.currentState, "CALIBRATION")
 

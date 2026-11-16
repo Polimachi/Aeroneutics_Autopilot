@@ -50,7 +50,7 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         -- Step 4: FCP takes off and enters CRUISE at clearance altitude -> WP1 in Base+4 goal
         arbiter:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
@@ -60,7 +60,7 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         -- Step 5: Craft reaches WP1 -> advances to WP2
         arbiter:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 100, z = 100 } }
             }
         })
@@ -92,7 +92,7 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         -- Craft reaches WP2 -> advances to WP3
         arbiter:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 300, z = 300 } }
             }
         })
@@ -102,7 +102,7 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         -- Step 8: Craft reaches WP3 (final WP with facilityId PAD_BRAVO_01) -> LANDING goal active
         arbiter:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 600, z = 600 } }
             }
         })
@@ -112,10 +112,10 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         assert_eq(fin.flightMode, "LANDING")
         assert_eq(fin.designatedFacilityId, "PAD_BRAVO_01")
 
-        -- Step 9: Emergency E-STOP hotkey fires E_STOP to Base+1
+        -- Step 9: Emergency E-STOP hotkey fires E_STOP to Base+9
         arbiter:handle_pilot_action("ESTOP")
         assert_eq(#sent_packets, 1)
-        assert_eq(sent_packets[1].chan, 10001) -- Base+1
+        assert_eq(sent_packets[1].chan, 10009) -- Base+9
         assert_eq(sent_packets[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(sent_packets[1].payload.payload.action, "E_STOP")
         assert_eq(sent_packets[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")
