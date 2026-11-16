@@ -62,8 +62,8 @@
    - 6대 기종(`FIXED_WING`, `WINGED_VTOL`, `VECTORED_VTOL`, `ADVANCED_VTOL`, `QUADROTOR`, `HEXAROTOR`) 및 `constraintProfile`(`STANDARD`, `STRICT_LEVEL`, `TILT_ASSISTED`, `FIXED_WING_GLIDE`)에 맞게 **`QUATERNION_RATE`** 스키마(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`, 선택적 `flapTarget`, 선택적 `translationBias {surge, sway}`)를 생성하여 `Base+1` (`[I-2]`)로 20Hz 송출합니다.
 2. **로컬 속도 적분 기반 상태 전파 (`state_propagator.lua`)**:
    - `AMM`의 `posEpoch` 갱신 주기 사이를 `VAS Base+2`의 20Hz 3D 속도 벡터로 로컬 적분(`dt <= 0.1s` 가드)하고, `posEpoch` 증가 시 유계 오프셋 병합을 수행하며, `AMM` 항법 정체(`navStale`) 여부를 판정해 `MSG_OUTER_LOOP_STATUS` (`Base+4`)로 보고합니다.
-3. **6-State 외루프 FSM 및 2단계 시동·페일세이프 격리 (`flight_fsm.lua`)**:
-   - 6대 외루프 상태(`BOOT`, `IDLE_ARMED`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD`, `EMERGENCY_LAND`)를 운용합니다.
+3. **7-State 외루프 FSM 및 2단계 시동·페일세이프·비상 홀드 격리 (`flight_fsm.lua`)**:
+   - 7대 외루프 상태(`BOOT`, `IDLE_ARMED`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD`, `EMERGENCY_LAND`, `EMERGENCY_HOLD`)를 운용합니다.
    - `AMM`의 `arm`/`flightActive` 플래그를 `Base+1`로 전달하고, 조종석 `MFD_ACRO` 선점(`activeSource == "MFD_ACRO"`) 시 `PASSIVE_TRACKING`으로 전이하여 `Base+1` 송출을 침묵(Silence)하고 적분기를 동결한 뒤 `"FCP"` 복귀 시 **2.0초 범프리스 선형 램핑**을 수행합니다.
    - `Base+4` 500ms 두절(`AMM_TIMEOUT`) 시 `AMM_TIMEOUT_HOLD`(10초 호버/선회 홀드) $\to$ `EMERGENCY_LAND`로 자체 안전 강하를 집행합니다.
 4. **온보드 전용 비행 코어 채널 격리 및 `MSG_CHANNEL_REBIND` 중계 (`network_manager.lua`)**:
@@ -195,22 +195,22 @@ FCP의 모든 항법 및 유도 알고리즘은 항공 역학 표준인 **NED (N
 src/2_guidance/fcp/
 ├── main.lua                        # 메인 진입점, 20Hz 결정론적 루프 & 선택적 debug TUI(parallel.waitForAny)
 ├── config/
-│   └── fcp_config.json             # 3채널 설정, SE(3) 게인(g=11.0), 6기종 투영 파라미터, 타임아웃
+│   └── fcp_config.json             # 4채널 설정(Base+4,2,1,9), SE(3) 게인(g=11.0), 6기종 투영 파라미터, 타임아웃
 └── modules/
-    ├── network_manager.lua         # 단일 top 모뎀(Base+4, Base+2, Base+1 전용), REBIND 중계, ICD v1.9.5 엔벨로프
+    ├── network_manager.lua         # 단일 top 모뎀(Base+4, Base+2, Base+1, Base+9 비상경보 전용), REBIND 중계, ICD v1.9.5 엔벨로프
     ├── state_propagator.lua        # VAS Base+2 속도 적분 기반 로컬 상태 전파, posEpoch 병합, navStale 판정
     ├── outer_loop_controller.lua   # 통합 SE(3) 가속도 법칙 & 6대 기체 QUATERNION_RATE 투영, 2.0s 범프리스 램프
-    ├── flight_fsm.lua              # 6-State 외루프 FSM, AMM_TIMEOUT(500ms->10s) & VAS_TIMEOUT(500ms) 감시
+    ├── flight_fsm.lua              # 7-State 외루프 FSM(EMERGENCY_HOLD 포함), AMM_TIMEOUT(500ms->10s) & VAS_TIMEOUT(500ms) 감시
     └── ui_renderer.lua             # (선택) debug=true 시 비동기 5Hz 디버그 대시보드 (헤드리스 기본)
 ```
 
 | 모듈 명칭 | 주관 인터페이스 | 실행 주기 / 조건 | 핵심 역할 및 기능 |
 | :--- | :---: | :---: | :--- |
 | **`main.lua`** | 시스템 루프 | 20Hz (50ms) / 선택적 5Hz | 20Hz 틱 스케줄러 가동, 5단계 외루프 파이프라인 순차 실행; `debug: false` 헤드리스 기본, `debug: true` 시 `parallel.waitForAny`로 `ui_renderer.lua` 비동기 격리 구동 |
-| **`network_manager.lua`** | I-1, I-2, I-12 | 매 틱 / 이벤트 | 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1` 3개 채널만 개방, `ver = "1.9.5"` 엔벨로프 직렬화/역직렬화, `MSG_CHANNEL_REBIND` (`Base+4` $\to$ `Base+1`) 중계 및 `MSG_CHANNEL_REBIND_ACK` 취합 |
+| **`network_manager.lua`** | I-1, I-2, I-12 | 매 틱 / 이벤트 | 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1`, `Base+9`(비상 경보 구독 전용) 4개 채널 개방, `ver = "1.9.5"` 엔벨로프 직렬화/역직렬화, `MSG_CHANNEL_REBIND` (`Base+4` $\to$ `Base+1`) 중계 및 `MSG_CHANNEL_REBIND_ACK` 취합 |
 | **`state_propagator.lua`** | I-1, I-12 | 20Hz | `AMM Base+4` `posEpoch` 갱신 사이 `VAS Base+2` 속도로 로컬 위치 적분(`dt <= 0.1s` 가드), 에포크 증가 시 유계 오프셋 병합, `navStale` 판정 |
 | **`outer_loop_controller.lua`** | I-2, I-12 | 20Hz | `SE(3)` 목표 가속도/비력($g=11.0\text{ m/s}^2$) 산출, 6대 기체별 `QUATERNION_RATE` 투영, `constraintProfile` · 스웨이 손실 폴백, 2.0초 범프리스 램핑 및 방향성 안티와인드업 |
-| **`flight_fsm.lua`** | I-1, I-2, I-12 | 20Hz | 6-State 외루프 FSM(`BOOT`, `IDLE_ARMED`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD`, `EMERGENCY_LAND`), `AMM_TIMEOUT`(500ms) · `VAS_TIMEOUT`(500ms) 감시 |
+| **`flight_fsm.lua`** | I-1, I-2, I-12 | 20Hz | 7-State 외루프 FSM(`BOOT`, `IDLE_ARMED`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD`, `EMERGENCY_LAND`, `EMERGENCY_HOLD`), `AMM_TIMEOUT`(500ms) · `VAS_TIMEOUT`(500ms) 감시 |
 | **`ui_renderer.lua`** *(선택)* | 로컬 TUI | `debug: true` 시 5Hz | 디버그 전용 상태 표출(제어 루프 비차단 격리); 기본 `debug: false` 시 로드 생략 |
 
 > [!NOTE]
@@ -231,14 +231,14 @@ sequenceDiagram
     participant V as VAS (Node 01)
 
     Note over T: 틱 시작 (t = 0.0 ms)
-    T->>N: 1. 인바운드 큐 폴링 (Base+4, Base+2, Base+1 전용)
-    Note over N: ver="1.9.5" 검증 및 REBIND 중계 처리
+    T->>N: 1. 인바운드 큐 폴링 (Base+4, Base+2, Base+1, Base+9 전용)
+    Note over N: ver="1.9.5" 검증 및 REBIND 중계 / Base+9 비상 경보 처리
 
     T->>P: 2. 로컬 상태 전파 (state_propagator)
     Note over P: VAS Base+2 속도 적분 (dt<=0.1s) / AMM posEpoch 병합 / navStale 판정
 
-    T->>F: 3. 6-State FSM 및 타임아웃 평가 (flight_fsm)
-    Note over F: AMM_TIMEOUT(500ms) / VAS_TIMEOUT(500ms) / MFD_ACRO 선점 판정
+    T->>F: 3. 7-State FSM 및 타임아웃 평가 (flight_fsm)
+    Note over F: Base+9 비상경보(EMERGENCY_HOLD) / AMM_TIMEOUT(500ms) / VAS_TIMEOUT(500ms) / MFD_ACRO 선점 판정
 
     alt ACTIVE_TRACKING / AMM_TIMEOUT_HOLD / EMERGENCY_LAND
         T->>O: 4. 통합 SE(3) 외루프 연산 및 6기종 투영
@@ -412,33 +412,34 @@ flowchart LR
 
 ---
 
-## 7. 6-State 외루프 비행 유한 상태 기계 (`flight_fsm.lua`)
+## 7. 7-State 외루프 비행 유한 상태 기계 (`flight_fsm.lua`)
 
-### 7.1 6-State 외루프 FSM 상태 정의
-`v2.0.0` FCP는 임무·부트스트랩·시설물 상태를 `AMM (Node 03)`으로 이관하고, 순수 외루프 실시간 추종 생명주기만을 관리하는 **6-State 외루프 FSM**으로 경량화되었습니다.
+### 7.1 7-State 외루프 FSM 상태 정의
+`v2.0.0` FCP는 임무·부트스트랩·시설물 상태를 `AMM (Node 03)`으로 이관하고 순수 외루프 실시간 추종 생명주기만을 관리하며, `v2.3.0` (`TASK-125`)에서는 `Base+9` (`CH_EMERGENCY_CORE`) 비상 경보 분리와 함께 **`EMERGENCY_HOLD`** 안전 홀드 상태를 포함한 **7-State 외루프 FSM**을 운용합니다.
 
 | 상태 식별자 (State) | 상태 명칭 | 진입 조건 및 제어 거동 |
 | :--- | :---: | :--- |
-| **`BOOT`** | 시스템 초기화 | `config/fcp_config.json` 로드, 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1` 3채널 개방 및 내부 적분기/전파기 초기화. |
+| **`BOOT`** | 시스템 초기화 | `config/fcp_config.json` 로드, 단일 `top` 모뎀에서 `Base+4`, `Base+2`, `Base+1`, `Base+9` 4채널 개방 및 내부 적분기/전파기 초기화. |
 | **`IDLE_ARMED`** | 시동 대기 / 아이들 | `AMM` `Base+4` 연결 수립 후 `arm == false` 또는 `arm == true, flightActive == false` 상태. `Base+1`로 `arm` / `flightActive=false`를 전달하고 적분기를 `0`으로 유지. |
 | **`ACTIVE_TRACKING`** | 정상 `SE(3)` 외루프 추종 | `arm == true, flightActive == true` 및 `VAS activeSource ~= "MFD_ACRO"`. 20Hz `Base+4` 세트포인트를 `SE(3)` 법칙으로 투영하여 `Base+1` `QUATERNION_RATE` 송출. |
 | **`PASSIVE_TRACKING`** | 수동 `MFD_ACRO` 추종 유예 | `VAS Base+2`의 `activeSource == "MFD_ACRO"` 감지 시 진입. `Base+1` 송출을 즉시 침묵(Silence)하고 적분기를 동결하되 `state_propagator`는 지속. `"FCP"` 복귀 시 **2.0초 범프리스 램핑** 실행. |
 | **`AMM_TIMEOUT_HOLD`** | `AMM` 두절 안전 체공 홀드 | `ACTIVE_TRACKING` 중 `Base+4` (`MSG_TRAJECTORY_SETPOINT`) 침묵이 `>= 500ms` 도달 시 진입. 적분기를 초기화하고 현재 전파 고도·위치에서 수평 호버(회전익/VTOL) 또는 $18^\circ$ 뱅크 선회(고정익)를 최대 `10.0초` 유지. |
 | **`EMERGENCY_LAND`** | 외루프 비상 강하 착륙 | `AMM_TIMEOUT_HOLD`가 `10.0초` 초과 미복구(또는 치명적 손실) 시 진입. 회전익/VTOL은 수평 자세로 `-1.5 m/s` 수직 강하, 고정익은 `-1.0 m/s` 얕은 활공 강하 집행. |
+| **`EMERGENCY_HOLD`** | 코어 비상 경보 안전 홀드 | `Base+9` (`CH_EMERGENCY_CORE`) `MSG_EMERGENCY_ALERT` 수신 또는 `Base+2` `activeSource == "EMERGENCY_DIRECT"` (`E_STOP`) 감지 시 진입. 적분기를 초기화하고 `Base+1` `MSG_ATTITUDE_CMD` 송출을 중단한 채 안전 홀드 상태를 유지하며 `Base+4` `MSG_OUTER_LOOP_STATUS`로 상향 보고. |
 
 > [!NOTE]
 > **구버전 16-State 임무 FSM 이관 (`[DEPRECATED — Migrated to AMM v1.3.0]`)**
 > 종래 `v1.16.0`의 16대 임무/인프라 상태(`BOOT_INIT`, `BOOTSTRAP`, `PROBE_CHANNEL`, `ARMING_LOCKED`, `DISARMED`, `ARMING`, `TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `FAILSAFE_HOLD`, `FAILSAFE_RTH`, `DOCK_*`, `GO_AROUND`)는 모두 **`AMM (Node 03, v1.3.0)`**의 `mission_engine` 및 `trajectory_generator`로 이관되었으며 FCP FSM에서는 **`[DEPRECATED]`** 처리되었습니다. `AMM`은 해당 임무 단계들을 `Base+4`의 `flightMode` + 궤적 세트포인트로 FCP에 전달합니다.
 
-### 7.2 6-State FSM 상태 전이 다이어그램
+### 7.2 7-State FSM 상태 전이 다이어그램
 
 ```mermaid
 stateDiagram-v2
     [*] --> BOOT: "전원 인가 / 초기화"
-    BOOT --> IDLE_ARMED: "3채널(Base+4,2,1) 개방 완료"
+    BOOT --> IDLE_ARMED: "4채널(Base+4,2,1,9) 개방 완료"
 
     IDLE_ARMED --> ACTIVE_TRACKING: "AMM Base+4 (arm=true & flightActive=true)"
-    ACTIVE_TRACKING --> IDLE_ARMED: "AMM Base+4 (arm=false OR flightActive=false) OR E_STOP"
+    ACTIVE_TRACKING --> IDLE_ARMED: "AMM Base+4 (arm=false OR flightActive=false)"
 
     ACTIVE_TRACKING --> PASSIVE_TRACKING: "VAS Base+2 activeSource == MFD_ACRO"
     PASSIVE_TRACKING --> ACTIVE_TRACKING: "activeSource == FCP (2.0초 범프리스 램핑)"
@@ -449,21 +450,29 @@ stateDiagram-v2
     AMM_TIMEOUT_HOLD --> EMERGENCY_LAND: "10.0초 미복구 에스컬레이션"
 
     EMERGENCY_LAND --> IDLE_ARMED: "착지 완료 (v_y ~ 0) OR disarm"
+
+    ACTIVE_TRACKING --> EMERGENCY_HOLD: "Base+9 MSG_EMERGENCY_ALERT OR Base+2 EMERGENCY_DIRECT"
+    PASSIVE_TRACKING --> EMERGENCY_HOLD: "Base+9 MSG_EMERGENCY_ALERT OR Base+2 EMERGENCY_DIRECT"
+    AMM_TIMEOUT_HOLD --> EMERGENCY_HOLD: "Base+9 MSG_EMERGENCY_ALERT OR Base+2 EMERGENCY_DIRECT"
+    EMERGENCY_LAND --> EMERGENCY_HOLD: "Base+9 MSG_EMERGENCY_ALERT OR Base+2 EMERGENCY_DIRECT"
+    EMERGENCY_HOLD --> IDLE_ARMED: "지상 복귀 및 AMM disarm (arm=false & 경보 해제)"
 ```
 
-### 7.3 6-State 전이 매트릭스
+### 7.3 7-State 전이 매트릭스
 
 | 현재 상태 | 트리거 이벤트 | 가드 조건 (Guard) | 실행 액션 (Action) | 전이 대상 상태 |
 | :--- | :--- | :--- | :--- | :--- |
-| `BOOT` | `CHANNELS_READY` | `Base+4, +2, +1` 모뎀 개방 성공 | 전파기·적분기 `0` 초기화 | `IDLE_ARMED` |
+| `BOOT` | `CHANNELS_READY` | `Base+4, +2, +1, +9` 모뎀 개방 성공 | 전파기·적분기 `0` 초기화 | `IDLE_ARMED` |
 | `IDLE_ARMED` | `SETPOINT_FLIGHT_START` | `arm == true and flightActive == true` | 적분기 리셋, 20Hz `SE(3)` 투영 개시 | `ACTIVE_TRACKING` |
-| `ACTIVE_TRACKING` | `SETPOINT_DISARM_OR_IDLE` | `arm == false or flightActive == false` or `E_STOP` | 적분기 클리어, `Base+1` `flightActive=false` 전달 | `IDLE_ARMED` |
+| `ACTIVE_TRACKING` | `SETPOINT_DISARM_OR_IDLE` | `arm == false or flightActive == false` | 적분기 클리어, `Base+1` `flightActive=false` 전달 | `IDLE_ARMED` |
 | `ACTIVE_TRACKING` | `ACRO_PREEMPT_DETECT` | `telemetry.activeSource == "MFD_ACRO"` | `Base+1` 송출 침묵(Silence), 적분기 동결 | `PASSIVE_TRACKING` |
 | `PASSIVE_TRACKING` | `ACRO_RELEASE_DETECT` | `telemetry.activeSource == "FCP"` | 적분기 리셋, **2.0초 범프리스 램핑** 개시 | `ACTIVE_TRACKING` |
 | `ACTIVE_TRACKING` | `AMM_TIMEOUT_500MS` | `Base+4` 침묵 $\ge 500\text{ ms}$ | 적분기 클리어, 홀드 기준 위치 고정 (10s 타이머) | `AMM_TIMEOUT_HOLD` |
 | `AMM_TIMEOUT_HOLD` | `AMM_RECOVERED` | `Base+4` 유효 세트포인트 재수신 | 적분기 리셋, **2.0초 범프리스 램핑** 복귀 | `ACTIVE_TRACKING` |
 | `AMM_TIMEOUT_HOLD` | `HOLD_TIMEOUT_10S` | 홀드 경과 $> 10.0\text{ s}$ | 회전익 `-1.5 m/s` / 고정익 `-1.0 m/s` 하강 지령 | `EMERGENCY_LAND` |
 | `EMERGENCY_LAND` | `TOUCHDOWN_OR_DISARM` | `arm == false` 또는 착지 정지 확인 | 출력 차단, 적분기 클리어 | `IDLE_ARMED` |
+| `*` (비행/체공 상태) | `EMERGENCY_CORE_ALERT` | `Base+9` `MSG_EMERGENCY_ALERT` 또는 `activeSource == "EMERGENCY_DIRECT"` | 적분기 초기화, `Base+1` `MSG_ATTITUDE_CMD` 송출 중단, `MSG_OUTER_LOOP_STATUS` 보고 | `EMERGENCY_HOLD` |
+| `EMERGENCY_HOLD` | `EMERGENCY_CLEARED_DISARM` | `arm == false` 및 경보 미수신(지상 안전 복귀) | 출력 차단 유지, 적분기 클리어 | `IDLE_ARMED` |
 
 ---
 
@@ -471,7 +480,7 @@ stateDiagram-v2
 1. **2단계 시동 중계 (`arm` & `flightActive`)**:
    - `AMM`이 `Base+4`로 `arm = true, flightActive = false`를 하달하면, FCP는 `IDLE_ARMED` 상태를 유지하며 `Base+1`로 동일한 `arm = true, flightActive = false`를 전달해 `VAS`의 TCA/ASA 디스커버리 및 센서 검증(`IDLE_ARMED`)을 수행시킵니다.
    - `AMM`이 `flightActive = true`를 인가하면 FCP는 `ACTIVE_TRACKING`으로 전이해 `Base+1`에 `flightActive = true` 및 `QUATERNION_RATE` 지령을 송출합니다.
-   - `arm = false` 수신 또는 `VAS Base+1` `MSG_EMERGENCY_ALERT` / `Base+2` `activeSource == "EMERGENCY_DIRECT"`(`E_STOP`) 감지 시 FCP는 적분기를 초기화하고 `IDLE_ARMED`로 복귀합니다.
+   - `arm = false` 수신 시 `IDLE_ARMED`로 복귀하며, `VAS Base+9` (`CH_EMERGENCY_CORE`) `MSG_EMERGENCY_ALERT` 수신 또는 `Base+2` `activeSource == "EMERGENCY_DIRECT"`(`E_STOP`) 감지 시 FCP는 즉시 적분기를 초기화하고 **`EMERGENCY_HOLD`**로 안전 전이합니다(지상 안전 복귀 및 `arm = false` 해제 시 `IDLE_ARMED` 전환).
 
 2. **조종석 `MFD_ACRO` 선점 및 `PASSIVE_TRACKING` 프로토콜**:
    - 조종사가 MFD에서 ACRO 모드를 활성화하면 MFD가 `Base+1`로 `RATE_COMMAND`를 직결 주입하고, `VAS`가 `Base+2`의 `activeSource`를 `"MFD_ACRO"`로 보고합니다 (`Base+3` 20Hz HUD는 `AMM`의 양보로 `VAS`가 직접 인계).
@@ -488,7 +497,7 @@ stateDiagram-v2
 
 ## 8. 통신 패킷 규격 및 인터페이스 제어 명세 (Interface Control Document, ICD)
 
-모든 통신 패킷은 시스템 공통 Lua 테이블 엔벨로프(`ver = "1.9.5"`)를 필수로 적용합니다. `FCP v2.0.0`은 단일 `top` 모뎀에서 **`Base + 4` (`[I-12]`)**, **`Base + 2` (`[I-1]`)**, **`Base + 1` (`[I-2]`)** 3개 내부 채널만을 개방합니다.
+모든 통신 패킷은 시스템 공통 Lua 테이블 엔벨로프(`ver = "1.9.5"`)를 필수로 적용합니다. `FCP v2.3.0`은 단일 `top` 모뎀에서 **`Base + 4` (`[I-12]`)**, **`Base + 2` (`[I-1]`)**, **`Base + 1` (`[I-2]` 순수 유도)**, **`Base + 9` (`[I-2]` 비상 경보 구독)** 4개 내부 채널을 개방합니다(지상 격납고 OTA `[I-13]` 채널 제외).
 
 ### 8.1 [Interface I-1] 비행 텔레메트리 수신 (`VAS` $\rightarrow$ `FCP`)
 - **수신 채널**: `CH_TELEMETRY` (`Base + 2`)
@@ -721,7 +730,7 @@ stateDiagram-v2
 #### 8.3.2 [송출] 외루프 상태 피드백 (`MSG_OUTER_LOOP_STATUS`, FCP $\rightarrow$ AMM on Base+4)
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
-| `payload.fsmState` | string | 6-State 문자열 | 필수 | `"BOOT"`, `"IDLE_ARMED"`, `"ACTIVE_TRACKING"`, `"PASSIVE_TRACKING"`, `"AMM_TIMEOUT_HOLD"`, `"EMERGENCY_LAND"` |
+| `payload.fsmState` | string | 7-State 문자열 | 필수 | `"BOOT"`, `"IDLE_ARMED"`, `"ACTIVE_TRACKING"`, `"PASSIVE_TRACKING"`, `"AMM_TIMEOUT_HOLD"`, `"EMERGENCY_LAND"`, `"EMERGENCY_HOLD"` |
 | `payload.posError` | float | m | 필수 | 현재 3D 위치 추종 오차 노름 ($\|\mathbf{p}_{\text{ref}} - \mathbf{p}\|$) |
 | `payload.velError` | float | m/s | 필수 | 현재 3D 속도 추종 오차 노름 ($\|\mathbf{v}_{\text{ref}} - \mathbf{v}\|$) |
 | `payload.saturated` | boolean | true/false | 필수 | `FCP` 가속도/집합 추력 포화 클램핑 발생 여부 |
@@ -830,7 +839,7 @@ stateDiagram-v2
 
 ## 9. 설정 관리 규격 (`config/fcp_config.json`)
 
-`FCP v2.0.0` 설정 파일은 외부 인프라 채널, GPS 파라미터, 시설물/도킹 파라미터 및 구 로컬 추진기 프로파일 검증 경로를 제거하고 순수 `SE(3)` 외루프 제어 및 3채널 격리 항목만을 보유합니다.
+`FCP v2.3.0` 설정 파일은 외부 인프라 채널, GPS 파라미터, 시설물/도킹 파라미터 및 구 로컬 추진기 프로파일 검증 경로를 제거하고 순수 `SE(3)` 외루프 제어 및 4채널(`Base+4, Base+2, Base+1, Base+9`) 격리 항목만을 보유합니다.
 
 ```json
 {
@@ -938,7 +947,7 @@ stateDiagram-v2
 
 ### 11.1 `main.lua` - 20Hz 헤드리스 실행 루프 및 선택적 디버그 TUI
 ```lua
--- FCP v2.0.0 메인 20Hz 실행 루프 (단일 top 모뎀, 3채널 전용, 헤드리스 기본)
+-- FCP v2.3.0 메인 20Hz 실행 루프 (단일 top 모뎀, 4채널 전용, 헤드리스 기본)
 local main = {}
 
 function main.run()
@@ -1124,19 +1133,29 @@ function outer_loop_controller.compute(state, nowMs, fsmState, navState, setpoin
 end
 ```
 
-### 11.4 `flight_fsm.lua` - 6-State 외루프 FSM 및 500ms/10s 타임아웃 에스컬레이션
+### 11.4 `flight_fsm.lua` - 7-State 외루프 FSM 및 500ms/10s 타임아웃 에스컬레이션
 ```lua
 local flight_fsm = {}
 
 function flight_fsm.evaluate(state, nowMs, telemetry, setpoint, alert, navState, safety)
-    local out = { resetIntegrators = false, triggerBumpless = false }
+    local out = { resetIntegrators = false, triggerBumpless = false, silenceOutput = false }
     local sp = setpoint and setpoint.payload
     local tel = telemetry and telemetry.payload
 
-    -- 1. 비상 경보 또는 E_STOP 감지 시 즉시 IDLE_ARMED 복귀
+    -- 1. Base+9 비상 경보(MSG_EMERGENCY_ALERT) 또는 E_STOP 감지 시 즉시 EMERGENCY_HOLD 안전 전이
     if alert or (tel and tel.activeSource == "EMERGENCY_DIRECT") then
-        state.currentState = "IDLE_ARMED"
+        state.currentState = "EMERGENCY_HOLD"
         out.resetIntegrators = true
+        out.silenceOutput = true
+        return out
+    end
+    if state.currentState == "EMERGENCY_HOLD" then
+        if sp and not sp.arm then
+            state.currentState = "IDLE_ARMED"
+            out.resetIntegrators = true
+        else
+            out.silenceOutput = true
+        end
         return out
     end
 
@@ -1204,8 +1223,8 @@ end
    - 중력 보상 $g = 11.0\text{ m/s}^2$ 기준 정지 호버 목표 시 $\mathbf{f}_{\text{des}} = [0, 11.0, 0]^T$가 산출되고 `targetQuaternion`이 단위 노름($\|\mathbf{q}\| = 1.0 \pm 10^{-5}$)을 유지하는지 검증.
    - `VECTORED_VTOL` / `ADVANCED_VTOL`에서 `STRICT_LEVEL` ($\theta=\phi=0^\circ$, `translationBias {surge, sway}`)과 `TILT_ASSISTED` ($\pm 10^\circ$, $15.0^\circ/\text{s}$ 슬루율) 전환, 그리고 `actuatorHealth.tap == false` 시 틸트 폴백이 동작하는지 검증.
    - `WINGED_VTOL` $V \in [8.0, 18.0]\text{ m/s}$ 연속 천이 블렌딩 및 `FIXED_WING` BTT 뱅크/요 피드포워드(`targetAngularRates.yawRate`) 정합 검증.
-4. **6-State 외루프 FSM 및 2.0초 범프리스 램핑 검증 (`flight_fsm`)**:
-   - `BOOT` $\to$ `IDLE_ARMED` $\to$ `ACTIVE_TRACKING` 전이 및 `flightMode` 이산 전환 시 적분기 리셋·2.0초 선형 램핑($\lambda \in [0, 1]$)이 실행되는지 검증.
+4. **7-State 외루프 FSM 및 2.0초 범프리스 램핑 검증 (`flight_fsm`)**:
+   - `BOOT` $\to$ `IDLE_ARMED` $\to$ `ACTIVE_TRACKING` 전이, `Base+9` `MSG_EMERGENCY_ALERT` 수신 시 `EMERGENCY_HOLD` 안전 전이 및 `flightMode` 이산 전환 시 적분기 리셋·2.0초 선형 램핑($\lambda \in [0, 1]$)이 실행되는지 검증.
 
 ### 12.2 결함 주입 및 멀티노드 E2E 시뮬레이션 기준 (`TASK-208` 대상)
 1. **`AMM_TIMEOUT` 500ms $\to$ 10.0초 `EMERGENCY_LAND` 에스컬레이션 시험**:
@@ -1215,7 +1234,7 @@ end
 3. **`MFD_ACRO` 선점 (`PASSIVE_TRACKING`) 및 2.0초 범프리스 복귀 시험**:
    - `Base+2` `activeSource == "MFD_ACRO"` 수신 시 FCP가 즉시 `Base+1` 송출을 침묵시키고, `"FCP"` 복귀 시 `2.0초` 선형 램핑을 통해 자세 점프 없이 추종을 재개하는지 검증.
 4. **4계층 `MSG_CHANNEL_REBIND` 캐스케이드 시험 (`AMM -> FCP -> VAS -> TCA/ASA`)**:
-   - `AMM`이 `Base_old+4`로 `10000 -> 10080` 재바인딩을 개시할 때 `FCP`가 `Base_old+1`로 `VAS`에 중계하고 `VAS`가 `TCA(Base_old+10)` / `ASA(Base_old+11, 구 Base_old+7 [DEPRECATED])`까지 전파한 뒤, `COMMIT` 후 `10084/10082/10081` 3채널로 통신을 이어가는지 검증.
+   - `AMM`이 `Base_old+4`로 `10000 -> 10080` 재바인딩을 개시할 때 `FCP`가 `Base_old+1`로 `VAS`에 중계하고 `VAS`가 `TCA(Base_old+10)` / `ASA(Base_old+11, 구 Base_old+7 [DEPRECATED])`까지 전파한 뒤, `COMMIT` 후 `10084/10082/10081/10089` 4채널로 통신을 이어가는지 검증.
 
 ### 12.3 구버전(`v1.16.0`) 구현 이력 보존 및 `TASK-208` 대체 안내
 > [!NOTE]

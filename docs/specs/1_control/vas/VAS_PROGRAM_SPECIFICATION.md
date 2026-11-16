@@ -254,7 +254,7 @@ sequenceDiagram
     T->>S: 틱 시작 (t = 0.0ms)
     Note over S: 1. pcall 4종 센서 폴링 (0.8ms)<br/>2. 3D 레버암 역산 & 쿼터니언 변환 (0.7ms)
     S->>F: comState & 5종 sensorHealth 전달 (t = 1.5ms)
-    Note over F: 3. 워치독 검사 & Base+1 선점 중재 (0.3ms)<br/>(E_STOP > MFD_ACRO > FCP)
+    Note over F: 3. 워치독 검사 & 선점 중재 (0.3ms)<br/>(Base+9 E_STOP > Base+1 MFD_ACRO > Base+1 FCP)
     F->>P: effectiveCmd & fsmState 전달
     Note over P: 4. [Layer 2A: Pre-Filter]<br/>QUATERNION_RATE/RATE_COMMAND 해석 & Stall Guard(<=10m/s)<br/>Flap Vfe Guard(>15m/s) & 틸트 제한 (0.4ms)
     P->>C: 조건화된 condCmd & comState 전달
@@ -543,7 +543,7 @@ flowchart TD
   ```
 
 ### 5.10 모듈 10: `network_manager` (듀얼 모뎀 라우터, 프로토콜 파서 및 동적 채널 관리자)
-- **역할**: 상단 무선 모뎀 온보드 채널(`Base+0` Alignment 교정 바인딩 개시, `Base+1` `FCP` 유도/`MFD_ACRO`/`E_STOP`, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면, `Base+2` 텔레메트리, `Base+3` ACRO HUD)과 하단 유선 모뎀을 바인딩하며, 격납고 바인딩(`MSG_CALIBRATION_INIT`) 수신 시 베이 채널을 동적 개방하고 하위 노드(TCA, ASA)로 `MSG_CALIB_BAY_BIND`를 중계 전파하며, `FCP`(`Base+1`)로부터 수신한 동적 채널 재바인딩(`MSG_CHANNEL_REBIND`) 2단계 트랜잭션(`PREPARE` $\to$ `MSG_REBIND_ACK` $\to$ `COMMIT`)을 처리하여 TCA/ASA으로 계단식 포워딩합니다.
+- **역할**: 상단 무선 모뎀 온보드 채널(`Base+8` Alignment 교정 바인딩 개시 [`Base+0` 미개방], `Base+1` `FCP` 유도/`MFD_ACRO`, `Base+9` `CH_EMERGENCY_CORE` `E_STOP` 수신 및 `MSG_EMERGENCY_ALERT` 송출, `Base+10` (구 `Base+6` [DEPRECATED]) TCA 추력, `Base+11` (구 `Base+7` [DEPRECATED]) ASA 조종면, `Base+2` 텔레메트리, `Base+3` ACRO HUD)과 하단 유선 모뎀을 바인딩하며, 격납고 바인딩(`MSG_CALIBRATION_INIT`) 수신 시 베이 채널을 동적 개방하고 하위 노드(TCA, ASA)로 `MSG_CALIB_BAY_BIND`를 중계 전파하며, `FCP`(`Base+1`)로부터 수신한 동적 채널 재바인딩(`MSG_CHANNEL_REBIND`) 2단계 트랜잭션(`PREPARE` $\to$ `MSG_CHANNEL_REBIND_ACK` [구 `MSG_REBIND_ACK` `DEPRECATED`] $\to$ `COMMIT`)을 처리하여 TCA/ASA으로 계단식 포워딩합니다.
 - **핵심 시그니처**:
   ```lua
   function network_manager.init(systemConfig) -> netState
@@ -725,11 +725,11 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 | **`AIRBORNE_EMERGENCY`** | 공중 비상 개입 | 런타임 패닉 또는 비상 유도 시 진입. 완경사 강하 후 접지 시 `E_STOP` 전이. |
 | **`E_STOP`** | 비상 정지 | 비행 종료 및 치명적 비상 킬스위치. 공중 시 쿠션 스로틀 인가, 지상 안착 시 전 구동계 0 차단 (하드 래치). |
 
-### 7.2 Base+1 C2 선점 중재 및 2단계 시동 프로토콜
-1. **`Base + 1` 다중 발신원 선점 중재 매트릭스 (Preemption Arbitration — `E_STOP > MFD_ACRO > FCP`)**:
-   - **우선순위 1 (`E_STOP` / `EMERGENCY_DIRECT`)**: `MSG_EMERGENCY_OVERRIDE` (`action == "E_STOP"`, `authKey == "ESTOP_CONFIRM_KEY"`). 발신처(`AMM`, 조종석 `MFD`, 지상 `GCS`) 불문 최우선 선점하여 즉시 `controlState = "E_STOP"` 전이 및 물리 구동계 차단을 집행합니다.
-   - **우선순위 2 (`MFD_ACRO` / `RATE_COMMAND`)**: 조종석 `MFD`가 발신한 `MSG_ATTITUDE_CMD` (`commandType == "RATE_COMMAND"`, `acroActive == true`). `FCP` 명령을 선점 차단하고 20Hz 각속도 직접 조종을 인계합니다. 동시에 `Base+2` `MSG_FLIGHT_TELEMETRY.activeSource = "MFD_ACRO"`를 송출하여 **`FCP`를 `PASSIVE_TRACKING` 상태로 전환시키고 `AMM`의 `Base+3` 5Hz 송출을 양보(Mute)시킨 뒤**, `VAS`가 `Base+3` 20Hz 직접 HUD 송출로 전환합니다.
-   - **우선순위 3 (`FCP` / `QUATERNION_RATE`)**: `source == "FCP"`, `commandType == "QUATERNION_RATE"` 자율 외루프 지령 추종 (`activeSource = "FCP"`).
+### 7.2 Base+9 비상 킬스위치 및 Base+1 유도 선점 중재 프로토콜
+1. **비상/유도 다중 발신원 선점 중재 매트릭스 (`Base+9 E_STOP > Base+1 MFD_ACRO > Base+1 FCP`)**:
+   - **우선순위 1 (`E_STOP` / `EMERGENCY_DIRECT` — 별도 `Base + 9` `CH_EMERGENCY_CORE` 직결)**: `MSG_EMERGENCY_OVERRIDE` (`action == "E_STOP"`, `authKey == "ESTOP_CONFIRM_KEY"`). `Base + 1` 유도 채널과 물리·논리적으로 분리된 최상위 하드웨어 비상 채널 **`Base + 9` (`CH_EMERGENCY_CORE`)**로 수신되며(구 `Base + 1` 직결 `[DEPRECATED]`), 발신처(`AMM`, 조종석 `MFD`, 지상 `GCS`) 불문 최우선 선점하여 즉시 `controlState = "E_STOP"` 전이 및 물리 구동계 차단을 집행합니다.
+   - **우선순위 2 (`MFD_ACRO` / `RATE_COMMAND` — `Base + 1`)**: 조종석 `MFD`가 `Base + 1`로 발신한 `MSG_ATTITUDE_CMD` (`commandType == "RATE_COMMAND"`, `acroActive == true`). `Base + 1` 내 `FCP` 명령을 선점 차단하고 20Hz 각속도 직접 조종을 인계합니다. 동시에 `Base+2` `MSG_FLIGHT_TELEMETRY.activeSource = "MFD_ACRO"`를 송출하여 **`FCP`를 `PASSIVE_TRACKING` 상태로 전환시키고 `AMM`의 `Base+3` 5Hz 송출을 양보(Mute)시킨 뒤**, `VAS`가 `Base+3` 20Hz 직접 HUD 송출로 전환합니다.
+   - **우선순위 3 (`FCP` / `QUATERNION_RATE` — `Base + 1`)**: `source == "FCP"`, `commandType == "QUATERNION_RATE"` 자율 외루프 지령 추종 (`activeSource = "FCP"`).
    - **공중 복구 정책**: `FAILSAFE_HOLD` 및 `EMERGENCY_LAND` 상태에서도 조종사의 `MFD_ACRO` 개입 또는 `FCP` `QUATERNION_RATE` 명령 정상 복구(`flightActive == true`) 시 `NORMAL`로 복귀 허용(`activeSource = "FCP"` 통보 시 `FCP` 2.0s 범프리스 복귀 및 `AMM` `Base+3` 5Hz 재개). 단, `E_STOP`은 시스템 리셋 전까지 해제 불가(Hard-Latched).
 2. **2단계 시동 프로토콜 (2-Stage Arming Protocol)**:
    - **1단계 (Arming)**: `MSG_ATTITUDE_CMD` (`arm = true`, `flightActive = false`) 수신 $\to$ `ARMING` 전이 $\to$ TCA/ASA 디스커버리 완료 시 `IDLE_ARMED` 대기 (출력 0 마스킹).
@@ -861,7 +861,7 @@ stateDiagram-v2
 - **채널**: `CH_FLIGHT_GUIDANCE` (`Base + 1`)
 - **수신 주기**: 20Hz (매 50ms)
 - **패킷 타입**: `MSG_ATTITUDE_CMD` (`"QUATERNION_RATE"` / `"RATE_COMMAND"`; `"ATTITUDE_ANGLE"` **`[DEPRECATED]`**)
-- **선점 중재 규칙**: `E_STOP` (`AMM`/`MFD`/`GCS`) > `MFD_ACRO` (`RATE_COMMAND`, `acroActive = true`) > `FCP` (`QUATERNION_RATE`). `MFD_ACRO` 발신 시 `FCP` 지령을 선점 차단하고 `Base+2` `activeSource = "MFD_ACRO"`를 통보(`FCP` `PASSIVE_TRACKING` · `AMM` `Base+3` 양보)하며 `VAS` 20Hz 직접 추종.
+- **선점 중재 규칙**: `Base+9 E_STOP` (`AMM`/`MFD`/`GCS`) > `Base+1 MFD_ACRO` (`RATE_COMMAND`, `acroActive = true`) > `Base+1 FCP` (`QUATERNION_RATE`). `MFD_ACRO` 발신 시 `FCP` 지령을 선점 차단하고 `Base+2` `activeSource = "MFD_ACRO"`를 통보(`FCP` `PASSIVE_TRACKING` · `AMM` `Base+3` 양보)하며 `VAS` 20Hz 직접 추종.
 - **타임아웃 감시**: `NORMAL` 상태에서 `FCP` 명령 1,500ms 무수신 시 `FAILSAFE_HOLD` 전이.
 - **Zero-Fallback 레거시 폐기**: `"ATTITUDE_ANGLE"`, `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave`는 모두 **`[DEPRECATED]`** 처리되었으며, `VAS`는 단일 표준 `QUATERNION_RATE` / `RATE_COMMAND` 스키마만 파싱합니다.
 

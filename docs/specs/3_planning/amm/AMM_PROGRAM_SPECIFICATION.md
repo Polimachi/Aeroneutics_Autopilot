@@ -297,7 +297,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 `ACT_PAY_BUS_CMD` / `ACT_PAY_SET_ROI` / `ACT_PAY_CLEAR_ROI` 체크포인트 또는 `ZONE3_PAYLOAD_CMD` 라이프사이클 훅 실행 시 기체 내부 Zone 3 버스(`Base + 20 ~ 39`, 특수 임무 확장 포함)로 송수신되는 표준 패킷입니다:
 
 ```lua
--- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Base + 20..29)
+-- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Zone 3 Base + 20..39 [표준 20..29 / 확장 30..39 EXT])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -307,12 +307,12 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
     payload = {
         checkpointId = "CP_02_CARGO_DROP",
         command = "RELEASE_BAY",       -- 탑재체 명령 식별자
-        replyChannel = 10020,          -- AMM이 동적 개방한 Zone 3 수신 채널 (Base + offset)
+        replyChannel = 10020,          -- AMM이 동적 개방한 Zone 3 수신 채널 (Base + 20..39)
         params = { bayId = 1 }         -- 탑재체별 세부 파라미터 테이블
     }
 }
 
--- 2. Payload Node -> AMM: 탑재체 동작 결과 회신 (MSG_PAYLOAD_ACK, Base + 20..29)
+-- 2. Payload Node -> AMM: 탑재체 동작 결과 회신 (MSG_PAYLOAD_ACK, Zone 3 Base + 20..39 [표준 20..29 / 확장 30..39 EXT])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -471,11 +471,13 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 
 ### 4.7 [I-5 / I-7 / I-8 / I-9] 인프라 게이트웨이, GPS, 부트스트랩 및 채널 재바인딩
 
-1. **GCS 채널 블록 부트스트랩 (`[I-8]`, `CH 50000`)**:
-   - `channel_sentinel`은 부팅 시 `CH 50000`으로 `MSG_BLOCK_REQUEST` (`hardwareUuid`, `domainId`, `requestedBandwidth = 40`)를 송출하고, 1,000ms 이내에 `MSG_BLOCK_ASSIGN` (`blockId`, `baseChannel`, `bandwidth = 40`, `status`)을 수신해 40채널 블록을 확정합니다(무응답 시 로컬 캐시 Base로 폴백).
-2. **채널 충돌 프로브 및 4계층 재바인딩 개시 (`[I-9]`, `Base + 0` & `Base + 4`)**:
-   - **독립/오프라인 프로브**: 비행 시동 전 후보 `Base + 0`으로 `MSG_CHANNEL_PROBE` (`candidateBase`, `bandwidth = 40`)를 송출해 200ms 동안 침묵을 감시합니다. `MSG_CHANNEL_PROBE_ACK` (`status = "CONFLICT_DETECTED"`) 수신 시 즉시 `ARMING_LOCKED`를 발동해 `Base+4`로 `arm = false`를 고정하고 MFD 경보를 표출합니다.
-   - **동적 채널 재바인딩**: `baseChannel` 변경 필요 시 `AMM`은 `Base_old + 4`로 `MSG_CHANNEL_REBIND` (`transactionId`, `action = "PREPARE" | "COMMIT" | "ROLLBACK"`, `oldBaseChannel`, `newBaseChannel`, `bandwidth = 40`)를 하달하여 `AMM -> FCP (Base+4) -> VAS (Base+1) -> TCA/ASA (Base+10/11, 구 Base+6/7 [DEPRECATED])` 4계층을 통해 새 채널을 사전 개방한 뒤 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`status = "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"`) 취합 완료 즉시 `"COMMIT"`(500ms 내 미응답·실패 시 `"ROLLBACK"`)을 전파합니다.
+1. **GCS 채널 블록 부트스트랩 및 영속 리스 재검증 (`[I-8]`, `CH 50000`)**:
+   - `channel_sentinel`은 부팅 시 로컬 영속 리스 파일 `config/channel_lease.json` 존재 시 `preferredBase`를 담아 `CH 50000`으로 `MSG_BLOCK_REQUEST` (`hardwareUuid`, `domainId`, `requestedBandwidth = 40`, `preferredBase?`, `conflictBase?`)를 송출하고 **`gcsBootstrapTimeoutMs = 2,000ms`** 이내에 `MSG_BLOCK_ASSIGN` (`blockId`, `baseChannel`, `bandwidth = 40`, `status = "ASSIGNED" | "REASSIGNED" | "DENIED" | "FAILED"`, `leaseState`, `reassignedFrom?`)을 수신해 40채널 블록을 확정합니다(`requestedBandwidth ~= 40` 또는 포화 시 `"DENIED"`).
+   - **무응답 오프라인 분리 가드**: `2,000ms` 무응답 시 `config/channel_lease.json`을 보유하고 충돌 프로브를 통과한 기체에 한해 **`[NO_GCS_LEASE]`** 경고로 오프라인 운용을 허용하며, 로컬 리스가 없는 기체는 **`LOCKED_NO_GCS`**로 시동을 잠금(`Base+4` `arm = false` 고정)합니다.
+2. **부팅 상시 개방, 지터 다회 프로브 및 4계층 재바인딩 개시 (`[I-9]`, `Base + 0` & `Base + 4`)**:
+   - **부팅 즉시 `Base + 0` 개방 및 지터·2회 프로브**: `channel_sentinel`은 지상 대기 상태에서도 부팅 즉시 후보/확정 `Base + 0`을 개방해 타 기체 프로브에 응답하며(`payload.hardwareUuid == self.hardwareUuid` 자기 패킷 무시), 동시 기동 경합을 분산하기 위해 **`0~100ms` (`probeJitterMaxMs = 100`) 랜덤 지터** 대기 후 `MSG_CHANNEL_PROBE` (`candidateBase`, `bandwidth = 40`)를 송출해 **`probeRetryCount = 2`회 × `probeListenMs = 200ms`** 동안 청취합니다.
+   - **충돌 회피 재할당 및 3회 초과 잠금**: `MSG_CHANNEL_PROBE_ACK` (`status = "CONFLICT_DETECTED"`) 수신 시 즉시 영구 잠금하지 않고 GCS에 `conflictBase`를 보고해 `"REASSIGNED"` 블록을 받아 재프로브하며, **`maxReassignAttempts = 3`회 연속 충돌 시에만 `LOCKED_CONFLICT`** 시동 잠금(`Base+4` `arm = false` 고정 및 MFD 경보)을 발동합니다.
+   - **동적 채널 재바인딩**: `baseChannel` 변경 필요 시 `AMM`은 `Base_old + 4`로 `MSG_CHANNEL_REBIND` (`transactionId`, `action = "PREPARE" | "COMMIT" | "ROLLBACK"`, `oldBaseChannel`, `newBaseChannel`, `bandwidth = 40`)를 하달하여 `AMM -> FCP (Base+4) -> VAS (Base+1) -> TCA/ASA (Base+10/11, 구 Base+6/7 [DEPRECATED])` 4계층(및 `AMM` 소관 `Base_old + 0/+2/+3/+5/+9`, `Base_old + 20~39`)을 통해 새 채널을 사전 개방한 뒤 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`status = "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"`) 취합 완료 즉시 `"COMMIT"`(500ms 내 미응답·실패 시 `"ROLLBACK"`)을 전파합니다.
 3. **고정밀 GPS 비동기 파이프라인 (`[I-7]`, `CH 60001/60002`, `Base + 5`)**:
    - `nav_engine`은 5~10Hz 간격으로 `VAS Base+2`의 실측 `altitudeY`를 주입한 `MSG_GPS_REQUEST` (`replyChannel = Base + 5`, 구 `10045` `[DEPRECATED]`)를 `CH 60001`로 송출하고, `Base + 5`에 도착한 `MSG_GPS_RESPONSE`를 `gpsClient.handleMessage()`로 직접 주입하여 이벤트 큐 오염 없이 2D 위치 `{ x, z }`, `accuracy`, `hdop`를 획득합니다(`CH 60002` `MSG_GPS_STATUS_REQ`/`RESP` 진단 조회 지원).
 4. **3-Tier 시설물 관제 및 전술 유도 (`[I-5]`, `CH 50001~50004`, $Base_{\text{sec}} + 0/+10+\text{Idx}$, `Base + 5`)**:
@@ -528,7 +530,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 ### 5.2 무인기 헤드리스 모드 (`config.headless == true`)
 - `config/amm_config.json`에서 `headless = true`로 설정된 경우:
   - **Coroutine B (`5Hz` TUI 렌더링 루틴 및 `ui_renderer.flush_buffer`)를 생략**하여 로컬 터미널 출력 오버헤드를 제거합니다.
-  - **Coroutine A (`20Hz` 실시간 루프)**는 동일하게 가동되어 외부 모뎀·온보드 채널(`Base+0/+1/+2/+4/+5`, `Base+20~29`, `50000~50004`, `Base_sec+*`, `60001/60002`), 비차단 훅 데드라인 큐, 그리고 `Base+3` 5Hz 원격 MFD 다운링크(`MFD_ACRO` 시 양보)를 지속 수행하며, GCS의 `MSG_MISSION_CMD`(`Base+0`) 또는 시작 설정(`autoStartMission`)으로 미션을 자율 수행합니다.
+  - **Coroutine A (`20Hz` 실시간 루프)**는 동일하게 가동되어 외부 모뎀·온보드 채널(`Base+0/+2/+4/+5/+9`, `Base+20~39`, `50000~50004`, `Base_sec+*`, `60001/60002`), 비차단 훅 데드라인 큐, 그리고 `Base+3` 5Hz 원격 MFD 다운링크(`MFD_ACRO` 시 양보)를 지속 수행하며, GCS의 `MSG_MISSION_CMD`(`Base+0`) 또는 시작 설정(`autoStartMission`)으로 미션을 자율 수행합니다.
 
 ---
 

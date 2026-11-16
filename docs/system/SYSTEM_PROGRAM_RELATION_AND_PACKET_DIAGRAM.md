@@ -57,7 +57,7 @@
 
 본 문서는 자율 비행체 시스템과 지상 인프라를 구성하는 **모든 독립 소프트웨어/하드웨어 프로그램 노드의 상호 관계망, 무선 엔더 모뎀 채널 할당 마스터 맵, 그리고 노드 간에 교환되는 모든 데이터 패킷의 흐름과 스키마를 단일 시각화 체계로 정의한 종합 구조도**입니다.
 
-특히 전역 설계 체계(v2.15.0, v2.4.0 개편 이후 누적 정합)에서는 분산 무선 컴퓨팅 환경의 안정성과 확장성을 극대화하기 위해 **전역 RF 스펙트럼 전면 개편(Overhaul)**을 완결하였습니다. GCS 부트스트랩을 `50000`으로 이전하고, 기체 블록을 `10000 ~ 49999` ($Base = 10000 + (N-1) \times 40$, $BW=40$)의 1,000대 완전 연속 수납 구조로 재편하고(구 20채널 [DEPRECATED]), 구형 $N=1000$ 도약 예외를 영구 폐지하였습니다. 또한 광역 관제 및 공용 인프라(Sector 0, `50001 ~ 50200`), GAC 섹터별 200채널 독립 블록($Base_{\text{sec}} = 50001 + S \times 200$), 고정밀 GPS 60001번대 순차 배치(`60001 ~ 60004` 활성 및 `60005 ~ 60020` 예비), 그리고 Alignment 격납고 10채널 블록군(`101 ~ 200`, $Base_{\text{hangar}} = 101 + (\text{BayID} - 1) \times 10$, Bay 1~10 완결) 및 기체 `Base + 0` 직결 바인딩 체계를 수립하여 시스템의 단일 진실 공급원(SSOT)으로 기능합니다.
+특히 전역 설계 체계(v2.17.0, v2.4.0 개편 이후 누적 정합)에서는 분산 무선 컴퓨팅 환경의 안정성과 확장성을 극대화하기 위해 **전역 RF 스펙트럼 전면 개편(Overhaul)**을 완결하였습니다. GCS 부트스트랩을 `50000`으로 이전하고, 기체 블록을 `10000 ~ 49999` ($Base = 10000 + (N-1) \times 40$, $BW=40$)의 1,000대 완전 연속 수납 구조로 재편하고(구 20채널 [DEPRECATED]), 구형 $N=1000$ 도약 예외를 영구 폐지하였습니다. 또한 광역 관제 및 공용 인프라(Sector 0, `50001 ~ 50200`), GAC 섹터별 200채널 독립 블록($Base_{\text{sec}} = 50001 + S \times 200$), 고정밀 GPS 60001번대 순차 배치(`60001 ~ 60004` 활성 및 `60005 ~ 60020` 예비), 그리고 Alignment 격납고 10채널 블록군(`101 ~ 200`, $Base_{\text{hangar}} = 101 + (\text{BayID} - 1) \times 10$, Bay 1~10 완결) 및 기체 **`Base + 8` (`CH_CALIBRATION_INIT`) 직결 바인딩 체계**(구 `Base + 0` [DEPRECATED])를 수립하여 시스템의 단일 진실 공급원(SSOT)으로 기능합니다.
 
 ### 1.1 코드 경량화 및 Deprecated 운영 정책 (Code Lightweighting & Deprecation Policy)
 1. **사양서 명세 원칙 (Specification-First)**: 프로토콜 패킷 타입명 또는 페이로드 필드가 개정될 경우, 구버전 명칭은 사양서에 `[DEPRECATED]` 배지를 부여하고 대체 신규 명칭을 명시하여 설계 이력을 보존합니다.
@@ -686,7 +686,7 @@ sequenceDiagram
 | **OTA 무선 배포 서버** | `ota/main.lua`<br>[OTA_PROGRAM_SPECIFICATION.md](../specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md) | 지상 시설 | $Base_{\text{hangar}}+4$ (`CH_OTA_CMD`) | $Base_{\text{hangar}}+5$ (`CH_OTA_ACK`) | 무선 모뎀 & HTTP (선택) | `/ota_packages/` 스테이징 & GitHub Raw 원격 동기화, CRC32 청크 배포, 안전 게이트 준수, CLI & 51x19 TUI |
 | **조종석 AMM / 외부 게이트웨이** | `main.lua` (Node 03)<br>[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `50000`, `50001`, `60001`, $Base_{\text{sec}}+0$, `Base+0` (프로브), `Base+9` (`E_STOP`), `Base+3` (평시 5Hz), `Base+4`, `Base+5`, `Base+20~39` (동적), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `50000`, `50001`, `50003`, `50004`, $Base_{\text{sec}}+0$, $Base_{\text{sec}}+2$, $Base_{\text{sec}}+10+\text{Idx}$, `Base+0` (부팅 상시 개방), `Base+9` (비상알림), `Base+2`, `Base+4`, `Base+5`, `Base+20~39` (동적), `Base+0..39` 침범 감시, $Base_{\text{hangar}}+4$ (`OTA CMD`) | 듀얼 무선 모뎀 (외부 + 내부) & 레드스톤 I/O | 외부 도메인(`GCS`/`GPS`/`ATC`/`GAC`/시설물) 단일 종단, C2·프로브(`Base+0`, 지터+2회/리스 재검증), 평시 5Hz MFD 다운링크(`Base+3`, ACRO 시 양보+`300ms` 유예), GPS+DR 항법 융합 및 20Hz 궤적 생성(`Base+4`), `ACT_*`/`DEC_*`/`MAC_*` 미션 코어, 채터링 가드, Zone 3(`Base+20~39`), `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋, 51x19 TUI / 헤드리스 겸용 |
 | **조종석 MFD / 직결 패널** | 조종석 콘솔 / 직결 패널 | 기체 온보드 | `Base + 0`, `Base + 1` (`MFD_ACRO`), `Base + 9` (`E_STOP`) | `Base + 3` (평시 5Hz / ACRO 20Hz), `Base + 9` (비상알림) | 무선 모뎀 / 직결 패널 | 조종사 C2 명령 입력(`Base+0`), `RATE_COMMAND` 직결 선점(`Base+1`), 하드 `E_STOP` 직결(`Base+9`), 계기 HUD 표출(`Base+3`) |
-| **외루프 제어기 FCP** | `startup.lua` (Node 04)<br>[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 1` (`QUATERNION_RATE`), `Base + 4` (`MSG_OUTER_LOOP_STATUS`, `MSG_CHANNEL_REBIND_ACK`), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 4` (`MSG_TRAJECTORY_SETPOINT`, `MSG_CHANNEL_REBIND`), `Base + 2` (`MSG_FLIGHT_TELEMETRY`), `Base + 9` (`MSG_EMERGENCY_ALERT`), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 단일 `top` 무선 모뎀 (Ender) | 순수 온보드 `SE(3)` 외루프 제어기($g=11.0\text{ m/s}^2$), 6-State 외루프 FSM(`EMERGENCY_HOLD` 안전 전이), 6대 기체 제약 투영 및 `QUATERNION_RATE`(`Base+1`) 생성, `AMM_TIMEOUT`(500ms) 홀드/착륙, 채널 재할당 중계(`Base+4` $\to$ `Base+1`), `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
+| **외루프 제어기 FCP** | `startup.lua` (Node 04)<br>[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 1` (`QUATERNION_RATE`), `Base + 4` (`MSG_OUTER_LOOP_STATUS`, `MSG_CHANNEL_REBIND_ACK`), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 4` (`MSG_TRAJECTORY_SETPOINT`, `MSG_CHANNEL_REBIND`), `Base + 2` (`MSG_FLIGHT_TELEMETRY`), `Base + 9` (`MSG_EMERGENCY_ALERT`), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 단일 `top` 무선 모뎀 (Ender) | 순수 온보드 `SE(3)` 외루프 제어기($g=11.0\text{ m/s}^2$), 7-State 외루프 FSM(`EMERGENCY_HOLD` 안전 전이), 6대 기체 제약 투영 및 `QUATERNION_RATE`(`Base+1`) 생성, `AMM_TIMEOUT`(500ms) 홀드/착륙, 채널 재할당 중계(`Base+4` $\to$ `Base+1`), `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
 | **비행 제어 코어 VAS**| `startup.lua` (Node 01)<br>[VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 10`, `Base + 11`, `Base + 2`, `Base + 3` (ACRO 20Hz / `FCP_TIMEOUT` 5Hz), `Base + 9` (`MSG_EMERGENCY_ALERT`), $Base_{\text{hangar}}+1$ (CALIB 시), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 1`, `Base + 8` (`MSG_CALIBRATION_INIT`, `Base+0` 미개방), `Base + 9` (`E_STOP`), `Base + 10`, `Base + 11`, $Base_{\text{hangar}}+0$ (CALIB 시), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 무선 모뎀 / 탑재 센서 버스 | VICD-Spec 3계층 드라이버(`actuator_adapter_tca` + `actuator_adapter_asa`), 단위 쿼터니언 `SO(3)` 제어, $V^2$ 동압 스케줄링, `Base+9 E_STOP > MFD_ACRO > FCP` 선점 중재(`acroTimeoutMs=250ms`), `FCP_TIMEOUT`(1,500ms) 홀드/착륙, ACRO 시 `Base+3` 20Hz HUD 직접 송출, 동적 베이 바인딩 하향 전파, `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
 | **추력 어댑터 TCA 클러스터**| `tap_daemon.lua / main.lua` (Node 02-xx)<br/>[TCA_PROGRAM_SPECIFICATION.md](../specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 10`, $Base_{\text{hangar}}+3$ (CALIB 시), $Base_{\text{hangar}}+5$ (`OTA ACK`) | `Base + 10`, $Base_{\text{hangar}}+0/+3$ (CALIB 시), $Base_{\text{hangar}}+4$ (`OTA CMD`) | 무선 모뎀 & 추진기 상호작용 모드(API/REDSTONE) | 동적 타이머 300ms 워치독, REDSTONE(0~15)/API(0.0~1.0) 인가, 단선/포화 회신, `MSG_CALIB_BAY_BIND` 동적 베이 개폐, `MSG_CHANNEL_REBIND` 처리, `/lib/ota_agent.lua` 안전 게이트 & 부팅 커밋 |
 | **공력 조종면 ASA 클러스터**| `asa_daemon.lua` (Node 06-xx)<br/>[ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) | 기체 온보드 | `Base + 11`, $Base_{\text{hangar}}+3$ (CALIB 시) | `Base + 11`, $Base_{\text{hangar}}+0/+3$ (CALIB 시) | 무선 모뎀 & 조종면 액추에이터 | VAS 산하 3구역 노드(06-L/R/T), 20Hz 타각 제어(`MSG_AERO_CMD`, 구 `MSG_SURFACE_CMD` `[DEPRECATED]`), 상태/포화 회신(`MSG_AERO_STATUS.interactionMode`, 구 `MSG_SURFACE_STATUS`/`mode` `[DEPRECATED]`), 300ms 안전 활공 트림, `MSG_CALIB_BAY_BIND` 동적 베이 개폐, `MSG_CHANNEL_REBIND` 처리 |
@@ -839,9 +839,6 @@ function handleBlockRequest(requestPacket)
 
     while candidateN <= MAX_CRAFT_LIMIT do
         local candidateBase = 10000 + (candidateN - 1) * FIXED_BW
-        local conflict = (candidateBase == payload.conflictBase)
-            or (existingCraft and not checkCollision(existingCraft.baseChannel, FIXED_BW, candidateBase, FIXED_BW) == false and false)
-
         if candidateBase ~= payload.conflictBase
             and isBandwidthValid(candidateBase, FIXED_BW)
             and not checkAnyCollision(candidateBase, FIXED_BW, craftUuid) then
@@ -866,6 +863,16 @@ function checkCollision(baseA, bwA, baseB, bwB)
     local startA, endA = baseA, baseA + bwA - 1
     local startB, endB = baseB, baseB + bwB - 1
     return math.max(startA, startB) <= math.min(endA, endB)
+end
+
+function checkAnyCollision(candidateBase, bw, ignoreUuid)
+    for _, other in ipairs(registry:listActive()) do
+        if other.hardwareUuid ~= ignoreUuid
+            and checkCollision(candidateBase, bw, other.baseChannel, other.bandwidth or FIXED_BW) then
+            return true
+        end
+    end
+    return false
 end
 ```
 

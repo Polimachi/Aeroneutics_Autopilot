@@ -118,7 +118,7 @@ flowchart TD
     ATC["Tier 1: 통합 관제탑 Tower ATC [CH 50001/50002]"]
     GAC["Tier 2: 지상 구역 관제사 GAC Node 07<br/>[CH 50003 비콘 / CH 50004 디스패치 / Base_sec+0 관제 / Base_sec+1 백본]"]
     FAC["Tier 3: 스마트 시설물 군 착륙패드/활주로/도킹암<br/>[Base_sec+1 로컬백본 / Base_sec+10+Idx 전술유도]"]
-    ALIGN["격납고/정비 시험소 콘솔군 Alignment Node 05<br/>* Bay 1~10 10채널 블록 Base_hangar = 101+BayID-1*10<br/>* 기체 Base+0 직접 바인딩 및 3x2 대형 HUD"]
+    ALIGN["격납고/정비 시험소 콘솔군 Alignment Node 05<br/>* Bay 1~10 10채널 블록 Base_hangar = 101+BayID-1*10<br/>* 기체 Base+8 직접 바인딩 및 3x2 대형 HUD"]
     COCKPIT["조종석 입력 / MFD 직결 급기동 패널"]
 
     subgraph AIRCRAFT_BLOCK["비행체 40채널 전용 블록 Base = 10000 + N-1*40, BW=40, N=1~1000"]
@@ -132,7 +132,7 @@ flowchart TD
         end
 
         subgraph L3["Layer 3: 내루프 SO(3) 자세·추력 믹싱"]
-            CORE["비행 제어 VAS Node 01<br/>* SO(3) 내루프 및 전 구동계 TCA/ASA 통합 믹싱<br/>* V2 동압 스케줄링, 스톨 가드, Base+1 선점 중재"]
+            CORE["비행 제어 VAS Node 01<br/>* SO(3) 내루프 및 전 구동계 TCA/ASA 통합 믹싱<br/>* V2 동압 스케줄링, 스톨 가드, Base+1 유도 중재 및 Base+9 E_STOP"]
         end
 
         subgraph L4["Layer 4: 분산 물리 액추에이터 클러스터"]
@@ -1332,7 +1332,7 @@ flowchart TD
 - **통신 채널**: Layer 0/1 `Base + 4` (`CH_TRAJECTORY_CMD`) $\rightarrow$ Layer 2 `Base + 1` (`CH_FLIGHT_GUIDANCE`) $\rightarrow$ Layer 3 `Base + 10` / `Base + 11` (구 `Base+6/7` [DEPRECATED])
 - **목적**: 기체 운용 중 GCS 명령이나 충돌 해결로 `baseChannel`이 동적 변경될 때, 2단계 Prepare $\to$ Ack $\to$ Commit 트랜잭션으로 온보드 전 서브시스템의 통신 주파수를 원자적으로 동기화하여 통신 두절(Split-Brain)을 방지.
 - **4계층 캐스케이드 전파 순서 (`AMM -> FCP -> VAS -> TCA/ASA`)**:
-  1. **Layer 0 $\to$ 1 (`AMM` $\rightarrow$ `FCP`)**: `AMM`이 `Base_old + 4` (`CH_TRAJECTORY_CMD`)로 `MSG_CHANNEL_REBIND` (Phase `"PREPARE"`) 송신(동시에 `Base_old + 0` 및 탑재체 `Base_old + 20~29` 준비).
+  1. **Layer 0 $\to$ 1 (`AMM` $\rightarrow$ `FCP`)**: `AMM`이 `Base_old + 4` (`CH_TRAJECTORY_CMD`)로 `MSG_CHANNEL_REBIND` (Phase `"PREPARE"`) 송신(동시에 `Base_old + 0` 및 탑재체 Zone 3 `Base_old + 20~39` 준비).
   2. **Layer 1 $\to$ 2 (`FCP` $\rightarrow$ `VAS`)**: `FCP`가 `Base_old + 1` (`CH_FLIGHT_GUIDANCE`)로 `action = "PREPARE"` 하향 전달.
   3. **Layer 2 $\to$ 3 (`VAS` $\rightarrow$ `TCA / ASA`)**: `VAS`가 `TCA` (`Base_old + 10`, 구 `Base_old + 6` `[DEPRECATED]`) 및 `ASA` (`Base_old + 11`, 구 `Base_old + 7` `[DEPRECATED]`)로 `action = "PREPARE"` 하향 전달.
   4. 전 노드가 새 채널 대역을 사전 개방(`modem.open(newBaseChannel + offset)`)하고 상향으로 `MSG_CHANNEL_REBIND_ACK` (`MSG_REBIND_ACK [DEPRECATED]`)를 회신 (`TCA/ASA -> VAS -> FCP -> AMM`). *(구 `phase`, `oldBase`, `newBase`, `switchTimeoutMs` 필드는 `[DEPRECATED]` 처리되며 현행 표준은 `transactionId`, `action`, `oldBaseChannel`, `newBaseChannel`, `bandwidth`, `subNodesReady?` 및 `500ms` Option A 분산 브로드캐스트 타임아웃을 단일 채택합니다.)*
@@ -1474,7 +1474,7 @@ flowchart TD
 - **동적 채널 관리**: AMM은 평시 Zone 3 채널을 닫아두며, `ACT_PAY_*` 체크포인트 또는 `ZONE3_PAYLOAD_CMD` 라이프사이클 훅 실행 시에만 지정된 `Base + offset` ($20 \le \text{offset} \le 39$) 채널을 동적 개방(`modem.open`)하여 명령을 송출하고 `MSG_PAYLOAD_ACK` 수신 즉시 해제(`modem.close`)합니다.
 
 ```lua
--- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Base+20..29)
+-- 1. AMM -> Payload Node: 탑재체 동작 요청 (MSG_PAYLOAD_REQ, Zone 3 Base+20..39 [표준 20..29 / 확장 30..39 EXT])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1489,7 +1489,7 @@ flowchart TD
     }
 }
 
--- 2. Payload Node -> AMM: 탑재체 동작 완료 응답 (MSG_PAYLOAD_ACK, Base+20..29)
+-- 2. Payload Node -> AMM: 탑재체 동작 완료 응답 (MSG_PAYLOAD_ACK, Zone 3 Base+20..39 [표준 20..29 / 확장 30..39 EXT])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
