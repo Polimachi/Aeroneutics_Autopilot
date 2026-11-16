@@ -581,6 +581,9 @@ manifest.MODULES = {
                 defaultAlt = 150.0,
                 defaultSpeed = 18.0,
                 arrivalRadius = 15.0,
+                safety = {
+                    acroRecoveryHoldMs = 300,
+                },
             }
         },
         files = {

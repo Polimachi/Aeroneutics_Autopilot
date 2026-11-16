@@ -471,7 +471,54 @@ describe("AMM Main Event Pump and Command Processing", function()
         for _ = 1, 4 do
             main_mod.step_20hz_tick(app, 0.05, 1250)
         end
-        assert_eq(#mfd_tx, 1) -- Still 1, suppressed!
+        local mfd_after_acro = 0
+        for _, tx in ipairs(top_m._transmitted) do
+            if tx.tx == 10003 then mfd_after_acro = mfd_after_acro + 1 end
+        end
+        assert_eq(mfd_after_acro, 1) -- Still 1, suppressed!
+    end)
+
+    it("enforces 300ms ACRO_RECOVERY_HOLD in step_5hz_downlink and step_20hz_tick after MFD_ACRO/FAILSAFE_HOLD recovery", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            safety = { acroRecoveryHoldMs = 300 },
+        }, { top = top_m, back = back_m })
+
+        local function count_mfd()
+            local c = 0
+            for _, tx in ipairs(top_m._transmitted) do
+                if tx.tx == 10003 then c = c + 1 end
+            end
+            return c
+        end
+
+        -- 1. VAS sends MFD_ACRO at t=1000 -> yields immediately
+        app.arbiter:handle_mfd_state({
+            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", activeSource = "MFD_ACRO", acroActive = true },
+        }, 1000)
+        -- 2. VAS returns to FCP at t=1050 -> still held until 1300
+        app.arbiter:handle_mfd_state({
+            payload = { fsmState = "NORMAL", activeSource = "FCP" },
+        }, 1050)
+
+        app.tickCount = 3
+        main_mod.step_20hz_tick(app, 0.05, 1250)
+        assert_eq(count_mfd(), 0)
+
+        local ok_dl, err_dl = main_mod.step_5hz_downlink(app, 1299)
+        assert_false(ok_dl)
+        assert_eq(err_dl, "ACRO_RECOVERY_HOLD")
+        assert_eq(count_mfd(), 0)
+
+        -- 3. At t=1300 (>= 300ms since lastVasPriorityMs=1000), step_5hz_downlink resumes Base+3
+        local ok_res = main_mod.step_5hz_downlink(app, 1300)
+        assert_true(ok_res)
+        assert_eq(count_mfd(), 1)
     end)
 
     it("routes Base+5 MSG_GPS_RESPONSE through filter_gps updating app.nav.pos and posEpoch without crashing", function()

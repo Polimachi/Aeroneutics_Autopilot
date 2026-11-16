@@ -161,6 +161,33 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(#top_m._transmitted, 1) -- No new transmission!
     end)
 
+    it("suppresses MSG_MFD_STATE with ACRO_RECOVERY_HOLD during 300ms hysteresis window via bound arbiter", function()
+        local c2_arbiter = require("c2_arbiter")
+        local waypoint_queue = require("waypoint_queue")
+        local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local top_m = mock.modem({ wireless = true })
+        net:bind_modems(top_m, top_m, 10000)
+        local q = waypoint_queue.new({ defaultAlt = 150, defaultSpeed = 18, arrivalRadius = 15 })
+        local arb = c2_arbiter.new(q, net, { safety = { acroRecoveryHoldMs = 300 } })
+
+        arb:handle_mfd_state({
+            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", activeSource = "MFD_ACRO", acroActive = true },
+        }, 5000)
+        arb:handle_mfd_state({
+            payload = { fsmState = "NORMAL", activeSource = "FCP" },
+        }, 5050)
+
+        local ok_hold, err_hold = net:send_mfd_state({ fsmState = "CRUISE" }, arb.activeSource, 5299)
+        assert_false(ok_hold)
+        assert_eq(err_hold, "ACRO_RECOVERY_HOLD")
+        assert_eq(#top_m._transmitted, 0)
+
+        local ok_resume = net:send_mfd_state({ fsmState = "CRUISE" }, arb.activeSource, 5300)
+        assert_true(ok_resume)
+        assert_eq(#top_m._transmitted, 1)
+        assert_eq(top_m._transmitted[1].tx, 10003)
+    end)
+
     it("enforces Zone 3 (Base+20..29) bounds and manages dynamic channel open/close without closing Base+0/+3", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local m = mock.modem({ wireless = true })

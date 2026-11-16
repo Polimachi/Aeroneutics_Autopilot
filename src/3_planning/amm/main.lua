@@ -772,6 +772,13 @@ local function create_app(config, modems)
 end
 
 local function step_5hz_downlink(app, now_ms)
+    local t_ms = now_ms or get_now_ms(app)
+    if app.arbiter and app.arbiter.can_transmit_mfd then
+        local can_tx, yield_reason = app.arbiter:can_transmit_mfd(t_ms)
+        if not can_tx then
+            return false, yield_reason
+        end
+    end
     local act_src = (app.arbiter and app.arbiter.activeSource) or "FCP"
     if act_src == "MFD_ACRO" then
         return false, "YIELDED_TO_MFD_ACRO"
@@ -826,7 +833,7 @@ local function step_5hz_downlink(app, now_ms)
         },
     }
     if app.net and app.net.send_mfd_state then
-        return app.net:send_mfd_state(mfd_payload, act_src)
+        return app.net:send_mfd_state(mfd_payload, act_src, t_ms)
     end
     return true
 end

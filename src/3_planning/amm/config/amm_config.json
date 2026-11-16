@@ -58,6 +58,7 @@
   "safety": {
     "fcpStatusTimeoutMs": 500,
     "dynamicGuideTimeoutMs": 300,
+    "acroRecoveryHoldMs": 300,
     "channelProbeWaitMs": 200,
     "gcsBootstrapTimeoutMs": 1000,
     "maxApproachRetries": 3,

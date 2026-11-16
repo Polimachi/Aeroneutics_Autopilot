@@ -325,6 +325,7 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(acro10003, 3)
         assert_not_nil(lastAcroPkt)
         assert_eq(lastAcroPkt.payload.source, "CORE_ACRO_TAKEOVER")
+        assert_eq(lastAcroPkt.payload.activeSource, "MFD_ACRO")
         assert_eq(lastAcroPkt.payload.controlState, "NORMAL")
         assert_eq(lastAcroPkt.payload.flightMode, "ACRO")
         assert_true(lastAcroPkt.payload.acroActive)
@@ -354,8 +355,31 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(failsafe10003, 1)
         assert_not_nil(lastFailsafePkt)
         assert_eq(lastFailsafePkt.payload.source, "CORE_FAILSAFE")
+        assert_eq(lastFailsafePkt.payload.activeSource, "FCP")
         assert_eq(lastFailsafePkt.payload.flightMode, "FAILSAFE_HOLD")
         assert_false(lastFailsafePkt.payload.acroActive)
+
+        -- EMERGENCY_LAND mode: transmits 1 every 4 ticks (5Hz)
+        wirelessModem._transmitted = {}
+        tf.tickCounter = 0
+        local fsmEmerg = { currentState = "EMERGENCY_LAND", activeSource = "FCP" }
+        for _ = 1, 4 do
+            telemetry_feeder.tick(tf, net, comState, fsmEmerg, mixerState, diagState)
+        end
+        local emerg10003 = 0
+        local lastEmergPkt = nil
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" then
+                emerg10003 = emerg10003 + 1
+                lastEmergPkt = tx.pkt
+            end
+        end
+        assert_eq(emerg10003, 1)
+        assert_not_nil(lastEmergPkt)
+        assert_eq(lastEmergPkt.payload.source, "CORE_FAILSAFE")
+        assert_eq(lastEmergPkt.payload.activeSource, "FCP")
+        assert_eq(lastEmergPkt.payload.flightMode, "EMERGENCY_LAND")
+        assert_false(lastEmergPkt.payload.acroActive)
     end)
 end)
 

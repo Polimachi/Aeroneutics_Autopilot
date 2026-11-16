@@ -34,8 +34,13 @@ function network_manager.new(config)
         openPayloadChannels = {},
         openInfraChannels = {},
         otaAgent = nil,
+        arbiter = cfg.arbiter or nil,
     }, network_manager)
     return self
+end
+
+function network_manager:set_arbiter(arbiter)
+    self.arbiter = arbiter
 end
 
 function network_manager:bind_modems(top_modem, back_modem, base_ch)
@@ -165,9 +170,16 @@ function network_manager:send_rebind_command(action, txId, oldBase, newBase)
     return ok, err
 end
 
-function network_manager:send_mfd_state(payload, activeSource)
+function network_manager:send_mfd_state(payload, activeSource, now_ms)
     if activeSource == "MFD_ACRO" then
         return false, "YIELDED_TO_MFD_ACRO"
+    end
+    local arb = (type(activeSource) == "table" and activeSource) or self.arbiter
+    if arb and type(arb.can_transmit_mfd) == "function" then
+        local ok_tx, yield_reason = arb:can_transmit_mfd(now_ms)
+        if not ok_tx then
+            return false, yield_reason
+        end
     end
     local pkt = self:encode_envelope("MSG_MFD_STATE", payload)
     local m = self.onboardModem or self.modem

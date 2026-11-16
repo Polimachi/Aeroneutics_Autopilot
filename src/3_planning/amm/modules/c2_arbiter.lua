@@ -6,8 +6,16 @@ local chattering_guard = require("chattering_guard")
 local c2_arbiter = {}
 c2_arbiter.__index = c2_arbiter
 
+local function resolve_now_ms(now_ms)
+    if type(now_ms) == "number" then
+        return now_ms
+    end
+    return (os.epoch and os.epoch("utc")) or (os.time() * 1000)
+end
+
 function c2_arbiter.new(queue, net, config, engine, guard)
     local cfg = config or {}
+    local safe = cfg.safety or {}
     local eng = engine or (cfg and cfg.engine) or nil
     local g = guard or (eng and eng.guard) or chattering_guard.init(cfg)
     local self = setmetatable({
@@ -29,9 +37,19 @@ function c2_arbiter.new(queue, net, config, engine, guard)
         lastOuterStatusMs = 0,
         lastTelemMs = 0,
         fcpTimedOut = false,
+        acroRecoveryHoldMs = safe.acroRecoveryHoldMs or cfg.acroRecoveryHoldMs or 300,
+        lastVasPriorityMs = nil,
+        vasMfdPriorityUntilMs = 0,
         emergencyGoal = nil,
         activeGoal = nil,
     }, c2_arbiter)
+    if type(net) == "table" then
+        if net.set_arbiter then
+            net:set_arbiter(self)
+        else
+            net.arbiter = self
+        end
+    end
     if self.engine then
         self.engine.authority = self.authority
     end
@@ -313,6 +331,32 @@ local function handle_engine_telemetry(self, p, now_ms)
     end
 end
 
+function c2_arbiter:update_acro_yield_window(payload, now_ms)
+    if type(payload) ~= "table" then return end
+    local now = resolve_now_ms(now_ms)
+    local fsm = payload.fsmState or payload.controlState
+    local is_acro = (payload.activeSource == "MFD_ACRO") or (payload.acroActive == true) or (payload.source == "CORE_ACRO_TAKEOVER")
+    local is_vas_failsafe = (fsm == "FAILSAFE_HOLD") or (fsm == "EMERGENCY_LAND") or (payload.source == "CORE_FAILSAFE")
+    if is_acro or is_vas_failsafe then
+        self.lastVasPriorityMs = now
+        self.vasMfdPriorityUntilMs = now + (self.acroRecoveryHoldMs or 300)
+    end
+end
+
+function c2_arbiter:can_transmit_mfd(now_ms)
+    if self.activeSource == "MFD_ACRO" then
+        return false, "YIELDED_TO_MFD_ACRO"
+    end
+    local now = resolve_now_ms(now_ms)
+    if self.lastVasPriorityMs ~= nil and now < (self.vasMfdPriorityUntilMs or 0) then
+        return false, "ACRO_RECOVERY_HOLD"
+    end
+    if self.fsmState == "FAILSAFE_HOLD" or self.fsmState == "EMERGENCY_LAND" then
+        return false, "YIELDED_TO_VAS_FAILSAFE"
+    end
+    return true
+end
+
 local function sync_state_and_step(self, p, now_ms, allow_engine)
     self.fsmState = p.fsmState or p.controlState or self.fsmState
     local ctrl = p.controlState or p.fsmState
@@ -321,8 +365,13 @@ local function sync_state_and_step(self, p, now_ms, allow_engine)
     elseif ctrl ~= nil then
         self.armed = true
     end
-    self.activeSource = p.activeSource or self.activeSource
+    if p.activeSource ~= nil then
+        self.activeSource = p.activeSource
+    elseif p.acroActive == true or p.source == "CORE_ACRO_TAKEOVER" then
+        self.activeSource = "MFD_ACRO"
+    end
     self.airframeType = p.airframeType or p.airframe or self.airframeType
+    self:update_acro_yield_window(p, now_ms)
 
     if self.fcpTakeoffActive and self.fsmState == "CRUISE" then
         self.fcpTakeoffActive = false
@@ -347,8 +396,18 @@ local function sync_state_and_step(self, p, now_ms, allow_engine)
 end
 
 function c2_arbiter:handle_mfd_state(packet, now_ms)
-    if not packet or type(packet.payload) ~= "table" then return end
+    if type(packet) ~= "table" then return end
     local p = packet.payload
+    if type(p) ~= "table" then
+        if packet.ver == nil and packet.type == nil
+            and (packet.activeSource ~= nil or packet.fsmState ~= nil
+                 or packet.controlState ~= nil or packet.source ~= nil
+                 or packet.acroActive ~= nil) then
+            p = packet
+        else
+            return
+        end
+    end
     if p.source == "AMM_INTEGRATED" then return end
     self.latest_mfd_payload = p
     sync_state_and_step(self, p, now_ms, false)
