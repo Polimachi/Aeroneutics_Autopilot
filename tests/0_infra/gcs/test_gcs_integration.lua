@@ -120,4 +120,65 @@ describe("GCS E2E closed-loop simulation integration", function()
 
         if fs.exists("config/test_e2e_registry.json") then fs.delete("config/test_e2e_registry.json") end
     end)
+
+    it("denies invalid bandwidth and handles REASSIGNED + persistent lease across GCS restart", function()
+        local reg_path = "config/test_gcs_task125_reg.json"
+        if fs.exists(reg_path) then fs.delete(reg_path) end
+
+        local modem = create_mock_modem()
+        local app = main.create_app(test_cfg, modem, reg_path)
+
+        -- 1. Invalid bandwidth (requestedBandwidth = 20) -> DENIED, not registered
+        local bad_bw_req = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_BAD",
+            seq = 1,
+            type = "MSG_BLOCK_REQUEST",
+            time = 1000,
+            payload = { domainId = "AIRCRAFT_BAD", hardwareUuid = "UUID-BAD", requestedBandwidth = 20 }
+        }
+        assert_true(app:process_modem_message(50000, 50000, bad_bw_req))
+        local deny_tx = modem.transmissions[1]
+        assert_eq(deny_tx.payload.type, "MSG_BLOCK_ASSIGN")
+        assert_eq(deny_tx.payload.payload.status, "DENIED")
+        assert_eq(deny_tx.payload.payload.reason, "INVALID_BANDWIDTH")
+        assert_nil(app.fleet_tracker.get_craft(app.fleet, "AIRCRAFT_BAD"))
+
+        -- 2. AIRCRAFT_01 acquires Block 1 (10000)
+        assert_true(app:process_modem_message(50000, 50000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_BLOCK_REQUEST", time = 1100,
+            payload = { domainId = "AIRCRAFT_01", hardwareUuid = "UUID-1", requestedBandwidth = 40 }
+        }))
+        assert_eq(modem.transmissions[2].payload.payload.status, "ASSIGNED")
+        assert_eq(modem.transmissions[2].payload.payload.baseChannel, 10000)
+
+        -- 3. Simulate GCS restart (new app loading persisted registry)
+        local modem2 = create_mock_modem()
+        local app2 = main.create_app(test_cfg, modem2, reg_path)
+
+        -- AIRCRAFT_02 requests preferredBase = 10000 -> REASSIGNED to 10040 and registered in fleet_tracker
+        assert_true(app2:process_modem_message(50000, 50000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 1, type = "MSG_BLOCK_REQUEST", time = 2000,
+            payload = { domainId = "AIRCRAFT_02", hardwareUuid = "UUID-2", requestedBandwidth = 40, preferredBase = 10000 }
+        }))
+        local reassign_tx = modem2.transmissions[1]
+        assert_eq(reassign_tx.payload.payload.status, "REASSIGNED")
+        assert_eq(reassign_tx.payload.payload.reassignedFrom, 10000)
+        assert_eq(reassign_tx.payload.payload.baseChannel, 10040)
+        assert_eq(reassign_tx.payload.payload.blockId, 2)
+        local c2 = app2.fleet_tracker.get_craft(app2.fleet, "AIRCRAFT_02")
+        assert_not_nil(c2)
+        assert_eq(c2.baseChannel, 10040)
+
+        -- 4. AIRCRAFT_01 reboots with preferredBase = 10000, UUID-1 -> ASSIGNED 10000
+        assert_true(app2:process_modem_message(50000, 50000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_BLOCK_REQUEST", time = 2100,
+            payload = { domainId = "AIRCRAFT_01", hardwareUuid = "UUID-1", requestedBandwidth = 40, preferredBase = 10000 }
+        }))
+        local reconfirm_tx = modem2.transmissions[2]
+        assert_eq(reconfirm_tx.payload.payload.status, "ASSIGNED")
+        assert_eq(reconfirm_tx.payload.payload.baseChannel, 10000)
+
+        if fs.exists(reg_path) then fs.delete(reg_path) end
+    end)
 end)
