@@ -106,8 +106,8 @@ Expected: 새로 추가한 `Base+8`/`Base+9`/`REASSIGNED`/strict channel binding
    - `I-2`: `MSG_ATTITUDE_CMD` 전용 `offset: 1` 채널 매처와 비상 전용 `I-2-EMG` (또는 `I-2` 내부 `packetChannelOverrides`: `MSG_EMERGENCY_OVERRIDE -> aircraft_offset 9`, `MSG_EMERGENCY_ALERT -> aircraft_offset 9`, `channelMatchers`에 `offset: 1`, `offset: 9` 포함).
    - `I-4`: `MSG_CALIBRATION_INIT`을 `aircraft_offset: 8` (`CH_CALIBRATION_INIT`)로 매칭(기존 `aircraft_offset: 0` 제거) + `packetChannelOverrides`: `MSG_CALIBRATION_INIT -> aircraft_offset 8`, `hangar_offset` (`0, 1, 3`) 유지.
    - `I-6`: `timeoutsMs`에 `acroTimeoutMs: 250`, `acroRecoveryHoldMs: 300` 추가.
-   - `I-8`: `MSG_BLOCK_REQUEST` `optionalKeys`에 `"preferredBase"` 추가, `numericBounds.requestedBandwidth: [40, 40]`; `MSG_BLOCK_ASSIGN` `enums.status: ["ASSIGNED", "REASSIGNED", "DENIED", "FAILED"]`, `optionalKeys`에 `"leaseState"`, `"reassignedFrom"`, `"reason"` 추가.
-   - `I-9`: `channelMatchers`에 `offset: 8, 9` 및 `offsets 20..39` 감시 범위 반영; `timeoutsMs`에 `probeListenMs: 200`, `probeJitterMaxMs: 100`, `probeRetryCount: 2`, `intrusionAlertWindowMs: 30000`, `rebindAckTimeoutMs: 500` 추가; `MSG_CHANNEL_PROBE_ACK` `optionalKeys`에 `"responderUuid"`, `"responderStatus"` 추가.
+   - `I-8`: `MSG_BLOCK_REQUEST` `optionalKeys`에 `"preferredBase"`, `"conflictBase"` 추가, `numericBounds.requestedBandwidth: [40, 40]`; `MSG_BLOCK_ASSIGN` `enums.status: ["ASSIGNED", "REASSIGNED", "DENIED", "FAILED"]`, `optionalKeys`에 `"leaseState"`, `"reassignedFrom"`, `"reason"` 추가.
+   - `I-9`: `channelMatchers`에 `offset: 8, 9` 및 `offsets 20..39` 감시 범위 반영; `timeoutsMs`에 `probeListenMs: 200`, `probeJitterMaxMs: 100`, `probeRetryCount: 2`, `maxReassignAttempts: 3`, `gcsBootstrapTimeoutMs: 2000`, `intrusionAlertWindowMs: 30000`, `rebindAckTimeoutMs: 500` 추가; `MSG_CHANNEL_PROBE_ACK` `optionalKeys`에 `"responderUuid"`, `"responderStatus"` 추가.
 
 - [ ] **Step 4: `tools/verify_contracts.py` 정적·E2E 엄격 채널 검증 확장 (Green)**
 
@@ -131,10 +131,10 @@ Expected: `PASS`.
    - `Base+8`: `CH_CALIBRATION_INIT` (`Alignment -> VAS` 지상 교정 세션 개시 `MSG_CALIBRATION_INIT` 전용).
    - `Base+9`: `CH_EMERGENCY_CORE` (`E_STOP` `MSG_EMERGENCY_OVERRIDE` & `MSG_EMERGENCY_ALERT` 전용 비상 버스).
    - `Base+20~39`: Zone 3 Payload & Special Mission 버스 통합 (`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` `CH_PAYLOAD_RSV_22~29`, `Base+30~39` `CH_PAYLOAD_EXT_30~39` 확장 예비). 편대 비행(`CH_FORMATION_LINK`)은 `TBD` (향후 독립 광역 데이터링크)로 이관.
-2. **채널 프로브 & 영속 리스 규약 (`TASK-125-2`, `-3`, `-4`):**
-   - 랜덤 백오프 지터 `0~100ms` 선행 대기 + 다회(`probeRetryCount = 2`, 회당 `200ms`) 재프로브 + `CONFLICT_DETECTED` 수신 시 GCS `preferredBase` 충돌 보고 재할당 또는 `LOCKED_CONFLICT` 시동 락업.
+2. **채널 프로브, 회피 루프 & 영속 리스 규약 (`TASK-125-2`, `-3`, `-4`):**
+   - 랜덤 백오프 지터 `0~100ms` 선행 대기 + 다회(`probeRetryCount = 2`, 회당 `200ms`) 재프로브 + `CONFLICT_DETECTED` 수신 시 GCS `conflictBase` 보고 재할당 회피 루프(`maxReassignAttempts = 3`) 후 3회 연속 충돌 시에만 `LOCKED_CONFLICT` 시동 잠금.
    - `AMM` 부팅 즉시 `Base+0` 상시 개방(지상 `DISARMED`/`IDLE`/`PROBING`/`ACQUIRED` 포함) 및 자기 `hardwareUuid` 무시 규칙 명시.
-   - 꺼진 점유자(Sleeping Occupant) 방지: GCS `channel_registry.json` 영속 리스(`hardwareUuid`, `leaseState`, `lastSeenMs`) + `AMM` 로컬 디스크 캐시(`config/channel_lease.json`) + 부팅 시 GCS `MSG_BLOCK_REQUEST(preferredBase)` 재검증 핸드셰이크.
+   - 꺼진 점유자(Sleeping Occupant) 방지: GCS `channel_registry.json` 영속 리스(`hardwareUuid`, `leaseState`, `lastSeenMs`) + `AMM` 로컬 디스크 캐시(`config/channel_lease.json`) + 부팅 시 GCS `MSG_BLOCK_REQUEST(preferredBase)` 재검증 핸드셰이크. GCS 무응답 타임아웃 시 로컬 `channel_lease.json` 보유 및 다회 ARP 프로브 통과 기체는 `[NO_GCS_LEASE]` 경고로 오프라인 운용 허용, 미보유 기체는 `LOCKED_NO_GCS` 시동 잠금.
 3. **GCS & 검증 규칙 결함 4종 (`TASK-125-8`, `-9`, `-10`, `-11`, `-12`):**
    - `Diagram §6.1` L798 `checkCollision(existingCraft.baseChannel, reqBW, craftUuid)`(3인자) → 4인자 `checkCollision(existingCraft.baseChannel, FIXED_BW, candidateBase, FIXED_BW)`로 정합 수정.
    - 가변 `reqBW` 제거 → `BW = 40` 고정 계약 단일화 (`requestedBandwidth ~= 40` 시 `"DENIED"`).
@@ -295,7 +295,7 @@ Expected: `amm`, `vas` 단위 테스트 PASS.
 ## Task 4: GCS 고정 대역폭(`BW=40`), `REASSIGNED` 상태 통일, 4인자 충돌 검사 및 영속 리스 관리 (`TASK-125-3`, `-9`, `-10`, `-12`)
 
 ### Interfaces
-- **Consumes:** `MSG_BLOCK_REQUEST { domainId, hardwareUuid, requestedBandwidth, [preferredBase] }`, 영속 파일 `config/channel_registry.json`
+- **Consumes:** `MSG_BLOCK_REQUEST { domainId, hardwareUuid, requestedBandwidth, [preferredBase], [conflictBase] }`, 영속 파일 `config/channel_registry.json`
 - **Produces:** `MSG_BLOCK_ASSIGN { blockId, baseChannel, bandwidth=40, status=("ASSIGNED"|"REASSIGNED"|"DENIED"|"FAILED"), channelRange, leaseState, [reassignedFrom], [reason] }`
 
 ### Files
@@ -327,7 +327,7 @@ Expected: 신규 `DENIED` / `REASSIGNED` / 영속 리스 재로드 테스트 FAI
    - 4인자 `ranges_overlap(baseA, bwA, baseB, bwB)`: `not (baseA + bwA - 1 < baseB or baseB + bwB - 1 < baseA)`.
    - Rule 2 단독 경계 검사(`base >= baseMin and base + FIXED_BW - 1 <= 49999 and (base - baseMin) % FIXED_BW == 0`) — Rule 3 `[50000, 60020]` 중복 검사 미사용.
    - 기존 동일 `domain_id` + `hardware_uuid` 매칭 시 기존 블록 재확인(`status = "ASSIGNED"`, `leaseState = "ACTIVE_LEASE"`, `lastSeenMs = now_ms`).
-   - `preferred_base` 지정 시 해당 블록 점유자(`allocations` + `ranges_overlap`)가 없거나 동일 UUID면 `status = "ASSIGNED"`; 다른 기체가 영속 점유 중이면 최저 빈 블록 검색 할당 후 `status = "REASSIGNED"`, `reassignedFrom = preferred_base` 반환.
+   - `preferred_base` 지정 시 해당 블록 점유자(`allocations` + `ranges_overlap`)가 없거나 동일 UUID면 `status = "ASSIGNED"`; 다른 기체가 영속 점유 중이거나 `conflict_base`로 보고 회피 요청된 블록이면(`conflict_base` 제외) 최저 빈 블록 검색 할당 후 `status = "REASSIGNED"`, `reassignedFrom = conflict_base or preferred_base` 반환.
    - 빈 블록 0개 시 `status = "FAILED"`, `reason = "NO_FREE_BLOCK"`.
    - `save_registry(state)`로 즉시 `config/channel_registry.json` 영속화 (`domainId`, `hardwareUuid`, `blockId`, `baseChannel`, `bandwidth = 40`, `leaseState = "ACTIVE_LEASE"`, `lastSeenMs`).
 2. `src/0_infra/gcs/main.lua`: `MSG_BLOCK_REQUEST` 핸들러가 `payload.preferredBase`와 `nowMs`를 `channel_manager.allocate_block`에 전달하고, `"DENIED"`/`"REASSIGNED"`/`"ASSIGNED"`/`"FAILED"` 상태를 그대로 `MSG_BLOCK_ASSIGN`으로 송신.
@@ -345,7 +345,7 @@ Expected: `gcs` 단위 테스트 PASS.
 
 ### Interfaces
 - **Consumes:** `amm_config.json` / `channel_lease.json`, `MSG_BLOCK_ASSIGN`, `MSG_CHANNEL_PROBE`, `Base+0..39` 인바운드 모뎀 프레임
-- **Produces:** 백오프 지터 + 2회 재프로브 상태머신(`JITTER_BACKOFF` → `PROBING_1` → `PROBING_2` → `ACQUIRED` / `LOCKED_CONFLICT`), 부팅 즉시 `Base+0` 응답기, 로컬 `channel_lease.json` 영속 마커 + `preferredBase` 부팅 재검증 요청, `Base+0..39` 이종 `domainId` 침범 카운터 + 30초 지속 시 `FAILSAFE_HOLD`/`RTH` 트리거
+- **Produces:** 백오프 지터 + 2회 재프로브 + 최대 3회 GCS 재요청 회피(`CONFLICT_DETECTED` → `conflictBase` 보고) + 조건부 오프라인 리스(`[NO_GCS_LEASE]` vs `LOCKED_NO_GCS`), 부팅 즉시 `Base+0` 응답기, 로컬 `channel_lease.json` 영속 마커, AMM 온보드 모뎀 전 블록(`Base+0..39`, ~40+채널) 개방·자국 `domainId` O(1) 통과·이종 침범 30초 지속 시 `FAILSAFE_HOLD`/`RTH` 트리거
 
 ### Files
 - Modify: `src/3_planning/amm/modules/channel_sentinel.lua`
@@ -362,13 +362,15 @@ Expected: `gcs` 단위 테스트 PASS.
 1. **동시 부팅 지터 + 2회 재프로브 (`TASK-125-2`):**
    - `start_bootstrap`이 `preferredBase` (로컬 캐시 존재 시)와 `requestedBandwidth = 40`을 싣는지 확인.
    - `on_block_assign(st, { baseChannel = 10040, status = "ASSIGNED" }, 1000, rng)` 시 `0 <= jitterMs <= 100` 동안 대기 후 Round 1 `MSG_CHANNEL_PROBE` 송신, `200ms` 침묵 시 Round 2 `MSG_CHANNEL_PROBE` 재송신, 두 라운드 모두 무응답일 때 `ACQUIRED` 확정 검증 (단일 200ms만으로 조기 확정하지 않음!).
+   - `CONFLICT_DETECTED` 수신 시: 1~2회차 충돌에는 `LOCKED_CONFLICT` 대신 `REASSIGN_REQUEST` 상태 + `conflictBase = 10040`을 실은 `MSG_BLOCK_REQUEST` 생성(최대 `maxReassignAttempts = 3`회 자동 재요청); 3회 연속 충돌 초과 시 `LOCKED_CONFLICT` (`is_locked(st) == true`) 검증.
    - 자기 자신의 `hardwareUuid`로 들어온 `MSG_CHANNEL_PROBE`는 `nil` 반환(자기 충돌 미유발) 검증.
 2. **부팅 직후 `Base+0` 프로브 응답기 (`TASK-125-4`):**
    - `st.status == "BOOT_VERIFY"` 또는 `"DISARMED"` / `"PROBING"` (보유/검증 중 로컬 `baseChannel = 10000` 바인딩 상태)에서 타 기체(`hardwareUuid = "OTHER"`)의 `MSG_CHANNEL_PROBE(candidateBase = 10000)` 수신 시 즉시 `MSG_CHANNEL_PROBE_ACK { status = "CONFLICT_DETECTED", occupiedBase = 10000, responderUuid = st.hardwareUuid }` 반환 검증.
-3. **로컬 점유 마커 영속 & 부팅 재검증 (`TASK-125-3`):**
+3. **로컬 점유 마커 영속, 부팅 재검증 & 조건부 오프라인 정책 (`TASK-125-3`):**
    - `ACQUIRED` 확정 시 `save_lease_cache(st, leasePath)` 기록 및 재부팅 `init()` 시 `cachedBase = 10000` 로딩 → `start_bootstrap`에서 `preferredBase = 10000`으로 GCS 재검증 요청 → GCS가 `"REASSIGNED"` (`baseChannel = 10080`) 회신 시 새 채널로 안전 프로브/전환하고 구 채널 고집 금지.
-4. **전 블록(`Base+0..39`) 침범 감시 (`TASK-125-11`):**
-   - `Base+8`, `Base+9`, `Base+20`, `Base+21`, `Base+30`, `Base+39` 등 전 블록(`offset 0..39`)에서 `domainId ~= ownDomainId`인 외부 패킷 수신 시 침범 카운터 증가 및 차단(`INTRUSION_DETECTED` 이벤트 반환), 30,000ms 연속 침범 시 `HOVER_HOLD` / `FAILSAFE_HOLD` 트리거 검증.
+   - GCS 오프라인 타임아웃 시: `cachedBase` 보유 + 다회 ARP 프로브 무충돌 통과 시 `ACQUIRED_OFFLINE` / `offlineWarning = "NO_GCS_LEASE"` (`is_locked(st) == false`); `cachedBase == nil`인 미보유 기체는 `LOCKED_NO_GCS` (`is_locked(st) == true`).
+4. **전 블록(`Base+0..39`) 개방 및 침범 감시 (`TASK-125-11`):**
+   - `network_manager:bind_modems`가 온보드 모뎀에 `baseChannel + 0 .. baseChannel + 39` 전 블록(40채널)을 개방하고(`<= 128` CC:Tweaked 상한 준수), 자국 `domainId` 패킷은 O(1) 즉시 통과(침범 카운트 0), `Base+8`, `Base+9`, `Base+10`, `Base+20`, `Base+30`, `Base+39` 등에서 `domainId ~= ownDomainId`인 외부 패킷 수신 시 침범 카운터 증가 및 차단(`INTRUSION_DETECTED`), 30,000ms 연속 침범 시 `HOVER_HOLD` / `FAILSAFE_HOLD` 트리거 검증.
 5. **Rule 2 경계 단순 검증 (`TASK-125-12`):** `is_valid_base`가 `10000..49960`, 40배수 단일 수학식으로 검증됨 확인.
 
 - [ ] **Step 2: Red 테스트 실행**
@@ -389,7 +391,8 @@ Expected: 다회 프로브 / 자기 UUID 필터 / 부팅 응답기 / 전 블록 
    - `on_block_assign`: `"DENIED"`/`"FAILED"` 시 `LOCKED_CONFLICT`; `"ASSIGNED"`/`"REASSIGNED"` 시 `st.candidateBase = assignPayload.baseChannel`, `st.jitterDelayMs = ... (0..100)`, `st.probeRound = 0`, `st.probeMaxRounds = 2`, `st.status = "JITTER_WAIT"`.
 4. `negotiate_and_probe(st, nowMs, probesOut)`:
    - `JITTER_WAIT` 경과 시 Round 1 송출 → `PROBING` (`probeWaitMs = 200`) → 무응답 만료 시 `probeRound < probeMaxRounds`이면 짧은 재지터(0~50ms) 후 Round 2 재송신 → 전 라운드 무응답 시 `ACQUIRED` + `save_lease_cache`.
-   - `CONFLICT_DETECTED` 수신 시 `LOCKED_CONFLICT` (`is_locked(st) == true`).
+   - `GCS_WAIT` 타임아웃(`2000ms`) 시: `st.cachedBase ~= nil`이면 `candidateBase = st.cachedBase`로 오프라인 다회 프로브 진행 후 통과 시 `ACQUIRED_OFFLINE` + `offlineWarning = "NO_GCS_LEASE"`, `st.cachedBase == nil`이면 `LOCKED_NO_GCS`.
+   - `CONFLICT_DETECTED` 수신 시: `st.reassignAttempts = st.reassignAttempts + 1`; `st.reassignAttempts < 3`이면 `conflictBase = st.candidateBase`를 기록하고 `status = "REASSIGN_REQUEST"`로 전이해 GCS `MSG_BLOCK_REQUEST(conflictBase)` 자동 재요청; `>= 3`이면 `LOCKED_CONFLICT` (`is_locked(st) == true`).
 5. `handle_incoming_probe(st, pkt)`:
    - `pkt.payload.hardwareUuid == st.hardwareUuid` → `nil` (자기 자신 송신 루프백 무시!).
    - `st.status == "ACQUIRED"` 또는 `((st.status == "BOOT_VERIFY" or st.status == "DISARMED" or st.status == "PROBING" or st.status == "JITTER_WAIT") and (st.baseChannel == cand or st.candidateBase == cand))`이면 `MSG_CHANNEL_PROBE_ACK { status = "CONFLICT_DETECTED", occupiedBase = cand, responderUuid = st.hardwareUuid, responderStatus = st.status }` 즉시 반환.
@@ -398,8 +401,8 @@ Expected: 다회 프로브 / 자기 UUID 필터 / 부팅 응답기 / 전 블록 
 
 - [ ] **Step 4: `AMM` `network_manager.lua` & `main.lua` 연결 (Green)**
 
-1. `network_manager:bind_modems` & `main.lua`: 부팅 즉시 `Base+0` (`CH_OPERATOR_C2`) 개방 보장(`TASK-125-4`), `step_sentinel_20hz`가 `JITTER_WAIT`/`PROBING`/`ACQUIRED` 상태를 비동기 스텝으로 구동하며 필요 시 GCS 재할당 재요청.
-2. `main.lua` (`handle_modem_message`): 자기 블록 `Base+0..39` 내 개방된 모든 채널(`+0..5`, `+8`, `+9`, 열린 Zone 3 `+20..39`)로 들어온 이종 `domainId` 패킷을 `channel_sentinel.record_intrusion_sample`로 전달하고 30초 초과 시 `arbiter` / `trajectory` 안전 체공 전이 연동.
+1. `network_manager:bind_modems` & `main.lua`: 부팅 즉시 `Base+0` (`CH_OPERATOR_C2`) 개방 및 블록 확정/캐시 시 온보드 모뎀 `Base+0..39` 40채널 전수 개방 보장(`TASK-125-4`, `TASK-125-11`), `step_sentinel_20hz`가 `GCS_WAIT`/`JITTER_WAIT`/`PROBING`/`REASSIGN_REQUEST`/`ACQUIRED` 상태를 비동기 스텝으로 구동하며 충돌 시 `conflictBase`를 실은 `MSG_BLOCK_REQUEST` 재요청 송신.
+2. `main.lua` (`handle_modem_message`): 최상단에서 `domainId == self.domainId`인 정상 자국 패킷은 O(1) 즉시 정상 디스패치로 통과하고, `Base+0..39` 내 이종 `domainId` 패킷만 `channel_sentinel.record_intrusion_sample`로 전달해 카운트·차단하며 30초 연속 침범 시 `arbiter` / `trajectory` 안전 체공 전이 연동.
 
 - [ ] **Step 5: 단위 테스트 실행 & 커밋**
 
