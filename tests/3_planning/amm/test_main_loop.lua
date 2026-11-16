@@ -969,24 +969,77 @@ describe("AMM Main Event Pump and Command Processing", function()
         for idx, ch in ipairs(rogue_channels) do
             app.clock_ms = 1000 + idx * 1000
             main_mod.process_event(app, "modem_message", "top", ch, ch, {
-                ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = idx, type = "MSG_OPERATOR_CMD", time = 1000 + idx * 1000,
+                ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = idx, type = "MSG_OPERATOR_CMD", time = app.clock_ms,
                 payload = { authority = "GCS_OVERRIDE", command = "LAND" },
-            }, 1000 + idx * 1000)
+            })
         end
         assert_eq(app.sentinel.intrusionCount, 6)
         assert_eq(app.arbiter.authority, "PILOT_PRIMARY") -- Blocked, never reached arbiter
 
-        -- 3. Continuous intrusion reaching >= 30,000ms triggers HOVER_HOLD failsafe
-        app.clock_ms = 32050
-        main_mod.process_event(app, "modem_message", "top", 10039, 10039, {
-            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 99, type = "MSG_TRAJECTORY_SETPOINT", time = 32050,
-            payload = {},
-        }, 32050)
+        -- 3. Periodic sustained foreign packets (every 3000ms across >= 30,000ms) trigger HOVER_HOLD failsafe
+        for t = 10000, 34000, 3000 do
+            app.clock_ms = t
+            main_mod.process_event(app, "modem_message", "top", 10039, 10039, {
+                ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = t, type = "MSG_TRAJECTORY_SETPOINT", time = t,
+                payload = {},
+            })
+        end
         assert_true(app.sentinel.intrusionFailsafeTriggered)
         assert_not_nil(app.arbiter.emergencyGoal)
         assert_eq(app.arbiter.emergencyGoal.flightMode, "HOVER_HOLD")
-        local sp = main_mod.step_20hz_tick(app, 0.05, 32100)
+        local sp = main_mod.step_20hz_tick(app, 0.05, 34100)
         assert_eq(sp.flightMode, "HOVER_HOLD")
+
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+    end)
+
+    it("exempts Base+8 MSG_CALIBRATION_INIT from hangar domainId while blocking non-calibration Base+8 traffic and inactive Zone 3 late ACKs", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease_path = "config/test_lease_main_cal_z3.json"
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 1000,
+            leasePath = lease_path,
+            system = { hardwareUuid = "AMM-CAL-Z3", primaryModemSide = "top", infraModemSide = "back" },
+            safety = { intrusionAlertWindowMs = 30000 },
+        }, { top = top_m, back = back_m })
+        app.sentinel.status = "ACQUIRED"
+
+        -- [I-3] Hangar station sending MSG_CALIBRATION_INIT on Base+8 across >30s must NOT trigger intrusion or HOVER_HOLD
+        for t = 1000, 34000, 2500 do
+            app.clock_ms = t
+            main_mod.process_event(app, "modem_message", "top", 10008, 10008, {
+                ver = "1.9.5", domainId = "HANGAR_ALIGN_01", seq = t, type = "MSG_CALIBRATION_INIT", time = t,
+                payload = { craftDomainId = "AIRCRAFT_01", baseChannel = 10000 },
+            })
+        end
+        assert_eq(app.sentinel.intrusionCount, 0)
+        assert_false(app.sentinel.intrusionFailsafeTriggered)
+        assert_nil(app.arbiter.emergencyGoal)
+
+        -- Non-calibration packet on Base+8 from foreign domain MUST still be blocked & counted
+        app.clock_ms = 35000
+        main_mod.process_event(app, "modem_message", "top", 10008, 10008, {
+            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 999, type = "MSG_THRUST_CMD", time = 35000,
+            payload = {},
+        })
+        assert_eq(app.sentinel.intrusionCount, 1)
+
+        -- [C-1] Late own-domain MSG_PAYLOAD_ACK on Base+20 when openPayloadChannels[10020] is nil must be ignored cleanly
+        assert_nil(app.net.openPayloadChannels[10020])
+        assert_true(top_m.isOpen(10020))
+        app.clock_ms = 35100
+        main_mod.process_event(app, "modem_message", "top", 10020, 10020, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1000, type = "MSG_PAYLOAD_ACK", time = 35100,
+            payload = { checkpointId = "CP_STALE", command = "DROP", status = "DROPPED" },
+        })
+        assert_nil(app.engine.hook_runner:get_last_payload_ack())
 
         if fs.exists(lease_path) then fs.delete(lease_path) end
     end)

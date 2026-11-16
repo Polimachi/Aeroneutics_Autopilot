@@ -70,10 +70,10 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         assert_eq(st.probeRound, 1)
 
         -- Non-conflict probe ACK must NOT lock or trigger reassign
-        channel_sentinel.on_probe_ack(st, {
+        assert_false(channel_sentinel.on_probe_ack(st, {
             type = "MSG_CHANNEL_PROBE_ACK",
             payload = { conflict = false, status = "CLEAR" },
-        })
+        }))
         assert_false(channel_sentinel.is_locked(st))
 
         -- After 200ms (1290): must NOT prematurely confirm ACQUIRED; must emit Round 2 probe
@@ -90,6 +90,15 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         assert_eq(st.baseChannel, 10040)
         assert_true(channel_sentinel.is_acquired(st))
         assert_true(fs.exists(lease_path))
+
+        -- [I-2] Delayed CONFLICT_DETECTED ACK after ACQUIRED must be ignored
+        local late_ok = channel_sentinel.on_probe_ack(st, {
+            type = "MSG_CHANNEL_PROBE_ACK",
+            payload = { conflict = true, status = "CONFLICT_DETECTED", occupiedBase = 10040, responderUuid = "LATE-OTHER" },
+        })
+        assert_false(late_ok)
+        assert_eq(st.status, "ACQUIRED")
+        assert_false(channel_sentinel.is_locked(st))
 
         cleanup_lease(lease_path)
     end)
@@ -115,12 +124,21 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         assert_nil(self_ack)
 
         -- Conflict 1 -> REASSIGN_REQUEST (not LOCKED_CONFLICT), emits MSG_BLOCK_REQUEST(conflictBase = 10040)
-        channel_sentinel.on_probe_ack(st, {
+        assert_true(channel_sentinel.on_probe_ack(st, {
             type = "MSG_CHANNEL_PROBE_ACK",
             payload = { conflict = true, status = "CONFLICT_DETECTED", occupiedBase = 10040, responderUuid = "OTHER-1" },
-        })
+        }))
         assert_eq(st.status, "REASSIGN_REQUEST")
+        assert_eq(st.reassignAttempts, 1)
         assert_false(channel_sentinel.is_locked(st))
+
+        -- [I-2] Second ACK arriving while already in REASSIGN_REQUEST must NOT double-count reassignAttempts
+        assert_false(channel_sentinel.on_probe_ack(st, {
+            type = "MSG_CHANNEL_PROBE_ACK",
+            payload = { conflict = true, status = "CONFLICT_DETECTED", occupiedBase = 10040, responderUuid = "OTHER-DUP" },
+        }))
+        assert_eq(st.reassignAttempts, 1)
+        assert_eq(st.status, "REASSIGN_REQUEST")
         local st_req1, req1 = channel_sentinel.negotiate_and_probe(st, 1100)
         assert_eq(st_req1, "GCS_WAIT")
         assert_eq(req1.type, "MSG_BLOCK_REQUEST")
@@ -256,7 +274,7 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         cleanup_lease(lease_path)
     end)
 
-    it("tracks foreign domainId intrusion across Base+0..39 and escalates at 30000ms", function()
+    it("guards intrusion tracking before acquisition, clears after silence gap, resets on acquire/rebind, and escalates sustained 30000ms intrusion", function()
         local lease_path = "config/test_lease_intrusion.json"
         cleanup_lease(lease_path)
 
@@ -264,7 +282,35 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
             system = { domainId = "AIRCRAFT_01", hardwareUuid = "AMM-01" },
             channels = { baseChannel = 10000 },
         }, 1000, lease_path)
-        st.status = "ACQUIRED"
+
+        -- [I-1] Pre-acquisition statuses (INIT/GCS_WAIT/JITTER_WAIT/PROBING/REASSIGN_REQUEST) must NOT track or escalate intrusion
+        for _, pre_status in ipairs({ "INIT", "GCS_WAIT", "JITTER_WAIT", "PROBING", "REASSIGN_REQUEST" }) do
+            st.status = pre_status
+            local h_pre, r_pre = channel_sentinel.record_intrusion_sample(st, 10008, "OTHER_CRAFT", 1000)
+            assert_false(h_pre)
+            assert_nil(r_pre)
+            assert_eq(channel_sentinel.step_intrusion_watchdog(st, 35000), "CLEAR")
+        end
+        assert_eq(st.intrusionCount, 0)
+
+        -- [I-1] BOOT_VERIFY resets cleanly upon finalize_acquired
+        st.status = "BOOT_VERIFY"
+        local h_bv, r_bv = channel_sentinel.record_intrusion_sample(st, 10008, "OTHER_CRAFT", 1000)
+        assert_true(h_bv)
+        assert_eq(r_bv, "INTRUSION_DETECTED")
+        assert_eq(st.intrusionCount, 1)
+        st.candidateBase = 10040
+        st.status = "PROBING"
+        st.probeRound = 2
+        st.probeMaxRounds = 2
+        st.probeStartMs = 1100
+        channel_sentinel.negotiate_and_probe(st, 1400, {})
+        assert_eq(st.status, "ACQUIRED")
+        assert_eq(st.intrusionCount, 0)
+        assert_nil(st.intrusionFirstMs)
+        assert_nil(st.intrusionLastMs)
+        assert_false(st.intrusionFailsafeTriggered)
+
         st.baseChannel = 10000
 
         -- Own domainId & out-of-block channels do not count
@@ -274,20 +320,39 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         assert_false(hit_ext)
         assert_eq(st.intrusionCount, 0)
 
-        -- Foreign packets inside Base+0..39 trigger INTRUSION_DETECTED
-        local hit1, r1 = channel_sentinel.record_intrusion_sample(st, 10008, "OTHER_CRAFT", 1000)
-        assert_true(hit1)
-        assert_eq(r1, "INTRUSION_DETECTED")
-        local hit2, r2 = channel_sentinel.record_intrusion_sample(st, 10039, "OTHER_CRAFT", 15000)
-        assert_true(hit2)
-        assert_eq(r2, "INTRUSION_DETECTED")
-        assert_eq(st.intrusionCount, 2)
+        -- [I-4a] Single stray foreign packet followed by > 5000ms silence must clear cleanly (NOT escalate at 31000)
+        local hit_stray, r_stray = channel_sentinel.record_intrusion_sample(st, 10008, "OTHER_CRAFT", 1000)
+        assert_true(hit_stray)
+        assert_eq(r_stray, "INTRUSION_DETECTED")
+        assert_eq(channel_sentinel.step_intrusion_watchdog(st, 6500), "CLEAR")
+        assert_eq(channel_sentinel.step_intrusion_watchdog(st, 31000), "CLEAR")
+        assert_eq(st.intrusionCount, 0)
+        assert_false(st.intrusionFailsafeTriggered)
 
-        -- At >= 30,000ms continuous intrusion -> FAILSAFE_ESCALATE
-        local hit3, r3 = channel_sentinel.record_intrusion_sample(st, 10020, "OTHER_CRAFT", 31000)
-        assert_true(hit3)
-        assert_eq(r3, "FAILSAFE_ESCALATE")
+        -- [I-4b] Periodic sustained foreign packets (<= 3000ms interval across 30,000ms) -> FAILSAFE_ESCALATE
+        for t = 1000, 31000, 3000 do
+            local hit, r = channel_sentinel.record_intrusion_sample(st, 10008 + (t % 30), "OTHER_CRAFT", t)
+            assert_true(hit)
+            if t < 31000 then
+                assert_eq(r, "INTRUSION_DETECTED")
+            else
+                assert_eq(r, "FAILSAFE_ESCALATE")
+            end
+        end
         assert_eq(channel_sentinel.step_intrusion_watchdog(st, 31050), "FAILSAFE_ESCALATE")
+
+        -- [I-1] Commit rebind resets intrusion counters cleanly
+        local prep = channel_sentinel.initiate_rebind(st, 10080, 32000)
+        assert_true(channel_sentinel.on_rebind_ack(st, {
+            type = "MSG_CHANNEL_REBIND_ACK",
+            payload = { transactionId = prep.payload.transactionId, status = "READY" },
+        }, 32050))
+        local _, c_st = channel_sentinel.step_rebind_transaction(st, 32100)
+        assert_eq(c_st, "COMMITTED")
+        assert_eq(st.intrusionCount, 0)
+        assert_nil(st.intrusionFirstMs)
+        assert_nil(st.intrusionLastMs)
+        assert_false(st.intrusionFailsafeTriggered)
 
         cleanup_lease(lease_path)
     end)

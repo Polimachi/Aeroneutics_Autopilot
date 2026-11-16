@@ -12,6 +12,7 @@ channel_sentinel.DEFAULT_PROBE_RETRIES = 2
 channel_sentinel.DEFAULT_MAX_REASSIGN_ATTEMPTS = 3
 channel_sentinel.DEFAULT_GCS_BOOTSTRAP_TIMEOUT_MS = 2000
 channel_sentinel.INTRUSION_ESCALATE_MS = 30000
+channel_sentinel.DEFAULT_INTRUSION_SILENCE_RESET_MS = 5000
 channel_sentinel.DEFAULT_LEASE_PATH = "config/channel_lease.json"
 
 local CRAFT_BASE_MIN = channel_sentinel.CRAFT_BASE_MIN
@@ -25,7 +26,24 @@ local DEFAULT_PROBE_RETRIES = channel_sentinel.DEFAULT_PROBE_RETRIES
 local DEFAULT_MAX_REASSIGN_ATTEMPTS = channel_sentinel.DEFAULT_MAX_REASSIGN_ATTEMPTS
 local DEFAULT_GCS_BOOTSTRAP_TIMEOUT_MS = channel_sentinel.DEFAULT_GCS_BOOTSTRAP_TIMEOUT_MS
 local INTRUSION_ESCALATE_MS = channel_sentinel.INTRUSION_ESCALATE_MS
+local DEFAULT_INTRUSION_SILENCE_RESET_MS = channel_sentinel.DEFAULT_INTRUSION_SILENCE_RESET_MS
 local DEFAULT_LEASE_PATH = channel_sentinel.DEFAULT_LEASE_PATH
+
+local INTRUSION_ACTIVE_STATUSES = {
+    ACQUIRED = true,
+    ACQUIRED_OFFLINE = true,
+    BOOT_VERIFY = true,
+}
+
+local function reset_intrusion_state(state)
+    if not state then return end
+    state.intrusionCount = 0
+    state.intrusionFirstMs = nil
+    state.intrusionLastMs = nil
+    state.intrusionFailsafeTriggered = false
+    state.lastIntruderDomainId = nil
+    state.lastIntruderChannel = nil
+end
 
 local function resolve_now_ms(now_ms)
     if type(now_ms) == "number" then
@@ -175,6 +193,7 @@ function channel_sentinel.init(config, now_ms, lease_path)
         probeMaxRounds = safe.probeRetryCount or cfg.probeRetryCount or DEFAULT_PROBE_RETRIES,
         maxReassignAttempts = safe.maxReassignAttempts or cfg.maxReassignAttempts or DEFAULT_MAX_REASSIGN_ATTEMPTS,
         intrusionAlertWindowMs = safe.intrusionAlertWindowMs or cfg.intrusionAlertWindowMs or INTRUSION_ESCALATE_MS,
+        intrusionSilenceResetMs = safe.intrusionSilenceResetMs or cfg.intrusionSilenceResetMs or DEFAULT_INTRUSION_SILENCE_RESET_MS,
         rngSeed = hash_uuid_seed(hwUuid, resolve_now_ms(now_ms)),
         bootstrapStartMs = 0,
         gcsWaitStartedAtMs = 0,
@@ -257,10 +276,11 @@ function channel_sentinel.probe_channel(state, candidate_base, now_ms)
 end
 
 function channel_sentinel.on_probe_ack(state, packet)
+    if not state or state.status ~= "PROBING" then return false end
     local payload = packet and packet.payload
-    if type(payload) ~= "table" then return end
+    if type(payload) ~= "table" then return false end
     if payload.responderUuid ~= nil and payload.responderUuid == state.hardwareUuid then
-        return
+        return false
     end
     if payload.conflict == true or payload.status == "CONFLICT_DETECTED" then
         state.reassignAttempts = (state.reassignAttempts or 0) + 1
@@ -273,7 +293,9 @@ function channel_sentinel.on_probe_ack(state, packet)
             state.locked = false
             state.status = "REASSIGN_REQUEST"
         end
+        return true
     end
+    return false
 end
 
 local function finalize_acquired(state, now_ms)
@@ -283,6 +305,7 @@ local function finalize_acquired(state, now_ms)
     state.locked = false
     state.reassignAttempts = 0
     state.conflictBase = nil
+    reset_intrusion_state(state)
     if state.offlinePending then
         state.status = "ACQUIRED_OFFLINE"
         state.offlineWarning = "NO_GCS_LEASE"
@@ -389,13 +412,20 @@ function channel_sentinel.handle_incoming_probe(state, packet)
 end
 
 function channel_sentinel.record_intrusion_sample(state, channel, domain_id, now_ms)
+    if not state or not INTRUSION_ACTIVE_STATUSES[state.status] then
+        return false, nil
+    end
     if not channel_sentinel.is_in_own_block(state, channel) then
         return false, nil
     end
     if type(domain_id) ~= "string" or domain_id == "" or domain_id == state.domainId then
         return false, nil
     end
-    local now = now_ms or 0
+    local now = resolve_now_ms(now_ms)
+    local silence_limit = state.intrusionSilenceResetMs or DEFAULT_INTRUSION_SILENCE_RESET_MS
+    if state.intrusionLastMs and not state.intrusionFailsafeTriggered and (now - state.intrusionLastMs) > silence_limit then
+        reset_intrusion_state(state)
+    end
     state.intrusionCount = (state.intrusionCount or 0) + 1
     if not state.intrusionFirstMs then
         state.intrusionFirstMs = now
@@ -411,12 +441,22 @@ function channel_sentinel.record_intrusion_sample(state, channel, domain_id, now
 end
 
 function channel_sentinel.step_intrusion_watchdog(state, now_ms)
-    if not state or not state.intrusionFirstMs or (state.intrusionCount or 0) == 0 then
+    if not state or not INTRUSION_ACTIVE_STATUSES[state.status] then
         return "CLEAR"
     end
-    local now = now_ms or 0
-    if state.intrusionFailsafeTriggered
-        or (now - state.intrusionFirstMs) >= (state.intrusionAlertWindowMs or INTRUSION_ESCALATE_MS) then
+    if state.intrusionFailsafeTriggered then
+        return "FAILSAFE_ESCALATE"
+    end
+    if not state.intrusionFirstMs or not state.intrusionLastMs or (state.intrusionCount or 0) == 0 then
+        return "CLEAR"
+    end
+    local now = resolve_now_ms(now_ms)
+    local silence_limit = state.intrusionSilenceResetMs or DEFAULT_INTRUSION_SILENCE_RESET_MS
+    if (now - state.intrusionLastMs) > silence_limit then
+        reset_intrusion_state(state)
+        return "CLEAR"
+    end
+    if (now - state.intrusionFirstMs) >= (state.intrusionAlertWindowMs or INTRUSION_ESCALATE_MS) then
         state.intrusionFailsafeTriggered = true
         return "FAILSAFE_ESCALATE"
     end
@@ -485,6 +525,7 @@ function channel_sentinel.step_rebind_transaction(state, now_ms)
         state.cachedBase = tx.newBase
         state.lastAcquiredMs = now
         state.rebindTx = nil
+        reset_intrusion_state(state)
         channel_sentinel.save_lease_cache(state)
         return {
             type = "MSG_CHANNEL_REBIND",

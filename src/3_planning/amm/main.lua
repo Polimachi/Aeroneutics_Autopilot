@@ -654,6 +654,9 @@ local function is_allowed_cross_domain_on_block(chan, pkt, base, sentinel, own_d
     if chan == base + 5 and BASE_PLUS_5_INFRA_RESPONSES[pkt.type] then
         return true
     end
+    if chan == base + 8 and pkt.type == "MSG_CALIBRATION_INIT" then
+        return true
+    end
     return false
 end
 
@@ -721,7 +724,9 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
     elseif handle_facility_rx(app, chan, pkt, t_ms) then
         return
     elseif app.net.is_payload_channel and app.net:is_payload_channel(chan) and app.engine then
-        app.engine:on_payload_ack(pkt, chan, t_ms)
+        if not app.net.openPayloadChannels or app.net.openPayloadChannels[chan] then
+            app.engine:on_payload_ack(pkt, chan, t_ms)
+        end
     elseif app.otaAgent then
         app.otaAgent:handle_packet(chan, chan, pkt)
     end
