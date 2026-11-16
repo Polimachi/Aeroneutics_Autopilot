@@ -454,6 +454,7 @@ describe("Scenario 1: GCS Bootstrap & Telemetry Downlink", function()
         assert_eq(deny_payload.reason, "INVALID_BANDWIDTH")
 
         local bad_state = cs2.init({ system = { domainId = "AIRCRAFT_BAD", hardwareUuid = "HW-UUID-BAD" } }, 2600)
+        cs2.start_bootstrap(bad_state, 2600)
         cs2.on_block_assign(bad_state, deny_payload, 2600)
         assert_eq(bad_state.status, "LOCKED_CONFLICT")
         assert_true(bad_state.locked)

@@ -1127,6 +1127,114 @@ describe("AMM Main Event Pump and Command Processing", function()
         })
         assert_eq(app.sentinel.intrusionCount, 3)
 
+        -- 4. Authorized Base+9 MSG_EMERGENCY_OVERRIDE (GCS* / MFD / GCS_OVERRIDE) exempt from intrusion; rogue Base+9 E_STOP still counts
+        local prev_count = app.sentinel.intrusionCount
+        main_mod.process_event(app, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "GCS_01", seq = 70, type = "MSG_EMERGENCY_OVERRIDE", time = 42000,
+            payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "GCS" },
+        })
+        main_mod.process_event(app, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "COCKPIT_MFD", seq = 71, type = "MSG_EMERGENCY_OVERRIDE", time = 42100,
+            payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "MFD" },
+        })
+        main_mod.process_event(app, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "TOWER_CMD", seq = 72, type = "MSG_EMERGENCY_OVERRIDE", time = 42200,
+            payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "PILOT", authority = "GCS_OVERRIDE" },
+        })
+        assert_eq(app.sentinel.intrusionCount, prev_count)
+
+        main_mod.process_event(app, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 73, type = "MSG_EMERGENCY_OVERRIDE", time = 42300,
+            payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "ROGUE" },
+        })
+        assert_eq(app.sentinel.intrusionCount, prev_count + 1)
+
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+    end)
+
+    it("ignores foreign CH 50000 MSG_BLOCK_ASSIGN while ACQUIRED and supports ACQUIRED_OFFLINE cached lease flow", function()
+        local main_mod = require("main")
+        local channel_sentinel = require("channel_sentinel")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease_path = "config/test_lease_main_offline.json"
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+
+        -- Persist cached lease at Base=10040 for AMM-OFFLINE-01
+        local seed = channel_sentinel.init({
+            system = { domainId = "AIRCRAFT_01", hardwareUuid = "AMM-OFFLINE-01" },
+            channels = { baseChannel = 10040 },
+        }, 500, lease_path)
+        seed.baseChannel = 10040
+        seed.lastAcquiredMs = 500
+        assert_true(channel_sentinel.save_lease_cache(seed, lease_path))
+
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 1000,
+            leasePath = lease_path,
+            system = { hardwareUuid = "AMM-OFFLINE-01", primaryModemSide = "top", infraModemSide = "back" },
+            safety = { gcsBootstrapTimeoutMs = 2000, probeJitterMaxMs = 0, probeRetryCount = 2, channelProbeWaitMs = 200 },
+        }, { top = top_m, back = back_m })
+
+        assert_eq(app.sentinel.status, "BOOT_VERIFY")
+        assert_eq(app.sentinel.baseChannel, 10040)
+        assert_eq(app.net.baseChannel, 10040)
+        assert_true(top_m.isOpen(10040))
+        assert_true(top_m.isOpen(10079))
+
+        -- Tick 1 emits MSG_BLOCK_REQUEST on 50000 -> GCS_WAIT
+        main_mod.step_20hz_tick(app, 0.05, 1000)
+        assert_eq(app.sentinel.status, "GCS_WAIT")
+
+        -- GCS timeout at 3000 -> Round 1 probe, Round 2 probe at 3200 -> ACQUIRED_OFFLINE at 3400
+        main_mod.step_20hz_tick(app, 0.05, 3000)
+        assert_eq(app.sentinel.status, "PROBING")
+        main_mod.step_20hz_tick(app, 0.05, 3200)
+        assert_eq(app.sentinel.status, "PROBING")
+        main_mod.step_20hz_tick(app, 0.05, 3400)
+        assert_eq(app.sentinel.status, "ACQUIRED_OFFLINE")
+        assert_eq(app.sentinel.offlineWarning, "NO_GCS_LEASE")
+        assert_true(string.find(app.arbiter.lastBanner, "NO_GCS_LEASE", 1, true) ~= nil)
+
+        -- Mission with channelBound=true starts cleanly while ACQUIRED_OFFLINE
+        assert_true(app.engine:load_table({
+            version = "2.0.0",
+            missionId = "OFFLINE_SORTIE",
+            checkpoints = {
+                {
+                    checkpointId = "CP_1",
+                    action = "ACT_NAV_GOTO_WP",
+                    params = { targetPos = { x = 200, z = 200 } },
+                    preconditions = { channelBound = true },
+                },
+            },
+        }))
+        local ok_start, err_start = app.engine:start("SINGLE", 3450)
+        assert_true(ok_start, tostring(err_start))
+        local sp_off = main_mod.step_20hz_tick(app, 0.05, 3500)
+        assert_true(sp_off.arm)
+        assert_true(sp_off.flightActive)
+
+        -- Foreign CH 50000 MSG_BLOCK_ASSIGN (ASSIGNED/DENIED) while ACQUIRED_OFFLINE or ACQUIRED must be ignored
+        main_mod.process_event(app, "modem_message", "back", 50000, 50000, {
+            ver = "1.9.5", domainId = "GCS_01", seq = 90, type = "MSG_BLOCK_ASSIGN", time = 3600,
+            payload = { baseChannel = 10120, status = "ASSIGNED" },
+        }, 3600)
+        assert_eq(app.sentinel.status, "ACQUIRED_OFFLINE")
+        assert_eq(app.sentinel.baseChannel, 10040)
+
+        app.sentinel.status = "ACQUIRED"
+        main_mod.process_event(app, "modem_message", "back", 50000, 50000, {
+            ver = "1.9.5", domainId = "GCS_01", seq = 91, type = "MSG_BLOCK_ASSIGN", time = 3650,
+            payload = { status = "DENIED", reason = "OTHER_CRAFT_DENIED" },
+        }, 3650)
+        assert_eq(app.sentinel.status, "ACQUIRED")
+        assert_false(app.sentinel.locked)
+        assert_eq(app.sentinel.baseChannel, 10040)
+
         if fs.exists(lease_path) then fs.delete(lease_path) end
     end)
 end)

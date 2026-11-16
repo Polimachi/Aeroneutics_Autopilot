@@ -235,6 +235,10 @@
         }
       ],
       "packetChannelOverrides": {
+        "MSG_ATTITUDE_CMD": {
+          "kind": "aircraft_offset",
+          "offset": 1
+        },
         "MSG_EMERGENCY_OVERRIDE": {
           "kind": "aircraft_offset",
           "offset": 9

@@ -140,7 +140,7 @@ Expected: `PASS`.
    - 가변 `reqBW` 제거 → `BW = 40` 고정 계약 단일화 (`requestedBandwidth ~= 40` 시 `"DENIED"`).
    - `§6.1` & Seq 5 재할당 응답 상태를 `§6.3`과 일치시켜 `"REASSIGNED"`로 통일.
    - `§6.3` 비행 중 채널 침범 감시 범위를 `Base+0~5, +10~11`에서 **전 블록 `Base+0~39`**(Zone 1 Core `+8`/`+9` 및 Zone 3 Payload `+20~39` 포함)로 확대.
-   - `§7.2` Rule 3 (`[50000, 60020]` 중복 체크) 삭제: Rule 2 (`Base + 39 <= 49999`)로 수학적 동치 보장, `ChannelValidator` 의사코드 단순화.
+   - `§7.2` Rule 3 (`[50000, 60020]` 중복 체크) 삭제: Rule 2 (`Base + 39 <= 49999`)로 수학적 동치 성립, `ChannelValidator` 의사코드 단순화.
 
 - [ ] **Step 6: 6대 서브시스템 사양서(`AMM`, `VAS`, `FCP`, `GCS`, `ALIGNMENT`, `FDR`) `Approved` 개정 및 연관 버전 배지 동기화**
 
@@ -250,7 +250,7 @@ Expected: 지정된 6개 타깃 단위 테스트 전부 PASS, `run_mutation_test
 
 ### Interfaces
 - **Consumes:** `VAS` `activeSource` (`"FCP" | "MFD_ACRO"`) 및 `fsmState` (`"FAILSAFE_HOLD" | "EMERGENCY_LAND"`), `AMM` `c2_arbiter.activeSource`, `ICD I-6` (`acroTimeoutMs = 250`, `acroRecoveryHoldMs = 300`)
-- **Produces:** `AMM` `c2_arbiter`의 비차단 억제·복귀 히스테리시스 게이트 (`update_acro_yield_window`), `VAS telemetry_feeder` 우선권 불변 및 양측 동시 송신 0건 보장
+- **Produces:** `AMM` `c2_arbiter`의 비차단 억제·복귀 히스테리시스 게이트 (`update_acro_yield_window`), `VAS telemetry_feeder` 우선권 불변 및 양측 동시 송신 0건 유지
 
 ### Files
 - Modify: `src/3_planning/amm/config/amm_config.json` (`safety.acroRecoveryHoldMs = 300`)
@@ -281,7 +281,7 @@ Expected: `ACRO_RECOVERY_HOLD` 유예 창 테스트 FAIL.
 2. `c2_arbiter.lua`:
    - `self.vasMfdPriorityUntilMs = 0`, `self.acroRecoveryHoldMs = cfg.acroRecoveryHoldMs or 300`.
    - `handle_mfd_state(payload, nowMs)`: `activeSource == "MFD_ACRO"`이거나 `fsmState == "FAILSAFE_HOLD"` / `"EMERGENCY_LAND"`인 경우 `self.vasMfdPriorityUntilMs = nowMs + self.acroRecoveryHoldMs`로 연장하고 `self.activeSource` 갱신. `activeSource == "FCP"`로 복귀해도 `nowMs < self.vasMfdPriorityUntilMs` 동안은 `can_transmit_mfd(nowMs)`가 `false, "ACRO_RECOVERY_HOLD"` 반환.
-3. `network_manager.lua` (`send_mfd_state`) & `main.lua` (`step_5hz_downlink`): `arbiter:can_transmit_mfd(nowMs)`와 `activeSource == "MFD_ACRO"`를 일관 검증해 경계 겹침 원천 차단.
+3. `network_manager.lua` (`send_mfd_state`) & `main.lua` (`step_5hz_downlink`): `arbiter:can_transmit_mfd(nowMs)`와 `activeSource == "MFD_ACRO"`를 일관 검증해 경계 겹침 방지.
 
 - [ ] **Step 4: 단위 테스트 통과 확인 & 커밋**
 
@@ -309,7 +309,7 @@ Expected: `amm`, `vas` 단위 테스트 PASS.
 `tests/0_infra/gcs/test_channel_manager.lua` 및 `test_gcs_integration.lua`에 아래 케이스를 추가한다:
 1. **가변 `reqBW` 거부 (`TASK-125-9`):** `allocate_block(state, "AIRCRAFT_04", "UUID-4", 20)` 또는 `80` 호출 시 `res.status == "DENIED"`, `res.reason == "INVALID_BANDWIDTH"` 반환, 레지스트리 미기록 확인.
 2. **충돌 시 `"REASSIGNED"` 반환 (`TASK-125-10`):** Block 1(`10000`)을 `"AIRCRAFT_01"` (`UUID-1`)이 점유(오프라인 포함) 중일 때, `"AIRCRAFT_02"` (`UUID-2`)가 `preferredBase = 10000`으로 요청하면 `res.status == "REASSIGNED"`, `res.reassignedFrom == 10000`, `res.baseChannel == 10040`, `res.blockId == 2` 반환 검증.
-3. **Rule 2 단일 경계 검증 (`TASK-125-12`):** `is_valid_block_range(baseChannel)`가 `baseChannel >= 10000 and baseChannel <= 49960 and (baseChannel - 10000) % 40 == 0`만으로 `[50000, 60020]`과 비겹침을 보장하고 `10040`은 `49960` 초과 시 `false` 반환함을 검증.
+3. **Rule 2 단일 경계 검증 (`TASK-125-12`):** `is_valid_block_range(baseChannel)`가 `baseChannel >= 10000 and baseChannel <= 49960 and (baseChannel - 10000) % 40 == 0`만으로 `[50000, 60020]`과 비겹침을 검증하고 `10040`은 `49960` 초과 시 `false` 반환함을 검증.
 4. **꺼진 점유자(Sleeping Occupant) 영속 리스 보호 (`TASK-125-3`):** `"AIRCRAFT_01"` 할당 후 `channel_manager.init(cfg, registryPath)`를 새 상태로 재로드해도 `"AIRCRAFT_01"` (`leaseState = "OFFLINE_RESERVED"` 또는 `"ACTIVE_LEASE"`)이 Block 1을 유지하여 신규 기체 `"AIRCRAFT_05"`가 Block 1을 탈취하지 못하고 Block 2 (`10040`)를 할당받음을 검증. `release_block` 명시 호출 시에만 Block 1 반환.
 5. **로컬 캐시 부팅 재검증 핸드셰이크 (`TASK-125-3`):** 기존 점유자 `"AIRCRAFT_01"`이 재부팅해 `preferredBase = 10000`, 동일 `hardwareUuid = "UUID-1"`으로 요청 시 `status == "ASSIGNED"`, `baseChannel == 10000` 재확인 반환; 반면 다른 `hardwareUuid = "UUID-NEW"`가 `preferredBase = 10000` 요청 시 `"REASSIGNED"`로 Block 2 할당 검증.
 
@@ -401,7 +401,7 @@ Expected: 다회 프로브 / 자기 UUID 필터 / 부팅 응답기 / 전 블록 
 
 - [ ] **Step 4: `AMM` `network_manager.lua` & `main.lua` 연결 (Green)**
 
-1. `network_manager:bind_modems` & `main.lua`: 부팅 즉시 `Base+0` (`CH_OPERATOR_C2`) 개방 및 블록 확정/캐시 시 온보드 모뎀 `Base+0..39` 40채널 전수 개방 보장(`TASK-125-4`, `TASK-125-11`), `step_sentinel_20hz`가 `GCS_WAIT`/`JITTER_WAIT`/`PROBING`/`REASSIGN_REQUEST`/`ACQUIRED` 상태를 비동기 스텝으로 구동하며 충돌 시 `conflictBase`를 실은 `MSG_BLOCK_REQUEST` 재요청 송신.
+1. `network_manager:bind_modems` & `main.lua`: 부팅 즉시 `Base+0` (`CH_OPERATOR_C2`) 개방 및 블록 확정/캐시 시 온보드 모뎀 `Base+0..39` 40채널 전수 개방 적용(`TASK-125-4`, `TASK-125-11`), `step_sentinel_20hz`가 `GCS_WAIT`/`JITTER_WAIT`/`PROBING`/`REASSIGN_REQUEST`/`ACQUIRED` 상태를 비동기 스텝으로 구동하며 충돌 시 `conflictBase`를 실은 `MSG_BLOCK_REQUEST` 재요청 송신.
 2. `main.lua` (`handle_modem_message`): 최상단에서 `domainId == self.domainId`인 정상 자국 패킷은 O(1) 즉시 정상 디스패치로 통과하고, `Base+0..39` 내 이종 `domainId` 패킷만 `channel_sentinel.record_intrusion_sample`로 전달해 카운트·차단하며 30초 연속 침범 시 `arbiter` / `trajectory` 안전 체공 전이 연동.
 
 - [ ] **Step 5: 단위 테스트 실행 & 커밋**

@@ -196,7 +196,7 @@ function channel_sentinel.init(config, now_ms, lease_path)
         intrusionSilenceResetMs = safe.intrusionSilenceResetMs or cfg.intrusionSilenceResetMs or DEFAULT_INTRUSION_SILENCE_RESET_MS,
         rngSeed = hash_uuid_seed(hwUuid, resolve_now_ms(now_ms)),
         bootstrapStartMs = 0,
-        gcsWaitStartedAtMs = 0,
+        gcsWaitStartedAtMs = nil,
         jitterStartMs = 0,
         jitterDelayMs = 0,
         probeStartMs = 0,
@@ -237,11 +237,14 @@ function channel_sentinel.start_bootstrap(state, now_ms)
 end
 
 function channel_sentinel.on_block_assign(state, payload, now_ms, rng)
+    if not state or state.status ~= "GCS_WAIT" then
+        return false
+    end
     if type(payload) == "table" and (payload.status == "DENIED" or payload.status == "FAILED") then
         state.locked = true
         state.status = "LOCKED_CONFLICT"
         state.conflictReason = payload.reason or "GCS_BLOCK_DENIED"
-        return
+        return true
     end
     local candidate = payload and payload.baseChannel
     if candidate and channel_sentinel.is_valid_base(candidate) then
@@ -257,6 +260,7 @@ function channel_sentinel.on_block_assign(state, payload, now_ms, rng)
     state.conflictReason = nil
     state.conflictBase = nil
     state.status = "JITTER_WAIT"
+    return true
 end
 
 function channel_sentinel.probe_channel(state, candidate_base, now_ms)

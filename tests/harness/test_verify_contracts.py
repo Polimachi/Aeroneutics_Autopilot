@@ -477,6 +477,7 @@ class TestContractsVerification(unittest.TestCase):
         i2_offsets = {m["offset"] for m in i2["channelMatchers"] if m.get("kind") == "aircraft_offset"}
         self.assertEqual(i2_offsets, {1, 9})
         i2_overrides = i2.get("packetChannelOverrides", {})
+        self.assertEqual(i2_overrides.get("MSG_ATTITUDE_CMD", {}).get("offset"), 1)
         self.assertEqual(i2_overrides.get("MSG_EMERGENCY_OVERRIDE", {}).get("offset"), 9)
         self.assertEqual(i2_overrides.get("MSG_EMERGENCY_ALERT", {}).get("offset"), 9)
 
@@ -535,8 +536,30 @@ class TestContractsVerification(unittest.TestCase):
                 "payload": {"stationId": "ST1", "bayId": 1, "baseHangarChannel": 101},
             },
         }
+        bad_attitude_on_ch9 = {
+            "suite": "test_strict_binding.lua",
+            "channel": 10009,
+            "replyChannel": 10009,
+            "from": "FCP",
+            "time": 100.0,
+            "payload": {
+                "ver": "1.9.5",
+                "domainId": "AIRCRAFT_01",
+                "seq": 4,
+                "type": "MSG_ATTITUDE_CMD",
+                "time": 100.0,
+                "payload": {
+                    "source": "FCP",
+                    "arm": True,
+                    "flightActive": True,
+                    "commandType": "QUATERNION_RATE",
+                    "targetAngularRates": {"pitch": 0.0, "roll": 0.0, "yaw": 0.0},
+                    "collectiveThrust": 0.5,
+                },
+            },
+        }
 
-        for bad_pkt in (bad_estop_on_ch1, bad_alert_on_ch1, bad_calib_on_ch0):
+        for bad_pkt in (bad_estop_on_ch1, bad_alert_on_ch1, bad_calib_on_ch0, bad_attitude_on_ch9):
             errs = validate_captured_packets([bad_pkt], contracts)
             self.assertTrue(
                 any("channel mismatch for strict interface binding" in e for e in errs),
@@ -548,6 +571,7 @@ class TestContractsVerification(unittest.TestCase):
             {**bad_alert_on_ch1, "channel": 10009, "replyChannel": 10009},
             {**bad_calib_on_ch0, "channel": 10008, "replyChannel": 10008},
             {**bad_calib_on_ch0, "channel": 101, "replyChannel": 101},
+            {**bad_attitude_on_ch9, "channel": 10001, "replyChannel": 10001},
         ]
         self.assertEqual(validate_captured_packets(valid_packets, contracts), [])
 

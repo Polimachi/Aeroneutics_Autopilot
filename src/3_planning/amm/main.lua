@@ -558,7 +558,9 @@ local function handle_sentinel_rx(app, chan, pkt, base, now_ms)
         channel_sentinel.on_probe_ack(app.sentinel, pkt)
         return true
     elseif (chan == 50000 or chan == base + 0) and pkt.type == "MSG_BLOCK_ASSIGN" then
-        channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
+        if app.sentinel.status == "GCS_WAIT" then
+            channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
+        end
         return true
     end
     return false
@@ -655,6 +657,10 @@ local function is_allowed_cross_domain_on_block(chan, pkt, base, sentinel, own_d
         return true
     end
     if chan == base + 8 and pkt.type == "MSG_CALIBRATION_INIT" then
+        return true
+    end
+    if chan == base + 9 and pkt.type == "MSG_EMERGENCY_OVERRIDE"
+        and (is_gcs_domain or p.source == "GCS" or p.source == "MFD" or p.authority == "GCS_OVERRIDE") then
         return true
     end
     return false
@@ -979,7 +985,11 @@ end
 
 local function step_sentinel_20hz(app, now)
     if not app.sentinel or not app.net then return end
+    local prev_status = app.sentinel.status
     local _, out_pkt = channel_sentinel.negotiate_and_probe(app.sentinel, now)
+    if prev_status ~= "ACQUIRED_OFFLINE" and app.sentinel.status == "ACQUIRED_OFFLINE" and app.arbiter then
+        app.arbiter.lastBanner = "[OFFLINE LEASE: " .. tostring(app.sentinel.offlineWarning or "NO_GCS_LEASE") .. "]"
+    end
     if out_pkt then
         if out_pkt.type == "MSG_BLOCK_REQUEST" then
             app.net:send_infra_packet(50000, out_pkt.type, out_pkt.payload)

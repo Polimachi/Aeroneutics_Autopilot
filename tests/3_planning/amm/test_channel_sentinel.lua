@@ -35,6 +35,7 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
             system = { domainId = "AIRCRAFT_03", hardwareUuid = "AMM-NODE-03-4402" },
             channels = { baseChannel = 10000 },
         }, 1000, lease_path)
+        assert_nil(st.gcsWaitStartedAtMs)
 
         local boot = channel_sentinel.start_bootstrap(st, 1000)
         assert_eq(boot.type, "MSG_BLOCK_REQUEST")
@@ -44,11 +45,13 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         assert_eq(st.status, "GCS_WAIT")
 
         -- MUT-03: invalid candidate 10060 must fall back to st.baseChannel
-        channel_sentinel.on_block_assign(st, { baseChannel = 10060, status = "ASSIGNED" }, 1020, function() return 0 end)
+        assert_true(channel_sentinel.on_block_assign(st, { baseChannel = 10060, status = "ASSIGNED" }, 1020, function() return 0 end))
         assert_eq(st.candidateBase, 10000)
 
+        -- Re-enter GCS_WAIT before accepting next block assignment
+        channel_sentinel.start_bootstrap(st, 1040)
         -- Valid candidate 10040 enters JITTER_WAIT with 0..100ms delay
-        channel_sentinel.on_block_assign(st, { baseChannel = 10040, status = "ASSIGNED" }, 1050, function() return 40 end)
+        assert_true(channel_sentinel.on_block_assign(st, { baseChannel = 10040, status = "ASSIGNED" }, 1050, function() return 40 end))
         assert_eq(st.candidateBase, 10040)
         assert_eq(st.status, "JITTER_WAIT")
         assert_true(st.jitterDelayMs >= 0 and st.jitterDelayMs <= 100)
@@ -112,6 +115,7 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
             channels = { baseChannel = 10000 },
         }, 1000, lease_path)
 
+        channel_sentinel.start_bootstrap(st, 1000)
         channel_sentinel.on_block_assign(st, { baseChannel = 10040, status = "ASSIGNED" }, 1050, function() return 0 end)
         local _, p1 = channel_sentinel.negotiate_and_probe(st, 1050)
         assert_eq(p1.type, "MSG_CHANNEL_PROBE")
@@ -170,9 +174,55 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
 
         -- GCS DENIED / FAILED directly locks LOCKED_CONFLICT
         local st_den = channel_sentinel.init({ system = { hardwareUuid = "AMM-DENY" } }, 1000, lease_path)
-        channel_sentinel.on_block_assign(st_den, { status = "DENIED", reason = "INVALID" }, 1050)
+        channel_sentinel.start_bootstrap(st_den, 1000)
+        assert_true(channel_sentinel.on_block_assign(st_den, { status = "DENIED", reason = "INVALID" }, 1050))
         assert_eq(st_den.status, "LOCKED_CONFLICT")
         assert_true(channel_sentinel.is_locked(st_den))
+
+        cleanup_lease(lease_path)
+    end)
+
+    it("ignores late or foreign MSG_BLOCK_ASSIGN unless state is GCS_WAIT", function()
+        local lease_path = "config/test_lease_guard_assign.json"
+        cleanup_lease(lease_path)
+
+        local st = channel_sentinel.init({
+            system = { domainId = "AIRCRAFT_01", hardwareUuid = "AMM-GUARD-01" },
+            channels = { baseChannel = 10040 },
+        }, 1000, lease_path)
+
+        -- INIT must ignore on_block_assign
+        assert_false(channel_sentinel.on_block_assign(st, { baseChannel = 10080, status = "ASSIGNED" }, 1010))
+        assert_eq(st.status, "INIT")
+        assert_eq(st.baseChannel, 10040)
+
+        -- ACQUIRED and ACQUIRED_OFFLINE must ignore foreign ASSIGNED and DENIED without hijacking/locking
+        for _, active_status in ipairs({ "ACQUIRED", "ACQUIRED_OFFLINE" }) do
+            st.status = active_status
+            st.baseChannel = 10040
+            st.candidateBase = 10040
+            st.locked = false
+            assert_false(channel_sentinel.on_block_assign(st, { baseChannel = 10120, status = "ASSIGNED" }, 1100))
+            assert_eq(st.status, active_status)
+            assert_eq(st.baseChannel, 10040)
+            assert_eq(st.candidateBase, 10040)
+            assert_false(st.locked)
+
+            assert_false(channel_sentinel.on_block_assign(st, { status = "DENIED", reason = "FOREIGN_DENY" }, 1120))
+            assert_eq(st.status, active_status)
+            assert_false(st.locked)
+        end
+
+        -- LOCKED_CONFLICT and LOCKED_NO_GCS must also ignore late ASSIGNED
+        for _, locked_status in ipairs({ "LOCKED_CONFLICT", "LOCKED_NO_GCS" }) do
+            st.status = locked_status
+            st.baseChannel = 10040
+            st.locked = true
+            assert_false(channel_sentinel.on_block_assign(st, { baseChannel = 10160, status = "ASSIGNED" }, 1200))
+            assert_eq(st.status, locked_status)
+            assert_eq(st.baseChannel, 10040)
+            assert_true(st.locked)
+        end
 
         cleanup_lease(lease_path)
     end)
