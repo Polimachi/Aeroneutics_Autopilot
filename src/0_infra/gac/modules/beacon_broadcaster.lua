@@ -5,6 +5,34 @@ local beacon_broadcaster = {}
 
 local PROTOCOL_VER = "1.9.5"
 
+local function extract_fac_pos(fac)
+    if type(fac.position) == "table" then return fac.position end
+    if type(fac.coordinates) == "table" then return fac.coordinates end
+    if type(fac.touchdownPoint) == "table" then return fac.touchdownPoint end
+    return nil
+end
+
+local function build_facility_snapshots(inventory)
+    if not (inventory and inventory.get_all_facilities) then return nil end
+    local list = {}
+    for _, fac in ipairs(inventory:get_all_facilities()) do
+        local isDed = false
+        if inventory.is_dedicated then isDed = inventory:is_dedicated(fac.facilityId) == true end
+        local pos = extract_fac_pos(fac)
+        table.insert(list, {
+            facilityId = fac.facilityId,
+            facilityType = fac.facilityType or fac.type or "LANDING_PAD",
+            status = fac.status or "UNKNOWN",
+            position = pos and { x = pos.x or 0, y = pos.y or 0, z = pos.z or 0 } or nil,
+            heading = fac.heading or 0.0,
+            endPoint = fac.endPoint,
+            tacticalChannel = fac.tacticalChannel,
+            dedicated = isDed
+        })
+    end
+    return list
+end
+
 function beacon_broadcaster.create(config)
     local cfg = config or {}
     local state = {
@@ -36,6 +64,7 @@ function beacon_broadcaster.create(config)
 
         local wind = surfaceWind or { speed = 0.0, direction = 0.0 }
         local status = sectorStatus or "OPERATIONAL"
+        local facilities = build_facility_snapshots(inventory)
 
         return {
             ver = PROTOCOL_VER,
@@ -55,7 +84,8 @@ function beacon_broadcaster.create(config)
                     direction = wind.direction or 0.0
                 },
                 mobility = cfg.mobility or "STATIC",
-                status = status
+                status = status,
+                facilities = facilities
             }
         }
     end

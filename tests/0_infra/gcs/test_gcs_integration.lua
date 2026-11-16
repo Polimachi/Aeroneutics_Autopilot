@@ -116,7 +116,7 @@ describe("GCS E2E closed-loop simulation integration", function()
         local new_active = app.fleet_tracker.get_active_craft(app.fleet)
         assert_eq(new_active.domainId, "DRONE_02")
         assert_true(modem:isOpen(10043), "Must open Base+3 for DRONE_02 (10043)")
-        assert_false(modem:isOpen(10003), "Must close Base+3 for AIRCRAFT_01 (10003)")
+        assert_true(modem:isOpen(10003), "Must keep Base+3 open for AIRCRAFT_01 (10003) for multi-craft fleet tracking")
 
         if fs.exists("config/test_e2e_registry.json") then fs.delete("config/test_e2e_registry.json") end
     end)

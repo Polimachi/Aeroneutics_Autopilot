@@ -334,7 +334,7 @@ def _is_under_deferred_dir(rel_path: str) -> bool:
 
 def verify_workspace(
     workspace_root: Path,
-    strict_gdrive_packages: bool = False,
+    strict_gdrive_packages: bool = True,
 ) -> VerificationReport:
     """Runs 3-way consistency verification across src/, manifest.lua, and gdrive_mapping.json."""
     report = VerificationReport()
@@ -642,6 +642,23 @@ def verify_workspace(
                 report.errors.append(
                     f"UNMAPPED_PACKAGE_FILE: '{repo_p}' is not present in gdrive_mapping.json files"
                 )
+        for lib_key, lib_info in sorted(shared_libs.items()):
+            rp = lib_info.get("repoPath")
+            gid = lib_info.get("gdriveId")
+            fid = (gdrive_files.get(rp) or {}).get("id") if isinstance(gdrive_files.get(rp), dict) else None
+            if rp and (not gid or fid != gid):
+                report.errors.append(
+                    f"PACKAGE_GDRIVE_ID_MISMATCH: SHARED_LIBS.{lib_key} '{rp}' manifest gdriveId={gid!r}, gdrive_mapping id={fid!r}"
+                )
+        for mod_id, mod_data in sorted(modules.items()):
+            for fentry in mod_data.get("files", []):
+                rp = fentry.get("repoPath")
+                gid = fentry.get("gdriveId")
+                fid = (gdrive_files.get(rp) or {}).get("id") if isinstance(gdrive_files.get(rp), dict) else None
+                if rp and (not gid or fid != gid):
+                    report.errors.append(
+                        f"PACKAGE_GDRIVE_ID_MISMATCH: MODULES.{mod_id} '{rp}' manifest gdriveId={gid!r}, gdrive_mapping id={fid!r}"
+                    )
 
     return report
 
@@ -659,7 +676,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--strict-gdrive-packages",
         action="store_true",
-        help="Require all package files (not only installer/bootstrap/shared) to be mapped in gdrive_mapping.json",
+        default=True,
+        help="Require all package files and manifest gdriveId fields to match gdrive_mapping.json (default: enabled)",
+    )
+    parser.add_argument(
+        "--no-strict-gdrive-packages",
+        action="store_false",
+        dest="strict_gdrive_packages",
+        help="Disable strict GDrive validation for package files",
     )
     return parser
 

@@ -479,6 +479,81 @@
       font-size: 12px;
       line-height: 1.45;
     }
+    #worldSelect {
+      max-width: 165px;
+      min-width: 96px;
+      flex: 0 1 165px;
+    }
+    #worldPresetDrawer {
+      position: fixed;
+      top: 52px;
+      left: 0;
+      bottom: 32px;
+      width: 410px;
+      max-width: 100vw;
+      z-index: 42;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px;
+      gap: 8px;
+      overscroll-behavior: contain;
+      overflow-y: auto;
+    }
+    #worldPresetDrawer[hidden] { display: none; }
+    .world-subcard {
+      border: 1px solid var(--border-default);
+      border-radius: 4px;
+      background: var(--bg-elevated);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .world-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .world-fac-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 260px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .world-fac-item {
+      border: 1px solid var(--border-default);
+      border-radius: 4px;
+      background: var(--bg-panel);
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .fac-warn-box {
+      grid-column: 1 / -1;
+      border: 1px solid var(--accent-amber);
+      border-radius: 4px;
+      background: #3b260866;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .fac-toolbar-row {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     .bottom-validation-bar {
       flex: 0 0 auto;
       background: var(--bg-panel);
@@ -511,6 +586,40 @@
       text-align: left;
       font-size: 12px;
       padding: 4px 8px;
+    }
+    .live-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border-default);
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+    }
+    .live-badge.online {
+      color: #34d399;
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.14);
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop[hidden] { display: none; }
+    .push-modal-card {
+      width: 390px;
+      max-width: 92vw;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     @media (pointer: fine) {
       ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -545,6 +654,8 @@
       </div>
       <button id="btnUndo" type="button" title="Ctrl+Z">Undo</button>
       <button id="btnRedo" type="button" title="Ctrl+Y">Redo</button>
+      <select id="worldSelect" aria-label="Select active world preset"></select>
+      <button id="btnWorldPresets" type="button" aria-expanded="false" aria-controls="worldPresetDrawer">Worlds</button>
       <select id="presetSelect" aria-label="Load mission preset">
         <option value="">Presets…</option>
         <option value="MSN_RECON_001">MSN_RECON_001 (Recon Orbit)</option>
@@ -556,6 +667,9 @@
       <button id="btnRawJson" type="button" aria-expanded="false" aria-controls="rawJsonDrawer">Raw JSON</button>
       <button id="btnCopyJson" type="button">Copy JSON</button>
       <button id="btnExportJson" type="button" class="btn-primary">Export .json</button>
+      <button id="btnConnectLive" type="button" aria-pressed="false" title="Connect to localhost GCS Live Bridge">Connect Live</button>
+      <span id="liveFleetBadge" class="live-badge mono tabular" role="status" aria-live="polite" translate="no">LIVE: OFF</span>
+      <button id="btnPushAircraft" type="button">Push to Aircraft</button>
       <div class="header-spacer"></div>
       <div id="toastBanner" class="toast-banner" role="status" aria-live="polite" hidden></div>
     </header>
@@ -585,6 +699,8 @@
             <button id="btnToggleSnap" type="button" aria-pressed="true">Snap 10m</button>
             <button id="btnFitView" type="button">Fit</button>
             <button id="btnToggleAltProfile" type="button" aria-expanded="false" aria-controls="altProfilePane">Alt Profile</button>
+            <button id="btnToggleFacilities" type="button" aria-pressed="true" title="Show/hide active world facilities on 2D map">Facilities</button>
+            <button id="btnPickFacilityTool" type="button" aria-pressed="false" title="Click map to pick coordinates for facility form">Pick Fac</button>
             <span id="zoomReadout" class="mono tabular" style="font-size:11px;color:var(--text-muted)">100%</span>
           </div>
           <div id="emptyCanvasCta" class="empty-cta">
@@ -622,6 +738,46 @@
       <textarea id="rawJsonTextarea" aria-label="Raw mission JSON"></textarea>
     </aside>
 
+    <aside id="worldPresetDrawer" aria-label="World Facility Presets" hidden>
+      <div class="rail-header" style="padding:0 0 4px 0">
+        <strong style="flex:1 1 auto">World Facility Presets</strong>
+        <button id="btnExportWorlds" type="button">Export Worlds</button>
+        <button id="btnImportWorlds" type="button">Import Worlds</button>
+        <input id="worldFileImportInput" type="file" accept=".json,application/json" hidden>
+        <button id="btnCloseWorldDrawer" type="button" aria-label="Close world preset drawer">Close</button>
+      </div>
+      <div class="world-subcard">
+        <div class="world-row">
+          <select id="drawerWorldSelect" aria-label="Manage active world" style="flex:1 1 auto"></select>
+          <button id="btnDeleteWorld" type="button">Del World</button>
+        </div>
+        <div class="world-row">
+          <input id="newWorldNameInput" type="text" placeholder="World name…" aria-label="World name" spellcheck="false" autocomplete="off" style="flex:1 1 auto">
+          <button id="btnAddWorld" type="button" class="btn-primary">+ World</button>
+          <button id="btnRenameWorld" type="button">Rename</button>
+        </div>
+      </div>
+      <div class="world-subcard">
+        <div class="world-row">
+          <strong style="flex:1 1 auto;font-size:12px">Add / Edit Facility</strong>
+          <button id="btnPickFacFromMap" type="button">Pick on Map</button>
+          <button id="btnCancelFacEdit" type="button">Clear</button>
+        </div>
+        <div class="form-grid">
+          <label class="field-group"><span class="field-label">facilityId</span><input id="facIdInput" type="text" class="mono" placeholder="PAD_ALPHA" translate="no" spellcheck="false" autocomplete="off"></label>
+          <label class="field-group"><span class="field-label">label</span><input id="facLabelInput" type="text" placeholder="Alpha North Pad" spellcheck="false" autocomplete="off"></label>
+          <label class="field-group"><span class="field-label">type</span><select id="facTypeSelect"><option value="LANDING_PAD">LANDING_PAD</option><option value="RUNWAY">RUNWAY</option><option value="DOCKING_ARM">DOCKING_ARM</option><option value="WAYPOINT">WAYPOINT</option></select></label>
+          <label class="field-group"><span class="field-label">headingDeg</span><input id="facHdgInput" type="number" step="5" placeholder="0"></label>
+          <label class="field-group"><span class="field-label">X</span><input id="facXInput" type="number" step="1" placeholder="0"></label>
+          <label class="field-group"><span class="field-label">Z</span><input id="facZInput" type="number" step="1" placeholder="0"></label>
+          <label class="field-group"><span class="field-label">Y (opt alt)</span><input id="facYInput" type="number" step="1" placeholder="65"></label>
+          <label class="field-group"><span class="field-label">notes</span><input id="facNotesInput" type="text" placeholder="Optional note…"></label>
+        </div>
+        <button id="btnSaveFacility" type="button" class="btn-primary">Save Facility</button>
+      </div>
+      <div id="worldFacilityList" class="world-fac-list"></div>
+    </aside>
+
     <footer id="validationBar" class="bottom-validation-bar">
       <div class="validation-strip">
         <span id="validationSummary" class="mono tabular" style="flex:1 1 auto">0 Errors · 0 Warnings</span>
@@ -634,6 +790,22 @@
       </div>
       <div id="validationList" class="validation-list" hidden></div>
     </footer>
+
+    <div id="pushAircraftModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pushModalTitle" hidden>
+      <div class="push-modal-card">
+        <div class="rail-header" style="padding:0">
+          <strong id="pushModalTitle" style="flex:1 1 auto">Push Mission to Aircraft</strong>
+          <button id="btnClosePushModal" type="button" aria-label="Close push modal">✕</button>
+        </div>
+        <label class="field-group"><span class="field-label">Target Aircraft</span><select id="pushCraftSelect" aria-label="Target aircraft"></select></label>
+        <label class="field-group"><span class="field-label">Dispatch Action</span><select id="pushActionSelect" aria-label="Mission push action"><option value="LOAD">LOAD (Upload &amp; Stage Only)</option><option value="RUN">RUN (Upload &amp; Execute Immediately)</option></select></label>
+        <label class="world-row" style="font-size:12px;cursor:pointer"><input id="pushSaveToDiskCheck" type="checkbox" checked> <span>Save /missions/&lt;missionId&gt;.json on aircraft</span></label>
+        <div class="world-row" style="justify-content:flex-end">
+          <button id="btnCancelPushModal" type="button">Cancel</button>
+          <button id="btnConfirmPushMission" type="button" class="btn-primary">Send Mission</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script>
     "use strict";
@@ -686,6 +858,7 @@
           ACT_TKL_TRANS_FW2MC: { domain: "TKL", label: "Transition FW->MC", summary: "고정익에서 멀티콥터 천이", spatial: false },
           ACT_TKL_LAND_NORM: { domain: "TKL", label: "Normal Land", summary: "일반 착륙 (facilityId 또는 targetPos)", spatial: true, optionalPos: true },
           ACT_TKL_LAND_PREC: { domain: "TKL", label: "Precision Land", summary: "정밀 착륙 패드 유도 착륙", spatial: true, optionalPos: true },
+          ACT_TKL_LAND_NEAREST: { domain: "TKL", label: "Land Nearest", summary: "가용 최근접 착륙장 자동 탐색 착륙 (facilityTypeFilter, maxRangeM)", spatial: true, optionalPos: true },
           ACT_TKL_ABORT_LAND: { domain: "TKL", label: "Abort Land", summary: "착륙 중단 및 복행 상승", spatial: true, optionalPos: true },
 
           ACT_NAV_GOTO_WP: { domain: "NAV", label: "Go-To Waypoint", summary: "정밀 정지 3D 경유점 (기본 반경 5.0m, settleTicks 4)", spatial: true },
@@ -843,12 +1016,24 @@
         const HOOK_TYPES = ["REDSTONE_SET", "REDSTONE_PULSE", "ZONE3_PAYLOAD_CMD", "NOTIFY_OPERATOR"];
         const HOOK_PHASES = ["onEnter", "onExit", "onAbort"];
 
+        const FACILITY_TYPES = ["LANDING_PAD", "RUNWAY", "DOCKING_ARM", "WAYPOINT"];
+        const FACILITY_TYPE_FILTERS = ["ANY", "LANDING_PAD", "RUNWAY"];
+        const getCompatibleFacilityTypes = (action) => {
+          const act = String(action || "");
+          if (act.startsWith("ACT_MOB_")) return ["DOCKING_ARM", "LANDING_PAD", "RUNWAY"];
+          if (act.startsWith("ACT_TKL_") || act.startsWith("MAC_")) return ["LANDING_PAD", "RUNWAY"];
+          return FACILITY_TYPES.slice();
+        };
+
         return {
           DEFAULTS_BASELINE,
           EXECUTION_MODES,
           FALLBACK_POLICIES,
           HEADING_MODES,
           AIRFRAME_TYPES,
+          FACILITY_TYPES,
+          FACILITY_TYPE_FILTERS,
+          getCompatibleFacilityTypes,
           REDSTONE_SIDES,
           BUNDLED_COLORS,
           ACTIVE_ACTIONS,
@@ -914,6 +1099,7 @@
           if (a === "ACT_NAV_GOTO_WP" || a === "ACT_NAV_CORRIDOR") return `PROXIMITY_3D (toleranceM: ${r.acceptanceRadius}m, settleTicks: 4)`;
           if (a === "ACT_TKL_TAKEOFF_VERT" || a === "ACT_NAV_CHANGE_ALT" || a === "ACT_PAT_LOITER_ALT") return "ALTITUDE_REACHED (toleranceM: 5.0m, settleTicks: 4)";
           if (a === "ACT_TKL_LAND_NORM" || a === "ACT_TKL_LAND_PREC") return `FACILITY_TOUCHDOWN (${p.facilityId || "PAD"})`;
+          if (a === "ACT_TKL_LAND_NEAREST") return `FACILITY_TOUCHDOWN (NEAREST: ${p.facilityTypeFilter || "ANY"})`;
           if (a === "ACT_PAT_LOITER_TIME" || a === "ACT_PAT_HOLD_POS" || a === "ACT_PAT_POI_HOLD") {
             return isFiniteNum(p.durationSec) ? `DURATION_SEC (${p.durationSec}s)` : "Manual hold (next/stop)";
           }
@@ -1004,9 +1190,13 @@
             out.awaitAck = prev.awaitAck !== false;
           }
           for (const k of Object.keys(prev)) {
-            if (!SHARED_PARAM_KEYS.has(k) && k === "facilityId" && (nextAction.startsWith("ACT_TKL_") || nextAction.startsWith("ACT_MOB_") || nextAction.startsWith("MAC_"))) {
+            if (!SHARED_PARAM_KEYS.has(k) && k === "facilityId" && nextAction !== "ACT_TKL_LAND_NEAREST" && (nextAction.startsWith("ACT_TKL_") || nextAction.startsWith("ACT_MOB_") || nextAction.startsWith("MAC_"))) {
               out.facilityId = prev.facilityId;
             }
+          }
+          if (nextAction === "ACT_TKL_LAND_NEAREST") {
+            out.facilityTypeFilter = SchemaConstants.FACILITY_TYPE_FILTERS.includes(prev.facilityTypeFilter) ? prev.facilityTypeFilter : "ANY";
+            if (isFiniteNum(prev.maxRangeM) && prev.maxRangeM > 0) out.maxRangeM = prev.maxRangeM;
           }
           return out;
         };
@@ -1079,6 +1269,280 @@
         };
 
         return { normalizeShortcutCoords, extractExtras, mergeExtras, cleanActionSwitchParams, expandMacroCheckpoint };
+      })();
+      const WorldStore = (() => {
+        const STORAGE_KEY = "uafs_amm_world_presets_v1";
+        const listeners = new Set();
+        const DEFAULT_WORLD_ID = "WORLD_DEFAULT";
+        const makeDefaultWorld = () => ({ worldId: DEFAULT_WORLD_ID, name: "Default World", facilities: [] });
+
+        const sanitizeFacility = (raw) => {
+          if (!raw || typeof raw !== "object") return null;
+          const fid = typeof raw.facilityId === "string" ? raw.facilityId.trim() : "";
+          const x = Number(raw.x), z = Number(raw.z);
+          if (!fid || !Number.isFinite(x) || !Number.isFinite(z)) return null;
+          const ftype = SchemaConstants.FACILITY_TYPES.includes(raw.type) ? raw.type : "LANDING_PAD";
+          const entry = {
+            facilityId: fid,
+            label: typeof raw.label === "string" && raw.label.trim() ? raw.label.trim() : fid,
+            type: ftype,
+            x,
+            z,
+          };
+          if (raw.y !== undefined && raw.y !== "" && Number.isFinite(Number(raw.y))) entry.y = Number(raw.y);
+          if (raw.headingDeg !== undefined && raw.headingDeg !== "" && Number.isFinite(Number(raw.headingDeg))) {
+            entry.headingDeg = Number(raw.headingDeg);
+          }
+          if (typeof raw.notes === "string" && raw.notes.trim()) entry.notes = raw.notes.trim();
+          return entry;
+        };
+
+        const sanitizeWorld = (raw, fallbackIdx) => {
+          if (!raw || typeof raw !== "object") return null;
+          const wid = typeof raw.worldId === "string" && raw.worldId.trim()
+            ? raw.worldId.trim()
+            : `WORLD_${(fallbackIdx || 1)}`;
+          const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : wid;
+          const seen = new Set();
+          const facilities = [];
+          for (const f of Array.isArray(raw.facilities) ? raw.facilities : []) {
+            const clean = sanitizeFacility(f);
+            if (clean && !seen.has(clean.facilityId)) {
+              seen.add(clean.facilityId);
+              facilities.push(clean);
+            }
+          }
+          return { worldId: wid, name, facilities };
+        };
+
+        const loadInitialState = () => {
+          const fallback = { activeWorldId: DEFAULT_WORLD_ID, worlds: [makeDefaultWorld()] };
+          try {
+            if (typeof localStorage === "undefined") return fallback;
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return fallback;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.worlds) || parsed.worlds.length === 0) return fallback;
+            const worlds = [];
+            const seenW = new Set();
+            parsed.worlds.forEach((w, idx) => {
+              const cw = sanitizeWorld(w, idx + 1);
+              if (cw && !seenW.has(cw.worldId)) {
+                seenW.add(cw.worldId);
+                worlds.push(cw);
+              }
+            });
+            if (worlds.length === 0) return fallback;
+            const activeId = seenW.has(parsed.activeWorldId) ? parsed.activeWorldId : worlds[0].worldId;
+            return { activeWorldId: activeId, worlds };
+          } catch (_) {
+            return fallback;
+          }
+        };
+
+        let storeState = loadInitialState();
+
+        const persist = () => {
+          try {
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(storeState));
+            }
+          } catch (_) {}
+        };
+
+        const emit = (reason) => {
+          persist();
+          for (const fn of listeners) {
+            try { fn(storeState, reason || "world_change"); } catch (_) {}
+          }
+        };
+
+        const subscribe = (fn) => {
+          listeners.add(fn);
+          return () => listeners.delete(fn);
+        };
+
+        const findWorld = (worldId) => {
+          const wid = worldId || storeState.activeWorldId;
+          return storeState.worlds.find((w) => w.worldId === wid) || storeState.worlds[0];
+        };
+
+        const getState = () => deepClone(storeState);
+        const getWorlds = () => deepClone(storeState.worlds);
+        const getActiveWorld = () => deepClone(findWorld(storeState.activeWorldId));
+        const getFacilities = (worldId) => deepClone(findWorld(worldId).facilities || []);
+        const getFacility = (facilityId, worldId) => {
+          if (typeof facilityId !== "string" || !facilityId.trim()) return null;
+          const fac = (findWorld(worldId).facilities || []).find((f) => f.facilityId === facilityId.trim());
+          return fac ? deepClone(fac) : null;
+        };
+        const getFacilitiesByType = (types, worldId) => {
+          const allow = Array.isArray(types) ? new Set(types) : null;
+          return getFacilities(worldId).filter((f) => !allow || allow.has(f.type));
+        };
+
+        const setActiveWorld = (worldId) => {
+          const found = storeState.worlds.find((w) => w.worldId === worldId);
+          if (!found) return false;
+          storeState.activeWorldId = found.worldId;
+          emit("world_select");
+          return true;
+        };
+
+        const createWorld = (name) => {
+          const label = typeof name === "string" && name.trim() ? name.trim() : `World ${storeState.worlds.length + 1}`;
+          const baseId = `WORLD_${label.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "") || "NEW"}`;
+          let wid = baseId;
+          let seq = 2;
+          while (storeState.worlds.some((w) => w.worldId === wid)) wid = `${baseId}_${seq++}`;
+          const next = { worldId: wid, name: label, facilities: [] };
+          storeState.worlds.push(next);
+          storeState.activeWorldId = wid;
+          emit("world_create");
+          return deepClone(next);
+        };
+
+        const renameWorld = (worldId, name) => {
+          const w = findWorld(worldId);
+          const clean = typeof name === "string" ? name.trim() : "";
+          if (!w || !clean) return false;
+          w.name = clean;
+          emit("world_rename");
+          return true;
+        };
+
+        const deleteWorld = (worldId) => {
+          const targetId = worldId || storeState.activeWorldId;
+          if (storeState.worlds.length <= 1) {
+            storeState.worlds[0].facilities = [];
+            emit("world_clear");
+            return true;
+          }
+          const idx = storeState.worlds.findIndex((w) => w.worldId === targetId);
+          if (idx < 0) return false;
+          storeState.worlds.splice(idx, 1);
+          if (storeState.activeWorldId === targetId) {
+            storeState.activeWorldId = storeState.worlds[0].worldId;
+          }
+          emit("world_delete");
+          return true;
+        };
+
+        const upsertFacility = (rawEntry, originalId, worldId) => {
+          const clean = sanitizeFacility(rawEntry);
+          if (!clean) return { ok: false, error: "INVALID_FACILITY_DATA" };
+          const w = findWorld(worldId);
+          const conflict = w.facilities.find((f) => f.facilityId === clean.facilityId && f.facilityId !== originalId);
+          if (conflict && originalId !== undefined && originalId !== null) {
+            return { ok: false, error: "DUPLICATE_FACILITY_ID" };
+          }
+          const idx = w.facilities.findIndex((f) => f.facilityId === (originalId || clean.facilityId));
+          if (idx >= 0) w.facilities[idx] = clean;
+          else w.facilities.push(clean);
+          emit("facility_upsert");
+          return { ok: true, facility: deepClone(clean) };
+        };
+
+        const deleteFacility = (facilityId, worldId) => {
+          const w = findWorld(worldId);
+          const idx = w.facilities.findIndex((f) => f.facilityId === facilityId);
+          if (idx < 0) return false;
+          w.facilities.splice(idx, 1);
+          emit("facility_delete");
+          return true;
+        };
+
+        const applyFacilityToCheckpoint = (cp, fac, targetField) => {
+          if (!cp || !fac) return cp;
+          cp.params = cp.params || {};
+          const p = cp.params;
+          const act = String(cp.action || "");
+          const tf = targetField || (act === "ACT_PAY_SET_ROI" ? "poiPos" : "targetPos");
+          const xz = { x: Number(fac.x), z: Number(fac.z) };
+          if (tf === "poiPos") {
+            p.poiPos = isFiniteNum(fac.y) ? { x: xz.x, y: Number(fac.y), z: xz.z } : deepClone(xz);
+          } else if (tf === "endPos" && act === "ACT_NAV_CORRIDOR") {
+            p.endPos = deepClone(xz);
+          } else if (act === "ACT_NAV_CORRIDOR") {
+            p.startPos = deepClone(xz);
+          } else {
+            p.targetPos = deepClone(xz);
+          }
+          const isFacAction = (act.startsWith("ACT_TKL_") && act !== "ACT_TKL_LAND_NEAREST") || act.startsWith("ACT_MOB_") || act.startsWith("MAC_");
+          if (isFacAction && fac.type !== "WAYPOINT") {
+            p.facilityId = fac.facilityId;
+          }
+          const shouldCopyAlt = act === "ACT_TKL_TAKEOFF_VERT" || act === "ACT_TKL_LAND_NORM" || act === "ACT_TKL_LAND_PREC" || act === "ACT_TKL_LAND_NEAREST" || act.startsWith("ACT_MOB_");
+          if (shouldCopyAlt && isFiniteNum(fac.y)) {
+            p.targetAlt = Number(fac.y);
+          }
+          return cp;
+        };
+
+        const exportWorldsJson = (singleWorldOnly) => {
+          const worlds = singleWorldOnly ? [getActiveWorld()] : getWorlds();
+          return JSON.stringify({ schemaVersion: "1.0.0", activeWorldId: storeState.activeWorldId, worlds }, null, 2);
+        };
+
+        const importWorldsJson = (rawTextOrObj, mode) => {
+          try {
+            const parsed = typeof rawTextOrObj === "string" ? JSON.parse(rawTextOrObj) : deepClone(rawTextOrObj);
+            if (!parsed || typeof parsed !== "object") return { ok: false, error: "INVALID_WORLD_JSON" };
+            const incoming = Array.isArray(parsed.worlds) ? parsed.worlds : (Array.isArray(parsed.facilities) ? [parsed] : null);
+            if (!incoming || incoming.length === 0) return { ok: false, error: "NO_WORLDS_FOUND" };
+            const cleaned = [];
+            incoming.forEach((w, idx) => {
+              const cw = sanitizeWorld(w, idx + 1);
+              if (cw) cleaned.push(cw);
+            });
+            if (cleaned.length === 0) return { ok: false, error: "NO_VALID_WORLDS" };
+            if (mode === "replace") {
+              storeState.worlds = cleaned;
+              storeState.activeWorldId = (parsed.activeWorldId && cleaned.some((w) => w.worldId === parsed.activeWorldId))
+                ? parsed.activeWorldId
+                : cleaned[0].worldId;
+            } else {
+              for (const nw of cleaned) {
+                const existing = storeState.worlds.find((w) => w.worldId === nw.worldId);
+                if (existing) {
+                  existing.name = nw.name;
+                  for (const nf of nw.facilities) {
+                    const eIdx = existing.facilities.findIndex((f) => f.facilityId === nf.facilityId);
+                    if (eIdx >= 0) existing.facilities[eIdx] = nf;
+                    else existing.facilities.push(nf);
+                  }
+                } else {
+                  storeState.worlds.push(nw);
+                }
+              }
+              storeState.activeWorldId = cleaned[0].worldId;
+            }
+            emit("world_import");
+            return { ok: true, count: cleaned.length, activeWorldId: storeState.activeWorldId };
+          } catch (err) {
+            return { ok: false, error: "JSON_PARSE_ERROR", message: err.message };
+          }
+        };
+
+        return {
+          STORAGE_KEY,
+          subscribe,
+          getState,
+          getWorlds,
+          getActiveWorld,
+          setActiveWorld,
+          createWorld,
+          renameWorld,
+          deleteWorld,
+          getFacilities,
+          getFacility,
+          getFacilitiesByType,
+          upsertFacility,
+          deleteFacility,
+          applyFacilityToCheckpoint,
+          exportWorldsJson,
+          importWorldsJson,
+        };
       })();
       const Validator = (() => {
         const KNOWN_PRECOND_MAP = (() => {
@@ -1372,6 +1836,20 @@
             if (act === "ACT_PAY_REDSTONE" && p.side !== undefined && !SchemaConstants.REDSTONE_SIDES.includes(p.side)) {
               pushIssue(errors, "ERROR", "INVALID_PARAM_RANGE", "ACT_PAY_REDSTONE requires valid Redstone side.", seq, `${cpPath}.params.side`);
             }
+            if (act === "ACT_TKL_LAND_NEAREST") {
+              if (p.facilityTypeFilter !== undefined && !SchemaConstants.FACILITY_TYPE_FILTERS.includes(p.facilityTypeFilter)) {
+                pushIssue(errors, "ERROR", "INVALID_FACILITY_TYPE_FILTER", `facilityTypeFilter '${p.facilityTypeFilter}' must be ANY, LANDING_PAD, or RUNWAY.`, seq, `${cpPath}.params.facilityTypeFilter`);
+              }
+              if (p.maxRangeM !== undefined && (!isFiniteNum(p.maxRangeM) || p.maxRangeM <= 0)) {
+                pushIssue(errors, "ERROR", "INVALID_MAX_RANGE_M", "maxRangeM must be a positive finite number.", seq, `${cpPath}.params.maxRangeM`);
+              }
+            }
+            if (typeof p.facilityId === "string" && p.facilityId.trim()) {
+              const facList = (opts && Array.isArray(opts.worldFacilities)) ? opts.worldFacilities : WorldStore.getFacilities();
+              if (!facList.some((f) => f.facilityId === p.facilityId.trim())) {
+                pushIssue(warnings, "WARNING", "UNREGISTERED_FACILITY_ID", `Facility '${p.facilityId.trim()}' is not registered in the active world preset.`, seq, `${cpPath}.params.facilityId`);
+              }
+            }
             if (isFiniteNum(p.targetAlt) && p.targetAlt < 0) {
               pushIssue(warnings, "WARNING", "INVALID_PARAM_RANGE", `targetAlt (${p.targetAlt}m) is negative.`, seq, `${cpPath}.params.targetAlt`);
             }
@@ -1435,6 +1913,10 @@
             targetAirframe: "WINGED_VTOL",
             altProfileOpen: false,
             rawJsonOpen: false,
+            worldDrawerOpen: false,
+            showWorldFacilities: true,
+            activeTool: "SELECT",
+            editingFacilityId: null,
             validationOpen: false,
             validationFilter: "ALL",
             gridSnap: true,
@@ -1468,6 +1950,7 @@
         const revalidate = () => {
           state.lastValidation = Validator.validateMission(state.mission, {
             targetAirframe: state.ui.targetAirframe,
+            worldFacilities: WorldStore.getFacilities(),
           });
         };
 
@@ -1812,6 +2295,10 @@
           cpError: "#f87171",
           cpWarn: "#fb923c",
           cpMacro: "#c084fc",
+          facPad: "rgba(34, 211, 238, 0.55)",
+          facRunway: "rgba(16, 185, 129, 0.55)",
+          facDock: "rgba(167, 139, 250, 0.55)",
+          facWp: "rgba(245, 158, 11, 0.55)",
           text: "#e2e8f0",
           muted: "#94a3b8",
         };
@@ -2015,6 +2502,33 @@
           ctx.strokeStyle = COLORS.axisZ;
           ctx.beginPath(); ctx.moveTo(origin.sx, 0); ctx.lineTo(origin.sx, height); ctx.stroke();
 
+          // Layer 1.5: Active World Background Facility Pins
+          if (st.ui.showWorldFacilities !== false) {
+            const worldFacs = WorldStore.getFacilities();
+            ctx.font = "10px monospace";
+            for (const fac of worldFacs) {
+              const sf = worldToScreen(fac.x, fac.z, view);
+              if (sf.sx < -40 || sf.sx > width + 40 || sf.sy < -40 || sf.sy > height + 40) continue;
+              const fCol = fac.type === "RUNWAY" ? COLORS.facRunway : (fac.type === "DOCKING_ARM" ? COLORS.facDock : (fac.type === "WAYPOINT" ? COLORS.facWp : COLORS.facPad));
+              ctx.save();
+              ctx.strokeStyle = fCol;
+              ctx.fillStyle = fCol;
+              ctx.lineWidth = 1.5;
+              if (fac.type === "RUNWAY") {
+                ctx.strokeRect(sf.sx - 8, sf.sy - 4, 16, 8);
+              } else if (fac.type === "DOCKING_ARM") {
+                ctx.beginPath();
+                ctx.moveTo(sf.sx, sf.sy - 7); ctx.lineTo(sf.sx + 7, sf.sy);
+                ctx.lineTo(sf.sx, sf.sy + 7); ctx.lineTo(sf.sx - 7, sf.sy);
+                ctx.closePath(); ctx.stroke();
+              } else {
+                ctx.strokeRect(sf.sx - 5, sf.sy - 5, 10, 10);
+              }
+              ctx.fillText(fac.facilityId, sf.sx + 9, sf.sy + 3);
+              ctx.restore();
+            }
+          }
+
           // Layer 2: Corridors & Geofence
           for (let i = 0; i < cps.length; i++) {
             const cp = cps[i];
@@ -2133,13 +2647,81 @@
             ctx.fillText(c.label, c.sx + 10, ly);
           }
 
-          // Layer 8: Cursor HUD
+          // Layer 7.5: Live Multi-Craft Telemetry & Trails (TASK-404)
+          if (typeof LiveBridge !== "undefined") {
+            const liveCrafts = LiveBridge.getFleetCrafts();
+            const trailsMap = LiveBridge.getTrails();
+            for (const lc of liveCrafts) {
+              const pts = trailsMap[lc.domainId] || [];
+              if (pts.length > 1) {
+                ctx.save();
+                ctx.strokeStyle = lc.isStale ? COLORS.muted : COLORS.facRunway;
+                ctx.lineWidth = 1.5;
+                if (typeof ctx.setLineDash === "function") ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                for (let ti = 0; ti < pts.length; ti++) {
+                  const stp = worldToScreen(pts[ti].x, pts[ti].z, view);
+                  if (ti === 0) ctx.moveTo(stp.sx, stp.sy);
+                  else ctx.lineTo(stp.sx, stp.sy);
+                }
+                ctx.stroke();
+                if (typeof ctx.setLineDash === "function") ctx.setLineDash([]);
+                ctx.restore();
+              }
+              if (lc.position && isFiniteNum(lc.position.x) && isFiniteNum(lc.position.z)) {
+                const sc = worldToScreen(lc.position.x, lc.position.z, view);
+                const hdgDeg = (lc.attitude && isFiniteNum(lc.attitude.yaw)) ? lc.attitude.yaw : 0;
+                const rad = (hdgDeg * Math.PI) / 180;
+                const fwdX = Math.sin(rad);
+                const fwdY = -Math.cos(rad);
+                const rightX = Math.cos(rad);
+                const rightY = Math.sin(rad);
+                ctx.fillStyle = lc.isStale ? COLORS.muted : COLORS.facRunway;
+                ctx.beginPath();
+                ctx.moveTo(sc.sx + fwdX * 10, sc.sy + fwdY * 10);
+                ctx.lineTo(sc.sx - fwdX * 7 + rightX * 6, sc.sy - fwdY * 7 + rightY * 6);
+                ctx.lineTo(sc.sx - fwdX * 3, sc.sy - fwdY * 3);
+                ctx.lineTo(sc.sx - fwdX * 7 - rightX * 6, sc.sy - fwdY * 7 - rightY * 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = lc.isStale ? COLORS.muted : COLORS.text;
+                ctx.font = "11px monospace";
+                ctx.fillText(`${lc.domainId} (${lc.fsmState || "?"})`, sc.sx + 10, sc.sy - 6);
+              }
+            }
+          }
+
+          // Layer 8: 4-Edge (X, Z) Coordinate Rulers & Cursor HUD
+          ctx.fillStyle = COLORS.muted;
+          ctx.font = "10px monospace";
+          for (let wx = startX; wx <= botRight.x; wx += stepWorld) {
+            const px = worldToScreen(wx, 0, view).sx;
+            if (px < 20 || px > width - 28) continue;
+            if (px >= 380) ctx.fillText(String(Math.round(wx)), px + 2, 13);
+            if (px >= 220) ctx.fillText(String(Math.round(wx)), px + 2, height - 7);
+          }
+          for (let wz = startZ; wz <= botRight.z; wz += stepWorld) {
+            const py = worldToScreen(0, wz, view).sy;
+            if (py < 42 || py > height - 28) continue;
+            ctx.fillText(String(Math.round(wz)), 6, py - 2);
+            const lbl = String(Math.round(wz));
+            ctx.fillText(lbl, Math.max(8, width - 6 - lbl.length * 6), py - 2);
+          }
           if (cursorWorld) {
             ctx.fillStyle = COLORS.muted;
             ctx.font = "11px monospace";
             ctx.fillText(`X:${Math.round(cursorWorld.x)} Z:${Math.round(cursorWorld.z)} (${Math.round(view.zoom * 100)}%)`, 12, height - 12);
           }
           ctx.restore();
+        };
+
+        const hitTestFacilityPin = (sx, sy, view) => {
+          const facs = WorldStore.getFacilities();
+          for (const fac of facs) {
+            const sf = worldToScreen(fac.x, fac.z, view);
+            if (Math.hypot(sx - sf.sx, sy - sf.sy) <= 14) return fac;
+          }
+          return null;
         };
 
         const renderAltProfile = () => {
@@ -2232,6 +2814,19 @@
             const st = Store.getState();
             const pt = localPt(e);
             const view = { offsetX: st.ui.viewOffset.x, offsetZ: st.ui.viewOffset.z, zoom: st.ui.zoom, width: pt.width, height: pt.height };
+            if (e.button === 0 && st.ui.activeTool === "PICK_FACILITY") {
+              const cw = screenToWorld(pt.sx, pt.sy, view);
+              const snapOn = e.altKey ? false : st.ui.gridSnap;
+              const wx = snapCoord(cw.x, st.ui.gridStep, snapOn);
+              const wz = snapCoord(cw.z, st.ui.gridStep, snapOn);
+              const fxEl = document.getElementById("facXInput");
+              const fzEl = document.getElementById("facZInput");
+              if (fxEl) fxEl.value = String(wx);
+              if (fzEl) fzEl.value = String(wz);
+              Store.setUi({ activeTool: "SELECT", worldDrawerOpen: true });
+              InspectorUI.showToast(`Picked facility coords (${wx}, ${wz})`, "info");
+              return;
+            }
             if (e.button === 0) {
               const hit = hitTestCanvas(st.mission.checkpoints, pt.sx, pt.sy, view, st.ui.selectedIndex);
               if (hit) {
@@ -2239,6 +2834,21 @@
                 Store.beginUndoTransaction();
                 dragState = { target: "MAP", kind: hit.kind, index: hit.index };
                 return;
+              }
+              if (st.ui.showWorldFacilities !== false) {
+                const fhit = hitTestFacilityPin(pt.sx, pt.sy, view);
+                if (fhit) {
+                  const selIdx = st.ui.selectedIndex;
+                  const selCp = selIdx >= 0 ? st.mission.checkpoints[selIdx] : null;
+                  if (selCp) {
+                    Store.mutateMission((m) => { WorldStore.applyFacilityToCheckpoint(m.checkpoints[selIdx], fhit); });
+                    InspectorUI.showToast(`Assigned ${fhit.facilityId} to ${selCp.checkpointId}`, "info");
+                  } else {
+                    Store.setUi({ viewOffset: { x: fhit.x, z: fhit.z } });
+                    InspectorUI.showToast(`Centered on ${fhit.facilityId}`, "info");
+                  }
+                  return;
+                }
               }
             }
             if (e.button === 0 || e.button === 1 || e.button === 2) {
@@ -2474,6 +3084,98 @@
               ? "Grid snap enabled (hold Alt while dragging to bypass)"
               : "Grid snap disabled (click to enable 10m snap)";
           }
+          const worldSel = document.getElementById("worldSelect");
+          if (worldSel) {
+            const worlds = WorldStore.getWorlds();
+            const actWorld = WorldStore.getActiveWorld();
+            clearNode(worldSel);
+            for (const w of worlds) {
+              const opt = el("option", "", `${w.name} (${w.facilities.length})`);
+              opt.value = w.worldId;
+              if (w.worldId === actWorld.worldId) opt.selected = true;
+              worldSel.appendChild(opt);
+            }
+            worldSel.value = actWorld.worldId;
+          }
+          const btnWorld = document.getElementById("btnWorldPresets");
+          if (btnWorld) btnWorld.setAttribute("aria-expanded", String(Boolean(st.ui.worldDrawerOpen)));
+          const wDrawer = document.getElementById("worldPresetDrawer");
+          if (wDrawer) wDrawer.hidden = !st.ui.worldDrawerOpen;
+          const btnFacVis = document.getElementById("btnToggleFacilities");
+          if (btnFacVis) btnFacVis.setAttribute("aria-pressed", String(st.ui.showWorldFacilities !== false));
+          const btnPickFac = document.getElementById("btnPickFacilityTool");
+          if (btnPickFac) btnPickFac.setAttribute("aria-pressed", String(st.ui.activeTool === "PICK_FACILITY"));
+        };
+
+        const renderWorldDrawer = (st) => {
+          const wDrawer = document.getElementById("worldPresetDrawer");
+          if (!wDrawer || wDrawer.hidden) return;
+          const worlds = WorldStore.getWorlds();
+          const actWorld = WorldStore.getActiveWorld();
+          const dSel = document.getElementById("drawerWorldSelect");
+          if (dSel) {
+            clearNode(dSel);
+            for (const w of worlds) {
+              const opt = el("option", "", `${w.name} [${w.worldId}]`);
+              opt.value = w.worldId;
+              if (w.worldId === actWorld.worldId) opt.selected = true;
+              dSel.appendChild(opt);
+            }
+            dSel.value = actWorld.worldId;
+          }
+          const listEl = document.getElementById("worldFacilityList");
+          if (!listEl) return;
+          clearNode(listEl);
+          if (actWorld.facilities.length === 0) {
+            listEl.appendChild(el("div", "empty-state", "No facilities registered in this world yet."));
+            return;
+          }
+          for (const fac of actWorld.facilities) {
+            const item = el("div", "world-fac-item");
+            const top = el("div", "world-row");
+            top.appendChild(el("span", "mono", fac.facilityId));
+            top.appendChild(el("span", "badge", fac.type));
+            top.appendChild(el("span", "cp-summary", `${fac.label || ""}`));
+            item.appendChild(top);
+            const coords = `${fac.x}, ${fac.z}${isFiniteNum(fac.y) ? `, Y:${fac.y}` : ""}${isFiniteNum(fac.headingDeg) ? ` · ${fac.headingDeg}°` : ""}`;
+            item.appendChild(el("span", "mono cp-summary", coords));
+            const btns = el("div", "world-row");
+            const bUse = el("button", "", "Apply"); bUse.type = "button";
+            bUse.addEventListener("click", () => {
+              const sIdx = Store.getState().ui.selectedIndex;
+              if (sIdx < 0) {
+                Store.setUi({ viewOffset: { x: fac.x, z: fac.z } });
+                showToast(`Centered map on ${fac.facilityId}`, "info");
+                return;
+              }
+              Store.mutateMission((m) => { WorldStore.applyFacilityToCheckpoint(m.checkpoints[sIdx], fac); });
+              showToast(`Applied ${fac.facilityId} to CP#${sIdx + 1}`, "info");
+            });
+            const bEdit = el("button", "", "Edit"); bEdit.type = "button";
+            bEdit.addEventListener("click", () => {
+              const setVal = (id, v) => { const n = document.getElementById(id); if (n) n.value = v ?? ""; };
+              setVal("facIdInput", fac.facilityId);
+              setVal("facLabelInput", fac.label);
+              setVal("facTypeSelect", fac.type);
+              setVal("facXInput", fac.x);
+              setVal("facZInput", fac.z);
+              setVal("facYInput", fac.y);
+              setVal("facHdgInput", fac.headingDeg);
+              setVal("facNotesInput", fac.notes);
+              Store.setUi({ editingFacilityId: fac.facilityId });
+            });
+            const bDel = el("button", "btn-danger", "Delete"); bDel.type = "button";
+            bDel.addEventListener("click", () => {
+              WorldStore.deleteFacility(fac.facilityId);
+              Store.revalidate();
+              renderAll();
+            });
+            btns.appendChild(bUse);
+            btns.appendChild(bEdit);
+            btns.appendChild(bDel);
+            item.appendChild(btns);
+            listEl.appendChild(item);
+          }
         };
 
         const renderLeftRail = (st) => {
@@ -2587,8 +3289,77 @@
           if (cp.action === "ACT_PAT_HOLD_POS" || cp.action === "ACT_PAT_POI_HOLD" || cp.action === "ACT_PAT_LOITER_TIME" || cp.action === "MAC_RECON_ORBIT") {
             grid.appendChild(makeField("durationSec (s)", makeInput("number", p.durationSec ?? "", `checkpoints[${idx}].params.durationSec`, (v) => setParam("durationSec", v === "" ? undefined : Number(v)))));
           }
-          if (cp.action.startsWith("ACT_TKL_") || cp.action.startsWith("ACT_MOB_") || cp.action.startsWith("MAC_")) {
+          if (cp.action === "ACT_TKL_LAND_NEAREST") {
+            grid.appendChild(makeField("facilityTypeFilter", makeSelect(SchemaConstants.FACILITY_TYPE_FILTERS, p.facilityTypeFilter || "ANY", `checkpoints[${idx}].params.facilityTypeFilter`, (v) => setParam("facilityTypeFilter", v))));
+            grid.appendChild(makeField("maxRangeM (opt > 0)", makeInput("number", p.maxRangeM ?? "", `checkpoints[${idx}].params.maxRangeM`, (v) => setParam("maxRangeM", v === "" ? undefined : Number(v)))));
+          }
+          if (cp.action !== "ACT_TKL_LAND_NEAREST" && (cp.action.startsWith("ACT_TKL_") || cp.action.startsWith("ACT_MOB_") || cp.action.startsWith("MAC_"))) {
+            const compatTypes = SchemaConstants.getCompatibleFacilityTypes(cp.action);
+            const compatFacs = WorldStore.getFacilitiesByType(compatTypes);
+            const facOpts = [{ value: "", label: "(Custom / None)" }, ...compatFacs.map((f) => ({ value: f.facilityId, label: `${f.facilityId} (${f.x}, ${f.z})` }))];
+            grid.appendChild(makeField("World Facility", makeSelect(facOpts, compatFacs.some((f) => f.facilityId === p.facilityId) ? p.facilityId : "", "", (fid) => {
+              if (!fid) { setParam("facilityId", undefined); return; }
+              const picked = WorldStore.getFacility(fid);
+              if (picked) {
+                Store.mutateMission((m) => { WorldStore.applyFacilityToCheckpoint(m.checkpoints[idx], picked); });
+              }
+            })));
             grid.appendChild(makeField("facilityId", makeInput("text", p.facilityId || "", `checkpoints[${idx}].params.facilityId`, (v) => setParam("facilityId", v || undefined))));
+            if (typeof p.facilityId === "string" && p.facilityId.trim() && !WorldStore.getFacility(p.facilityId.trim())) {
+              const warnBox = el("div", "fac-warn-box");
+              warnBox.appendChild(el("span", "", `Unregistered facility '${p.facilityId.trim()}' in active world`));
+              const regBtn = el("button", "", "Register to Current World");
+              regBtn.type = "button";
+              regBtn.addEventListener("click", () => {
+                const pos = p.targetPos || { x: 0, z: 0 };
+                WorldStore.upsertFacility({
+                  facilityId: p.facilityId.trim(),
+                  label: p.facilityId.trim(),
+                  type: cp.action.startsWith("ACT_MOB_") ? "DOCKING_ARM" : "LANDING_PAD",
+                  x: isFiniteNum(pos.x) ? pos.x : 0,
+                  z: isFiniteNum(pos.z) ? pos.z : 0,
+                  y: isFiniteNum(p.targetAlt) ? p.targetAlt : undefined,
+                });
+                Store.revalidate();
+                renderAll();
+                showToast(`Registered ${p.facilityId.trim()} in active world`, "info");
+              });
+              warnBox.appendChild(regBtn);
+              grid.appendChild(warnBox);
+            }
+          }
+          if ((SchemaConstants.ACTIVE_ACTIONS[cp.action] && SchemaConstants.ACTIVE_ACTIONS[cp.action].spatial) || SchemaConstants.isMacroActive(cp.action) || cp.action === "ACT_PAY_SET_ROI") {
+            const worldRow = el("div", "fac-toolbar-row");
+            const allFacs = WorldStore.getFacilities();
+            const pickSel = makeSelect([{ value: "", label: "From World…" }, ...allFacs.map((f) => ({ value: f.facilityId, label: `${f.facilityId} [${f.type}] (${f.x}, ${f.z})` }))], "", "", (fid) => {
+              if (!fid) return;
+              const picked = WorldStore.getFacility(fid);
+              if (picked) {
+                Store.mutateMission((m) => { WorldStore.applyFacilityToCheckpoint(m.checkpoints[idx], picked); });
+                showToast(`Copied coordinates from ${picked.facilityId}`, "info");
+              }
+            });
+            pickSel.style.flex = "1 1 auto";
+            const saveFacBtn = el("button", "", "Save as Facility");
+            saveFacBtn.type = "button";
+            saveFacBtn.addEventListener("click", () => {
+              const srcPos = isPosXZ(p.poiPos) && cp.action === "ACT_PAY_SET_ROI" ? p.poiPos : (isPosXZ(p.targetPos) ? p.targetPos : (isPosXZ(p.startPos) ? p.startPos : { x: 0, z: 0 }));
+              const sugId = (typeof p.facilityId === "string" && p.facilityId.trim()) ? p.facilityId.trim() : `${cp.checkpointId}_WP`;
+              WorldStore.upsertFacility({
+                facilityId: sugId,
+                label: sugId,
+                type: (cp.action.startsWith("ACT_TKL_") || cp.action.startsWith("ACT_MOB_")) ? "LANDING_PAD" : "WAYPOINT",
+                x: srcPos.x,
+                z: srcPos.z,
+                y: isFiniteNum(p.targetAlt) ? p.targetAlt : undefined,
+              });
+              Store.revalidate();
+              renderAll();
+              showToast(`Saved ${sugId} to active world`, "info");
+            });
+            worldRow.appendChild(pickSel);
+            worldRow.appendChild(saveFacBtn);
+            grid.appendChild(worldRow);
           }
           if (cp.action === "ACT_PAY_BUS_CMD" || cp.action === "MAC_CARGO_SORTIE") {
             const baseCh = DefaultResolver.computeBaseChannel(st.ui.aircraftNumber);
@@ -2943,6 +3714,43 @@
           }
         };
 
+        const renderLiveUi = () => {
+          if (typeof LiveBridge === "undefined") return;
+          const connected = LiveBridge.isConnected();
+          const crafts = LiveBridge.getFleetCrafts();
+          const btn = document.getElementById("btnConnectLive");
+          if (btn) {
+            btn.setAttribute("aria-pressed", String(connected));
+            btn.textContent = connected ? "Disconnect Live" : "Connect Live";
+          }
+          const badge = document.getElementById("liveFleetBadge");
+          if (badge) {
+            badge.textContent = connected ? `LIVE: ${crafts.length} CRAFT` : "LIVE: OFF";
+            if (badge.classList) {
+              if (connected) badge.classList.add("online");
+              else badge.classList.remove("online");
+            }
+          }
+          const craftSel = document.getElementById("pushCraftSelect");
+          if (craftSel) {
+            const prev = craftSel.value;
+            clearNode(craftSel);
+            if (crafts.length === 0) {
+              const opt = el("option", "", "AIRCRAFT_01 (default Ch 10000)");
+              opt.value = "AIRCRAFT_01";
+              craftSel.appendChild(opt);
+            } else {
+              for (const c of crafts) {
+                const lbl = `${c.domainId} [${c.fsmState || "?"} | CH ${c.baseChannel || "?"}]`;
+                const opt = el("option", "", lbl);
+                opt.value = c.domainId;
+                if (c.domainId === prev) opt.selected = true;
+                craftSel.appendChild(opt);
+              }
+            }
+          }
+        };
+
         const renderAll = () => {
           const st = Store.getState();
           renderTopBar(st);
@@ -2950,6 +3758,8 @@
           renderInspector(st);
           renderValidationBar(st);
           renderPicker(st);
+          renderWorldDrawer(st);
+          renderLiveUi();
           CanvasRenderer.render();
           if (st.ui.altProfileOpen) CanvasRenderer.renderAltProfile();
         };
@@ -3134,6 +3944,215 @@
           importJson,
         };
       })();
+      const LiveBridge = (() => {
+        const DEFAULT_URL = "ws://127.0.0.1:8765";
+        const LOCAL_WS_RE = /^ws:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?(\/.*)?$/i;
+        const MAX_TRAIL_POINTS = 60;
+        let ws = null;
+        let connected = false;
+        let activeUrl = DEFAULT_URL;
+        let fleetCrafts = new Map();
+        let trails = new Map();
+        let lastWorldSync = null;
+        let lastAck = null;
+        let pushSeq = 0;
+        const pendingRequests = new Map();
+        const outboundHistory = [];
+
+        const isAllowedLocalUrl = (url) => LOCAL_WS_RE.test(String(url || "").trim());
+
+        const mapBeaconFacility = (fac) => {
+          if (!fac || typeof fac !== "object" || !fac.facilityId) return null;
+          const pos = (fac.position && typeof fac.position === "object") ? fac.position : fac;
+          return {
+            facilityId: String(fac.facilityId),
+            label: String(fac.label || fac.facilityId),
+            type: ["LANDING_PAD", "RUNWAY", "DOCKING_ARM", "WAYPOINT"].includes(fac.facilityType || fac.type)
+              ? (fac.facilityType || fac.type)
+              : "LANDING_PAD",
+            x: isFiniteNum(Number(pos.x)) ? Number(pos.x) : 0,
+            z: isFiniteNum(Number(pos.z)) ? Number(pos.z) : 0,
+            y: isFiniteNum(Number(pos.y)) ? Number(pos.y) : undefined,
+            headingDeg: isFiniteNum(Number(fac.heading)) ? Number(fac.heading) : 0,
+            notes: `GCS Live (${String(fac.status || "FREE")})`,
+          };
+        };
+
+        const handleWorldSync = (msg) => {
+          const rawList = Array.isArray(msg.facilities) ? msg.facilities : [];
+          const mapped = rawList.map(mapBeaconFacility).filter(Boolean);
+          const secId = msg.sectorId != null ? String(msg.sectorId) : "0";
+          const worldId = `LIVE_SECTOR_${secId}`;
+          const worldName = typeof msg.sectorName === "string" && msg.sectorName.trim()
+            ? msg.sectorName.trim()
+            : `Live Sector ${secId}`;
+          WorldStore.importWorldsJson({
+            schemaVersion: "1.0.0",
+            activeWorldId: worldId,
+            worlds: [{ worldId, name: worldName, facilities: mapped }],
+          }, "merge");
+          WorldStore.setActiveWorld(worldId);
+          lastWorldSync = { sectorId: msg.sectorId ?? null, sectorName: worldName, count: mapped.length };
+          Store.revalidate();
+          InspectorUI.renderAll();
+          return { handled: true, type: "WORLD_PRESET_SYNC", worldId, facilitiesCount: mapped.length };
+        };
+
+        const handleFleetSync = (msg) => {
+          const list = Array.isArray(msg.crafts) ? msg.crafts : [];
+          const nextMap = new Map();
+          for (const raw of list) {
+            if (!raw || typeof raw.domainId !== "string" || !raw.domainId) continue;
+            const craft = deepClone(raw);
+            nextMap.set(craft.domainId, craft);
+            if (craft.position && isFiniteNum(Number(craft.position.x)) && isFiniteNum(Number(craft.position.z))) {
+              const px = Number(craft.position.x);
+              const pz = Number(craft.position.z);
+              const py = isFiniteNum(Number(craft.position.y)) ? Number(craft.position.y) : 0;
+              const arr = trails.get(craft.domainId) || [];
+              const prev = arr[arr.length - 1];
+              if (!prev || Math.hypot(px - prev.x, pz - prev.z) >= 0.5) {
+                arr.push({ x: px, z: pz, y: py });
+                if (arr.length > MAX_TRAIL_POINTS) arr.shift();
+                trails.set(craft.domainId, arr);
+              }
+            }
+          }
+          fleetCrafts = nextMap;
+          InspectorUI.renderAll();
+          return { handled: true, type: "FLEET_TELEMETRY_SYNC", craftCount: fleetCrafts.size };
+        };
+
+        const handlePushAck = (msg) => {
+          lastAck = deepClone(msg);
+          if (msg.requestId) pendingRequests.delete(msg.requestId);
+          if (msg.status === "ACCEPTED") {
+            InspectorUI.showToast(`${msg.targetCraft || "Aircraft"} accepted ${msg.action || "LOAD"} (${msg.missionId || "OK"})`, "info");
+          } else {
+            InspectorUI.showToast(`Push rejected (${msg.targetCraft || "?"}): ${msg.status || "ERR"}${msg.reason ? " — " + msg.reason : ""}`, "error");
+          }
+          return { handled: true, type: "MISSION_PUSH_ACK", ack: lastAck };
+        };
+
+        const handleMessage = (rawOrObj) => {
+          let msg = rawOrObj;
+          if (typeof rawOrObj === "string") {
+            try { msg = JSON.parse(rawOrObj); } catch (_) { return { handled: false, error: "INVALID_JSON" }; }
+          }
+          if (!msg || typeof msg !== "object" || typeof msg.type !== "string") {
+            return { handled: false, error: "INVALID_MESSAGE" };
+          }
+          if (msg.type === "WORLD_PRESET_SYNC") return handleWorldSync(msg);
+          if (msg.type === "FLEET_TELEMETRY_SYNC") return handleFleetSync(msg);
+          if (msg.type === "MISSION_PUSH_ACK") return handlePushAck(msg);
+          return { handled: false, error: "UNKNOWN_TYPE" };
+        };
+
+        const disconnect = () => {
+          if (ws) {
+            try { if (typeof ws.close === "function") ws.close(); } catch (_) {}
+          }
+          ws = null;
+          connected = false;
+          InspectorUI.renderAll();
+        };
+
+        const connect = (url) => {
+          const target = String(url || DEFAULT_URL).trim();
+          if (!isAllowedLocalUrl(target)) {
+            return { ok: false, error: "NON_LOCAL_BRIDGE_URL" };
+          }
+          const WsCtor = typeof WebSocket === "function" ? WebSocket : (typeof globalThis !== "undefined" ? globalThis.WebSocket : null);
+          if (typeof WsCtor !== "function") {
+            return { ok: false, error: "WEBSOCKET_UNSUPPORTED" };
+          }
+          if (ws) disconnect();
+          activeUrl = target;
+          const sock = new WsCtor(target);
+          ws = sock;
+          sock.onopen = () => {
+            connected = true;
+            InspectorUI.showToast(`Live Bridge connected (${target})`, "info");
+            InspectorUI.renderAll();
+          };
+          sock.onmessage = (evt) => {
+            if (evt && evt.data !== undefined) handleMessage(evt.data);
+          };
+          sock.onclose = () => {
+            if (ws === sock) {
+              ws = null;
+              connected = false;
+              InspectorUI.renderAll();
+            }
+          };
+          sock.onerror = () => {
+            InspectorUI.showToast("Live Bridge WebSocket connection failed", "error");
+          };
+          return { ok: true, url: target };
+        };
+
+        const pushMission = (opts) => {
+          const o = opts || {};
+          const st = Store.getState();
+          if (st.lastValidation && st.lastValidation.errors.length > 0 && !o.allowInvalid) {
+            return { ok: false, error: "MISSION_VALIDATION_FAILED", count: st.lastValidation.errors.length };
+          }
+          const targetCraft = String(o.targetCraft || "").trim();
+          if (!targetCraft) return { ok: false, error: "MISSING_TARGET_CRAFT" };
+          const action = o.action === "RUN" ? "RUN" : "LOAD";
+          const saveToDisk = o.saveToDisk !== false;
+          const craft = fleetCrafts.get(targetCraft);
+          const baseChannel = o.baseChannel != null ? o.baseChannel : (craft && craft.baseChannel != null ? craft.baseChannel : null);
+          pushSeq += 1;
+          const requestId = `push-${Date.now()}-${pushSeq}`;
+          const missionData = JsonIO.buildExportObject(st.mission, { includeUiKeys: false });
+          const cmd = {
+            type: "MISSION_PUSH_CMD",
+            requestId,
+            targetCraft,
+            baseChannel,
+            action,
+            saveToDisk,
+            missionData,
+          };
+          outboundHistory.push(cmd);
+          if (outboundHistory.length > 20) outboundHistory.shift();
+          pendingRequests.set(requestId, cmd);
+          if (!connected || !ws || typeof ws.send !== "function") {
+            return { ok: false, error: "LIVE_BRIDGE_DISCONNECTED", requestId, payload: cmd };
+          }
+          ws.send(JSON.stringify(cmd));
+          return { ok: true, sent: true, requestId, payload: cmd };
+        };
+
+        return {
+          DEFAULT_URL,
+          isAllowedLocalUrl,
+          connect,
+          disconnect,
+          isConnected: () => connected,
+          getUrl: () => activeUrl,
+          handleMessage,
+          pushMission,
+          getFleetCrafts: () => Array.from(fleetCrafts.values()),
+          getTrails: () => {
+            const out = {};
+            for (const [k, v] of trails.entries()) out[k] = deepClone(v);
+            return out;
+          },
+          getLastWorldSync: () => (lastWorldSync ? deepClone(lastWorldSync) : null),
+          getLastAck: () => (lastAck ? deepClone(lastAck) : null),
+          getOutboundHistory: () => deepClone(outboundHistory),
+          clearState: () => {
+            fleetCrafts.clear();
+            trails.clear();
+            pendingRequests.clear();
+            outboundHistory.length = 0;
+            lastWorldSync = null;
+            lastAck = null;
+          },
+        };
+      })();
       const AppBootstrap = (() => {
         let initialized = false;
         let autosaveTimer = null;
@@ -3303,6 +4322,107 @@
           on("btnToggleSnap", "click", () => Store.setUi({ gridSnap: !Store.getState().ui.gridSnap }));
           on("btnFitView", "click", () => CanvasRenderer.fitView());
           on("btnToggleAltProfile", "click", () => Store.setUi({ altProfileOpen: !Store.getState().ui.altProfileOpen }));
+          on("btnToggleFacilities", "click", () => Store.setUi({ showWorldFacilities: Store.getState().ui.showWorldFacilities === false }));
+          on("btnPickFacilityTool", "click", () => {
+            const cur = Store.getState().ui.activeTool;
+            Store.setUi({ activeTool: cur === "PICK_FACILITY" ? "SELECT" : "PICK_FACILITY" });
+          });
+
+          const syncWorldSelect = (id) => {
+            WorldStore.setActiveWorld(id);
+            Store.revalidate();
+            InspectorUI.renderAll();
+          };
+          on("worldSelect", "change", (e) => syncWorldSelect(e.target.value));
+          on("drawerWorldSelect", "change", (e) => syncWorldSelect(e.target.value));
+          on("btnWorldPresets", "click", () => Store.setUi({ worldDrawerOpen: !Store.getState().ui.worldDrawerOpen }));
+          on("btnCloseWorldDrawer", "click", () => Store.setUi({ worldDrawerOpen: false }));
+          on("btnAddWorld", "click", () => {
+            const inp = document.getElementById("newWorldNameInput");
+            const created = WorldStore.createWorld(inp ? inp.value : "");
+            if (inp) inp.value = "";
+            Store.revalidate();
+            InspectorUI.showToast(`Created world ${created.name}`, "info");
+            InspectorUI.renderAll();
+          });
+          on("btnRenameWorld", "click", () => {
+            const inp = document.getElementById("newWorldNameInput");
+            if (inp && WorldStore.renameWorld(WorldStore.getActiveWorld().worldId, inp.value)) {
+              inp.value = "";
+              InspectorUI.showToast("Renamed active world", "info");
+              InspectorUI.renderAll();
+            }
+          });
+          on("btnDeleteWorld", "click", () => {
+            WorldStore.deleteWorld();
+            Store.revalidate();
+            InspectorUI.showToast("Removed active world", "info");
+            InspectorUI.renderAll();
+          });
+          on("btnPickFacFromMap", "click", () => {
+            Store.setUi({ activeTool: "PICK_FACILITY" });
+            InspectorUI.showToast("Click 2D canvas to pick facility coordinates", "info");
+          });
+          on("btnCancelFacEdit", "click", () => {
+            ["facIdInput", "facLabelInput", "facXInput", "facZInput", "facYInput", "facHdgInput", "facNotesInput"].forEach((id) => {
+              const n = document.getElementById(id);
+              if (n) n.value = "";
+            });
+            Store.setUi({ editingFacilityId: null });
+          });
+          on("btnSaveFacility", "click", () => {
+            const valOf = (id) => { const n = document.getElementById(id); return n ? n.value : ""; };
+            const res = WorldStore.upsertFacility({
+              facilityId: valOf("facIdInput"),
+              label: valOf("facLabelInput"),
+              type: valOf("facTypeSelect") || "LANDING_PAD",
+              x: valOf("facXInput"),
+              z: valOf("facZInput"),
+              y: valOf("facYInput"),
+              headingDeg: valOf("facHdgInput"),
+              notes: valOf("facNotesInput"),
+            }, Store.getState().ui.editingFacilityId);
+            if (!res.ok) {
+              InspectorUI.showToast(`Facility error: ${res.error}`, "error");
+              return;
+            }
+            Store.setUi({ editingFacilityId: null });
+            Store.revalidate();
+            InspectorUI.showToast(`Saved facility ${res.facility.facilityId}`, "info");
+            InspectorUI.renderAll();
+          });
+          on("btnExportWorlds", "click", () => {
+            const jsonText = WorldStore.exportWorldsJson(false);
+            if (typeof Blob !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
+              const blob = new Blob([jsonText], { type: "application/json" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = "uafs_world_presets.json";
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              URL.revokeObjectURL(a.href);
+            }
+            InspectorUI.showToast("Exported World Presets JSON", "info");
+          });
+          on("btnImportWorlds", "click", () => {
+            const wi = document.getElementById("worldFileImportInput");
+            if (wi && typeof wi.click === "function") wi.click();
+          });
+          on("worldFileImportInput", "change", (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file || typeof FileReader === "undefined") return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              const res = WorldStore.importWorldsJson(reader.result, "merge");
+              if (!res.ok) InspectorUI.showToast(`World import failed: ${res.error}`, "error");
+              else {
+                Store.revalidate();
+                InspectorUI.showToast(`Imported ${res.count} world preset(s)`, "info");
+                InspectorUI.renderAll();
+              }
+            };
+            reader.readAsText(file);
+            e.target.value = "";
+          });
 
           on("modeCheckpointBtn", "click", () => Store.setUi({ rightMode: "CHECKPOINT" }));
           on("modeSettingsBtn", "click", () => Store.setUi({ rightMode: "MISSION_SETTINGS" }));
@@ -3311,6 +4431,44 @@
           on("valFilterErrors", "click", () => Store.setUi({ validationFilter: "ERRORS", validationOpen: true }));
           on("valFilterWarnings", "click", () => Store.setUi({ validationFilter: "WARNINGS", validationOpen: true }));
           on("btnToggleValidation", "click", () => Store.setUi({ validationOpen: !Store.getState().ui.validationOpen }));
+
+          const setPushModalOpen = (open) => {
+            const modal = document.getElementById("pushAircraftModalBackdrop");
+            if (modal) modal.hidden = !open;
+            if (open) {
+              InspectorUI.renderAll();
+              const sel = document.getElementById("pushCraftSelect");
+              if (sel && typeof sel.focus === "function") sel.focus();
+            }
+          };
+          on("btnConnectLive", "click", () => {
+            if (LiveBridge.isConnected()) {
+              LiveBridge.disconnect();
+              InspectorUI.showToast("Disconnected Live Bridge", "info");
+            } else {
+              const res = LiveBridge.connect();
+              if (!res.ok) InspectorUI.showToast(`Live connect failed: ${res.error}`, "error");
+            }
+          });
+          on("btnPushAircraft", "click", () => setPushModalOpen(true));
+          on("btnClosePushModal", "click", () => setPushModalOpen(false));
+          on("btnCancelPushModal", "click", () => setPushModalOpen(false));
+          on("btnConfirmPushMission", "click", () => {
+            const craftSel = document.getElementById("pushCraftSelect");
+            const actionSel = document.getElementById("pushActionSelect");
+            const saveChk = document.getElementById("pushSaveToDiskCheck");
+            const res = LiveBridge.pushMission({
+              targetCraft: craftSel ? craftSel.value : "AIRCRAFT_01",
+              action: actionSel ? actionSel.value : "LOAD",
+              saveToDisk: saveChk ? saveChk.checked : true,
+            });
+            if (!res.ok) {
+              InspectorUI.showToast(`Push blocked: ${res.error}`, "error");
+              return;
+            }
+            setPushModalOpen(false);
+            InspectorUI.showToast(`Sent ${res.payload.action} to ${res.payload.targetCraft}`, "info");
+          });
 
           if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
             document.addEventListener("keydown", (e) => {
@@ -3322,7 +4480,10 @@
                 else if (k === "z") { if (e.preventDefault) e.preventDefault(); Store.undo(); }
                 else if (k === "y") { if (e.preventDefault) e.preventDefault(); Store.redo(); }
               } else if (e.key === "Escape") {
-                if (Store.getState().ui.activePopover) Store.setUi({ activePopover: null });
+                const pushM = document.getElementById("pushAircraftModalBackdrop");
+                if (pushM && !pushM.hidden) setPushModalOpen(false);
+                else if (Store.getState().ui.activePopover) Store.setUi({ activePopover: null });
+                else if (Store.getState().ui.worldDrawerOpen) Store.setUi({ worldDrawerOpen: false });
                 else if (Store.getState().ui.rawJsonOpen) Store.setUi({ rawJsonOpen: false });
               }
             });
@@ -3349,16 +4510,18 @@
       })();
 
       window.__AMM_EDITOR__ = {
-        version: "0.3.1",
+        version: "0.5.0",
         deepClone,
         SchemaConstants,
         MacroExpander,
         DefaultResolver,
+        WorldStore,
         Validator,
         Store,
         CanvasRenderer,
         InspectorUI,
         JsonIO,
+        LiveBridge,
         AppBootstrap,
       };
       AppBootstrap.init();

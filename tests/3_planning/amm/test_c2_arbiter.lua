@@ -586,4 +586,83 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         end
         assert_eq(eng.active_index, 2)
     end)
+
+    it("handles Base+0 MSG_MISSION_CMD LOAD and inline RUN missionData with /missions persistence", function()
+        local mission_engine = require("mission_engine")
+        local q, net, arb, tx = create_fixture()
+        local eng = mission_engine.new({ net = net, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        if fs.exists("/missions/LIVE_PUSH_01.json") then fs.delete("/missions/LIVE_PUSH_01.json") end
+        if fs.exists("/missions/INLINE_NO_SAVE.json") then fs.delete("/missions/INLINE_NO_SAVE.json") end
+
+        -- 1. Missing/invalid missionData -> SCHEMA_INVALID
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "LOAD", missionData = { version = "2.0.0", checkpoints = {} } },
+        }, 2000)
+        assert_eq(tx[#tx].payload.type, "MSG_MISSION_ACK")
+        assert_eq(tx[#tx].payload.payload.action, "LOAD")
+        assert_eq(tx[#tx].payload.payload.status, "SCHEMA_INVALID")
+
+        -- 2. Valid LOAD with default saveToDisk -> saves /missions/LIVE_PUSH_01.json & stays IDLE
+        local valid_mission = {
+            version = "2.0.0",
+            missionId = "LIVE_PUSH_01",
+            executionMode = "SINGLE",
+            checkpoints = {
+                { checkpointId = "CP_01", action = "ACT_NAV_SPLINE_WP", params = { targetPos = { x = 150, z = -220 }, targetAlt = 110 } },
+            },
+        }
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "LOAD", missionData = valid_mission, saveToDisk = true },
+        }, 2100)
+        local ack_load = tx[#tx].payload.payload
+        assert_eq(ack_load.action, "LOAD")
+        assert_eq(ack_load.status, "ACCEPTED")
+        assert_eq(ack_load.missionId, "LIVE_PUSH_01")
+        assert_eq(ack_load.missionState, "IDLE")
+        assert_eq(eng.missionId, "LIVE_PUSH_01")
+        assert_eq(eng:count(), 1)
+        assert_true(fs.exists("/missions/LIVE_PUSH_01.json"), "LOAD must persist /missions/LIVE_PUSH_01.json")
+
+        -- 3. Start loaded mission, then verify EN_ROUTE rejects LOAD without forceRestart & bad forceRestart keeps flight
+        assert_true(eng:start("SINGLE", 2200))
+        assert_eq(eng.state, "EN_ROUTE")
+
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "LOAD", missionData = valid_mission },
+        }, 2300)
+        assert_eq(tx[#tx].payload.payload.status, "BUSY_REJECTED")
+
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "LOAD", missionData = { version = "1.0.0", items = {} }, forceRestart = true },
+        }, 2400)
+        assert_eq(tx[#tx].payload.payload.status, "SCHEMA_INVALID")
+        assert_eq(eng.state, "EN_ROUTE")
+
+        -- 4. Inline RUN with missionData & saveToDisk = false -> forceRestart + EN_ROUTE without disk file
+        local inline_run = {
+            version = "2.0.0",
+            missionId = "INLINE_NO_SAVE",
+            checkpoints = {
+                { checkpointId = "CP_A", action = "ACT_NAV_SPLINE_WP", params = { targetPos = { x = 300, z = 400 } } },
+            },
+        }
+        arb:handle_gcs_packet({
+            ver = "1.9.5", type = "MSG_MISSION_CMD",
+            payload = { action = "RUN", missionData = inline_run, saveToDisk = false, forceRestart = true },
+        }, 2500)
+        local ack_run = tx[#tx].payload.payload
+        assert_eq(ack_run.action, "RUN")
+        assert_eq(ack_run.status, "ACCEPTED")
+        assert_eq(ack_run.missionId, "INLINE_NO_SAVE")
+        assert_eq(eng.state, "EN_ROUTE")
+        assert_false(fs.exists("/missions/INLINE_NO_SAVE.json"))
+
+        if fs.exists("/missions/LIVE_PUSH_01.json") then fs.delete("/missions/LIVE_PUSH_01.json") end
+    end)
 end)

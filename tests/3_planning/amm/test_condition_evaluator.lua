@@ -173,7 +173,7 @@ describe("AMM 12-Type Condition Evaluator and Default Resolver", function()
         assert_true(#str > 0 and #str <= 25)
     end)
 
-    it("resolves all 36 active ACT_* defaults, evaluates SYS_ARMED/IMMEDIATE, and tracks 360*turns for ACT_PAT_LOITER_TURNS", function()
+    it("resolves all 37 active ACT_* defaults, evaluates SYS_ARMED/IMMEDIATE, and tracks 360*turns for ACT_PAT_LOITER_TURNS", function()
         local action_registry = require("action_registry")
         for act_id in pairs(action_registry.ACTIVE_LIFECYCLES) do
             local grp, err = condition_evaluator.resolve_default_complete({ action = act_id, params = {} }, { acceptanceRadius = 15 })
@@ -194,6 +194,14 @@ describe("AMM 12-Type Condition Evaluator and Default Resolver", function()
 
         local roi_imm = condition_evaluator.resolve_default_complete({ action = "ACT_PAY_SET_ROI", params = { poiPos = { x = 1, y = 2, z = 3 } } })
         assert_eq(roi_imm.conditions[1].type, "IMMEDIATE")
+
+        local land_nearest = condition_evaluator.resolve_default_complete({
+            action = "ACT_TKL_LAND_NEAREST",
+            _resolvedFacilityId = "PAD_NEAR_01",
+            params = {},
+        })
+        assert_eq(land_nearest.conditions[1].type, "FACILITY_TOUCHDOWN")
+        assert_eq(land_nearest.conditions[1].facilityId, "PAD_NEAR_01")
 
         -- ACT_PAT_LOITER_TURNS: 1 full turn = 360 deg around center (0, 0)
         local orb_cp = {

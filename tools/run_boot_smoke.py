@@ -52,7 +52,7 @@ class TargetSmokeReport:
 def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) -> list[SmokeTarget]:
     """
     Constructs the standard list of boot smoke targets.
-    Active subsystems (12): alignment, fdr, installer, ota, gps, gac, gcs, landing_pad, tca, vas, fcp, amm.
+    Active subsystems (13): alignment, fdr, installer, ota, gps, gac, gcs, landing_pad, runway, tca, vas, fcp, amm.
     Deferred subsystems (1): asa (TASK-105).
     """
     root = workspace_root.resolve()
@@ -118,6 +118,14 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
         SmokeTarget(
             target_id="0_infra/landing_pad",
             source_dir=src / "0_infra" / "landing_pad",
+            expected_channels=[50202, 50206, 50211],
+            cli_args=[],
+            deferred=False,
+            workspace_root=root,
+        ),
+        SmokeTarget(
+            target_id="0_infra/runway",
+            source_dir=src / "0_infra" / "runway",
             expected_channels=[50202, 50206, 50211],
             cli_args=[],
             deferred=False,
@@ -238,6 +246,22 @@ def _stage_minimal_configs(computer_dir: Path) -> None:
         },
     }
     (pad_dir / "config.json").write_text(json.dumps(pad_cfg, indent=2), encoding="utf-8")
+
+    # 3b. Runway config
+    rwy_dir = computer_dir / "runway"
+    rwy_dir.mkdir(parents=True, exist_ok=True)
+    rwy_cfg = {
+        "facilityId": "RWY_09L",
+        "mobility": "STATIC",
+        "sectorId": 1,
+        "runwayIndex": 1,
+        "channels": {
+            "sectorFacilityChannel": 50202,
+            "sectorGpsReplyChannel": 50206,
+            "tacticalChannel": 50211,
+        },
+    }
+    (rwy_dir / "config.json").write_text(json.dumps(rwy_cfg, indent=2), encoding="utf-8")
 
     # 4. GCS config
     gcs_cfg = {
@@ -479,10 +503,12 @@ local mock_p = {
     end,
     getMethods = function(side)
         local dev = (registry[side] and registry[side].dev)
-        if not dev and p_orig and p_orig.wrap then
-            dev = p_orig.wrap(side)
+        if not dev then
+            if p_orig and p_orig.getMethods then
+                return p_orig.getMethods(side)
+            end
+            return nil
         end
-        if not dev then return nil end
         local methods = {}
         for k, v in pairs(dev) do
             if type(v) == "function" then methods[#methods + 1] = k end

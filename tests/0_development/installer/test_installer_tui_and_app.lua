@@ -45,7 +45,7 @@ local function readFile(path)
 end
 
 describe("tui_view 51x19 terminal rendering and source toggle", function()
-    it("renders header, 14-module menu, progress bar, and source toggle within 51x19 bounds", function()
+    it("renders header, 15-module menu, progress bar, and source toggle within 51x19 bounds", function()
         -- 1. Source toggle logic
         assert_eq(tui_view.toggleSource("github"), "gdrive")
         assert_eq(tui_view.toggleSource("gdrive"), "github")
@@ -53,7 +53,7 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         assert_eq(tui_view.toggleSource("GDRIVE"), "github")
 
         local modules = manifest.listModules()
-        assert_eq(#modules, 14)
+        assert_eq(#modules, 15)
 
         -- 2. Color terminal rendering
         local termColor = mock.term(51, 19)
@@ -130,7 +130,7 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         local catScroll = tui_view.renderCategoryMenu(termColor, categories, 2, "github", installedMap, 0)
         assert_eq(catScroll, 0)
         assert_true(termColor:_contains("[DIR] 0_infra"))
-        assert_true(termColor:_contains("[2/6 inst]"))
+        assert_true(termColor:_contains("[2/7 inst]"))
         assert_true(termColor:_contains("[Enter] Open Folder"))
         assert_true(termColor:_contains("3_planning"))
 
@@ -142,7 +142,7 @@ describe("tui_view 51x19 terminal rendering and source toggle", function()
         assert_true(termColor:_contains("Folder: 2_guidance"))
         assert_true(termColor:_contains("[Bksp/B] Folders"))
         assert_false(termColor:_contains("3_planning"), "stale category row must be cleared")
-        assert_false(termColor:_contains("[2/6 inst]"), "stale category counter must be cleared")
+        assert_false(termColor:_contains("[2/7 inst]"), "stale category counter must be cleared")
 
         -- Verify >12 module list scrolls smoothly within rows 4..15
         local syntheticMods = {}
@@ -473,7 +473,7 @@ describe("installer_app module installation and upgrade pipeline", function()
         local meta = version_registry.load(appRoot .. "/.version.json")
         assert_nil(meta.modules.gcs)
         assert_true(termMock:_contains("[DIR] 0_infra"))
-        assert_true(termMock:_contains("[0/6 inst]"))
+        assert_true(termMock:_contains("[0/7 inst]"))
     end)
 
     it("handles [U] guard on uninstalled modules, Backspace cancel, Left return, and custom stub fallback", function()

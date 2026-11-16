@@ -152,6 +152,19 @@ class TestGDriveSyncCLI(unittest.TestCase):
             self.assertEqual(result.returncode, 0, f"Verify failed: {result.stderr}")
             self.assertIn("Verification PASS", result.stdout)
 
+    def test_package_remote_names_are_collision_free(self) -> None:
+        sys.path.insert(0, str(WORKSPACE_ROOT))
+        from tools.sync_gdrive import discover_manifest_files  # noqa: E402
+
+        entries = discover_manifest_files()
+        pkg_entries = [e for e in entries if e["category"] == "packages"]
+        self.assertGreaterEqual(len(pkg_entries), 100)
+        remote_names = [e["remoteName"] for e in pkg_entries]
+        self.assertEqual(len(remote_names), len(set(remote_names)), "Package remote names must not collide")
+        self.assertIn("vas__main.lua", remote_names)
+        self.assertIn("gcs__main.lua", remote_names)
+        self.assertIn("runway__main.lua", remote_names)
+
 
 if __name__ == "__main__":
     unittest.main()

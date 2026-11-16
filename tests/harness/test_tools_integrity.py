@@ -26,6 +26,7 @@ class TestToolsIntegrity(unittest.TestCase):
             WORKSPACE_ROOT / "tools" / "verify_runtime_wiring.py",
             WORKSPACE_ROOT / "tools" / "run_boot_smoke.py",
             WORKSPACE_ROOT / "tools" / "analyze_flight_log.py",
+            WORKSPACE_ROOT / "tools" / "gcs_live_bridge.py",
         ]
         for tool_path in expected_tools:
             self.assertTrue(

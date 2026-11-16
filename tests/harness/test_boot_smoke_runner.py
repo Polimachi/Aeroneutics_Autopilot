@@ -26,9 +26,9 @@ from tools.run_boot_smoke import (
 
 
 class TestBootSmokeRunner(unittest.TestCase):
-    def test_build_smoke_targets_covers_12_active_subsystems_and_skips_deferred_asa(self) -> None:
+    def test_build_smoke_targets_covers_13_active_subsystems_and_skips_deferred_asa(self) -> None:
         targets = build_smoke_targets(WORKSPACE_ROOT, include_deferred=False)
-        self.assertEqual(len(targets), 12, f"Expected 12 active targets, got {len(targets)}")
+        self.assertEqual(len(targets), 13, f"Expected 13 active targets, got {len(targets)}")
 
         target_ids = [t.target_id for t in targets]
         self.assertNotIn("1_control/asa", target_ids)
@@ -42,6 +42,7 @@ class TestBootSmokeRunner(unittest.TestCase):
             "0_infra/gac",
             "0_infra/gcs",
             "0_infra/landing_pad",
+            "0_infra/runway",
             "1_control/tca",
             "1_control/vas",
             "2_guidance/fcp",
@@ -61,7 +62,7 @@ class TestBootSmokeRunner(unittest.TestCase):
 
     def test_build_smoke_targets_includes_asa_when_include_deferred(self) -> None:
         targets = build_smoke_targets(WORKSPACE_ROOT, include_deferred=True)
-        self.assertEqual(len(targets), 13, f"Expected 13 targets, got {len(targets)}")
+        self.assertEqual(len(targets), 14, f"Expected 14 targets, got {len(targets)}")
 
         target_map = {t.target_id: t for t in targets}
         self.assertIn("1_control/asa", target_map)

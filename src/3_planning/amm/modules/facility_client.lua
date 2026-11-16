@@ -50,10 +50,24 @@ end
 
 function facility_client.update_beacons(state, beacon_payload, now_ms)
     if not state or not beacon_payload then return end
-    local id = beacon_payload.facilityId or "UNKNOWN"
     local now = now_ms or 0
-    beacon_payload._receivedMs = now
-    state.beacons[id] = beacon_payload
+
+    if type(beacon_payload.facilities) == "table" then
+        for _, fac in ipairs(beacon_payload.facilities) do
+            if type(fac) == "table" and type(fac.facilityId) == "string" and fac.facilityId ~= "" then
+                fac._receivedMs = now
+                if fac.sectorId == nil then fac.sectorId = beacon_payload.sectorId end
+                if fac.gacChannel == nil then fac.gacChannel = beacon_payload.gacChannel end
+                state.beacons[fac.facilityId] = fac
+            end
+        end
+    end
+
+    if beacon_payload.facilityId or type(beacon_payload.facilities) ~= "table" then
+        local id = beacon_payload.facilityId or "UNKNOWN"
+        beacon_payload._receivedMs = now
+        state.beacons[id] = beacon_payload
+    end
 
     local expire_thresh = now - 5000
     for fid, b in pairs(state.beacons) do
@@ -63,18 +77,21 @@ function facility_client.update_beacons(state, beacon_payload, now_ms)
     end
 end
 
-function facility_client.find_nearest_free_landing_facility(state, craft_pos)
+function facility_client.find_nearest_free_landing_facility(state, craft_pos, type_filter, max_range_m)
     if not state or not craft_pos then return nil, 999999 end
+    local filter = type_filter or "ANY"
     local best, best_dist = nil, 999999
     local cx, cz = craft_pos.x or 0, craft_pos.z or 0
+    local has_range = (type(max_range_m) == "number" and max_range_m > 0)
 
     for _, b in pairs(state.beacons) do
-        local is_landing = (b.facilityType == "LANDING_PAD" or b.facilityType == "RUNWAY")
-        if is_landing and b.status == "FREE" and b.position then
-            local dx = b.position.x - cx
-            local dz = b.position.z - cz
+        local is_landing = (filter == "ANY" and (b.facilityType == "LANDING_PAD" or b.facilityType == "RUNWAY"))
+            or (b.facilityType == filter)
+        if is_landing and b.status == "FREE" and b.dedicated ~= true and b.position then
+            local dx = (b.position.x or 0) - cx
+            local dz = (b.position.z or 0) - cz
             local dist = math.sqrt(dx * dx + dz * dz)
-            if dist < best_dist then
+            if (not has_range or dist <= max_range_m) and dist < best_dist then
                 best_dist = dist
                 best = b
             end

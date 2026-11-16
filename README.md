@@ -6,10 +6,10 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 무선 OTA 배포·롤백 가드(`TASK-117`, `OTA v0.1.0`·`INSTALLER v1.2.0`·`VAS v1.22.0`·`TCA v1.13.0`·`FCP v2.2.0`·`AMM v2.1.0`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR·오프라인 분석기(`TASK-120`, `FDR v0.3.0`), AMM WebUI 미션 에디터(`TASK-402`, `v0.3.1 Implemented`), 전사 전수 감사 43건 교정(`TASK-013`), `AMM v2.0.1` 표준 행동 체계·채터링 방지 가드(`TASK-124`, `TASK-204`), GPS 결함 수정(`TASK-123`), 4계층 `SE(3)` 연동(`TASK-207`~`209`), 사양서 역할 분리(`TASK-206`) 완료. 다음 1순위는 40채널 블록 개편·결함 12종 해소(`TASK-125`)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge·실시간 전술 지도·원클릭 미션 푸시(`TASK-404`, `GCS v1.2.0`·`AMM v2.3.0`·`에디터 v0.5.0`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset·`ACT_TKL_LAND_NEAREST`(`TASK-403`), 무선 OTA 배포·롤백 가드(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-125`(40채널 블록 개편·결함 12종 해소)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
-  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `GCS`(`TASK-107`) 구현, `VAS` 센서 파이프라인 표준화(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Runway`·`Docking Arm`·`ASA` 본 구현 일정 보류)
+  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
   - **Phase 2 (고등 항법 및 편대 임무)**: 3차원 경로 계획(`3_planning/`) 및 다중 기체 편대 미션 오케스트레이터(`4_mission/`) 구축
   - **Phase 3 (물리 하드웨어 및 수동 급기동)**: Create/Avionics 아날로그 스틱 및 물리 컨트롤러 연동, `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 ACRO 수동 조종(`TASK-301`)
 - **실시간 작업 진행 현황 및 상세 백로그 (SSOT)**: [TASK.md](TASK.md)
@@ -81,7 +81,7 @@ Create_Aeroneutics/
 │   ├── 0_development/installer/           # 통합 인스톨러 단위 테스트
 │   ├── 0_development/ota/                 # 무선 OTA 서버 및 에이전트 단위 테스트
 │   ├── 0_development/sensors/             # 센서 표준 라이브러리 단위 테스트
-│   ├── 0_infra/{gac, gcs, gps, landing_pad}/ # 기지 인프라 단위 테스트 (GAC, GCS, GPS, Landing Pad)
+│   ├── 0_infra/{gac, gcs, gps, landing_pad, runway}/ # 기지 인프라 단위 테스트 (GAC, GCS, GPS, Landing Pad, Runway)
 │   ├── 1_control/{asa, tca, vas}/         # 온보드 제어기 단위 테스트
 │   ├── 2_guidance/fcp/                    # FCP 단위 테스트
 │   ├── 3_planning/amm/                    # AMM 및 WebUI 에디터(`test_amm_mission_editor.py`) 단위 테스트
@@ -89,8 +89,9 @@ Create_Aeroneutics/
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
 │
 ├── tools/                                 # 개발·검증 CLI 도구
-│   ├── amm_mission_editor.html            # 호스트 PC 오프라인 WebUI 미션 에디터 (`v0.3.1 Implemented`)
+│   ├── amm_mission_editor.html            # 호스트 PC WebUI 미션 에디터 (`v0.5.0 Implemented`, Live Mode 지원)
 │   ├── analyze_flight_log.py              # FDR JSONL 오프라인 분석·튜닝 CLI
+│   ├── gcs_live_bridge.py                 # localhost RFC 6455 GCS ↔ WebUI 실시간 WebSocket 브리지
 │   ├── run_boot_smoke.py                  # 전체 활성 서브시스템 부트 스모크 및 채널·예외 검증기
 │   ├── run_e2e_tests.py                   # 멀티노드 E2E 패킷 시뮬레이션 러너
 │   ├── run_mutation_tests.py              # 테스트 실효성 검증용 돌연변이 테스터 (살상률 측정)
@@ -164,7 +165,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(18개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(19개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```
@@ -192,7 +193,7 @@ python tools/verify_all_specs.py
   ```
 
 ### 6. 사양서 상태 분포 검증
-활성 사양서 18종의 상태 분포(`Implemented` / `Approved`)를 검사합니다 (현재 `13 Implemented, 5 Approved`):
+활성 사양서 18종의 상태 분포(`Implemented` / `Approved`)를 검사합니다 (현재 `14 Implemented, 4 Approved`):
 ```bash
 python tools/verify_spec_status.py
 ```

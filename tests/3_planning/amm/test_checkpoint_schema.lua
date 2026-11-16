@@ -2,10 +2,10 @@
 local mission_engine = require("mission_engine")
 
 describe("AMM v2.0.0 3-Tier Action Checkpoint Schema and Zero-Fallback Validation", function()
-    it("classifies 36 active ACT_*, 22 deferred ACT_*, and rejects all 13 deprecated v1.x action names", function()
+    it("classifies 37 active ACT_*, 22 deferred ACT_*, and rejects all 13 deprecated v1.x action names", function()
         local active = {
             "ACT_SYS_LOAD", "ACT_SYS_PREFLIGHT", "ACT_SYS_SET_HOME", "ACT_SYS_ARM", "ACT_SYS_DISARM", "ACT_SYS_TERMINATE",
-            "ACT_TKL_TAKEOFF_VERT", "ACT_TKL_TRANS_MC2FW", "ACT_TKL_TRANS_FW2MC", "ACT_TKL_LAND_NORM", "ACT_TKL_LAND_PREC", "ACT_TKL_ABORT_LAND",
+            "ACT_TKL_TAKEOFF_VERT", "ACT_TKL_TRANS_MC2FW", "ACT_TKL_TRANS_FW2MC", "ACT_TKL_LAND_NORM", "ACT_TKL_LAND_PREC", "ACT_TKL_LAND_NEAREST", "ACT_TKL_ABORT_LAND",
             "ACT_NAV_GOTO_WP", "ACT_NAV_SPLINE_WP", "ACT_NAV_CORRIDOR", "ACT_NAV_CHANGE_ALT", "ACT_NAV_CHANGE_SPD", "ACT_NAV_CHANGE_YAW",
             "ACT_PAT_HOLD_POS", "ACT_PAT_POI_HOLD", "ACT_PAT_LOITER_TIME", "ACT_PAT_LOITER_TURNS", "ACT_PAT_LOITER_ALT",
             "ACT_PAY_BUS_CMD", "ACT_PAY_REDSTONE", "ACT_PAY_SET_ROI", "ACT_PAY_CLEAR_ROI",
@@ -120,12 +120,21 @@ describe("AMM v2.0.0 3-Tier Action Checkpoint Schema and Zero-Fallback Validatio
             { cp = { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 20, command = "" } }, err = "MISSING_PAYLOAD_COMMAND" },
             { cp = { action = "ACT_PAY_REDSTONE", params = { mode = "BLINK", side = "top" } }, err = "INVALID_REDSTONE_MODE" },
             { cp = { action = "ACT_PAY_REDSTONE", params = { mode = "EMIT", side = "diagonal" } }, err = "INVALID_REDSTONE_SIDE" },
+            { cp = { action = "ACT_TKL_LAND_NEAREST", params = { facilityTypeFilter = "DOCKING_ARM" } }, err = "INVALID_FACILITY_TYPE_FILTER" },
+            { cp = { action = "ACT_TKL_LAND_NEAREST", params = { maxRangeM = 0 } }, err = "INVALID_MAX_RANGE_M" },
         }
         for _, tc in ipairs(cases) do
             local ok, res_or_err = mission_engine.normalize_checkpoint(tc.cp, nil, 1, { baseChannel = 10000 })
             assert_nil(ok, "Expected rejection for " .. tc.err)
             assert_eq(res_or_err, tc.err)
         end
+
+        local ok_nr, nr_err = mission_engine.normalize_checkpoint({
+            action = "ACT_TKL_LAND_NEAREST",
+            params = {},
+        }, { targetAlt = 140, cruiseSpeed = 18 }, 1, { baseChannel = 10000 })
+        assert_nil(nr_err)
+        assert_eq(ok_nr.params.facilityTypeFilter, "ANY")
     end)
 
     it("validates a full v2.0.0 mission definition, rejects items[], and stops on first deferred checkpoint", function()

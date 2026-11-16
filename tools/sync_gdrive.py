@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -60,6 +61,14 @@ def discover_manifest_files() -> List[Dict[str, Any]]:
     files: List[Dict[str, Any]] = []
     seen_paths = set()
 
+    def compute_remote_name(repo_path: str, category: str, dest: str) -> str:
+        if category == "packages":
+            mod_match = re.search(r"src/([^/]+)/([^/]+)/", repo_path)
+            mod_id = mod_match.group(2) if mod_match else "misc"
+            dest_clean = dest.lstrip("/")
+            return f"{mod_id}__{dest_clean.replace('/', '__')}"
+        return Path(repo_path).name
+
     def add_entry(repo_path: str, staged_rel_path: str, category: str, dest: str) -> None:
         if repo_path in seen_paths:
             return
@@ -70,6 +79,7 @@ def discover_manifest_files() -> List[Dict[str, Any]]:
             "category": category,
             "dest": dest,
             "fileName": Path(repo_path).name,
+            "remoteName": compute_remote_name(repo_path, category, dest),
         })
 
     # 1. Root Installer
@@ -128,6 +138,7 @@ def cmd_stage(staging_dir: Path) -> int:
             "category": cat,
             "dest": entry["dest"],
             "fileName": entry["fileName"],
+            "remoteName": entry["remoteName"],
             "sizeBytes": size,
             "sha256": sha,
         })
@@ -155,7 +166,7 @@ def fetch_remote_files(folder_id: str) -> Dict[str, str]:
     gdrive_bin = get_gdrive_cmd()
     try:
         proc = subprocess.run(
-            [gdrive_bin, "readonly", "ls", folder_id, "--json"],
+            [gdrive_bin, "readonly", "ls", folder_id, "--max", "0", "--json"],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -172,6 +183,75 @@ def fetch_remote_files(folder_id: str) -> Dict[str, str]:
     except Exception as e:
         print(f"[WARN] Failed to list remote folder '{folder_id}': {e}", file=sys.stderr)
         return {}
+
+
+def _sync_single_file(
+    gdrive_bin: str,
+    folder_id: str,
+    staged_p: Path,
+    flat_upload_dir: Path,
+    remote_name: str,
+    remote_id: Optional[str],
+    dry_run: bool,
+    existing_sha: Optional[str],
+    existing_name: Optional[str],
+    new_sha: str,
+) -> Dict[str, Any]:
+    if dry_run:
+        action = "UPDATE" if remote_id else "UPLOAD"
+        return {
+            "ok": True,
+            "action": action.lower(),
+            "file_id": remote_id or f"DRY_RUN_ID_{remote_name}",
+            "log": f"   [DRY-RUN] {action} {staged_p.name} -> remote '{remote_name}' (target ID: {remote_id or 'NEW'})",
+        }
+
+    if remote_id and existing_sha == new_sha and existing_name == remote_name:
+        return {"ok": True, "action": "skip", "file_id": remote_id, "log": None}
+
+    if remote_id:
+        res = subprocess.run(
+            [gdrive_bin, "mutate", "update", remote_id, str(staged_p)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        if res.returncode != 0:
+            return {"ok": False, "error": f"   [FAIL] Update {remote_name} ({remote_id}): {res.stderr.strip()}"}
+        return {"ok": True, "action": "update", "file_id": remote_id, "log": f"   [UPDATE] {remote_name} (ID: {remote_id})"}
+
+    upload_src = staged_p
+    if staged_p.name != remote_name:
+        flat_upload_dir.mkdir(parents=True, exist_ok=True)
+        upload_src = flat_upload_dir / remote_name
+        shutil.copy2(staged_p, upload_src)
+
+    res = subprocess.run(
+        [gdrive_bin, "mutate", "upload", str(upload_src), "--parent", folder_id],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if res.returncode != 0:
+        return {"ok": False, "error": f"   [FAIL] Upload {remote_name}: {res.stderr.strip()}"}
+    m = re.search(r"ID:\s*([A-Za-z0-9_\-]+)", res.stdout)
+    if not m:
+        return {"ok": False, "error": f"   [FAIL] Could not parse ID for {remote_name}: {res.stdout.strip()}"}
+    return {"ok": True, "action": "upload", "file_id": m.group(1), "log": f"   [UPLOAD] {remote_name} (ID: {m.group(1)})"}
+
+
+def _record_mapping_entry(mapping: Dict[str, Any], file_info: Dict[str, Any], remote_name: str, file_id: str) -> None:
+    repo_p = file_info["repoPath"]
+    mapping.setdefault("files", {})[repo_p] = {
+        "id": file_id,
+        "name": remote_name,
+        "repoPath": repo_p,
+        "category": file_info["category"],
+        "sizeBytes": file_info["sizeBytes"],
+        "sha256": file_info["sha256"],
+        "downloadUrl": f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t",
+    }
+    mapping.setdefault("bootstrapMap", {})[repo_p] = file_id
 
 
 def cmd_sync(
@@ -191,7 +271,6 @@ def cmd_sync(
     manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
     staged_files = manifest_data.get("files", [])
 
-    # Load existing mapping
     mapping: Dict[str, Any] = {
         "version": "1.0.0",
         "folderId": folder_id,
@@ -212,6 +291,8 @@ def cmd_sync(
 
     gdrive_bin = get_gdrive_cmd()
     remote_files = {} if dry_run else fetch_remote_files(folder_id)
+    remote_id_set = set(remote_files.values())
+    flat_upload_dir = staging_dir / "_upload_flat"
 
     files_to_sync = [
         f for f in staged_files
@@ -222,118 +303,136 @@ def cmd_sync(
 
     uploaded_count = 0
     updated_count = 0
+    skipped_count = 0
+    failed_count = 0
 
-    for file_info in files_to_sync:
+    def run_task(file_info: Dict[str, Any]) -> tuple[Dict[str, Any], str, Dict[str, Any]]:
         repo_p = file_info["repoPath"]
         staged_p = staging_dir / file_info["stagedRelPath"]
-        # Use remote file name that distinguishes duplicates if needed, or structured name
-        remote_name = file_info["fileName"]
-        # If filename might collide (e.g. multiple main.lua), prefix with package name
-        if remote_name == "main.lua":
-            parts = Path(file_info["stagedRelPath"]).parts
-            if len(parts) >= 2:
-                remote_name = f"{parts[-2]}_{remote_name}"
-
+        remote_name = file_info.get("remoteName") or file_info["fileName"]
+        existing_record = mapping.get("files", {}).get(repo_p)
         remote_id = remote_files.get(remote_name)
-        if not remote_id:
-            existing_record = mapping.get("files", {}).get(repo_p)
-            if existing_record and isinstance(existing_record, dict) and "id" in existing_record:
-                candidate_id = existing_record["id"]
-                if candidate_id in remote_files.values():
-                    remote_id = candidate_id
+        if not remote_id and isinstance(existing_record, dict) and existing_record.get("id") in remote_id_set:
+            remote_id = existing_record["id"]
+        ex_sha = existing_record.get("sha256") if isinstance(existing_record, dict) else None
+        ex_name = existing_record.get("name") if isinstance(existing_record, dict) else None
+        res = _sync_single_file(
+            gdrive_bin, folder_id, staged_p, flat_upload_dir, remote_name,
+            remote_id, dry_run, ex_sha, ex_name, file_info["sha256"],
+        )
+        return file_info, remote_name, res
 
-        if dry_run:
-            action = "UPDATE" if remote_id else "UPLOAD"
-            print(f"   [DRY-RUN] {action} {repo_p} -> remote name '{remote_name}' (target ID: {remote_id or 'NEW'})")
-            # For dry-run tests, record placeholder ID if missing
-            file_id = remote_id or f"DRY_RUN_ID_{file_info['fileName']}"
-        else:
-            if remote_id:
-                print(f"   [UPDATE] {remote_name} (ID: {remote_id})...")
-                res = subprocess.run(
-                    [gdrive_bin, "mutate", "update", remote_id, str(staged_p)],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                )
-                if res.returncode != 0:
-                    print(f"   [FAIL] Update error: {res.stderr.strip()}", file=sys.stderr)
+    try:
+        workers = 1 if dry_run else 8
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(run_task, fi) for fi in files_to_sync]
+            for fut in as_completed(futures):
+                file_info, remote_name, res = fut.result()
+                if not res.get("ok"):
+                    failed_count += 1
+                    print(res.get("error"), file=sys.stderr)
                     continue
-                file_id = remote_id
-                updated_count += 1
-            else:
-                print(f"   [UPLOAD] {remote_name} -> folder {folder_id}...")
-                res = subprocess.run(
-                    [gdrive_bin, "mutate", "upload", str(staged_p), "--parent", folder_id],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                )
-                if res.returncode != 0:
-                    print(f"   [FAIL] Upload error: {res.stderr.strip()}", file=sys.stderr)
-                    continue
-                m = re.search(r"ID:\s*([A-Za-z0-9_\-]+)", res.stdout)
-                if not m:
-                    print(f"   [FAIL] Could not parse file ID from: {res.stdout.strip()}", file=sys.stderr)
-                    continue
-                file_id = m.group(1)
+                if res.get("log"):
+                    print(res["log"])
+                act = res.get("action")
+                if act == "upload":
+                    uploaded_count += 1
+                elif act == "update":
+                    updated_count += 1
+                else:
+                    skipped_count += 1
+                file_id = res["file_id"]
                 remote_files[remote_name] = file_id
-                uploaded_count += 1
+                _record_mapping_entry(mapping, file_info, remote_name, file_id)
+    finally:
+        if flat_upload_dir.exists():
+            shutil.rmtree(flat_upload_dir, ignore_errors=True)
 
-        # Record mapping
-        mapping.setdefault("files", {})[repo_p] = {
-            "id": file_id,
-            "name": remote_name,
-            "repoPath": repo_p,
-            "category": file_info["category"],
-            "sizeBytes": file_info["sizeBytes"],
-            "sha256": file_info["sha256"],
-            "downloadUrl": f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t",
-        }
-        mapping.setdefault("bootstrapMap", {})[repo_p] = file_id
+    if dry_run:
+        print(f">> Dry-run finished: {len(files_to_sync)} file(s) previewed (mapping file left untouched).")
+        return 0
 
     mapping["lastSync"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     mapping_file.parent.mkdir(parents=True, exist_ok=True)
     mapping_file.write_text(json.dumps(mapping, indent=2), encoding="utf-8")
 
-    print(f">> Synchronization finished: {uploaded_count} uploaded, {updated_count} updated.")
+    print(f">> Synchronization finished: {uploaded_count} uploaded, {updated_count} updated, {skipped_count} unchanged, {failed_count} failed.")
     print(f"   Updated mapping written to: {mapping_file}")
 
     if embed:
-        embed_bootstrap_ids(mapping)
+        modified_paths = embed_bootstrap_ids(mapping)
+        if modified_paths:
+            print(f">> Re-staging and uploading {len(modified_paths)} post-embed manifest/installer file(s)...")
+            cmd_stage(staging_dir)
+            post_manifest = json.loads((staging_dir / "manifest.json").read_text(encoding="utf-8"))
+            post_by_repo = {f["repoPath"]: f for f in post_manifest.get("files", [])}
+            for mod_repo in modified_paths:
+                fi = post_by_repo.get(mod_repo)
+                rec = mapping.get("files", {}).get(mod_repo)
+                if not fi or not rec or not rec.get("id"):
+                    continue
+                r_upd = _sync_single_file(
+                    gdrive_bin, folder_id, staging_dir / fi["stagedRelPath"], flat_upload_dir,
+                    fi.get("remoteName") or fi["fileName"], rec["id"], False, None, None, fi["sha256"],
+                )
+                if r_upd.get("ok"):
+                    print(r_upd["log"])
+                    _record_mapping_entry(mapping, fi, fi.get("remoteName") or fi["fileName"], r_upd["file_id"])
+                else:
+                    failed_count += 1
+                    print(r_upd.get("error"), file=sys.stderr)
+            mapping["lastSync"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            mapping_file.write_text(json.dumps(mapping, indent=2), encoding="utf-8")
 
-    return 0
+    return 0 if failed_count == 0 else 1
 
 
-def embed_bootstrap_ids(mapping: Dict[str, Any]) -> None:
-    """Embeds the bootstrap file IDs into installer.lua, src/installer.lua, and manifest.lua."""
+def embed_bootstrap_ids(mapping: Dict[str, Any]) -> List[str]:
+    """Embeds mapped file IDs into installer.lua, src/0_development/installer/installer.lua, and manifest.lua."""
+    files_map = mapping.get("files", {})
     bootstrap_map = mapping.get("bootstrapMap", {})
-    if not bootstrap_map:
-        return
+    id_by_repo: Dict[str, str] = {}
+    for rp, fid in bootstrap_map.items():
+        if isinstance(fid, str) and fid:
+            id_by_repo[rp] = fid
+    for rp, meta in files_map.items():
+        if isinstance(meta, dict) and isinstance(meta.get("id"), str) and meta["id"]:
+            id_by_repo[rp] = meta["id"]
+    if not id_by_repo:
+        return []
 
-    # Files to update
     installer_files = [
         WORKSPACE_ROOT / "installer.lua",
         WORKSPACE_ROOT / "src" / "0_development" / "installer" / "installer.lua",
         WORKSPACE_ROOT / "src" / "0_development" / "installer" / "modules" / "manifest.lua",
     ]
+    modified: List[str] = []
 
     for fpath in installer_files:
         if not fpath.is_file():
             continue
         content = fpath.read_text(encoding="utf-8")
         orig = content
+        is_manifest = fpath.name == "manifest.lua"
 
-        for repo_p, fid in bootstrap_map.items():
-            # Replace gdriveId = nil with gdriveId = "fid" for repoPath
-            pattern = re.compile(
+        for repo_p, fid in id_by_repo.items():
+            boot_pat = re.compile(
                 r'(\{\s*repoPath\s*=\s*"' + re.escape(repo_p) + r'",\s*cacheRelPath\s*=\s*"[^"]+",\s*gdriveId\s*=\s*)(nil|"[^"]*")(\s*\})'
             )
-            content = pattern.sub(rf'\g<1>"{fid}"\g<3>', content)
+            content = boot_pat.sub(rf'\g<1>"{fid}"\g<3>', content)
+            if is_manifest:
+                dest_pat = re.compile(
+                    r'(\{[^{}]*?repoPath\s*=\s*"' + re.escape(repo_p) + r'"[^{}]*?dest\s*=\s*"[^"]+"[^{}]*?gdriveId\s*=\s*)(nil|"[^"]*")'
+                )
+                content = dest_pat.sub(rf'\g<1>"{fid}"', content)
 
         if content != orig:
             fpath.write_text(content, encoding="utf-8")
-            print(f">> Embedded bootstrap IDs into {fpath.relative_to(WORKSPACE_ROOT)}")
+            rel = fpath.relative_to(WORKSPACE_ROOT).as_posix()
+            print(f">> Embedded GDrive IDs into {rel}")
+            modified.append(rel)
+
+    return modified
 
 
 def cmd_status(staging_dir: Path, mapping_file: Path, folder_id: str) -> int:
@@ -394,6 +493,15 @@ def cmd_verify(mapping_file: Path, category_filter: str) -> int:
             fid = bootstrap_map.get(b) or (files.get(b, {}).get("id"))
             if not fid:
                 missing.append(b)
+
+    if category_filter in ("all", "packages"):
+        for entry in discover_manifest_files():
+            if category_filter != "all" and entry["category"] != category_filter:
+                continue
+            rp = entry["repoPath"]
+            fid = (files.get(rp, {}) or {}).get("id")
+            if not fid and rp not in missing:
+                missing.append(rp)
 
     if missing:
         print(f"[FAIL] Missing file IDs for: {missing}", file=sys.stderr)

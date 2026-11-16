@@ -4,6 +4,7 @@
 local action_registry = require("action_registry")
 local chattering_guard = require("chattering_guard")
 local condition_evaluator = require("condition_evaluator")
+local facility_client = require("facility_client")
 local hook_runner = require("hook_runner")
 
 local mission_engine = {}
@@ -16,6 +17,7 @@ mission_engine.DEFERRED_ACTIONS = action_registry.DEFERRED_ACTIONS
 local VALID_SIDES = { top = true, bottom = true, left = true, right = true, front = true, back = true }
 local VALID_EXEC_MODES = { SINGLE = true, REPEAT = true, LOOP = true }
 local VALID_FALLBACKS = { SKIP_NEXT = true, RTH = true, HOVER_HOLD = true, LOITER = true }
+local VALID_FACILITY_FILTERS = { ANY = true, LANDING_PAD = true, RUNWAY = true }
 
 local function is_finite(n)
     return type(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge
@@ -144,6 +146,21 @@ local function validate_land(p, defaults, opts)
     return true
 end
 
+local function validate_nearest_land(p, defaults, opts)
+    if p.facilityTypeFilter == nil then p.facilityTypeFilter = "ANY" end
+    if not VALID_FACILITY_FILTERS[p.facilityTypeFilter] then
+        return false, "INVALID_FACILITY_TYPE_FILTER"
+    end
+    if p.maxRangeM ~= nil and (not is_finite(p.maxRangeM) or p.maxRangeM <= 0) then
+        return false, "INVALID_MAX_RANGE_M"
+    end
+    if (p.targetPos ~= nil or p.x ~= nil or p.z ~= nil) and not extract_target_pos(p) then
+        return false, "INVALID_TARGET_POS"
+    end
+    inherit_flight_defaults(p, defaults, opts)
+    return true
+end
+
 local function validate_payload_action(p, _defaults, opts)
     if not is_zone3_spec(p, opts and opts.baseChannel) then return false, "INVALID_ZONE3_CHANNEL" end
     if type(p.command) ~= "string" or p.command == "" then return false, "MISSING_PAYLOAD_COMMAND" end
@@ -182,6 +199,7 @@ local ACTION_VALIDATORS = {
     ACT_MOB_MOVING_TKOFF = validate_takeoff,
     ACT_TKL_LAND_PREC = validate_land,
     ACT_TKL_LAND_NORM = validate_land,
+    ACT_TKL_LAND_NEAREST = validate_nearest_land,
     ACT_PAY_BUS_CMD = validate_payload_action,
     ACT_PAY_REDSTONE = validate_redstone_action,
 }
@@ -610,6 +628,29 @@ local function set_land_goal(self, cp)
     return true
 end
 
+local function set_nearest_land_goal(self, cp)
+    local p = cp.params or {}
+    local nav_pos = self.lastMfd and self.lastMfd.navigation and self.lastMfd.navigation.currentPos
+    local pos = nav_pos or p.targetPos or self.homePos or { x = 0, z = 0 }
+    if not self.fac then
+        cp._resolvedFacilityId = nil
+        return false, "NO_FACILITY_AVAILABLE"
+    end
+    local best = facility_client.find_nearest_free_landing_facility(self.fac, pos, p.facilityTypeFilter, p.maxRangeM)
+    if not best then
+        cp._resolvedFacilityId = nil
+        return false, "NO_FACILITY_AVAILABLE"
+    end
+    cp._resolvedFacilityId = best.facilityId
+    local bpos = best.position or {}
+    local tpos = (bpos.x and bpos.z) and { x = bpos.x, z = bpos.z } or p.targetPos
+    self.currentGoal = {
+        flightMode = "LANDING", arm = true, flightActive = true,
+        facilityId = best.facilityId, targetPos = tpos, targetAlt = bpos.y or p.targetAlt,
+    }
+    return true
+end
+
 local function dispatch_failsafe_cmd(self, mode)
     self.currentGoal = { flightMode = mode, arm = true, flightActive = true }
     return true
@@ -680,6 +721,7 @@ local FCP_DISPATCHERS = {
     ACT_PAT_POI_HOLD = set_poi_goal,
     ACT_TKL_LAND_PREC = set_land_goal,
     ACT_TKL_LAND_NORM = set_land_goal,
+    ACT_TKL_LAND_NEAREST = set_nearest_land_goal,
     ACT_MOB_DECK_SYNC = set_land_goal,
     ACT_PAY_BUS_CMD = function(self, cp, now_ms) return self.hook_runner:start_action(cp, now_ms) end,
     ACT_PAY_REDSTONE = function(self, cp, now_ms) return self.hook_runner:start_action(cp, now_ms) end,
@@ -832,8 +874,27 @@ end
 local function dispatch_checkpoint(self, cp, t_ms)
     if cp.onEnter then self.hook_runner:execute_hooks(cp.onEnter, cp, t_ms) end
     local dispatcher = FCP_DISPATCHERS[cp.action]
-    if dispatcher then dispatcher(self, cp, t_ms) end
+    if dispatcher then
+        local ok, err = dispatcher(self, cp, t_ms)
+        if ok == false and err == "NO_FACILITY_AVAILABLE" then
+            return false, err
+        end
+    end
     apply_runtime_decorators(self, cp)
+    return true
+end
+
+local function finish_dispatch(self, cp)
+    local ok, err = dispatch_checkpoint(self, cp, self.enteredAtMs)
+    if ok then return true, nil end
+    if find_decorator(cp, "DEC_RETRY_N") then
+        cp._noNearestFacility = err or "NO_FACILITY_AVAILABLE"
+        self.currentGoal = build_loiter_fallback(self, cp)
+        return true, nil
+    end
+    local ab = self:apply_abort(cp, self.enteredAtMs)
+    if ab == "SKIPPED" then return true, nil end
+    return false, err or "NO_FACILITY_AVAILABLE"
 end
 
 function mission_engine:enter_checkpoint(index, now_ms, is_retry)
@@ -860,6 +921,8 @@ function mission_engine:enter_checkpoint(index, now_ms, is_retry)
     cp.status = "ACTIVE"
     cp.settleState = {}
     cp._orbitState = nil
+    cp._noNearestFacility = nil
+    cp._resolvedFacilityId = nil
     if not is_retry then cp._attempt = 1 end
     if has_human then
         self.waitingHumanAuth = true
@@ -867,8 +930,7 @@ function mission_engine:enter_checkpoint(index, now_ms, is_retry)
         return true
     end
     self.waitingHumanAuth = false
-    dispatch_checkpoint(self, cp, self.enteredAtMs)
-    return true
+    return finish_dispatch(self, cp)
 end
 
 function mission_engine:confirm(now_ms)
@@ -877,8 +939,7 @@ function mission_engine:confirm(now_ms)
     if not cp then return false, "INVALID_INDEX" end
     self.waitingHumanAuth = false
     self.enteredAtMs = get_time_ms(now_ms)
-    dispatch_checkpoint(self, cp, self.enteredAtMs)
-    return true, nil
+    return finish_dispatch(self, cp)
 end
 
 function mission_engine:advance(now_ms)
@@ -899,6 +960,8 @@ function mission_engine:advance(now_ms)
             c.status = nil
             c._attempt = nil
             c._orbitState = nil
+            c._noNearestFacility = nil
+            c._resolvedFacilityId = nil
         end
         local wrap_idx = 1
         while wrap_idx < #self.checkpoints and chattering_guard.should_skip_on_repeat(self.checkpoints[wrap_idx].action) do
@@ -924,6 +987,9 @@ function mission_engine:evaluate_active(now_ms)
         if type(lim) == "number" and lim > 0 and (now_ms - self.enteredAtMs) >= (lim * 1000) then
             return self:apply_abort(cp, now_ms)
         end
+    end
+    if cp._noNearestFacility then
+        return self:apply_abort(cp, now_ms)
     end
     local ctx = {
         mfd = self.lastMfd, enteredAtMs = self.enteredAtMs, nowMs = now_ms,
@@ -975,6 +1041,8 @@ function mission_engine:start(execution_mode, now_ms)
         cp.status = nil
         cp._attempt = nil
         cp._orbitState = nil
+        cp._noNearestFacility = nil
+        cp._resolvedFacilityId = nil
     end
     self.touchdownArmed = false
     self.waitingHumanAuth = false

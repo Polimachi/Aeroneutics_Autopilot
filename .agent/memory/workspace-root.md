@@ -4,6 +4,45 @@
 
 ---
 
+## 2026-11-16 — Google Drive 전수 패키지 135파일 업로드·매핑 동기화 및 엄격 정합성 게이트 기본 활성화 (TASK-501)
+
+- **결정 배경**: `manifest.lua` 15개 모듈 전수 파일의 Google Drive 단일 폴더(`1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9`) 업로드 시 동일 파일명(`main.lua`, `network_manager.lua`, `tui_view.lua` 등) 충돌을 방지하고, 모든 패키지 `gdriveId` 임베드 및 `verify_manifest_sync.py` 기본 게이트를 `--strict-gdrive-packages`로 강화하기 위해 수행함.
+- **반영 내역**:
+  1. **충돌 방지 원격 파일명 및 전수 `--embed` (`tools/sync_gdrive.py`)**: `"packages"` 원격 파일명을 `<modId>__<dest_underscored>`로 정규화하고 `gdrive readonly ls --max 0 --json` 페이지네이션 제한을 제거함. `embed_bootstrap_ids()`를 `BOOTSTRAP_FILES`, `SHARED_LIBS`, 전 15모듈 `MODULES.*.files`(`isConfig` 포함)로 확장하고 임베드 후 변경된 `manifest.lua`·`installer.lua`를 재스테이징·재업로드하도록 개선(`--dry-run` 시 매핑·코드 무변경 가드 포함).
+  2. **엄격 검증 기본 활성화 (`tools/verify_manifest_sync.py`)**: `strict_gdrive_packages=True` 기본값(해제용 `--no-strict-gdrive-packages`)을 적용하고 `SHARED_LIBS`·`MODULES.*.files` `gdriveId` 일치 검사(`PACKAGE_GDRIVE_ID_MISMATCH`)를 추가함.
+  3. **하네스 테스트 및 실배포 실행**: `tests/harness/test_gdrive_sync.py`·`test_manifest_sync_verifier.py` 갱신(`15/15 PASS`), `sync_gdrive.py stage` → `sync --embed` (`135`파일 동기화 및 `manifest.lua` 재업로드) → `verify --category all` (`Verification PASS: 135 mapped files`) → `verify_manifest_sync.py --strict-gdrive-packages` (`15 modules, 134 manifest paths, 145 source files, 135 GDrive entries, 0 Errors, 0 Warnings`).
+
+---
+
+## 2026-11-16 — GCS WebSocket Live Bridge, GAC 시설 자동 동기화, 다중 기체 전술 지도 및 원클릭 미션 무선 푸시 구축 (TASK-404)
+
+- **결정 배경**: WebUI 에디터(`amm_mission_editor.html`)에서 작성한 미션을 세이브 폴더에 수동 복사하던 번거로움과 시설 좌표 수동 입력을 제거하고, 인게임 `GCS`(`http.websocket`)↔호스트 `ws://127.0.0.1:8765` 브리지↔WebUI 양방향 실시간 관제 및 원클릭 무선 미션 전송(`LOAD`/`RUN`)을 구축함.
+- **반영 내역**:
+  1. **Spec-First 및 계약 확장**: `config/protocol_contracts.json` `[I-6]` `MSG_MISSION_CMD`에 `"LOAD"` 및 선택 필드 `missionData`·`saveToDisk` 추가; `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md`(`v1.34.0`), `SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md`(`v2.18.0`), `GCS_PROGRAM_SPECIFICATION_AND_ICD.md`(`v1.2.0`), `AMM_PROGRAM_SPECIFICATION.md`(`v2.3.0`), `AMM_MISSION_EDITOR_SPECIFICATION.md`(`v0.5.0`) 동기화 및 구현 후 `Implemented` 승격.
+  2. **호스트 Python RFC 6455 브리지 (`tools/gcs_live_bridge.py`, `tests/harness/test_gcs_live_bridge.py`)**: stdlib `asyncio` 전용 로컬 WebSocket 서버(`127.0.0.1:8765`), 후발 클라이언트 접속 시 `WORLD_PRESET_SYNC`·`FLEET_TELEMETRY_SYNC` 즉시 캐시 전송, `MISSION_PUSH_CMD` / `MISSION_PUSH_ACK` 양방향 중계 구현(`tests/harness/test_tools_integrity.py` 등재).
+  3. **온보드 `AMM` `"LOAD"` & `GCS` 브리지 연동 (`src/3_planning/amm/`, `src/0_infra/gcs/`, `manifest.lua`)**: `c2_arbiter.lua` `handle_cmd_load` 및 인라인 `RUN` `missionData` 지원(`/missions/<safeId>.json` 저장, `BUS/SCHEMA_INVALID` 가드, `amm` `138/138 PASS`), `GCS` `live_bridge_client.lua`·`network_manager.lua`(`50003`/`50004` 및 전 등록 기체 `Base+3`/`Base+0` 동시 개방)·`main.lua`(`gcs_config.json` `liveBridge`, `gcs` `30/30 PASS`, 부트 스모크 `[50000, 50003, 50004]`), `manifest.lua` `MODULES.gcs v1.2.0` 반영.
+  4. **WebUI Live Mode (`tools/amm_mission_editor.html v0.5.0 Implemented`, `tests/3_planning/amm/test_amm_mission_editor.py`)**: 사용자 토글 `LiveBridge` IIFE(`ws://127.0.0.1:8765` 로컬 한정, 비로컬/외부 `fetch`/`https://` 영구 차단), `WORLD_PRESET_SYNC`→`WorldStore` 자동 병합, 2D 캔버스 다중 기체 삼각 마커·60점 궤적(`Trail`), `#pushAircraftModalBackdrop` 원클릭 푸시 모달 추가(`24/24 PASS`).
+
+---
+
+## 2026-11-16 — Runway 활주로 제어기 전면 개정, 10모듈 구현 및 3-Tier ILS/롤아웃 통합 검증 (TASK-103)
+
+- **결정 배경**: `Landing Pad v2.5.0` 기준으로 정합화된 지상 시설물 계층(`Base_sec+1` 백본, `CH 60001` 송신 전용 GPS+`Base_sec+5` 위상 분산) 및 `GAC v1.6.0`/`AMM v2.2.0` 연동을 활주로 도메인(`src/0_infra/runway/`)에 구현함.
+- **반영 내역**:
+  1. **Spec-First 및 계약 동기화**: `config/protocol_contracts.json` `[I-5]` `MSG_FACILITY_STATIC_GUIDE` 선택 필드(`endPoint`, `glideSlopeAngle`, `touchdownZoneLength`) 및 `MSG_RUNWAY_TOUCHDOWN`/`MSG_RUNWAY_VACATED` 등록, `RUNWAY_SPECIFICATION_AND_ICD.md`(`v1.12.0 Implemented`) 및 마스터 ICD·다이어그램·`GAC`·`AMM` 교차 배지 동기화.
+  2. **10모듈 구현·하네스 연동 (`src/0_infra/runway/`, `tools/run_boot_smoke.py`, `manifest.lua`)**: `main.lua` + `modules/{config_store,offset_transform,sensor_adapter,lighting_controller,gps_client,tactical_streamer,runway_fsm,setup_wizard,tui_view}.lua` 구현(선택 유선 `redstone_integrator_0`·`carrier_arresting_clutch`·`wind_display_link` 부재 시 데몬 무중단 성능 저하), `tools/run_boot_smoke.py` `mock_p.getMethods` `p_orig.wrap` 재귀 스택 오버플로우 수정(13타겟 `13/13 PASS`), `manifest.lua` 15번 모듈 등록(`0_development/installer` `44/44 PASS`), 단위 `12/12 PASS`, E2E Scenario 6 활주로 접근·접지·롤아웃·이탈 통과(`19/19 PASS`).
+
+---
+
+## 2026-11-16 — AMM WebUI World Preset, 시설 기반 이착륙 지정 및 ACT_TKL_LAND_NEAREST 구현 (TASK-403)
+
+- **결정 배경**: `/grill-me` 확정 설계안(`docs/superpowers/specs/2026-11-14-task-403-world-preset-design.md`)에 따라 서버별·월드별 시설 프리셋 관리, 체크포인트 호환 시설 드롭다운 연동 및 동적 최근접 착륙 행동 `ACT_TKL_LAND_NEAREST`를 구현함.
+- **반영 내역**:
+  1. **Spec-First 및 온보드 `GAC`/`AMM`**: `config/protocol_contracts.json` (`MSG_FACILITY_BEACON` 확장 키 및 `missionSchema.activeActions` `37`종), `GAC_PROGRAM_SPECIFICATION_AND_ICD.md` (`v1.6.0 Implemented`), `AMM_PROGRAM_SPECIFICATION.md` (`v2.2.0 Implemented`), `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.4.0 Implemented`), `src/0_infra/gac/modules/beacon_broadcaster.lua` (`facilities[]` 송출), `src/3_planning/amm/modules/{facility_client,action_registry,condition_evaluator,mission_engine,ui_renderer}.lua` (`ACT_TKL_LAND_NEAREST` + `NO_FACILITY_AVAILABLE` 가드) 구현.
+  2. **에디터 `WorldStore` & UI (`tools/amm_mission_editor.html`)**: 멀티 월드(`uafs_amm_world_presets_v1`), `#worldPresetDrawer`, 2D 4변 `(X, Z)` 눈금·시설 핀·`PICK_FACILITY`, 호환 시설 드롭다운·1클릭 등록·`'From World…'`/`'Save as Facility'` 구현(`test_amm_mission_editor.py` `23/23 PASS`, 단위 `14/14 PASS`, E2E `18/18 PASS`).
+
+---
+
 ## 2026-11-15 — 무선 OTA 배포 서버·슬레이브 에이전트·2단계 부트 워치독 구현 및 다중 노드 E2E/사양 승격 (TASK-117)
 
 - **결정 배경**: 다중 CC:Tweaked 온보드 노드(`VAS`, 다수 `TCA`, `FCP`, `AMM`)의 수동 `installer.lua` 업데이트 비용을 해소하고 비행 중 OTA 재부팅 추락 및 패킷 유실 벽돌 장애를 방지하기 위해 `/grill-me`·실행 계획서(`docs/superpowers/plans/2026-11-15-task-117-wireless-ota-rollback.md`, 구 `TASK-117 + 119` 통합)를 수립해 Spec-First로 구현함.

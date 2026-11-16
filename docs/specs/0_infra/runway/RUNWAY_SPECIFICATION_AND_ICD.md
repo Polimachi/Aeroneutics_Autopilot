@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.11.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Implemented` |
+| **문서 버전 (Version)** | `v1.12.0` |
+| **최종 수정일 (Date)** | `2026-11-16` |
 | **구현 코드 (Source)** | `src/0_infra/runway/` |
 | **주관 도메인 (Domain)** | 지상 인프라 활주로 유도 비콘 및 진입 제어 (Runway) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.12.0` | `2026-11-16` | **`TASK-103-1` 활주로 구현 기준 확정 (`v1.11.0` $\to$ `v1.12.0 Approved`)**: ① `Landing Pad v2.5.0` 아키텍처 준거 시운전·항법·모듈 구조(`src/0_infra/runway/modules/` 9모듈 + `main.lua`, `/runway/config.json`) 정립, ② `Base_sec+1` `GAC` 슬롯 배정/상태(`MSG_ATC_SLOT_ASSIGN`, `MSG_ATC_SLOT_ACK`, `MSG_ATC_FACILITY_UPDATE`) 일원화 및 §4.2 구 `CH 50002` `MSG_ATC_RESERVE_RUNWAY`/`RUNWAY_ACK`/`RUNWAY_CLEAR` `[DEPRECATED]` 표기, ③ `CH 60001` 송신 전용 + $Base_{\text{sec}}+5$ `computerId` 위상 분산 GPS·DR 및 시단(`touchdownOffset`)/종단(`endOffset`) 3D 오일러 오프셋 변환 규격화, ④ 유선 주변기기(`redstone_integrator_0`, 선택 사양 `carrier_arresting_clutch`, `wind_display_link`) 미부착 시 데몬 중단 없는 우아한 성능 저하 및 51x19 TUI 경고 표출·`[S]` 셋업 마법사 명시, ⑤ `AMM` `ACT_TKL_TAKEOFF_RWY`/`ACT_TKL_LAND_RWY` `[DEFERRED]` 유지 및 연관 배지(`ICD v1.33.0`, `GAC v1.6.0`, `Diagram v2.17.0`, `AMM v2.2.0`) 동기화 | `TASK-103` 활주로 제어기 코드베이스 구현 및 사양 정합 확립 |
 | `v1.11.0` | 2026-11-14 | Wave 1 전역 사양 동기화: `[I-5]` `MSG_FACILITY_STATIC_GUIDE`·`MSG_FACILITY_DYNAMIC_GUIDE` 시설물 3종 대칭 공통 스키마(`facilityType = "RUNWAY"`, `touchdownPoint`, `attitude`, `approachDirection = "FRONT" \| "BACK"`, `deckStatus`, `landingPermitted`, `abortAlert`, 동적 `velocity`/`acceleration`/`angularRates`, 보조 `endPoint`·`glideSlopeAngle`·`touchdownZoneLength`) 정합, `thresholdPoint`·`deckAttitude`·`runwayHeading`·`surfaceWind`·`arrestingWires`·`opticalMeatballOffset` 제거, `CH 50003` GAC 집약 비콘 송출 명시, `MSG_ATC_DEPARTURE_CLEARANCE`(`CH 50001`) vs `MSG_GAC_DEPARTURE_CLEARANCE`(`Base_sec+0`) 역할 분리 명시 및 연관 문서 버전(`ICD v1.30.0`, `GAC v1.5.0`, `Diagram v2.15.0`, `GPS v2.3.3`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Landing Pad v2.5.0`, `Docking Arm v1.12.0`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 시설물 3종 가이드 패킷 대칭 스키마 및 비콘·출발 관제 단일화 |
 | `v1.10.7` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: 외부 공중 RF 교신 상대(`CH 50001`, `50003`, `Base_sec+0`, `Base_sec+10+Idx`, `Base+5`)를 `기체 AMM (Node 03)`으로 일원화하고 `AMM`이 상대 ILS 글라이드슬로프/함선 속도 보상 궤적을 연산해 `Base+4`(`CH_TRAJECTORY_CMD`)로 `FCP (Node 04)`에 전달하는 계층 분담 명시, 연관 규격서 버전 동기화 | AMM 외부 게이트웨이·항법·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.10.6` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
@@ -23,13 +24,13 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.15.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.33.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.6.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.17.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.2.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.2.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
 
@@ -100,18 +101,22 @@ flowchart TD
 | **`50002`** | `CH_ATC_FACILITY` | Runway / ATC | ATC / Runway | 1Hz / 이벤트 | 활주로 폐쇄/개방 상태 동기화, 긴급 복행(Wave-off) 지시 전달 |
 | **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (AMM, GCS) | 1Hz | Sector 0 대표 비콘: 활주로 기본 제원 (활주로 번호, 길이, 폭, 표면 상태, 이동성 플래그) |
 | **$Base_{\text{sec}} + 0$** | `CH_GAC_COMM` | AMM / GAC | GAC / AMM | 이벤트 | 유도로 지상 활주 인가(`MSG_TAXI_CMD`), 주기장/에이프런 배정 및 출항 제어 ($Base_{\text{sec}} = 50001 + S \times 200$) |
-| **$Base_{\text{sec}} + 1$** | `CH_SECTOR_FACILITY` | Runway / GAC | GAC / Runway | 이벤트 | 활주로 노드와 관할 GAC 간 활주로 이탈/유도로 진입 상태 동기화 |
-| **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Runway Node | AMM (Node 03) | 1Hz (정적)<br/>20Hz (동적) | 시단/종단 좌표, 방위각, 동적 속도/가속도 벡터 스트리밍 |
-| **`Base + 5`** | `CH_EXTERNAL_COMM` | AMM (Node 03) | Runway / ATC | 이벤트 | 터치다운 완료, 활주로 이탈(`MSG_RUNWAY_VACATED`) 통보 |
+| **$Base_{\text{sec}} + 1$** | `CH_SECTOR_FACILITY` | Runway / GAC | GAC / Runway | 1Hz / 이벤트 | `MSG_ATC_SLOT_ASSIGN` / `MSG_ATC_SLOT_ACK` 슬롯 협상 및 `MSG_ATC_FACILITY_UPDATE` 활주로 점유·위치 동기화 |
+| **$Base_{\text{sec}} + 5$** | `CH_SECTOR_GPS_REPLY` | GPS Server | Runway Node | 이벤트 | 시설물 전용 GPS 측위 응답 수신 (`CH 60001` 송신 전용 + `computerId` 위상 분산 질의) |
+| **$Base_{\text{sec}} + 10 + \text{Idx}$** | `CH_TACTICAL_GUIDANCE` | Runway Node | AMM (Node 03) | 1Hz (정적)<br/>20Hz (동적) | 시단/종단 좌표, 방위각, 동적 속도/가속도 벡터 스트리밍 및 `MSG_RUNWAY_TOUCHDOWN`/`MSG_RUNWAY_VACATED` 수신 |
+| **`Base + 5`** | `CH_EXTERNAL_COMM` | AMM (Node 03) | Runway / ATC | 이벤트 | 기체 보조 통보 채널 |
 
-### 2.2 유선 모뎀 하드웨어 매핑 및 조명 제어 진리표 (Hardware Mapping & Lighting Truth Table)
+> [!IMPORTANT]
+> **GPS 채널 송신 전용(Transmit-Only) 및 위상 분산**: 활주로 노드는 타 시설물의 GPS 응답 스톰을 차단하기 위해 공용 `CH 60001`을 `modem.open()` 하지 않으며(`transmit(60001, Base_sec+5, req)` 단방향 송신 전용), 응답은 $Base_{\text{sec}}+5$로 수신하고 `computerId % interval` 위상 분산 주기를 적용합니다.
+
+### 2.2 유선 모뎀 하드웨어 매핑, 우아한 성능 저하(Graceful Degradation) 및 조명 제어 진리표
 
 #### 1. 유선 모뎀 주변기기 매핑
-| 주변기기 식별자 (Peripheral Name) | 장치 타입 | 제어 목적 | 신호 및 데이터 형식 |
-| :--- | :---: | :--- | :--- |
-| **`redstone_integrator_0`** | Redstone Integrator | 활주로 등화 및 유도로 정지선 램프 통합 제어 | 디지털 레드스톤 On/Off (6채널/방향) |
-| **`carrier_arresting_clutch`** *(옵션)* | Create Clutch | 항공모함 비행갑판 어레스팅 와이어 텐션 잠금 | 레드스톤 15 (체결) / 0 (자유 회전) |
-| **`wind_display_link`** *(옵션)* | Display Link / Nixie | 조종석 가시 풍향·풍속 및 활주로 번호 표출 | 문자열/수치 스트리밍 |
+| 주변기기 식별자 (Peripheral Name) | 장치 타입 | 제어 목적 | 신호 및 데이터 형식 | 미부착 시 동작 |
+| :--- | :---: | :--- | :--- | :--- |
+| **`redstone_integrator_0`** *(옵션)* | Redstone Integrator | 활주로 등화 및 유도로 정지선 램프 통합 제어 | 디지털 레드스톤 On/Off (6채널/방향) | 데몬 유지, TUI `[WARN] redstone_integrator_0 missing` 표출 |
+| **`carrier_arresting_clutch`** *(옵션)* | Create Clutch | 항공모함 비행갑판 어레스팅 와이어 텐션 잠금 | 레드스톤 15 (체결, `ROLLOUT` 중) / 0 (해제) | 선택 기능 비활성, 데몬 유지 |
+| **`wind_display_link`** *(옵션)* | Display Link / Nixie | 가시 풍향·풍속 및 활주로 상태/번호 표출 | 텍스트 디스플레이 갱신 | 선택 기능 비활성, 데몬 유지 |
 
 #### 2. 레드스톤 인티그레이터 출력 채널 매핑 (`redstone_integrator_0`)
 | 핀 방향 (Side) | 제어 회선명 | 대상 장비 | 정상 상태 (FREE) | 접근 인가 (APPROACH) | 활주 점유 (OCCUPIED) | 긴급 복행 (WAVE-OFF) |
@@ -378,13 +383,17 @@ sequenceDiagram
     Note over L: CLEAR_GREEN = ON, HOT_RED = OFF, HOLD_SHORT = OFF
     
     A->>C: MSG_ATC_APPROACH_REQ (CH 50001)<br/>[facilityType: RUNWAY, craft: AIRCRAFT_01]
-    C->>R: MSG_ATC_RESERVE_RUNWAY (CH 50002) [runwayId: RWY_09L]
-    R-->>C: MSG_ATC_RUNWAY_ACK (CH 50002) [status: ACCEPTED, tacticalCH: 50220]
+    C->>G: MSG_ATC_SECTOR_HANDOFF_REQ (CH 50002)
+    G-->>C: MSG_ATC_SECTOR_HANDOFF_ACK (CH 50002)
+    C->>A: MSG_ATC_HANDOFF_CLEARANCE (CH 50001) [gacChannel: 50201]
+    A->>G: MSG_GAC_CHECKIN_REQ (CH 50201)
+    G->>R: MSG_ATC_SLOT_ASSIGN (Base_sec+1) [facilityId: RWY_09L]
+    R-->>G: MSG_ATC_SLOT_ACK (Base_sec+1) [status: ACCEPTED, tacticalCH: 50220]
     
     Note over R,L: 접근 활성화 등화 제어
     R->>L: 유선 모뎀 신호 인가 (top: PAPI_ON, east: HOLD_SHORT_ON)
     
-    C->>A: MSG_ATC_APPROACH_CLEARANCE (CH 50001)<br/>[runwayId: RWY_09L, tacticalCH: 50220, mobility: DYNAMIC]
+    G->>A: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: RWY_09L, tacticalChannel: 50220]
 
     Note over A,R: 전술 채널 (CH 50220) 핸드오버
     alt 동적 비행갑판 (DYNAMIC)
@@ -399,21 +408,24 @@ sequenceDiagram
 
     Note over A: 활주로 접지 (Touchdown)
     A->>R: MSG_RUNWAY_TOUCHDOWN (CH 50220) [touchdownSpeed: 24.5 m/s]
+    R->>G: MSG_ATC_FACILITY_UPDATE (Base_sec+1) [status: OCCUPIED]
     R->>L: 활주로 점유 경고 등화 전환 (south: HOT_RED_ON, north: CLEAR_GREEN_OFF)
     
     Note over A: 제동 감속 및 유도로 진출 완료
-    A->>C: MSG_RUNWAY_VACATED (CH 50001) [exitTaxiway: TAXI_CHARLIE]
-    C->>R: MSG_ATC_RUNWAY_CLEAR (CH 50002)
+    A->>R: MSG_RUNWAY_VACATED (CH 50220) [exitTaxiway: TAXI_CHARLIE, runwayCleared: true]
+    R->>G: MSG_ATC_FACILITY_UPDATE (Base_sec+1) [status: FREE]
     
     Note over R,L: 활주로 개방 복귀 등화 전환
     R->>L: 유선 모뎀 신호 갱신 (north: CLEAR_GREEN_ON, south: HOT_RED_OFF, east: HOLD_SHORT_OFF)
     Note over R: 활주로 상태 'FREE' 즉시 전환 (후속기 착륙 허가 가능)
     
     Note over A,G: 유도로 활주 및 주기장 진입 (GAC 섹터 관제 인계)
-    C->>A: MSG_ATC_HANDOFF_CLEARANCE (CH 50001) [sectorId: 1, gacChannel: 50201]
     A->>G: MSG_GAC_CHECKIN_REQ (CH 50201) [craft: AIRCRAFT_01, status: TAXIING]
-    G->>A: MSG_TAXI_CMD (CH 50201) [action: TAXI_TO_RAMP, gateId: GATE_01]
+    G->>A: MSG_TAXI_CMD (CH 50201) [action: TAXI_TO_RAMP, assignedTaxiway: TAXI_CHARLIE]
 ```
+
+> [!NOTE]
+> **구 `CH 50002` `MSG_ATC_RESERVE_RUNWAY` / `MSG_ATC_RUNWAY_ACK` / `MSG_ATC_RUNWAY_CLEAR` `[DEPRECATED - v1.12.0]`**: 섹터 로컬 백본(`Base_sec+1`) 기반 `GAC` 통합 배정 프로토콜(`MSG_ATC_SLOT_ASSIGN` / `MSG_ATC_SLOT_ACK` / `MSG_ATC_FACILITY_UPDATE`)로 완전 일원화되었습니다.
 
 ---
 
@@ -431,3 +443,19 @@ sequenceDiagram
 
 기체 AMM (Node 03)은 항모의 이동 속도 벡터 $\vec{v}_{ship}$을 피드포워드 상쇄하여 진입 속도 세트포인트를 합성한 뒤 `Base+4`로 `FCP` 외루프 추종 제어기에 하달합니다:
 $$\vec{v}_{approach\_cmd} = \vec{v}_{ship} + \vec{v}_{airspeed\_glideslope}$$
+
+---
+
+## 6. 소프트웨어 모듈 아키텍처, 설정 스키마 및 검증 기준 (`src/0_infra/runway/`)
+
+1. **모듈 구성 (10 Lua 파일 — `main.lua` + 9모듈)**:
+   - `main.lua`: 20Hz 비차단 메인 데몬 (`os.pullEventRaw` 이벤트 루프, `[S]` 셋업 마법사 진입, `[F]` 강제 개방, `[L]` 조명 테스트, `[Q]` 종료).
+   - `modules/config_store.lua`: `/runway/config.json` 원자적 읽기/쓰기 및 정규화(`facilityId`/`runwayId`, `sectorId`, `runwayIndex`, `mobility`, `touchdownOffset`, `endOffset`, `glideSlopeAngle`, `touchdownZoneLength`, `channels`).
+   - `modules/offset_transform.lua`: 3D 바디 프레임 오프셋 회전 변환 (`touchdownPoint` 시단 및 `endPoint` 종단 동시 산출 + 각속도 선속도 보상).
+   - `modules/sensor_adapter.lua`: `avionics_sensors` 3종 센서 탐색·동역학 계측 및 갑판 안정성 판정(`tilt <= 10.0°`, `|vy| <= 2.5 m/s`, `DYNAMIC` 전용).
+   - `modules/lighting_controller.lua`: 유선 모뎀 주변기기(`redstone_integrator_0`, 선택 `carrier_arresting_clutch`, `wind_display_link`) 자동 탐색 및 상태별 등화/클러치 제어(미부착 시 `false` 반환 후 데몬 계속 유지).
+   - `modules/gps_client.lua`: `CH 60001` 송신 전용 GPS 질의(`computerId % interval` 위상 분산) + $Base_{\text{sec}}+5$ 응답 처리 및 20Hz DR 적분(`touchdownPoint`/`endPoint` 동기 갱신).
+   - `modules/tactical_streamer.lua`: `MSG_FACILITY_STATIC_GUIDE` / `MSG_FACILITY_DYNAMIC_GUIDE` (시단+종단 대칭 필드 포함), `MSG_ABORT_APPROACH`, `MSG_ATC_SLOT_ACK`, `MSG_ATC_FACILITY_UPDATE` 인코더.
+   - `modules/runway_fsm.lua`: `IDLE` / `APPROACH_STATIC` / `APPROACH_DYNAMIC` / `ROLLOUT` / `VACATING` / `WAVE_OFF` / `MAINTENANCE` 전이 및 `3.0s` 불안정 복행·슬롯 만료 처리.
+   - `modules/setup_wizard.lua` & `modules/tui_view.lua`: 5단계 시운전 설정 마법사 및 51x19 0-플리커 상태 콘솔(주변기기 경고 표출 포함).
+2. **`AMM` 연동 범위 비고**: `AMM` 온보드 미션 시퀀서의 고정익 활주로 전용 액션(`ACT_TKL_TAKEOFF_RWY`, `ACT_TKL_LAND_RWY`)은 후속 통합 과제로 `[DEFERRED]` 상태를 유지하며, 활주로 시설물 탐색은 `GAC` `MSG_FACILITY_BEACON` (`facilities[]`) 및 `Base_sec+1` 연동을 통해 즉시 운용됩니다.

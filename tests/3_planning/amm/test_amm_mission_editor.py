@@ -80,7 +80,9 @@ class TestEditorBootstrap(unittest.TestCase):
         html = EDITOR_HTML.read_text(encoding="utf-8")
         self.assertIn('<meta name="theme-color" content="#0b0f17">', html)
         self.assertIn("color-scheme: dark", html)
-        self.assertIsNone(re.search(r"https?://|fetch\s*\(|XMLHttpRequest|WebSocket", html))
+        self.assertIsNone(re.search(r"https?://|fetch\s*\(|XMLHttpRequest|wss://", html))
+        for m in re.finditer(r"ws://[^\s\"'`]+", html):
+            self.assertRegex(m.group(0), r"^ws://(127\.0\.0\.1|localhost)(:\d+)?", f"Non-localhost ws URL found: {m.group(0)}")
         self.assertIsNone(re.search(r"\bwindow\.(alert|confirm|prompt)\s*\(", html))
         self.assertNotIn("transition: all", html)
 
@@ -94,6 +96,7 @@ class TestEditorBootstrap(unittest.TestCase):
             "CanvasRenderer",
             "InspectorUI",
             "JsonIO",
+            "LiveBridge",
             "AppBootstrap",
         ]
         for mod in expected:
@@ -122,7 +125,7 @@ class TestTask2SchemaAndMacros(unittest.TestCase):
             };
             """
         )
-        self.assertEqual(res["activeCount"], 36)
+        self.assertEqual(res["activeCount"], 37)
         self.assertEqual(res["deferredCount"], 22)
         self.assertEqual(res["legacyCount"], 13)
         self.assertEqual(res["activeDec"], 6)
@@ -1155,6 +1158,303 @@ const document = {{
         self.assertEqual(out["init"], {"gridSnap": True, "pressed": "true", "text": "Snap 10m"})
         self.assertEqual(out["afterOff"], {"gridSnap": False, "pressed": "false", "text": "Snap Off"})
         self.assertEqual(out["afterOn"], {"gridSnap": True, "pressed": "true", "text": "Snap 10m"})
+
+
+class TestTask403WorldPresetsAndLandNearest(unittest.TestCase):
+    def test_world_store_multiworld_crud_and_json_roundtrip(self) -> None:
+        res = run_editor_js(
+            """
+            const W = E.WorldStore;
+            const w2 = W.createWorld("Combat Arena");
+            const up1 = W.upsertFacility({
+              facilityId: "PAD_ALPHA",
+              label: "<img src=x onerror=alert(1)> Alpha Pad",
+              type: "LANDING_PAD",
+              x: 120,
+              z: -340,
+              y: 68,
+              headingDeg: 90,
+              notes: "Primary runway apron"
+            });
+            const dup = W.upsertFacility({
+              facilityId: "PAD_ALPHA",
+              type: "LANDING_PAD",
+              x: 0,
+              z: 0
+            }, "NEW_TEMP_ID");
+            const up2 = W.upsertFacility({
+              facilityId: "RWY_MAIN",
+              label: "Main Strip",
+              type: "RUNWAY",
+              x: 400,
+              z: -100,
+              y: 64
+            });
+            const exported = W.exportWorldsJson(false);
+            const renamed = W.renameWorld(w2.worldId, "Sector 2 Theater");
+            W.deleteFacility("PAD_ALPHA");
+            const countAfterDel = W.getFacilities().length;
+            const imp = W.importWorldsJson(exported, "replace");
+            const countAfterImport = W.getFacilities().length;
+            return {
+              worldsCount: W.getWorlds().length,
+              up1Ok: up1.ok,
+              dupErr: dup.error,
+              up2Ok: up2.ok,
+              renamed,
+              countAfterDel,
+              impOk: imp.ok,
+              countAfterImport,
+              restoredLabel: (W.getFacility("PAD_ALPHA") || {}).label
+            };
+            """
+        )
+        self.assertEqual(res["worldsCount"], 2)
+        self.assertTrue(res["up1Ok"])
+        self.assertEqual(res["dupErr"], "DUPLICATE_FACILITY_ID")
+        self.assertTrue(res["up2Ok"])
+        self.assertTrue(res["renamed"])
+        self.assertEqual(res["countAfterDel"], 1)
+        self.assertTrue(res["impOk"])
+        self.assertEqual(res["countAfterImport"], 2)
+        self.assertIn("<img src=x", res["restoredLabel"])
+
+    def test_smart_y_mapping_pure_copy_and_unregistered_facility_warning(self) -> None:
+        res = run_editor_js(
+            """
+            const W = E.WorldStore;
+            const V = E.Validator;
+            W.upsertFacility({
+              facilityId: "PAD_01",
+              type: "LANDING_PAD",
+              x: 250,
+              z: -180,
+              y: 72
+            });
+            const fac = W.getFacility("PAD_01");
+            const cpLand = { checkpointId: "CP_L", action: "ACT_TKL_LAND_PREC", params: { targetAlt: 150 } };
+            const cpCruise = { checkpointId: "CP_C", action: "ACT_NAV_SPLINE_WP", params: { targetAlt: 220 } };
+            W.applyFacilityToCheckpoint(cpLand, fac);
+            W.applyFacilityToCheckpoint(cpCruise, fac);
+
+            // Mutate facility afterwards: checkpoints must remain pure copied values
+            W.upsertFacility({ facilityId: "PAD_01", type: "LANDING_PAD", x: 999, z: 999, y: 88 }, "PAD_01");
+
+            const mUnreg = {
+              missionId: "FAC_WARN",
+              version: "2.0.0",
+              checkpoints: [{ checkpointId: "CP1", action: "ACT_TKL_LAND_PREC", params: { facilityId: "UNREG_PAD", targetPos: { x: 0, z: 0 } } }]
+            };
+            const warnBefore = V.validateMission(mUnreg).warnings.map((w) => w.code);
+            W.upsertFacility({ facilityId: "UNREG_PAD", type: "LANDING_PAD", x: 0, z: 0, y: 64 });
+            const warnAfter = V.validateMission(mUnreg).warnings.map((w) => w.code);
+            return {
+              landAlt: cpLand.params.targetAlt,
+              landX: cpLand.params.targetPos.x,
+              landFac: cpLand.params.facilityId,
+              cruiseAlt: cpCruise.params.targetAlt,
+              cruiseX: cpCruise.params.targetPos.x,
+              cruiseFac: cpCruise.params.facilityId ?? null,
+              warnBefore,
+              warnAfter,
+            };
+            """
+        )
+        self.assertEqual(res["landAlt"], 72)
+        self.assertEqual(res["landX"], 250)
+        self.assertEqual(res["landFac"], "PAD_01")
+        self.assertEqual(res["cruiseAlt"], 220)
+        self.assertEqual(res["cruiseX"], 250)
+        self.assertIsNone(res["cruiseFac"])
+        self.assertIn("UNREGISTERED_FACILITY_ID", res["warnBefore"])
+        self.assertNotIn("UNREGISTERED_FACILITY_ID", res["warnAfter"])
+
+    def test_act_tkl_land_nearest_validation_and_canvas_rulers(self) -> None:
+        res = run_editor_js(
+            """
+            const V = E.Validator;
+            const badFilter = V.validateMission({
+              missionId: "N1",
+              version: "2.0.0",
+              checkpoints: [{ checkpointId: "CP1", action: "ACT_TKL_LAND_NEAREST", params: { facilityTypeFilter: "DOCKING_ARM" } }]
+            });
+            const badRange = V.validateMission({
+              missionId: "N2",
+              version: "2.0.0",
+              checkpoints: [{ checkpointId: "CP1", action: "ACT_TKL_LAND_NEAREST", params: { maxRangeM: -10 } }]
+            });
+            const ok = V.validateMission({
+              missionId: "N3",
+              version: "2.0.0",
+              checkpoints: [{ checkpointId: "CP1", action: "ACT_TKL_LAND_NEAREST", params: { facilityTypeFilter: "RUNWAY", maxRangeM: 500 } }]
+            });
+            const switched = E.MacroExpander.cleanActionSwitchParams(
+              { facilityId: "PAD_ALPHA", targetPos: { x: 10, z: 20 }, targetAlt: 120 },
+              "ACT_TKL_LAND_NEAREST"
+            );
+
+            // Verify CanvasRenderer draws facility pins and 4-edge coordinate ruler ticks cleanly
+            E.WorldStore.upsertFacility({ facilityId: "PIN_01", type: "LANDING_PAD", x: 100, z: 100, y: 65 });
+            const texts = [];
+            const mockCtx = {
+              fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", globalAlpha: 1,
+              save(){}, restore(){}, setTransform(){}, fillRect(){}, strokeRect(){},
+              beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, closePath(){}, arc(){}, fill(){},
+              setLineDash(){},
+              fillText(txt){ texts.push(String(txt)); },
+            };
+            const mockCanvas = {
+              clientWidth: 900, clientHeight: 650, width: 900, height: 650,
+              getContext(){ return mockCtx; },
+              addEventListener(){},
+            };
+            E.CanvasRenderer.attach(mockCanvas, null);
+            E.CanvasRenderer.render();
+            return {
+              badFilterCodes: badFilter.errors.map((e) => e.code),
+              badRangeCodes: badRange.errors.map((e) => e.code),
+              okValid: ok.valid,
+              switchedHasFac: "facilityId" in switched,
+              switchedFilter: switched.facilityTypeFilter,
+              renderedPin: texts.includes("PIN_01"),
+              rulerCount: texts.filter((t) => /^-?\\d+$/.test(t)).length,
+            };
+            """
+        )
+        self.assertIn("INVALID_FACILITY_TYPE_FILTER", res["badFilterCodes"])
+        self.assertIn("INVALID_MAX_RANGE_M", res["badRangeCodes"])
+        self.assertTrue(res["okValid"])
+        self.assertFalse(res["switchedHasFac"])
+        self.assertEqual(res["switchedFilter"], "ANY")
+        self.assertTrue(res["renderedPin"])
+        self.assertGreaterEqual(res["rulerCount"], 8)
+
+
+class TestTask404LiveBridgeAndPush(unittest.TestCase):
+    def test_live_bridge_world_sync_fleet_trails_canvas_and_push_cmd(self) -> None:
+        res = run_editor_js(
+            """
+            const sentFrames = [];
+            let activeSocket = null;
+            class MockWebSocket {
+              constructor(url) {
+                this.url = url;
+                this.readyState = 1;
+                activeSocket = this;
+              }
+              send(raw) { sentFrames.push(JSON.parse(raw)); }
+              close() { this.readyState = 3; }
+            }
+            globalThis.WebSocket = MockWebSocket;
+
+            const badRemote = E.LiveBridge.connect("ws://example.com:8765");
+            const badWss = E.LiveBridge.isAllowedLocalUrl("wss://127.0.0.1:8765");
+            const connRes = E.LiveBridge.connect();
+            activeSocket.onopen();
+
+            // 1. Incoming WORLD_PRESET_SYNC auto-merges sector facilities into WorldStore
+            activeSocket.onmessage({
+              data: JSON.stringify({
+                type: "WORLD_PRESET_SYNC",
+                sectorId: 3,
+                sectorName: "Sector Charlie",
+                facilities: [
+                  { facilityId: "PAD_C1", facilityType: "LANDING_PAD", status: "FREE", position: { x: 180, y: 72, z: -260 }, heading: 90 },
+                ],
+              }),
+            });
+            const activeW = E.WorldStore.getActiveWorld();
+
+            // 2. Incoming FLEET_TELEMETRY_SYNC populates craft list & movement trails
+            activeSocket.onmessage({
+              data: JSON.stringify({
+                type: "FLEET_TELEMETRY_SYNC",
+                crafts: [
+                  {
+                    domainId: "JET_LIVE_01", baseChannel: 10000, isStale: false, fsmState: "CRUISE",
+                    attitude: { yaw: 45 }, position: { x: 100, y: 150, z: -100 },
+                  },
+                ],
+              }),
+            });
+            activeSocket.onmessage({
+              data: JSON.stringify({
+                type: "FLEET_TELEMETRY_SYNC",
+                crafts: [
+                  {
+                    domainId: "JET_LIVE_01", baseChannel: 10000, isStale: false, fsmState: "CRUISE",
+                    attitude: { yaw: 60 }, position: { x: 120, y: 155, z: -120 },
+                  },
+                ],
+              }),
+            });
+
+            // Render 2D canvas and confirm live craft label is drawn
+            const texts = [];
+            const mockCtx = {
+              fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", globalAlpha: 1,
+              save(){}, restore(){}, setTransform(){}, fillRect(){}, strokeRect(){},
+              beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, closePath(){}, arc(){}, fill(){},
+              setLineDash(){},
+              fillText(txt){ texts.push(String(txt)); },
+            };
+            const mockCanvas = {
+              clientWidth: 900, clientHeight: 650, width: 900, height: 650,
+              getContext(){ return mockCtx; },
+              addEventListener(){},
+            };
+            E.CanvasRenderer.attach(mockCanvas, null);
+            E.CanvasRenderer.render();
+
+            // 3. Push loaded preset mission as LOAD and process MISSION_PUSH_ACK
+            E.Store.loadPreset("MSN_RECON_001");
+            const pushLoad = E.LiveBridge.pushMission({ targetCraft: "JET_LIVE_01", action: "LOAD", saveToDisk: true });
+            activeSocket.onmessage({
+              data: JSON.stringify({
+                type: "MISSION_PUSH_ACK",
+                requestId: pushLoad.requestId,
+                targetCraft: "JET_LIVE_01",
+                action: "LOAD",
+                status: "ACCEPTED",
+                missionId: "MSN_RECON_001",
+              }),
+            });
+
+            const crafts = E.LiveBridge.getFleetCrafts();
+            const trails = E.LiveBridge.getTrails();
+            const lastAck = E.LiveBridge.getLastAck();
+            return {
+              badRemoteErr: badRemote.error,
+              badWss,
+              connected: E.LiveBridge.isConnected(),
+              worldId: activeW.worldId,
+              worldName: activeW.name,
+              facCount: activeW.facilities.length,
+              craftCount: crafts.length,
+              trailLen: (trails.JET_LIVE_01 || []).length,
+              renderedCraftLabel: texts.some((t) => t.includes("JET_LIVE_01")),
+              sentCount: sentFrames.length,
+              sentType: sentFrames[0] && sentFrames[0].type,
+              sentAction: sentFrames[0] && sentFrames[0].action,
+              sentMissionVersion: sentFrames[0] && sentFrames[0].missionData && sentFrames[0].missionData.version,
+              ackStatus: lastAck && lastAck.status,
+            };
+            """
+        )
+        self.assertEqual(res["badRemoteErr"], "NON_LOCAL_BRIDGE_URL")
+        self.assertFalse(res["badWss"])
+        self.assertTrue(res["connected"])
+        self.assertEqual(res["worldId"], "LIVE_SECTOR_3")
+        self.assertEqual(res["worldName"], "Sector Charlie")
+        self.assertEqual(res["facCount"], 1)
+        self.assertEqual(res["craftCount"], 1)
+        self.assertEqual(res["trailLen"], 2)
+        self.assertTrue(res["renderedCraftLabel"])
+        self.assertEqual(res["sentCount"], 1)
+        self.assertEqual(res["sentType"], "MISSION_PUSH_CMD")
+        self.assertEqual(res["sentAction"], "LOAD")
+        self.assertEqual(res["sentMissionVersion"], "2.0.0")
+        self.assertEqual(res["ackStatus"], "ACCEPTED")
 
 
 if __name__ == "__main__":

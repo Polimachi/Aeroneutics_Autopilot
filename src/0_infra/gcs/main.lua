@@ -1,6 +1,6 @@
 -- src/0_infra/gcs/main.lua
 -- Ground Control Station & RF Channel Manager (CH 50000 / Node 08)
--- UAFS Ecosystem GCS v1.1.0
+-- UAFS Ecosystem GCS v1.2.0
 
 if package and package.path and not string.find(package.path, "modules/%?%.lua", 1, true) then
     package.path = "modules/?.lua;./modules/?.lua;" .. package.path
@@ -10,6 +10,7 @@ local channel_manager = require("channel_manager")
 local network_manager = require("network_manager")
 local c2_commander = require("c2_commander")
 local fleet_tracker = require("fleet_tracker")
+local live_bridge_client = require("live_bridge_client")
 local ui_renderer = require("ui_renderer")
 
 local main = {}
@@ -27,10 +28,17 @@ local function load_config(path)
         },
         channels = {
             bootstrapChannel = 50000,
+            facilityBeaconChannel = 50003,
+            missionAckChannel = 50004,
             bandwidth = 40,
             baseChannelMin = 10000,
             baseChannelMax = 49960,
             maxCraftBlocks = 1000
+        },
+        liveBridge = {
+            enabled = false,
+            url = "ws://127.0.0.1:8765",
+            telemetrySyncHz = 5
         },
         ui = {
             screenWidth = 51,
@@ -46,7 +54,10 @@ local function load_config(path)
             local parsed = textutils.unserializeJSON(raw)
             if type(parsed) == "table" then
                 if parsed.system then defaults.system = parsed.system end
-                if parsed.channels then defaults.channels = parsed.channels end
+                if parsed.channels then
+                    for k, v in pairs(parsed.channels) do defaults.channels[k] = v end
+                end
+                if parsed.liveBridge then defaults.liveBridge = parsed.liveBridge end
                 if parsed.ui then defaults.ui = parsed.ui end
             end
         end
@@ -59,7 +70,7 @@ local function get_time_ms()
     return math.floor(os.time() * 1000)
 end
 
-function main.create_app(cfg, modem, registry_path)
+function main.create_app(cfg, modem, registry_path, http_api)
     local app = {
         config = cfg or load_config(),
         modem = modem,
@@ -68,20 +79,24 @@ function main.create_app(cfg, modem, registry_path)
         network_manager = network_manager,
         c2_commander = c2_commander,
         fleet_tracker = fleet_tracker,
+        live_bridge_client = live_bridge_client,
         ui_renderer = ui_renderer,
         status_msg = "GCS READY",
-        running = true
+        running = true,
+        pending_push_req = {},
+        latest_world_beacon = nil,
     }
 
     app.channel_mgr = channel_manager.init(app.config, app.registry_path)
     app.net_mgr = network_manager.init(app.config, app.modem)
     network_manager.open_bootstrap_channel(app.net_mgr)
+    network_manager.open_infra_channels(app.net_mgr)
     app.fleet = fleet_tracker.init(app.config)
 
-    -- Register existing allocations into fleet tracker
     local existing = channel_manager.list_allocations(app.channel_mgr)
     for _, alloc in ipairs(existing) do
         fleet_tracker.register_craft(app.fleet, alloc.domainId, alloc.baseChannel, alloc.blockId)
+        network_manager.register_craft_channels(app.net_mgr, alloc.baseChannel)
     end
 
     local active = fleet_tracker.get_active_craft(app.fleet)
@@ -89,8 +104,49 @@ function main.create_app(cfg, modem, registry_path)
         network_manager.set_active_craft(app.net_mgr, active.baseChannel)
     end
 
+    app.bridge = live_bridge_client.init(app.config, http_api or _G.http)
+    live_bridge_client.connect(app.bridge)
     app.buf = ui_renderer.create_buffer(51, 19)
     return setmetatable(app, { __index = main })
+end
+
+local function handle_bootstrap_message(self, replyChannel, msg)
+    if msg.type ~= "MSG_BLOCK_REQUEST" then return false end
+    local p = msg.payload
+    local res = channel_manager.allocate_block(self.channel_mgr, p.domainId, p.hardwareUuid, p.requestedBandwidth)
+    channel_manager.save_registry(self.channel_mgr)
+    if res.status == "ASSIGNED" or res.status == "REASSIGNED" then
+        fleet_tracker.register_craft(self.fleet, p.domainId, res.baseChannel, res.blockId)
+        network_manager.register_craft_channels(self.net_mgr, res.baseChannel)
+        if not self.net_mgr.active_base then
+            network_manager.set_active_craft(self.net_mgr, res.baseChannel)
+        end
+        self.status_msg = string.format("ASSIGNED: %s -> CH %d", p.domainId, res.baseChannel)
+    else
+        self.status_msg = string.format("DENIED: %s (%s)", p.domainId, tostring(res.reason))
+    end
+    local reply_ch = replyChannel or self.config.channels.bootstrapChannel
+    network_manager.send_block_assign(self.net_mgr, reply_ch, res)
+    return true
+end
+
+local function is_craft_telemetry_channel(self, channel)
+    if self.net_mgr.active_base and (self.net_mgr.active_base + 3) == channel then
+        return true
+    end
+    for base, active in pairs(self.net_mgr.registered_bases or {}) do
+        if active and (base + 3) == channel then return true end
+    end
+    return false
+end
+
+local function is_mission_ack_channel(self, channel)
+    local ack_ch = (self.config.channels and self.config.channels.missionAckChannel) or 50004
+    if channel == ack_ch then return true end
+    for base, active in pairs(self.net_mgr.registered_bases or {}) do
+        if active and base == channel then return true end
+    end
+    return false
 end
 
 function main:process_modem_message(channel, replyChannel, raw_msg)
@@ -98,32 +154,69 @@ function main:process_modem_message(channel, replyChannel, raw_msg)
     if not msg then return false, err end
 
     if channel == self.config.channels.bootstrapChannel then
-        if msg.type == "MSG_BLOCK_REQUEST" then
-            local p = msg.payload
-            local res = channel_manager.allocate_block(self.channel_mgr, p.domainId, p.hardwareUuid, p.requestedBandwidth)
-            channel_manager.save_registry(self.channel_mgr)
-            if res.status == "ASSIGNED" then
-                fleet_tracker.register_craft(self.fleet, p.domainId, res.baseChannel, res.blockId)
-                if not self.net_mgr.active_base then
-                    network_manager.set_active_craft(self.net_mgr, res.baseChannel)
-                end
-                self.status_msg = string.format("ASSIGNED: %s -> CH %d", p.domainId, res.baseChannel)
-            else
-                self.status_msg = string.format("DENIED: %s (%s)", p.domainId, tostring(res.reason))
-            end
-            local reply_ch = replyChannel or self.config.channels.bootstrapChannel
-            network_manager.send_block_assign(self.net_mgr, reply_ch, res)
-            return true
-        end
+        return handle_bootstrap_message(self, replyChannel, msg)
     end
 
-    local cur_telem_ch = self.net_mgr.active_base and (self.net_mgr.active_base + 3)
-    if cur_telem_ch and channel == cur_telem_ch and msg.type == "MSG_MFD_STATE" then
+    local beacon_ch = (self.config.channels and self.config.channels.facilityBeaconChannel) or 50003
+    if channel == beacon_ch and msg.type == "MSG_FACILITY_BEACON" then
+        self.latest_world_beacon = msg.payload
+        live_bridge_client.send_world_preset(self.bridge, msg.payload)
+        return true
+    end
+
+    if msg.type == "MSG_MFD_STATE" and is_craft_telemetry_channel(self, channel) then
         fleet_tracker.update_telemetry(self.fleet, msg.domainId, msg.payload, get_time_ms())
         return true
     end
 
+    if msg.type == "MSG_MISSION_ACK" and is_mission_ack_channel(self, channel) then
+        local req_id = self.pending_push_req[msg.domainId]
+        self.pending_push_req[msg.domainId] = nil
+        live_bridge_client.send_mission_ack(self.bridge, req_id, msg.domainId, msg.payload)
+        self.status_msg = string.format("ACK %s: %s", tostring(msg.domainId), tostring(msg.payload.status))
+        return true
+    end
+
     return false
+end
+
+function main:process_websocket_message(_ws_url, raw_json)
+    local msg, err = live_bridge_client.parse_incoming(raw_json)
+    if not msg then return false, err end
+    if msg.type ~= "MISSION_PUSH_CMD" then return false, "UNHANDLED_WS_TYPE" end
+
+    local craft = fleet_tracker.get_craft(self.fleet, msg.targetCraft)
+    local base_ch = (craft and craft.baseChannel) or msg.baseChannel
+    if not base_ch then
+        live_bridge_client.send_mission_ack(self.bridge, msg.requestId, msg.targetCraft, {
+            action = msg.action or "LOAD",
+            status = "INVALID_CMD",
+            reason = "UNKNOWN_TARGET_CRAFT",
+        })
+        return false, "UNKNOWN_TARGET_CRAFT"
+    end
+
+    if msg.targetCraft and msg.requestId then
+        self.pending_push_req[msg.targetCraft] = msg.requestId
+    end
+    local ok = network_manager.send_mission_cmd(self.net_mgr, base_ch, {
+        action = msg.action or "LOAD",
+        missionName = msg.missionName,
+        executionMode = msg.executionMode,
+        forceRestart = msg.forceRestart,
+        missionData = msg.missionData,
+        saveToDisk = msg.saveToDisk,
+    })
+    if ok then
+        self.status_msg = string.format("PUSH %s -> %s", tostring(msg.action or "LOAD"), tostring(msg.targetCraft))
+    end
+    return ok
+end
+
+function main:sync_bridge_telemetry()
+    if not self.bridge or not self.bridge.connected then return false end
+    fleet_tracker.prune_stale(self.fleet, get_time_ms())
+    return live_bridge_client.send_fleet_telemetry(self.bridge, self.fleet)
 end
 
 local function handle_c2_key(app, active, lower_char)
@@ -200,6 +293,12 @@ local function run_event_loop(app)
             app.running = false
         elseif ev == "modem_message" then
             app:process_modem_message(p2, p3, p4)
+        elseif ev == "websocket_message" then
+            app:process_websocket_message(p1, p2)
+        elseif ev == "websocket_closed" then
+            if app.bridge and p1 == app.bridge.url then
+                app.bridge.connected = false
+            end
         elseif ev == "key" then
             app:process_key(p1, nil)
         elseif ev == "char" then
@@ -212,6 +311,7 @@ local function run_ui_loop(app)
     local interval = 1.0 / (app.config.system.uiRefreshRateHz or 5)
     while app.running do
         app:render(term)
+        app:sync_bridge_telemetry()
         sleep(interval)
     end
 end
@@ -227,6 +327,7 @@ function main.main_loop(config_path)
         function() run_event_loop(app) end,
         function() run_ui_loop(app) end
     )
+    live_bridge_client.close(app.bridge)
     term.clear()
     term.setCursorPos(1, 1)
     print("GCS terminated.")

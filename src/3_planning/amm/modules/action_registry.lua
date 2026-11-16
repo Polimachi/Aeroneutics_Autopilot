@@ -12,12 +12,13 @@ local ACTIVE_LIFECYCLES = {
     ACT_SYS_ARM = { group = "SYS", complete = "IMMEDIATE", abort = "ACT_SYS_DISARM" },
     ACT_SYS_DISARM = { group = "SYS", complete = "IMMEDIATE", abort = "NONE" },
     ACT_SYS_TERMINATE = { group = "SYS", complete = "IMMEDIATE", abort = "E_STOP" },
-    -- Takeoff / Transition / Landing (6)
+    -- Takeoff / Transition / Landing (7)
     ACT_TKL_TAKEOFF_VERT = { group = "TKL", complete = "ALTITUDE_REACHED", abort = "ACT_TKL_LAND_PREC" },
     ACT_TKL_TRANS_MC2FW = { group = "TKL", complete = "AIRSPEED_REACHED", abort = "ACT_TKL_TRANS_FW2MC" },
     ACT_TKL_TRANS_FW2MC = { group = "TKL", complete = "AIRSPEED_BELOW", abort = "ACT_FS_HOVER_HOLD" },
     ACT_TKL_LAND_NORM = { group = "TKL", complete = "TOUCHDOWN", abort = "ACT_TKL_ABORT_LAND" },
     ACT_TKL_LAND_PREC = { group = "TKL", complete = "TOUCHDOWN", abort = "ACT_TKL_ABORT_LAND" },
+    ACT_TKL_LAND_NEAREST = { group = "TKL", complete = "TOUCHDOWN", abort = "ACT_TKL_ABORT_LAND" },
     ACT_TKL_ABORT_LAND = { group = "TKL", complete = "ALTITUDE_REACHED", abort = "ACT_FS_HOVER_HOLD" },
     -- Navigation & Envelope (6)
     ACT_NAV_GOTO_WP = { group = "NAV", complete = "PROXIMITY_3D", abort = "ACT_FS_HOVER_HOLD" },

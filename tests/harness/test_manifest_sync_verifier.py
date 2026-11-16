@@ -61,7 +61,7 @@ manifest.SHARED_LIBS = {
     avionics_sensors = {
         repoPath = "src/0_development/sensors/avionics_sensors.lua",
         dest = "/lib/avionics_sensors.lua",
-        gdriveId = nil,
+        gdriveId = "ID_SENS",
     },
 }
 manifest.MODULE_ORDER = {
@@ -78,10 +78,10 @@ manifest.MODULES = {
             ["/config/system.json"] = { baseChannel = 10000 },
         },
         files = {
-            { repoPath = "src/1_control/vas/main.lua", dest = "/main.lua", gdriveId = nil },
-            { repoPath = "src/1_control/vas/modules/core_daemon.lua", dest = "/modules/core_daemon.lua", gdriveId = nil },
-            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = nil },
-            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },
+            { repoPath = "src/1_control/vas/main.lua", dest = "/main.lua", gdriveId = "ID_VAS_MAIN" },
+            { repoPath = "src/1_control/vas/modules/core_daemon.lua", dest = "/modules/core_daemon.lua", gdriveId = "ID_VAS_CORE" },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = "ID_SENS" },
+            { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = "ID_OTA" },
         },
     },
 }
@@ -133,12 +133,42 @@ return manifest
                 "sha256": "d" * 64,
                 "downloadUrl": "https://drive.usercontent.google.com/download?id=ID_SENS&export=download&confirm=t",
             },
+            "src/0_development/ota/ota_agent.lua": {
+                "id": "ID_OTA",
+                "name": "ota__lib__ota_agent.lua",
+                "repoPath": "src/0_development/ota/ota_agent.lua",
+                "category": "packages",
+                "sizeBytes": 10,
+                "sha256": "f" * 64,
+                "downloadUrl": "https://drive.usercontent.google.com/download?id=ID_OTA&export=download&confirm=t",
+            },
+            "src/1_control/vas/main.lua": {
+                "id": "ID_VAS_MAIN",
+                "name": "vas__main.lua",
+                "repoPath": "src/1_control/vas/main.lua",
+                "category": "packages",
+                "sizeBytes": 10,
+                "sha256": "1" * 64,
+                "downloadUrl": "https://drive.usercontent.google.com/download?id=ID_VAS_MAIN&export=download&confirm=t",
+            },
+            "src/1_control/vas/modules/core_daemon.lua": {
+                "id": "ID_VAS_CORE",
+                "name": "vas__modules__core_daemon.lua",
+                "repoPath": "src/1_control/vas/modules/core_daemon.lua",
+                "category": "packages",
+                "sizeBytes": 10,
+                "sha256": "2" * 64,
+                "downloadUrl": "https://drive.usercontent.google.com/download?id=ID_VAS_CORE&export=download&confirm=t",
+            },
         },
         "bootstrapMap": {
             "installer.lua": "ID_INST",
             "src/0_development/installer/installer_app.lua": "ID_APP",
             "src/0_development/installer/modules/manifest.lua": "ID_MAN",
             "src/0_development/sensors/avionics_sensors.lua": "ID_SENS",
+            "src/0_development/ota/ota_agent.lua": "ID_OTA",
+            "src/1_control/vas/main.lua": "ID_VAS_MAIN",
+            "src/1_control/vas/modules/core_daemon.lua": "ID_VAS_CORE",
         },
     }
     (root / "config" / "gdrive_mapping.json").write_text(
@@ -300,7 +330,7 @@ return manifest''',
             content = man_path.read_text(encoding="utf-8")
             # Remove ota_agent.lua from vas
             content = content.replace(
-                '{ repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = nil },\n',
+                '{ repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = "ID_OTA" },\n',
                 "",
             )
             man_path.write_text(content, encoding="utf-8")
@@ -310,6 +340,27 @@ return manifest''',
             self.assertTrue(
                 any("MISSING_SHARED_OTA_AGENT_LIB" in e and "vas" in e for e in report.errors),
                 f"Expected MISSING_SHARED_OTA_AGENT_LIB error, got: {report.errors}",
+            )
+
+    def test_strict_gdrive_packages_detects_unmapped_and_mismatched_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_minimal_workspace(root)
+            map_path = root / "config" / "gdrive_mapping.json"
+            data = json.loads(map_path.read_text(encoding="utf-8"))
+            del data["files"]["src/1_control/vas/modules/core_daemon.lua"]
+            del data["bootstrapMap"]["src/1_control/vas/modules/core_daemon.lua"]
+            map_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+            report = verify_workspace(root, strict_gdrive_packages=True)
+            self.assertFalse(report.ok)
+            self.assertTrue(
+                any("UNMAPPED_PACKAGE_FILE" in e and "core_daemon.lua" in e for e in report.errors),
+                f"Expected UNMAPPED_PACKAGE_FILE, got: {report.errors}",
+            )
+            self.assertTrue(
+                any("PACKAGE_GDRIVE_ID_MISMATCH" in e and "core_daemon.lua" in e for e in report.errors),
+                f"Expected PACKAGE_GDRIVE_ID_MISMATCH, got: {report.errors}",
             )
 
     def test_cli_returns_zero_on_live_workspace(self) -> None:

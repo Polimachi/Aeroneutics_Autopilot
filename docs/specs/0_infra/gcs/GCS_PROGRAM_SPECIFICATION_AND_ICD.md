@@ -6,23 +6,25 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.1.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 버전 (Version)** | `v1.2.0` |
+| **최종 수정일 (Date)** | `2026-11-16` |
 | **구현 코드 (Source)** | `src/0_infra/gcs/` |
 | **주관 도메인 (Domain)** | 지상 인프라 및 전역 무선 채널 관리 (GCS / Node 08) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말 v2.0.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v2.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.34.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.18.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말 v2.3.0)
+> - [AMM_MISSION_EDITOR_SPECIFICATION.md](../../3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md) (외부 웹 GUI 미션 에디터 v0.5.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v2.2.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.2.0` | `2026-11-16` | **`TASK-404` 다중 기체 동시 구독, 시설 비콘 수집(`CH 50003`/`50004`) 및 선택적 WebSocket Live Bridge (`modules/live_bridge_client.lua`) 규격 추가 (`Implemented` $\to$ `Approved`)**: ① 등록된 모든 편대 기체의 `Base+3`/`Base+0` 동시 개방 및 `CH 50003` (`MSG_FACILITY_BEACON`)·`CH 50004` (`MSG_MISSION_ACK`) 수신 통합, ② 로컬 브리지(`tools/gcs_live_bridge.py`, `ws://127.0.0.1:8765`)와 `WORLD_PRESET_SYNC`/`FLEET_TELEMETRY_SYNC`/`MISSION_PUSH_CMD`/`MISSION_PUSH_ACK` 양방향 중계 규격 신설, ③ `gcs_config.json` `liveBridge` 및 연관 문서(`ICD v1.34.0`, `Diagram v2.18.0`, `AMM v2.3.0`, `Editor v0.5.0`) 동기화 | `TASK-404` WebUI 미션 에디터 실시간 연동 및 원클릭 무선 미션 푸시·로드 지원 |
 | `v1.1.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `MSG_BLOCK_ASSIGN.status` 열거형(`"ASSIGNED" \| "REASSIGNED" \| "REJECTED" \| "DENIED"`) 정렬, `MSG_OPERATOR_CMD` 필드(`command` 열거형, `flightMode`, `emergencyAction`) 및 `MSG_EMERGENCY_OVERRIDE` `authKey` 마스터 ICD v1.30.0 동기화, 연관 문서 버전 갱신 | 마스터 ICD v1.30.0 및 다이어그램 v2.15.0 C2/부트스트랩 규격 일원화 |
 | `v1.0.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0) 동기화: `CH 50000` 부트스트랩(`MSG_BLOCK_REQUEST`)·`Base+0` C2(`MSG_OPERATOR_CMD`/`MSG_MISSION_CMD`)·평시 `Base+3` 5Hz 텔레메트리 송신 주체를 `AMM (Node 03)`으로 정렬(`MFD_ACRO` 시 `VAS` 직접 인계), `Base+1` `E_STOP`은 `AMM`·`FCP`를 모두 바이패스해 `VAS (Node 01)`에 직결 송출 명시, 연관 규격서 버전 동기화 (`src/0_infra/gcs/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·C2 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
 | `v1.0.1` | 2026-11-08 | 구버전 명칭 전면 척결 및 표준 명칭(FCP/ASA) 동기화 | 용어 무결성 확보 |
@@ -44,11 +46,14 @@
    - 조종석 MFD(`PILOT_PRIMARY`)보다 상위 관제 우선권으로 중재.
 3. **직결 하드 비상차단 (`E_STOP`)**:
    - `AMM (Node 03)` 및 외루프 `FCP (Node 04)`를 경유하지 않고 온보드 비행 제어 코어 `VAS (Node 01)`의 `Base + 1`(`CH_FLIGHT_GUIDANCE`)로 `MSG_EMERGENCY_OVERRIDE`(`E_STOP`)를 직결 송출하여 추진기를 즉각 셧다운.
-4. **다중 기체 텔레메트리 모니터링**:
-   - 활성 기체의 `Base + 3`(`CH_MFD_STATE`, 구 `CH_MFD_INSTRUMENT` `[DEPRECATED]`) 텔레메트리를 수신(평시 `AMM (Node 03)` 5Hz 송출, `MFD_ACRO` 진입 시 `VAS (Node 01)` 20Hz 직결 인계)하여 자세 각도, Y고도, 대지속도, 승강률, 연료, FSM 상태 표출.
+4. **다중 기체 텔레메트리 모니터링 및 시설 비콘 수집**:
+   - 등록된 모든 편대 기체의 `Base + 3`(`CH_MFD_STATE`, 구 `CH_MFD_INSTRUMENT` `[DEPRECATED]`) 및 `Base + 0`(`CH_OPERATOR_C2` / `MSG_MISSION_ACK`) 채널을 동시 개방하여(평시 `AMM (Node 03)` 5Hz 송출, `MFD_ACRO` 진입 시 `VAS (Node 01)` 20Hz 직결 인계) 자세·위치·연료·FSM 상태를 실시간 캐싱.
+   - `CH 50003` (`MSG_FACILITY_BEACON`) 및 `CH 50004` (`MSG_MISSION_ACK`)를 상시 청취하여 섹터 시설 스냅샷과 원격 미션 응답을 수집.
    - `[TAB]` 핫키를 통해 등록된 편대 기체 간 관제 타겟을 실시간 전환.
 5. **51x19 분할 TUI 콘솔**:
    - CC:Tweaked Advanced Computer 표준 해상도(51x19)에 맞추어 좌측 25열 계기 HUD, 우측 26열 기체 목록 및 채널 현황, 하단 3행 명령 바 렌더링.
+6. **선택적 WebSocket 실시간 브리지 (Optional Live Bridge, `TASK-404`)**:
+   - `gcs_config.json`의 `liveBridge.enabled == true`일 때 `http.websocket`으로 로컬 Python 브리지(`ws://127.0.0.1:8765`)에 비블로킹 연결하여 `WORLD_PRESET_SYNC`, `FLEET_TELEMETRY_SYNC`, `MISSION_PUSH_CMD` / `MISSION_PUSH_ACK` 양방향 중계를 수행 (`enabled == false` 또는 브리지 부재 시 헤드리스/TUI 단독 모드로 무중단 동작).
 
 ---
 
@@ -155,10 +160,17 @@
   },
   "channels": {
     "bootstrapChannel": 50000,
+    "facilityBeaconChannel": 50003,
+    "missionAckChannel": 50004,
     "bandwidth": 40,
     "baseChannelMin": 10000,
     "baseChannelMax": 49960,
     "maxCraftBlocks": 1000
+  },
+  "liveBridge": {
+    "enabled": false,
+    "url": "ws://127.0.0.1:8765",
+    "telemetrySyncHz": 5
   },
   "ui": {
     "screenWidth": 51,
@@ -184,3 +196,14 @@
   }
 }
 ```
+
+---
+
+## 6. WebSocket 실시간 브리지 및 월드 프리셋 연동 (`TASK-404`, Optional)
+
+- **브리지 토폴로지**: 인게임 `GCS` (`modules/live_bridge_client.lua`) $\leftrightarrow$ 호스트 PC Python RFC 6455 서버(`tools/gcs_live_bridge.py`, `ws://127.0.0.1:8765`) $\leftrightarrow$ 호스트 WebUI(`tools/amm_mission_editor.html`).
+- **브리지 JSON 메시지 4종**:
+  1. `WORLD_PRESET_SYNC` (`GCS` $\to$ 브리지 $\to$ WebUI): `CH 50003`에서 수신한 `MSG_FACILITY_BEACON`의 `sectorId`, `sectorName`, `facilities[]` 스냅샷 전달.
+  2. `FLEET_TELEMETRY_SYNC` (`GCS` $\to$ 브리지 $\to$ WebUI): 등록된 편대 전체 기체 목록(`crafts[]`: `domainId`, `baseChannel`, `position`, `attitude`, `groundSpeed`, `fuel`, `fsmState`, `isStale`)을 주기적으로 송출.
+  3. `MISSION_PUSH_CMD` (WebUI $\to$ 브리지 $\to$ `GCS`): `{ requestId, targetCraft, baseChannel, action: "LOAD" | "RUN", missionData, saveToDisk }`. `GCS`는 이를 대상 기체 `Base + 0` (`CH_OPERATOR_C2`) `MSG_MISSION_CMD` 패킷으로 변환 송출.
+  4. `MISSION_PUSH_ACK` (`GCS` $\to$ 브리지 $\to$ WebUI): 대상 기체 `AMM`이 `Base + 0` 또는 `CH 50004`로 회신한 `MSG_MISSION_ACK`를 `{ requestId, targetCraft, action, status, reason, missionId, missionState }` 형태로 중계.

@@ -18,6 +18,7 @@ local ACTION_SHORT = {
     ACT_TKL_TRANS_FW2MC = "FW2MC",
     ACT_TKL_LAND_NORM = "LAND",
     ACT_TKL_LAND_PREC = "LAND",
+    ACT_TKL_LAND_NEAREST = "LNDNRS",
     ACT_TKL_ABORT_LAND = "ABTLND",
     ACT_NAV_GOTO_WP = "GOTO",
     ACT_NAV_SPLINE_WP = "SPLINE",
@@ -269,6 +270,8 @@ local function format_action_detail(cp, source, is_engine)
         return "TKOFF " .. tostring(p.facilityId or "")
     elseif act == "ACT_TKL_LAND_PREC" or act == "ACT_TKL_LAND_NORM" then
         return "LAND " .. tostring(p.facilityId or "")
+    elseif act == "ACT_TKL_LAND_NEAREST" then
+        return "LAND " .. tostring(cp._resolvedFacilityId or p.facilityTypeFilter or "NEAR")
     end
     return ACTION_SHORT[act] or act
 end

@@ -571,4 +571,134 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         assert_eq(inv:get_facility("PAD_VIP_02").status, "OCCUPIED")
         assert_eq(inv:get_facility("PAD_VIP_02").currentCraft, "MAYDAY_VTOL_99")
     end)
+
+    it("executes GAC + Runway + AMM tactical fixed-wing approach, touchdown, rollout, and vacate cycle", function()
+        local bus = virtual_bus.create_bus({ clock = 3000.0 })
+        local gac = node_sandbox.create_node(bus, "GAC", "src/0_infra/gac")
+        local rwy = node_sandbox.create_node(bus, "RWY_09L", "src/0_infra/runway")
+        local amm = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
+
+        local config_loader = gac:require("config_loader")
+        local facility_inventory = gac:require("facility_inventory")
+        local allocation_engine = gac:require("allocation_engine")
+        local gac_fsm = gac:require("gac_fsm")
+
+        local gac_cfg = config_loader.get_default_config()
+        gac_cfg.facilities = {
+            {
+                facilityId = "RWY_09L",
+                type = "RUNWAY",
+                tacticalChannel = 50211,
+                maxSupportWeight = 80000.0,
+                maxSupportRadius = 15.0,
+                coordinates = { x = -1500.0, y = 70.0, z = 450.0 },
+                endPoint = { x = -1150.0, y = 70.0, z = 465.0 },
+                status = "FREE",
+                mobility = "STATIC",
+            },
+        }
+        local inv = facility_inventory.create(gac_cfg.facilities)
+        local gfsm = gac_fsm.create(gac_cfg, inv, allocation_engine)
+
+        local rwy_streamer = rwy:require("tactical_streamer")
+        local rwy_fsm_mod = rwy:require("runway_fsm")
+        local rwy_cfg = {
+            facilityId = "RWY_09L",
+            sectorId = 1,
+            runwayIndex = 1,
+            mobility = "STATIC",
+            approachHeading = 92.5,
+            approachDirection = "FRONT",
+            glideSlopeAngle = 3.0,
+            touchdownZoneLength = 80.0,
+            channels = { sectorFacilityChannel = 50202, tacticalChannel = 50211 },
+        }
+        local r_streamer = rwy_streamer.create(rwy_cfg)
+        local r_fsm = rwy_fsm_mod.create(rwy_cfg, r_streamer, true)
+
+        gac.modem:open(50201); gac.modem:open(50202)
+        rwy.modem:open(50202); rwy.modem:open(50211)
+        amm.modem:open(50201); amm.modem:open(50211)
+
+        -- 1. Checkin & Slot assign
+        amm.modem:transmit(50201, 50201, {
+            ver = "1.9.5",
+            domainId = "JET_01",
+            seq = 1,
+            type = "MSG_GAC_CHECKIN_REQ",
+            time = 3010,
+            payload = {
+                sectorId = gac_cfg.sectorId,
+                aircraftId = "JET_01",
+                craftWeight = 22000,
+                craftRadius = 6.0,
+                currentPos = { x = -2500, y = 180, z = 400 },
+                airframeType = "FIXED_WING",
+                facilityType = "RUNWAY",
+            },
+        })
+        bus:step(0.05)
+
+        local gac_in = gac.modem:drain()
+        assert_eq(#gac_in, 1)
+        local slotReq, clr = gfsm:handle_aircraft_checkin(gac_in[1].payload, gac_cfg.surfaceWind)
+        assert_nil(clr)
+        assert_not_nil(slotReq)
+        assert_eq(slotReq.payload.facilityId, "RWY_09L")
+
+        gac.modem:transmit(50202, 50202, slotReq)
+        bus:step(0.05)
+
+        local rwy_in = rwy.modem:drain()
+        local rwy_acks = r_fsm:handle_backbone_message(rwy_in[1].payload, 3.0)
+        assert_eq(#rwy_acks, 1)
+        assert_eq(rwy_acks[1].payload.status, "ACCEPTED")
+        assert_eq(r_fsm:get_state(), "APPROACH_STATIC")
+
+        rwy.modem:transmit(50202, 50202, rwy_acks[1])
+        bus:step(0.05)
+
+        local gac_slot_in = gac.modem:drain()
+        local appClr = gfsm:handle_pad_slot_ack(gac_slot_in[1].payload)
+        assert_eq(appClr.payload.status, "CLEARED")
+
+        -- 2. Static ILS Guide streaming with endPoint
+        local guidePkt = r_streamer:build_static_guide(10, "JET_01", { x = -1500.0, y = 70.0, z = 450.0 }, { x = -1150.0, y = 70.0, z = 465.0 }, false, 3100)
+        rwy.modem:transmit(50211, 50211, guidePkt)
+        bus:step(0.05)
+        local amm_guide = amm.modem:drain()
+        assert_eq(#amm_guide, 1)
+        assert_eq(amm_guide[1].payload.type, "MSG_FACILITY_STATIC_GUIDE")
+        assert_eq(amm_guide[1].payload.payload.facilityType, "RUNWAY")
+        assert_eq(amm_guide[1].payload.payload.endPoint.x, -1150.0)
+
+        -- 3. Touchdown -> ROLLOUT (OCCUPIED), then Vacated -> IDLE (FREE)
+        amm.modem:transmit(50211, 50211, {
+            ver = "1.9.5",
+            domainId = "JET_01",
+            seq = 12,
+            type = "MSG_RUNWAY_TOUCHDOWN",
+            time = 3200,
+            payload = { facilityId = "RWY_09L", touchdownSpeed = 24.5 },
+        })
+        bus:step(0.05)
+        local rwy_td = rwy.modem:drain()
+        local tdUpds = r_fsm:handle_tactical_message(rwy_td[1].payload, 3.2)
+        assert_eq(r_fsm:get_state(), "ROLLOUT")
+        assert_eq(tdUpds[1].payload.status, "OCCUPIED")
+
+        amm.modem:transmit(50211, 50211, {
+            ver = "1.9.5",
+            domainId = "JET_01",
+            seq = 13,
+            type = "MSG_RUNWAY_VACATED",
+            time = 3300,
+            payload = { facilityId = "RWY_09L", exitTaxiway = "TAXI_A", runwayCleared = true },
+        })
+        bus:step(0.05)
+        local rwy_vac = rwy.modem:drain()
+        local vacUpds = r_fsm:handle_tactical_message(rwy_vac[1].payload, 3.3)
+        assert_eq(r_fsm:get_state(), "IDLE")
+        assert_eq(vacUpds[1].payload.status, "FREE")
+    end)
 end)

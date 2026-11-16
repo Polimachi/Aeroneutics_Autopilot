@@ -391,4 +391,68 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_eq(eng.state, "ABORTED")
         assert_eq(eng:get_fallback_goal().flightMode, "HOVER_HOLD")
     end)
+
+    it("resolves nearest free landing facility for ACT_TKL_LAND_NEAREST and handles missing facility with DEC_RETRY_N", function()
+        local facility_client = require("facility_client")
+        local facState = facility_client.init({ arrivalRadius = 15.0 })
+        facility_client.update_beacons(facState, {
+            sectorId = "SEC_1",
+            gacChannel = 50201,
+            facilities = {
+                { facilityId = "PAD_DED", facilityType = "LANDING_PAD", status = "FREE", position = { x = 5, y = 64, z = 5 }, dedicated = true },
+                { facilityId = "PAD_ALPHA", facilityType = "LANDING_PAD", status = "FREE", position = { x = 120, y = 65, z = -50 }, dedicated = false },
+                { facilityId = "PAD_FAR", facilityType = "LANDING_PAD", status = "FREE", position = { x = 900, y = 70, z = 0 }, dedicated = false },
+            },
+        }, 1000)
+
+        local eng = create_engine_fixture({ fac = facState })
+        assert_true(eng:load_table({
+            missionId = "LAND_NEAREST_OK",
+            version = "2.0.0",
+            checkpoints = {
+                {
+                    checkpointId = "CP_NEAREST",
+                    action = "ACT_TKL_LAND_NEAREST",
+                    params = { facilityTypeFilter = "LANDING_PAD", maxRangeM = 300 },
+                },
+            },
+        }))
+        eng.lastMfd = { fsmState = "CRUISE", navigation = { currentPos = { x = 100, z = -40 } } }
+        assert_true(eng:start("SINGLE", 1200))
+        local goal = eng:get_trajectory_goal()
+        assert_not_nil(goal)
+        assert_eq(goal.flightMode, "LANDING")
+        assert_eq(goal.facilityId, "PAD_ALPHA")
+        assert_eq(goal.targetPos.x, 120)
+        assert_eq(goal.targetAlt, 65)
+
+        eng:step_telemetry({ fsmState = "APPROACH_LAND" }, 1300)
+        assert_eq(eng:step_telemetry({ fsmState = "DISARMED" }, 1500), "COMPLETED")
+
+        -- No facility available with DEC_RETRY_N(2): retries cleanly on tick without stack overflow
+        local emptyFac = facility_client.init({ arrivalRadius = 15.0 })
+        local eng2 = create_engine_fixture({ fac = emptyFac })
+        assert_true(eng2:load_table({
+            missionId = "LAND_NEAREST_RETRY",
+            version = "2.0.0",
+            fallbackPolicy = "RTH",
+            checkpoints = {
+                {
+                    checkpointId = "CP_RETRY",
+                    action = "ACT_TKL_LAND_NEAREST",
+                    decorators = { { decoratorId = "DEC_RETRY_N", overrideParams = { maxAttempts = 2 } } },
+                    params = { facilityTypeFilter = "RUNWAY" },
+                },
+            },
+        }))
+        eng2.lastMfd = { fsmState = "CRUISE", navigation = { currentPos = { x = 0, z = 0 } } }
+        local ok_s = eng2:start("SINGLE", 2000)
+        assert_true(ok_s)
+        local t1 = eng2:tick(2050)
+        assert_eq(t1, "RETRYING")
+        local t2 = eng2:tick(2100)
+        assert_eq(t2, "ABORTED")
+        assert_eq(eng2.state, "ABORTED")
+        assert_eq(eng2:get_fallback_goal().flightMode, "FAILSAFE_RTH")
+    end)
 end)

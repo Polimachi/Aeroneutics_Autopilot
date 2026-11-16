@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "folderId": "1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
   "folderUrl": "https://drive.google.com/drive/folders/1NgbGjm9YY7lpIlo4sLs32cNE2NwjVVy9",
-  "lastSync": "2026-11-14T05:56:39Z",
+  "lastSync": "2026-11-16T11:43:32Z",
   "files": {
     "src/0_development/installer/installer_app.lua": {
       "id": "1j9NXsI05yH7msK3tKX-JX3nHDObRVCDx",
@@ -18,8 +18,8 @@
       "name": "manifest.lua",
       "repoPath": "src/0_development/installer/modules/manifest.lua",
       "category": "bootstrap",
-      "sizeBytes": 36144,
-      "sha256": "376a1a2d1810bbb1c5d1988757da20297d5c7bcfa7e2915b87f3c2e7d3cd3cd7",
+      "sizeBytes": 47762,
+      "sha256": "15a5e5af394d0f0c6f92deda494eaa92d66d1aae3d3b4825e173298fc67ccc84",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1Lj-L-ZAIydyVxQWCVTEzT1qCDDIrCWwX&export=download&confirm=t"
     },
     "src/0_development/installer/modules/version_registry.lua": {
@@ -45,8 +45,8 @@
       "name": "startup_generator.lua",
       "repoPath": "src/0_development/installer/modules/startup_generator.lua",
       "category": "bootstrap",
-      "sizeBytes": 8616,
-      "sha256": "aed00823176b6023887f8d8b708053d554dcf436f2995a8a9cc375067e9241eb",
+      "sizeBytes": 14865,
+      "sha256": "10a88a902cbd886223dd30791e28ed224f037a671e50f2cd15a9607dfa3e4429",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1RLN2cvyI7_1X1HTo5tGcOWx66dYkfhII&export=download&confirm=t"
     },
     "src/0_development/installer/modules/downloader.lua": {
@@ -84,6 +84,1140 @@
       "sizeBytes": 37994,
       "sha256": "0f42f55e68d4867bd20ffa825d6f4f529abeff2aca7d43937fad56626533af11",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/actuator_adapter_tca.lua": {
+      "id": "1V6DU2fbjYVLNWnV-iunMSrL3JI1tsjoK",
+      "name": "vas__modules__actuator_adapter_tca.lua",
+      "repoPath": "src/1_control/vas/modules/actuator_adapter_tca.lua",
+      "category": "packages",
+      "sizeBytes": 8907,
+      "sha256": "5845c9967d76b31e13cf07ba34af0c4dff04fb6426737ef9d5f8c30ff277744d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1V6DU2fbjYVLNWnV-iunMSrL3JI1tsjoK&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/actuator_adapter_asa.lua": {
+      "id": "1Est8Gm_IIv3-iehK-QwK9D8wOJewJF77",
+      "name": "vas__modules__actuator_adapter_asa.lua",
+      "repoPath": "src/1_control/vas/modules/actuator_adapter_asa.lua",
+      "category": "packages",
+      "sizeBytes": 5217,
+      "sha256": "a557f85b27e63681fb0c2c8fc32b75a6886bf091a85b0ae01676c027846618a6",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Est8Gm_IIv3-iehK-QwK9D8wOJewJF77&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/flight_dynamics_core.lua": {
+      "id": "1MQnRr1It0iMvUAebEgTAHzg9arFIVVVH",
+      "name": "vas__modules__flight_dynamics_core.lua",
+      "repoPath": "src/1_control/vas/modules/flight_dynamics_core.lua",
+      "category": "packages",
+      "sizeBytes": 6785,
+      "sha256": "ab0c950ba22272b532f27f2699380e126faebfec18cf623b80a22262d1d6b276",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1MQnRr1It0iMvUAebEgTAHzg9arFIVVVH&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/core_daemon.lua": {
+      "id": "1RW9YNZI5w_FhA58aAwbUY2lQF7W0cAuE",
+      "name": "vas__modules__core_daemon.lua",
+      "repoPath": "src/1_control/vas/modules/core_daemon.lua",
+      "category": "packages",
+      "sizeBytes": 16422,
+      "sha256": "6368d5855a8d48a96b8b663624648401db1a974bef14d04203adbe8a75838dc5",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1RW9YNZI5w_FhA58aAwbUY2lQF7W0cAuE&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/network_manager.lua": {
+      "id": "1dA_g5anRkvP-wuRNN7wHrXw2IAGzyajH",
+      "name": "vas__modules__network_manager.lua",
+      "repoPath": "src/1_control/vas/modules/network_manager.lua",
+      "category": "packages",
+      "sizeBytes": 21512,
+      "sha256": "c33d8d2c9fd22f6bc34aaeb6e057f473f7622811e9e886bd98d38b7428bcca70",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1dA_g5anRkvP-wuRNN7wHrXw2IAGzyajH&export=download&confirm=t"
+    },
+    "src/1_control/vas/main.lua": {
+      "id": "1DbJlRF0bvr0L8A71HD4Q0LY-qOp_2efD",
+      "name": "vas__main.lua",
+      "repoPath": "src/1_control/vas/main.lua",
+      "category": "packages",
+      "sizeBytes": 4035,
+      "sha256": "6c9ecf090df780edbfa8f183dca74ec2cd37c9b39a31e3ee727e60eac94d1fd2",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1DbJlRF0bvr0L8A71HD4Q0LY-qOp_2efD&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/quat.lua": {
+      "id": "1TZSyjtkzrtGEfPC1zVj1SdW-vhBlGYtx",
+      "name": "vas__modules__quat.lua",
+      "repoPath": "src/1_control/vas/modules/quat.lua",
+      "category": "packages",
+      "sizeBytes": 3591,
+      "sha256": "07ecf8a75db1302595a51bd4c86b7416a94a8f4b2b74e25c6120911005820a3b",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1TZSyjtkzrtGEfPC1zVj1SdW-vhBlGYtx&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/thrust_mixer.lua": {
+      "id": "1Qfp_FMztHqJiwsX1u80B0q-E3DrVsqLG",
+      "name": "vas__modules__thrust_mixer.lua",
+      "repoPath": "src/1_control/vas/modules/thrust_mixer.lua",
+      "category": "packages",
+      "sizeBytes": 11285,
+      "sha256": "a578d6af0e25dd5c206dd22a713eb9c47a3d750f0d354ffca039a274539f7a53",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Qfp_FMztHqJiwsX1u80B0q-E3DrVsqLG&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/state_machine.lua": {
+      "id": "1xiQx0vuAxOS2K1oMMp6sEJ4F2gYh_WLK",
+      "name": "vas__modules__state_machine.lua",
+      "repoPath": "src/1_control/vas/modules/state_machine.lua",
+      "category": "packages",
+      "sizeBytes": 10373,
+      "sha256": "f7649b859e2ad0045a7f5edc56099d223b634280481956c8be6af86694d14583",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1xiQx0vuAxOS2K1oMMp6sEJ4F2gYh_WLK&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/ui_renderer.lua": {
+      "id": "1-FinhAfvHxQgEdznS33znTzZQWLAdIsu",
+      "name": "vas__modules__ui_renderer.lua",
+      "repoPath": "src/1_control/vas/modules/ui_renderer.lua",
+      "category": "packages",
+      "sizeBytes": 6615,
+      "sha256": "6b95616fec8e2610cf14cf4dc0d366225318a7db62feeb9e93ef93e8089be113",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1-FinhAfvHxQgEdznS33znTzZQWLAdIsu&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/sensor_pipeline.lua": {
+      "id": "1J95PdSrgCSv2Hrh6Pzxw1_xf2nYhvDUP",
+      "name": "vas__modules__sensor_pipeline.lua",
+      "repoPath": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "category": "packages",
+      "sizeBytes": 12452,
+      "sha256": "a4f74700d3dd7d0aa7c0821de4182cb3adc289ca1ce6c3a1a3d5ba0cff516ee9",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1J95PdSrgCSv2Hrh6Pzxw1_xf2nYhvDUP&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/telemetry_feeder.lua": {
+      "id": "1FfcWK1tEuU66q8X1vs_jBqTTtfGq8T8U",
+      "name": "vas__modules__telemetry_feeder.lua",
+      "repoPath": "src/1_control/vas/modules/telemetry_feeder.lua",
+      "category": "packages",
+      "sizeBytes": 3754,
+      "sha256": "1e589a9760f06aa44e8a981922081cddfa5889330373c4c1ab06cfe1ff2829e1",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1FfcWK1tEuU66q8X1vs_jBqTTtfGq8T8U&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/vec3.lua": {
+      "id": "1cvHN07z2At4OcE9bctLOHiGRQdM45wHp",
+      "name": "vas__modules__vec3.lua",
+      "repoPath": "src/1_control/vas/modules/vec3.lua",
+      "category": "packages",
+      "sizeBytes": 1854,
+      "sha256": "4b605e9238d903481ff6046360775d77b697c52c90b06c4fc71e87a83149fc92",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1cvHN07z2At4OcE9bctLOHiGRQdM45wHp&export=download&confirm=t"
+    },
+    "src/1_control/vas/modules/vehicle_policy.lua": {
+      "id": "13RQvS-hsaMbaeH9w8WMiBlDzMCQOo7OR",
+      "name": "vas__modules__vehicle_policy.lua",
+      "repoPath": "src/1_control/vas/modules/vehicle_policy.lua",
+      "category": "packages",
+      "sizeBytes": 8721,
+      "sha256": "34b4304c76b60cf6021b8b931fa1927bf817973257fd23f2e9ff67ec044f2c5d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=13RQvS-hsaMbaeH9w8WMiBlDzMCQOo7OR&export=download&confirm=t"
+    },
+    "src/0_development/ota/ota_agent.lua": {
+      "id": "1av9t1QqFdiSUBSlkQ_RMMEmqriY44uqX",
+      "name": "ota__lib__ota_agent.lua",
+      "repoPath": "src/0_development/ota/ota_agent.lua",
+      "category": "packages",
+      "sizeBytes": 38201,
+      "sha256": "411907006e2d107368d911b06dd566151d8b1d1bfbbf141027c7ecb5b29d4d13",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1av9t1QqFdiSUBSlkQ_RMMEmqriY44uqX&export=download&confirm=t"
+    },
+    "src/1_control/tca/main.lua": {
+      "id": "1cXXsKHmzHoV6A8AQf89OxVdwNoFDJYAP",
+      "name": "tca__main.lua",
+      "repoPath": "src/1_control/tca/main.lua",
+      "category": "packages",
+      "sizeBytes": 6929,
+      "sha256": "746e012a9a51df5ec95cceae1cd2856fa98df6bc0c77cb354d239c9fcb8c3416",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1cXXsKHmzHoV6A8AQf89OxVdwNoFDJYAP&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/actuator_adapter.lua": {
+      "id": "1rOkeE4ZQChNfVWsJKCEHXCo3M6T1TmmT",
+      "name": "tca__modules__actuator_adapter.lua",
+      "repoPath": "src/1_control/tca/modules/actuator_adapter.lua",
+      "category": "packages",
+      "sizeBytes": 11809,
+      "sha256": "1a4fbbe82a24efde4cba67f64579c9440eccfab96c5fbcdb32ca05a4398bb3e5",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1rOkeE4ZQChNfVWsJKCEHXCo3M6T1TmmT&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/channel_rebind_handler.lua": {
+      "id": "1K_ZRdIKVZB1hneB0x-qzPSRErh83n-f5",
+      "name": "tca__modules__channel_rebind_handler.lua",
+      "repoPath": "src/1_control/tca/modules/channel_rebind_handler.lua",
+      "category": "packages",
+      "sizeBytes": 7102,
+      "sha256": "3c1b6b37f93a05a55aa29775f328904c09be5d3f4a86a9df12d8057f8f533117",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1K_ZRdIKVZB1hneB0x-qzPSRErh83n-f5&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/discovery_handler.lua": {
+      "id": "16vnT_DxoNZ0nO1K45f-f1MUn2gZ7K1x9",
+      "name": "tca__modules__discovery_handler.lua",
+      "repoPath": "src/1_control/tca/modules/discovery_handler.lua",
+      "category": "packages",
+      "sizeBytes": 3749,
+      "sha256": "e73070e3937b75320e2bbc41a8e3178c107d1184f986e9146a9eaf46787117d3",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=16vnT_DxoNZ0nO1K45f-f1MUn2gZ7K1x9&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/config_manager.lua": {
+      "id": "1mqn6ur0pLkYAkuMN3-L0n7L93OZErU5y",
+      "name": "tca__modules__config_manager.lua",
+      "repoPath": "src/1_control/tca/modules/config_manager.lua",
+      "category": "packages",
+      "sizeBytes": 3688,
+      "sha256": "f6e4a7675fed8e4242610390cef8a1edf2b00c1b0d4c2bb1235b03acc59e2638",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1mqn6ur0pLkYAkuMN3-L0n7L93OZErU5y&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/group_allocator.lua": {
+      "id": "16DLrkpoMFyuMKmFjbmZ1Xu2cZBCitSUE",
+      "name": "tca__modules__group_allocator.lua",
+      "repoPath": "src/1_control/tca/modules/group_allocator.lua",
+      "category": "packages",
+      "sizeBytes": 2946,
+      "sha256": "7711ba78484c6e94985f1995352e444dfa1ed46ee5d44ffbe85bd9f214aea906",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=16DLrkpoMFyuMKmFjbmZ1Xu2cZBCitSUE&export=download&confirm=t"
+    },
+    "src/1_control/tca/tools/tca_setup.lua": {
+      "id": "1MUhc4csOLouqUclLgtJpwEk73C9n_6hq",
+      "name": "tca__tools__tca_setup.lua",
+      "repoPath": "src/1_control/tca/tools/tca_setup.lua",
+      "category": "packages",
+      "sizeBytes": 5537,
+      "sha256": "40a04dde11235bb7f97d722b7402a4526e2657aab3c70182dd10ee900ba6408f",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1MUhc4csOLouqUclLgtJpwEk73C9n_6hq&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/packet_protocol.lua": {
+      "id": "14W3ldI89hZudL0-zay8BFTwWQ6LeLY-K",
+      "name": "tca__modules__packet_protocol.lua",
+      "repoPath": "src/1_control/tca/modules/packet_protocol.lua",
+      "category": "packages",
+      "sizeBytes": 1809,
+      "sha256": "429f64b014eccaa80190fbf372b12b08cc73fb4b4cfa512668c3f9b5c663831d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=14W3ldI89hZudL0-zay8BFTwWQ6LeLY-K&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/status_reporter.lua": {
+      "id": "1hompaYxGMXtvp1M8zYawFImvvxem5jeC",
+      "name": "tca__modules__status_reporter.lua",
+      "repoPath": "src/1_control/tca/modules/status_reporter.lua",
+      "category": "packages",
+      "sizeBytes": 3097,
+      "sha256": "a3d0944aab7de0e475b661e8f93962a7b46d8cf25286983637b69353bb7970a4",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1hompaYxGMXtvp1M8zYawFImvvxem5jeC&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/tui_dashboard.lua": {
+      "id": "1RQn1Y6UYoB_nJJkYS2QjHVABeFuaPO3h",
+      "name": "tca__modules__tui_dashboard.lua",
+      "repoPath": "src/1_control/tca/modules/tui_dashboard.lua",
+      "category": "packages",
+      "sizeBytes": 6310,
+      "sha256": "245a66559ea51e4c1f0ce37416e724520f2aeb4cf9271dc628544e7f00695029",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1RQn1Y6UYoB_nJJkYS2QjHVABeFuaPO3h&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/watchdog_sentinel.lua": {
+      "id": "1YH0QAz8jKbPiLamNxx-XI9OJhQ20Pvdx",
+      "name": "tca__modules__watchdog_sentinel.lua",
+      "repoPath": "src/1_control/tca/modules/watchdog_sentinel.lua",
+      "category": "packages",
+      "sizeBytes": 4677,
+      "sha256": "a921b85afc976e1c07fa2400c528285e5b7b9d7d1201bd07d144d76ce2613c9a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1YH0QAz8jKbPiLamNxx-XI9OJhQ20Pvdx&export=download&confirm=t"
+    },
+    "src/1_control/tca/modules/tca_daemon.lua": {
+      "id": "12IuZWXfk_zUbu9fvQBJR_9RApO00nYOI",
+      "name": "tca__modules__tca_daemon.lua",
+      "repoPath": "src/1_control/tca/modules/tca_daemon.lua",
+      "category": "packages",
+      "sizeBytes": 13309,
+      "sha256": "8a1b0844932dda3946c5a6fba511074dbadf1611dae4b6db4e9549b3dd398300",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=12IuZWXfk_zUbu9fvQBJR_9RApO00nYOI&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/main.lua": {
+      "id": "1sGLn5sHzvPIrHrJHG-zNvJ9sVwkrkL5U",
+      "name": "fcp__main.lua",
+      "repoPath": "src/2_guidance/fcp/main.lua",
+      "category": "packages",
+      "sizeBytes": 13674,
+      "sha256": "b586f983de66f308030126604cd6450e579a8f55cd8966ef5df4b1a87abef8ae",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1sGLn5sHzvPIrHrJHG-zNvJ9sVwkrkL5U&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/config/fcp_config.json": {
+      "id": "1HQpjGiZAfXbn4UqNriky_xYGwoF_4wyo",
+      "name": "fcp__config__fcp_config.json",
+      "repoPath": "src/2_guidance/fcp/config/fcp_config.json",
+      "category": "packages",
+      "sizeBytes": 2256,
+      "sha256": "57892f9d189c3f6e1a9dc4e4857da4285914ee36995553f826a5360628eac795",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1HQpjGiZAfXbn4UqNriky_xYGwoF_4wyo&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/modules/flight_fsm.lua": {
+      "id": "1g8SmGdT8dY9Fm62fvg_adaJ9cWgxl4Ib",
+      "name": "fcp__modules__flight_fsm.lua",
+      "repoPath": "src/2_guidance/fcp/modules/flight_fsm.lua",
+      "category": "packages",
+      "sizeBytes": 8699,
+      "sha256": "74f3194ed160036a9a0affb4c28cbae38317cb8311e1fbf19d3ea0983d95d835",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1g8SmGdT8dY9Fm62fvg_adaJ9cWgxl4Ib&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/modules/network_manager.lua": {
+      "id": "1poah4I0VyHpkO5zyr-OD6wGCNQAjRY3D",
+      "name": "fcp__modules__network_manager.lua",
+      "repoPath": "src/2_guidance/fcp/modules/network_manager.lua",
+      "category": "packages",
+      "sizeBytes": 13979,
+      "sha256": "660e6b6ee3a074202f554c3c3f4f82f5c8a3423df41a348012e7058eb330b1bb",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1poah4I0VyHpkO5zyr-OD6wGCNQAjRY3D&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/modules/outer_loop_controller.lua": {
+      "id": "1pu1EVQwxD22p5MD8yaSz3kpR9t5nKEXv",
+      "name": "fcp__modules__outer_loop_controller.lua",
+      "repoPath": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
+      "category": "packages",
+      "sizeBytes": 20926,
+      "sha256": "f4484450b2c9b633f3fae17de0b85974b2ab5c4dcd9facfabaaf293ba861276a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1pu1EVQwxD22p5MD8yaSz3kpR9t5nKEXv&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/modules/state_propagator.lua": {
+      "id": "1VyPaMxjh47ZF15pJMev3OXB72RnJtGy1",
+      "name": "fcp__modules__state_propagator.lua",
+      "repoPath": "src/2_guidance/fcp/modules/state_propagator.lua",
+      "category": "packages",
+      "sizeBytes": 6402,
+      "sha256": "84185ac6f74d874c3dd3928b57c9c24f8204f1f2fedd694c07bfbc14e76760f0",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1VyPaMxjh47ZF15pJMev3OXB72RnJtGy1&export=download&confirm=t"
+    },
+    "src/2_guidance/fcp/modules/ui_renderer.lua": {
+      "id": "1UTxx4xW_lJxKutkGHMQbIWcYtDw6uCXt",
+      "name": "fcp__modules__ui_renderer.lua",
+      "repoPath": "src/2_guidance/fcp/modules/ui_renderer.lua",
+      "category": "packages",
+      "sizeBytes": 4561,
+      "sha256": "6ea7235d7316c4154ffef34491b65e455bdce58a265e53778733976bf800ae91",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1UTxx4xW_lJxKutkGHMQbIWcYtDw6uCXt&export=download&confirm=t"
+    },
+    "src/0_development/alignment/main.lua": {
+      "id": "1ufrk8V7WW1poMLnr8Yg_Xi-vGY8aX7_o",
+      "name": "alignment__main.lua",
+      "repoPath": "src/0_development/alignment/main.lua",
+      "category": "packages",
+      "sizeBytes": 3547,
+      "sha256": "c1d29bb216d1b068be217d3a554e3a2e2ca063c14679cb1513d6e4903b3c357d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1ufrk8V7WW1poMLnr8Yg_Xi-vGY8aX7_o&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/controllability_checker.lua": {
+      "id": "121bVco07Ah-NquPmO7MP6ZuRy_IQyOjT",
+      "name": "alignment__modules__controllability_checker.lua",
+      "repoPath": "src/0_development/alignment/modules/controllability_checker.lua",
+      "category": "packages",
+      "sizeBytes": 4594,
+      "sha256": "4f61ca13c837da0973c20a9cf389402a908e162bbfc2c5fb207c18f7fc5c578e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=121bVco07Ah-NquPmO7MP6ZuRy_IQyOjT&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/align_master.lua": {
+      "id": "1J4a3Lq6GTSRBa3JMSJ57j5d556qO-CW1",
+      "name": "alignment__modules__align_master.lua",
+      "repoPath": "src/0_development/alignment/modules/align_master.lua",
+      "category": "packages",
+      "sizeBytes": 15829,
+      "sha256": "508e020092edcfb490fd4eb37b01e894b974befcca152ad5be03f13de1ff61fc",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1J4a3Lq6GTSRBa3JMSJ57j5d556qO-CW1&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/discovery_client.lua": {
+      "id": "14SQnGMQSDQ-RPmRAKvw29cyf3frR_Bbk",
+      "name": "alignment__modules__discovery_client.lua",
+      "repoPath": "src/0_development/alignment/modules/discovery_client.lua",
+      "category": "packages",
+      "sizeBytes": 3392,
+      "sha256": "72afcd2d25048c45686e4b4ba19250d0e88e88e048324cb3261b691b277c35c4",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=14SQnGMQSDQ-RPmRAKvw29cyf3frR_Bbk&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/impulse_integrator.lua": {
+      "id": "1QW0RWsyrwbpNt-YkBwK3zznRJOH9X_1h",
+      "name": "alignment__modules__impulse_integrator.lua",
+      "repoPath": "src/0_development/alignment/modules/impulse_integrator.lua",
+      "category": "packages",
+      "sizeBytes": 2638,
+      "sha256": "429b0dcf278a8a3e36e4f25719154d86f55d3669b3cbc38ea38a5fc868c3aafa",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1QW0RWsyrwbpNt-YkBwK3zznRJOH9X_1h&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/hud_renderer.lua": {
+      "id": "1R-Smk5_GPLU9vwmZh_6tQYveY7Qibz0V",
+      "name": "alignment__modules__hud_renderer.lua",
+      "repoPath": "src/0_development/alignment/modules/hud_renderer.lua",
+      "category": "packages",
+      "sizeBytes": 4046,
+      "sha256": "6c94dbe2aa4ff4d02cae61d98f39502390b290077a3447f186379fa3c61b209e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1R-Smk5_GPLU9vwmZh_6tQYveY7Qibz0V&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/multi_pulse_sequencer.lua": {
+      "id": "1bMARylGydl4bOsbADjVJTf1eVhWjx6MG",
+      "name": "alignment__modules__multi_pulse_sequencer.lua",
+      "repoPath": "src/0_development/alignment/modules/multi_pulse_sequencer.lua",
+      "category": "packages",
+      "sizeBytes": 5500,
+      "sha256": "ccf630a2c1d8922324c9a11a6351548e06a693d46f5589f00f7fbfe74459748d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1bMARylGydl4bOsbADjVJTf1eVhWjx6MG&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/profile_exporter.lua": {
+      "id": "1pyB9Q-E9cDc-vry6wKtsR10NyMAm9c58",
+      "name": "alignment__modules__profile_exporter.lua",
+      "repoPath": "src/0_development/alignment/modules/profile_exporter.lua",
+      "category": "packages",
+      "sizeBytes": 7264,
+      "sha256": "efe8227f9cf320b5ab6542304e83f1a52842a7ec733a1a0c4515bcc2430e2fc2",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1pyB9Q-E9cDc-vry6wKtsR10NyMAm9c58&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/ols_regression_engine.lua": {
+      "id": "1SkWChaFEGRA3FTI1haMvIAZ5YqDerYH5",
+      "name": "alignment__modules__ols_regression_engine.lua",
+      "repoPath": "src/0_development/alignment/modules/ols_regression_engine.lua",
+      "category": "packages",
+      "sizeBytes": 5305,
+      "sha256": "8887eb3e11fc1cec7caaf75659b2548504186c9109f69a35ade29b090177dacd",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1SkWChaFEGRA3FTI1haMvIAZ5YqDerYH5&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/safety_sentinel.lua": {
+      "id": "1T96dvV_Z6D0jtSbir-BpNs6IvdRH3vQC",
+      "name": "alignment__modules__safety_sentinel.lua",
+      "repoPath": "src/0_development/alignment/modules/safety_sentinel.lua",
+      "category": "packages",
+      "sizeBytes": 2115,
+      "sha256": "9be8521d7b54cc190dbb3a1d8cdb1e06c18367900052f29cdbf46fa4df3d697e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1T96dvV_Z6D0jtSbir-BpNs6IvdRH3vQC&export=download&confirm=t"
+    },
+    "src/0_development/alignment/modules/settling_guard.lua": {
+      "id": "1S7F4tP40ldoiLXu145sL4fH-5KmRRFO9",
+      "name": "alignment__modules__settling_guard.lua",
+      "repoPath": "src/0_development/alignment/modules/settling_guard.lua",
+      "category": "packages",
+      "sizeBytes": 1463,
+      "sha256": "13c60b6dd2540d1f5fb252decbd4f56c654abb2d29ee5a039dc5656fa3385f9c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1S7F4tP40ldoiLXu145sL4fH-5KmRRFO9&export=download&confirm=t"
+    },
+    "src/0_infra/gps/main.lua": {
+      "id": "1qwdkXwaHc95KP1HpAwqnvW8tXVuf82JO",
+      "name": "gps__gps__main.lua",
+      "repoPath": "src/0_infra/gps/main.lua",
+      "category": "packages",
+      "sizeBytes": 545,
+      "sha256": "4b132e4f9b4f0d708523a31f338aa88e7cbe34ac4368bfef0dd15dca3f1ff665",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1qwdkXwaHc95KP1HpAwqnvW8tXVuf82JO&export=download&confirm=t"
+    },
+    "src/0_infra/gps/hal/storage_hal.lua": {
+      "id": "1jDf94JrI1KLE48PRmx8M-sHL8co7i2j5",
+      "name": "gps__gps__hal__storage_hal.lua",
+      "repoPath": "src/0_infra/gps/hal/storage_hal.lua",
+      "category": "packages",
+      "sizeBytes": 1513,
+      "sha256": "64df85a617db36f6658b9daae5df9cd5eeed3a80a7907ed3fec10cb50ca52566",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1jDf94JrI1KLE48PRmx8M-sHL8co7i2j5&export=download&confirm=t"
+    },
+    "src/0_infra/gps/server.lua": {
+      "id": "1g9Pjpv-G2N0qxARsUcB-6zlDgs558icq",
+      "name": "gps__gps__server.lua",
+      "repoPath": "src/0_infra/gps/server.lua",
+      "category": "packages",
+      "sizeBytes": 19435,
+      "sha256": "a9310513def48496ba9ae5e36e13aa0ab0007f9684fd2dcf60cbf3771b5cc88e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1g9Pjpv-G2N0qxARsUcB-6zlDgs558icq&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/config_store.lua": {
+      "id": "17J_XpBVtPBu6PGGL3JSaNUdAu8TJASNf",
+      "name": "gps__gps__modules__config_store.lua",
+      "repoPath": "src/0_infra/gps/modules/config_store.lua",
+      "category": "packages",
+      "sizeBytes": 4714,
+      "sha256": "4d903d043bf730734c66bf49e4f1e260a10935d7bd66014f043ba097fd88f5d6",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=17J_XpBVtPBu6PGGL3JSaNUdAu8TJASNf&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/protocol.lua": {
+      "id": "1iz4g_nou1nRu9ipWU3XxOxrfrX2rUyP3",
+      "name": "gps__gps__modules__protocol.lua",
+      "repoPath": "src/0_infra/gps/modules/protocol.lua",
+      "category": "packages",
+      "sizeBytes": 11354,
+      "sha256": "cee1b37f3e9d2059ac5a54766fb97e6d445c91f8848214dd38a0991bd048821d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1iz4g_nou1nRu9ipWU3XxOxrfrX2rUyP3&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/monitor_ui.lua": {
+      "id": "1uHL-jWAZ4gsy9S23NbQwrQEXY-DEUP9F",
+      "name": "gps__gps__modules__monitor_ui.lua",
+      "repoPath": "src/0_infra/gps/modules/monitor_ui.lua",
+      "category": "packages",
+      "sizeBytes": 7415,
+      "sha256": "05c7643a97d576cae57c4edd74c3f199f560cfb01e029af3f48c4e31b4a4c15c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1uHL-jWAZ4gsy9S23NbQwrQEXY-DEUP9F&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/radar_math.lua": {
+      "id": "1ftqvegHnxjQG9nSl2HBrvYfwxi2MX0yy",
+      "name": "gps__gps__modules__radar_math.lua",
+      "repoPath": "src/0_infra/gps/modules/radar_math.lua",
+      "category": "packages",
+      "sizeBytes": 1867,
+      "sha256": "9a5d5393a1e4c96d950e887b0e970e80ae3dabe43ed5aca0bec78b47d967efbc",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1ftqvegHnxjQG9nSl2HBrvYfwxi2MX0yy&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/session_scheduler.lua": {
+      "id": "1o10mp5w6HjHOW8-1UWPb33DEZ9pN7fTk",
+      "name": "gps__gps__modules__session_scheduler.lua",
+      "repoPath": "src/0_infra/gps/modules/session_scheduler.lua",
+      "category": "packages",
+      "sizeBytes": 8777,
+      "sha256": "52378085a954d98179bef98fe54ce0ea3c26c8f98ce15d382100742e5e4b200c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1o10mp5w6HjHOW8-1UWPb33DEZ9pN7fTk&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/trilateration.lua": {
+      "id": "1FbXaif4rlJEjdOeZGQsvVRMWGf4-rDiL",
+      "name": "gps__gps__modules__trilateration.lua",
+      "repoPath": "src/0_infra/gps/modules/trilateration.lua",
+      "category": "packages",
+      "sizeBytes": 7271,
+      "sha256": "4ab8b83adcc9a680585ee4d2de0dca0cced5f7fa80e5a9eed304f8a63bf03838",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1FbXaif4rlJEjdOeZGQsvVRMWGf4-rDiL&export=download&confirm=t"
+    },
+    "src/0_infra/gps/node.lua": {
+      "id": "1qjNi-QPO4rHPBBQV6x2Bp7DOJ7Cars0p",
+      "name": "gps__gps__node.lua",
+      "repoPath": "src/0_infra/gps/node.lua",
+      "category": "packages",
+      "sizeBytes": 7463,
+      "sha256": "6d6e2d7c9bf9c45c0ce5a994417ff3c235f41e11bc11675de6e9188dde4fbb67",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1qjNi-QPO4rHPBBQV6x2Bp7DOJ7Cars0p&export=download&confirm=t"
+    },
+    "src/0_infra/gps/hal/wizard_cli.lua": {
+      "id": "1CUecU4hMf9hGnRdNhGej9VOMcqF93quH",
+      "name": "gps__gps__hal__wizard_cli.lua",
+      "repoPath": "src/0_infra/gps/hal/wizard_cli.lua",
+      "category": "packages",
+      "sizeBytes": 4641,
+      "sha256": "2435980d47a48bb6331b55e9e8d46f683e8648dbb5e324917274a530ccdb72bb",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1CUecU4hMf9hGnRdNhGej9VOMcqF93quH&export=download&confirm=t"
+    },
+    "src/0_infra/gps/client_entry.lua": {
+      "id": "1Fb0HXfXJ8mefarzoK67wX6LLbq0inZHc",
+      "name": "gps__gps__client_entry.lua",
+      "repoPath": "src/0_infra/gps/client_entry.lua",
+      "category": "packages",
+      "sizeBytes": 1154,
+      "sha256": "57acf25c8141ddee452dddeb54d934ec8c76737c86f9c8731978b5206f848026",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Fb0HXfXJ8mefarzoK67wX6LLbq0inZHc&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/commissioning.lua": {
+      "id": "1Q2QafEd1SqtzI_NBq8g8gvG3P0MLmgWi",
+      "name": "gps__gps__modules__commissioning.lua",
+      "repoPath": "src/0_infra/gps/modules/commissioning.lua",
+      "category": "packages",
+      "sizeBytes": 3164,
+      "sha256": "1f3182536664ba6088d8a77bdac377fdb3de24b0e80f3a6e21ba2f9f51fd2197",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Q2QafEd1SqtzI_NBq8g8gvG3P0MLmgWi&export=download&confirm=t"
+    },
+    "src/0_infra/gps/hal/gps_client.lua": {
+      "id": "1R9-tDxEOG9BjR1BRolWVckcWcO4SESgZ",
+      "name": "gps__apis__gps_client.lua",
+      "repoPath": "src/0_infra/gps/hal/gps_client.lua",
+      "category": "packages",
+      "sizeBytes": 8410,
+      "sha256": "53adebc38f10f9011e2fb0a6985aa052ee6d9be3a17ac3e5aa6e26cbae6de49c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1R9-tDxEOG9BjR1BRolWVckcWcO4SESgZ&export=download&confirm=t"
+    },
+    "src/0_infra/gac/main.lua": {
+      "id": "1yyB_X2A0Dq-EOHZZv55zv3wk9teL17Ng",
+      "name": "gac__main.lua",
+      "repoPath": "src/0_infra/gac/main.lua",
+      "category": "packages",
+      "sizeBytes": 9414,
+      "sha256": "d6fed9bfca8f300bbb4b89057a8a152562672c4b4b86cdf0638e1ef302a233c5",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1yyB_X2A0Dq-EOHZZv55zv3wk9teL17Ng&export=download&confirm=t"
+    },
+    "src/0_infra/gps/modules/client_core.lua": {
+      "id": "1bTaiJG8L27tUftjoWuS9VxAvSE5fcByF",
+      "name": "gps__gps__modules__client_core.lua",
+      "repoPath": "src/0_infra/gps/modules/client_core.lua",
+      "category": "packages",
+      "sizeBytes": 4559,
+      "sha256": "b448532aad80a283680b5a71059b7e190ba6313acdc36fc1fd27750d193128b4",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1bTaiJG8L27tUftjoWuS9VxAvSE5fcByF&export=download&confirm=t"
+    },
+    "src/0_infra/gac/config.lua": {
+      "id": "1SSoOakqbSdi1OWamzZLp-mQj2d5ZUAAN",
+      "name": "gac__config.lua",
+      "repoPath": "src/0_infra/gac/config.lua",
+      "category": "packages",
+      "sizeBytes": 199,
+      "sha256": "790a75934c14ced6154bb60d73ea6e2df636ba3db5438f04d884ba99cb44b1cc",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1SSoOakqbSdi1OWamzZLp-mQj2d5ZUAAN&export=download&confirm=t"
+    },
+    "src/0_infra/gac/modules/config_loader.lua": {
+      "id": "1w-ZKzKjBvFsLtamro6XlKSyZGXbp27Ll",
+      "name": "gac__modules__config_loader.lua",
+      "repoPath": "src/0_infra/gac/modules/config_loader.lua",
+      "category": "packages",
+      "sizeBytes": 4974,
+      "sha256": "4fffe000ce038e38de91356a2abd17f176c93fd06b70c7aa7520676e308991ea",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1w-ZKzKjBvFsLtamro6XlKSyZGXbp27Ll&export=download&confirm=t"
+    },
+    "src/0_infra/gac/modules/facility_inventory.lua": {
+      "id": "1aqekpEUA_Zi_9caoMZKiEq9Y7TPo77d4",
+      "name": "gac__modules__facility_inventory.lua",
+      "repoPath": "src/0_infra/gac/modules/facility_inventory.lua",
+      "category": "packages",
+      "sizeBytes": 6094,
+      "sha256": "bd18731efe24da33da9cd95dabb51c76e92adb039fd83b47ae9b0a6fb00bb532",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1aqekpEUA_Zi_9caoMZKiEq9Y7TPo77d4&export=download&confirm=t"
+    },
+    "src/0_infra/gac/modules/beacon_broadcaster.lua": {
+      "id": "1MC6QVJRv2SKX5WGbNpgxKEdT0mQ1c17o",
+      "name": "gac__modules__beacon_broadcaster.lua",
+      "repoPath": "src/0_infra/gac/modules/beacon_broadcaster.lua",
+      "category": "packages",
+      "sizeBytes": 4810,
+      "sha256": "70327ad349c7fe226bdd96cd4846e8016135669ce94c29fcbba0d73e4de1131b",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1MC6QVJRv2SKX5WGbNpgxKEdT0mQ1c17o&export=download&confirm=t"
+    },
+    "src/0_infra/gac/modules/allocation_engine.lua": {
+      "id": "1863Xjn_fYC6tsOpDWZZZfgA3swaJo6tu",
+      "name": "gac__modules__allocation_engine.lua",
+      "repoPath": "src/0_infra/gac/modules/allocation_engine.lua",
+      "category": "packages",
+      "sizeBytes": 9791,
+      "sha256": "88efc86f8ae2e87926c4f3a3c0d4cadabc51eafd23feeceba3c19e753b4c2292",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1863Xjn_fYC6tsOpDWZZZfgA3swaJo6tu&export=download&confirm=t"
+    },
+    "src/0_infra/gac/modules/gac_fsm.lua": {
+      "id": "1lroLZ56ckrI-OUThbFk9iP-ymb0BqckE",
+      "name": "gac__modules__gac_fsm.lua",
+      "repoPath": "src/0_infra/gac/modules/gac_fsm.lua",
+      "category": "packages",
+      "sizeBytes": 13064,
+      "sha256": "3cc69108d850fac1a6ce969273131b492d45b498a956d255b625783a17a9b4d0",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1lroLZ56ckrI-OUThbFk9iP-ymb0BqckE&export=download&confirm=t"
+    },
+    "src/0_infra/gac/modules/tui_view.lua": {
+      "id": "15FIrnusK_TxOTerRcUD_TS21Ug2wGOw2",
+      "name": "gac__modules__tui_view.lua",
+      "repoPath": "src/0_infra/gac/modules/tui_view.lua",
+      "category": "packages",
+      "sizeBytes": 21351,
+      "sha256": "fc7e3ae252a6315940daa1c1fdfe2ea271c8b4cce640e3070d2aef599ed3e7e2",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=15FIrnusK_TxOTerRcUD_TS21Ug2wGOw2&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/main.lua": {
+      "id": "1cz2Tar0_EN1GP7bOrRB446Od_wpsqHDp",
+      "name": "landing_pad__main.lua",
+      "repoPath": "src/0_infra/landing_pad/main.lua",
+      "category": "packages",
+      "sizeBytes": 10647,
+      "sha256": "5f8ed264cf8f82ef128f9b54c581d68b4a667db0b502d676cacef066605c2121",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1cz2Tar0_EN1GP7bOrRB446Od_wpsqHDp&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/config_store.lua": {
+      "id": "13ScLe2gKeI7tqSBxJVcAqrkEmh_Rxy65",
+      "name": "landing_pad__modules__config_store.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/config_store.lua",
+      "category": "packages",
+      "sizeBytes": 7608,
+      "sha256": "ff023a5b85afed326c80f49a17e54d8e29d3bd649889f5b31f6559fb8f7978ec",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=13ScLe2gKeI7tqSBxJVcAqrkEmh_Rxy65&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/config.lua": {
+      "id": "1mMINj_22uuOwJJ3VHViWGkzrXjlgW2wH",
+      "name": "landing_pad__config.lua",
+      "repoPath": "src/0_infra/landing_pad/config.lua",
+      "category": "packages",
+      "sizeBytes": 199,
+      "sha256": "f7ed085efcdc7bf18298ac101ef2c8775a340b530a18c5f91f685a7c7dae7b52",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1mMINj_22uuOwJJ3VHViWGkzrXjlgW2wH&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/offset_transform.lua": {
+      "id": "1wqWa45oTs3iNl1172dZ8vdiHn4Beo6Gb",
+      "name": "landing_pad__modules__offset_transform.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/offset_transform.lua",
+      "category": "packages",
+      "sizeBytes": 3161,
+      "sha256": "e6bc2d3737c3cc6800b8465b0f55c3ea6a627ae24ea9bc56ba17603ae69e0d74",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1wqWa45oTs3iNl1172dZ8vdiHn4Beo6Gb&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/sensor_adapter.lua": {
+      "id": "1Y1O2aaymF5Z5mLx4RJvsrf7ZpAx2QVot",
+      "name": "landing_pad__modules__sensor_adapter.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/sensor_adapter.lua",
+      "category": "packages",
+      "sizeBytes": 5890,
+      "sha256": "05af2a13ab92a38272a7bcaf3f53a1423260a6bbd37561fbe489c0e78c8cdfbe",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Y1O2aaymF5Z5mLx4RJvsrf7ZpAx2QVot&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/gps_client.lua": {
+      "id": "1CNlXqIz5QuEPGeiPoG6bQCvHZzD_CLYY",
+      "name": "landing_pad__modules__gps_client.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "category": "packages",
+      "sizeBytes": 7908,
+      "sha256": "4f6053cd91950e27215dfe891ce0c30b5043a30b37fd258b9846998f2690e284",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1CNlXqIz5QuEPGeiPoG6bQCvHZzD_CLYY&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/tactical_streamer.lua": {
+      "id": "1ZPWqV3G5PCdrVn3NUSEtJLFssaKBJ57K",
+      "name": "landing_pad__modules__tactical_streamer.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/tactical_streamer.lua",
+      "category": "packages",
+      "sizeBytes": 5845,
+      "sha256": "95b507762db45af76a5031fc03e8ea1824d6491ea903f02a08e32989cd7a6627",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1ZPWqV3G5PCdrVn3NUSEtJLFssaKBJ57K&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/pad_fsm.lua": {
+      "id": "1DGpTXBDlwbHVFKwLD2BSatkfDC9-Sno1",
+      "name": "landing_pad__modules__pad_fsm.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/pad_fsm.lua",
+      "category": "packages",
+      "sizeBytes": 10242,
+      "sha256": "ab97409d81f8f249d6e7ac8e64fc2dc2212e7e269897783b5a6955ac61203c77",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1DGpTXBDlwbHVFKwLD2BSatkfDC9-Sno1&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/setup_wizard.lua": {
+      "id": "13UkSI5mhuxXko_ehDYbiGjEPDKjq6lwN",
+      "name": "landing_pad__modules__setup_wizard.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/setup_wizard.lua",
+      "category": "packages",
+      "sizeBytes": 4024,
+      "sha256": "9b16fcab05bccee50d55dbfe257df53b4cec86ede2f3e11911ca721f358fa30a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=13UkSI5mhuxXko_ehDYbiGjEPDKjq6lwN&export=download&confirm=t"
+    },
+    "src/0_infra/runway/main.lua": {
+      "id": "1IG8WbyE1FXP09BcqhuoJDCMULJC88Bvm",
+      "name": "runway__main.lua",
+      "repoPath": "src/0_infra/runway/main.lua",
+      "category": "packages",
+      "sizeBytes": 7438,
+      "sha256": "a0fc63681555a4aa049675d199f56031140db3cb1c776b8b31409d6b587a0590",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1IG8WbyE1FXP09BcqhuoJDCMULJC88Bvm&export=download&confirm=t"
+    },
+    "src/0_infra/landing_pad/modules/tui_view.lua": {
+      "id": "1XH5J3riloKmW-x-SmuFKyQDFt1ZT258M",
+      "name": "landing_pad__modules__tui_view.lua",
+      "repoPath": "src/0_infra/landing_pad/modules/tui_view.lua",
+      "category": "packages",
+      "sizeBytes": 6926,
+      "sha256": "e3e78b8762c869fcbe756f2fcc14c6799c2e9547902caad72b8c6c7e66038ca5",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1XH5J3riloKmW-x-SmuFKyQDFt1ZT258M&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/config_store.lua": {
+      "id": "1uAWaIeqNCPgoiZ6S5ZsdnhdFoozFr6nE",
+      "name": "runway__modules__config_store.lua",
+      "repoPath": "src/0_infra/runway/modules/config_store.lua",
+      "category": "packages",
+      "sizeBytes": 6054,
+      "sha256": "f09d71d554ea1711af9bb25094b18e43d4459b905be78cf3b86b3168c3c338a4",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1uAWaIeqNCPgoiZ6S5ZsdnhdFoozFr6nE&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/offset_transform.lua": {
+      "id": "15B5huPd0AUYVu4XeWs00X_vMy82Vka_n",
+      "name": "runway__modules__offset_transform.lua",
+      "repoPath": "src/0_infra/runway/modules/offset_transform.lua",
+      "category": "packages",
+      "sizeBytes": 3045,
+      "sha256": "ec500c42b594063aaf4328758040dabf0a617dcabd2bfcf3bf8cb14e57856584",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=15B5huPd0AUYVu4XeWs00X_vMy82Vka_n&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/lighting_controller.lua": {
+      "id": "1BXJo0dgAqlTXpvJHxxTqdHG6SwNJCh4T",
+      "name": "runway__modules__lighting_controller.lua",
+      "repoPath": "src/0_infra/runway/modules/lighting_controller.lua",
+      "category": "packages",
+      "sizeBytes": 3802,
+      "sha256": "b38b5c3c2d4fe67ac4249789f9d2b900825e75d7685284b2889e748bc97ee155",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1BXJo0dgAqlTXpvJHxxTqdHG6SwNJCh4T&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/sensor_adapter.lua": {
+      "id": "1RtFah4PscIvPg8mQDcSEjSW_e-Fxfsal",
+      "name": "runway__modules__sensor_adapter.lua",
+      "repoPath": "src/0_infra/runway/modules/sensor_adapter.lua",
+      "category": "packages",
+      "sizeBytes": 4759,
+      "sha256": "1ceaaa3cb6ae8d423570a781a0575b5fce4646de051cdb04a82de34ca66d05c9",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1RtFah4PscIvPg8mQDcSEjSW_e-Fxfsal&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/gps_client.lua": {
+      "id": "1rWHnKtqVe_gJZgOYnTw2_aIRil_WW_fM",
+      "name": "runway__modules__gps_client.lua",
+      "repoPath": "src/0_infra/runway/modules/gps_client.lua",
+      "category": "packages",
+      "sizeBytes": 5809,
+      "sha256": "ac8eaa9d5b4b5658319bec3f6adf2796550b3cff6a129635d698a96a58740d3d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1rWHnKtqVe_gJZgOYnTw2_aIRil_WW_fM&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/tactical_streamer.lua": {
+      "id": "13NFvG_YbERQ_2YZbQ_F5NTM0d5eHJDwh",
+      "name": "runway__modules__tactical_streamer.lua",
+      "repoPath": "src/0_infra/runway/modules/tactical_streamer.lua",
+      "category": "packages",
+      "sizeBytes": 4990,
+      "sha256": "6f50e15e9829c5e9082d57084d730ab8ce0a3e0abb731a9394ed816de71de8c3",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=13NFvG_YbERQ_2YZbQ_F5NTM0d5eHJDwh&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/runway_fsm.lua": {
+      "id": "1YAI62mOg2BGbjPFWx02tIt27sHYj-bki",
+      "name": "runway__modules__runway_fsm.lua",
+      "repoPath": "src/0_infra/runway/modules/runway_fsm.lua",
+      "category": "packages",
+      "sizeBytes": 7055,
+      "sha256": "5d9d56f560f4aedc599b56d63f81bf897d66bf97ee4c49eb369c7d90a7a66178",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1YAI62mOg2BGbjPFWx02tIt27sHYj-bki&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/setup_wizard.lua": {
+      "id": "1gQHUrkzVh85lY809kpwhrvf5f_J9ryz_",
+      "name": "runway__modules__setup_wizard.lua",
+      "repoPath": "src/0_infra/runway/modules/setup_wizard.lua",
+      "category": "packages",
+      "sizeBytes": 3056,
+      "sha256": "c98155755f2ef18d38514d510ea0d438fcccbd13f1b02fcf8f46b8ac9220dc6a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1gQHUrkzVh85lY809kpwhrvf5f_J9ryz_&export=download&confirm=t"
+    },
+    "src/0_infra/runway/modules/tui_view.lua": {
+      "id": "12xZPuwEwk71H5XYC3WhMEb4LHk0qLQ0R",
+      "name": "runway__modules__tui_view.lua",
+      "repoPath": "src/0_infra/runway/modules/tui_view.lua",
+      "category": "packages",
+      "sizeBytes": 2846,
+      "sha256": "baf00e21e97adff164ebd3d06391f28013cee4d75dbb0b483c2453d54e549c23",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=12xZPuwEwk71H5XYC3WhMEb4LHk0qLQ0R&export=download&confirm=t"
+    },
+    "src/3_planning/amm/config/amm_config.json": {
+      "id": "1zqS8CSCfewvwEvBy-5lgIBk6avAp1-S6",
+      "name": "amm__config__amm_config.json",
+      "repoPath": "src/3_planning/amm/config/amm_config.json",
+      "category": "packages",
+      "sizeBytes": 2667,
+      "sha256": "1bc5b426cbb8794305e6289a864f7664480255aa2189b8801b8a7f92366b6c89",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1zqS8CSCfewvwEvBy-5lgIBk6avAp1-S6&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/action_registry.lua": {
+      "id": "1-GgFtHgDkzJleh6AFhshvGnnQm-y-3mG",
+      "name": "amm__modules__action_registry.lua",
+      "repoPath": "src/3_planning/amm/modules/action_registry.lua",
+      "category": "packages",
+      "sizeBytes": 18812,
+      "sha256": "eeafe5b4d7e5f896ebd991755e1ba31d542093671cc8fc8b94c91c5f4f1e7d67",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1-GgFtHgDkzJleh6AFhshvGnnQm-y-3mG&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/chattering_guard.lua": {
+      "id": "1QHjJ565NwPagq-2NpWvG6T-oTyu1DYiW",
+      "name": "amm__modules__chattering_guard.lua",
+      "repoPath": "src/3_planning/amm/modules/chattering_guard.lua",
+      "category": "packages",
+      "sizeBytes": 6844,
+      "sha256": "10de1a33f830c4a5fba4e59dd5deefb282dbe8658e978be161b87249c7c10fe8",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1QHjJ565NwPagq-2NpWvG6T-oTyu1DYiW&export=download&confirm=t"
+    },
+    "src/3_planning/amm/main.lua": {
+      "id": "1bW8QGRKS3PZVNoLOhK1ddb-txD_lu7tK",
+      "name": "amm__main.lua",
+      "repoPath": "src/3_planning/amm/main.lua",
+      "category": "packages",
+      "sizeBytes": 42019,
+      "sha256": "c1d69e233de0f0c24da2b0d0255d3046b1d8fe69ee51b7e8310bebb032c82698",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1bW8QGRKS3PZVNoLOhK1ddb-txD_lu7tK&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/channel_sentinel.lua": {
+      "id": "1y1pOG4c0trA4iV-y_OViDhB-SMemaCLM",
+      "name": "amm__modules__channel_sentinel.lua",
+      "repoPath": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "category": "packages",
+      "sizeBytes": 8407,
+      "sha256": "b9ed393623367a1dd378fd187da0f46590dbdbb31ec9f2c2d2ba2899591ddfbf",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1y1pOG4c0trA4iV-y_OViDhB-SMemaCLM&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/facility_client.lua": {
+      "id": "1u2E8pHSNSRAJ3H6UPBTYKagMYkK3XxHm",
+      "name": "amm__modules__facility_client.lua",
+      "repoPath": "src/3_planning/amm/modules/facility_client.lua",
+      "category": "packages",
+      "sizeBytes": 16013,
+      "sha256": "4a20fbd703fa45637e8c506627527e59598e1b95b1c963e5ff0e3c509313a524",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1u2E8pHSNSRAJ3H6UPBTYKagMYkK3XxHm&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/nav_engine.lua": {
+      "id": "1rN4aWIItR_za9K4Xs-YwKzZW-baI8Vn0",
+      "name": "amm__modules__nav_engine.lua",
+      "repoPath": "src/3_planning/amm/modules/nav_engine.lua",
+      "category": "packages",
+      "sizeBytes": 11096,
+      "sha256": "523e6c0a83b4fee4355d74fc73d28c16be8442c8643307f0d1479e8ddeb61495",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1rN4aWIItR_za9K4Xs-YwKzZW-baI8Vn0&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/waypoint_queue.lua": {
+      "id": "15d5_A8GuLrtWiMPwhKGt3XLBiM2su8mZ",
+      "name": "amm__modules__waypoint_queue.lua",
+      "repoPath": "src/3_planning/amm/modules/waypoint_queue.lua",
+      "category": "packages",
+      "sizeBytes": 5382,
+      "sha256": "27c037fabd15b298df34739f29e559fcb69aee34c8fcce2089e7ba614db0c758",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=15d5_A8GuLrtWiMPwhKGt3XLBiM2su8mZ&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/network_manager.lua": {
+      "id": "1UHA3CwFWuAbMTYOdlwbfHrUhHJmEfAkM",
+      "name": "amm__modules__network_manager.lua",
+      "repoPath": "src/3_planning/amm/modules/network_manager.lua",
+      "category": "packages",
+      "sizeBytes": 11985,
+      "sha256": "0c5edc27c17f23b91dd11f74ae871e9be6177ec7f1dbfd3913d3d2699dead026",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1UHA3CwFWuAbMTYOdlwbfHrUhHJmEfAkM&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/condition_evaluator.lua": {
+      "id": "11FKssYezhRL_hdZtrwYQ2frfZRzSbfVf",
+      "name": "amm__modules__condition_evaluator.lua",
+      "repoPath": "src/3_planning/amm/modules/condition_evaluator.lua",
+      "category": "packages",
+      "sizeBytes": 19432,
+      "sha256": "3bba468cc4c770673e4b8b7588fa4e4bfbdef43fc8fe082929d32e5964a82351",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=11FKssYezhRL_hdZtrwYQ2frfZRzSbfVf&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/mission_engine.lua": {
+      "id": "1s8NbAGcXLwh3T9Ht_v-CfhlmgnGugVuo",
+      "name": "amm__modules__mission_engine.lua",
+      "repoPath": "src/3_planning/amm/modules/mission_engine.lua",
+      "category": "packages",
+      "sizeBytes": 44656,
+      "sha256": "6f7168ff2bfd57900767fcaeae2d9ebbd83a8e9d279e5bfbc25f1804053e39ae",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1s8NbAGcXLwh3T9Ht_v-CfhlmgnGugVuo&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/hook_runner.lua": {
+      "id": "1OI1RugCxDgeOGmML9o7K5ryKmMTO6aAg",
+      "name": "amm__modules__hook_runner.lua",
+      "repoPath": "src/3_planning/amm/modules/hook_runner.lua",
+      "category": "packages",
+      "sizeBytes": 10773,
+      "sha256": "283c5457351746fa2312d4f5dea52c1196104cb821634b0e3d18f898122c10db",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1OI1RugCxDgeOGmML9o7K5ryKmMTO6aAg&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/input_handler.lua": {
+      "id": "1hGs88n0M5kzqtzEO7a21BUtq2aarjmTd",
+      "name": "amm__modules__input_handler.lua",
+      "repoPath": "src/3_planning/amm/modules/input_handler.lua",
+      "category": "packages",
+      "sizeBytes": 3696,
+      "sha256": "1cd799368b3d27b561735bbcb6880fb38b3b138c88857683470c7b16bbbea920",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1hGs88n0M5kzqtzEO7a21BUtq2aarjmTd&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/c2_arbiter.lua": {
+      "id": "1kT2slrUNo97veikRZHE_d3RN2Lsk3Hqr",
+      "name": "amm__modules__c2_arbiter.lua",
+      "repoPath": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "category": "packages",
+      "sizeBytes": 21705,
+      "sha256": "c83601cd0864d67cda53d78ececccf7387e24eef85327703049b6e80219ac733",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1kT2slrUNo97veikRZHE_d3RN2Lsk3Hqr&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/ui_renderer.lua": {
+      "id": "1sKY6vyh0SGO8PkY-ZBL8GoSnoRUCbQn8",
+      "name": "amm__modules__ui_renderer.lua",
+      "repoPath": "src/3_planning/amm/modules/ui_renderer.lua",
+      "category": "packages",
+      "sizeBytes": 17056,
+      "sha256": "550cf6761a9c20734f2ca7434abbb5855dbe531534dd143957e53672f58c60ba",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1sKY6vyh0SGO8PkY-ZBL8GoSnoRUCbQn8&export=download&confirm=t"
+    },
+    "src/3_planning/amm/modules/trajectory_generator.lua": {
+      "id": "1Lxljo38VHV927_BATPBNTWcfo7P1ZGMG",
+      "name": "amm__modules__trajectory_generator.lua",
+      "repoPath": "src/3_planning/amm/modules/trajectory_generator.lua",
+      "category": "packages",
+      "sizeBytes": 23333,
+      "sha256": "f04417ada4d79d762b51a4996fa2918cbbe30d569edba85a2cc7ca0df7cee68f",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Lxljo38VHV927_BATPBNTWcfo7P1ZGMG&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/main.lua": {
+      "id": "1mv0BYqmSdziuZFe77zxaW-F1NxXlEUb-",
+      "name": "gcs__main.lua",
+      "repoPath": "src/0_infra/gcs/main.lua",
+      "category": "packages",
+      "sizeBytes": 13035,
+      "sha256": "9c9022a07c51bbe0d6e106cbd069dc3eb749d00c200252b96750f2adcc6d2a2c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1mv0BYqmSdziuZFe77zxaW-F1NxXlEUb-&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/config/gcs_config.json": {
+      "id": "1jJ5aCq2uUh52x519ZAH9VpVqPGUQokk0",
+      "name": "gcs__config__gcs_config.json",
+      "repoPath": "src/0_infra/gcs/config/gcs_config.json",
+      "category": "packages",
+      "sizeBytes": 605,
+      "sha256": "16d46bba186af585ea9a440fa33b21fd4b39bf1aeea7e8b4ab260efdedda606b",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1jJ5aCq2uUh52x519ZAH9VpVqPGUQokk0&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/modules/channel_manager.lua": {
+      "id": "14B8LSFjr8P2I5rfEW6RbK38Z3Ce-55Vc",
+      "name": "gcs__modules__channel_manager.lua",
+      "repoPath": "src/0_infra/gcs/modules/channel_manager.lua",
+      "category": "packages",
+      "sizeBytes": 6249,
+      "sha256": "5751064ec7ba3f8a6a3e6304c7f3cf845f8d8c739c417cd3491d24f60997279e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=14B8LSFjr8P2I5rfEW6RbK38Z3Ce-55Vc&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/config/channel_registry.json": {
+      "id": "1kP80bOVaq1HndP__9UjlQKrEUH7C502b",
+      "name": "gcs__config__channel_registry.json",
+      "repoPath": "src/0_infra/gcs/config/channel_registry.json",
+      "category": "packages",
+      "sizeBytes": 75,
+      "sha256": "fe95b2cd2adb515be85545b62374300e8f528234bab4ddc32de48b0cc744997a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1kP80bOVaq1HndP__9UjlQKrEUH7C502b&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/modules/network_manager.lua": {
+      "id": "1Pb-62eLGHLl9oMTqZxAUoouyJEzsgaaA",
+      "name": "gcs__modules__network_manager.lua",
+      "repoPath": "src/0_infra/gcs/modules/network_manager.lua",
+      "category": "packages",
+      "sizeBytes": 5328,
+      "sha256": "2081bd10068f0e592d0f8bec9a3afeb64b0d7707477d4106a8c3fd33d89a0886",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pb-62eLGHLl9oMTqZxAUoouyJEzsgaaA&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/modules/c2_commander.lua": {
+      "id": "13pWwtJUnLfJysSiiRWB64B_Sy3NGSRw8",
+      "name": "gcs__modules__c2_commander.lua",
+      "repoPath": "src/0_infra/gcs/modules/c2_commander.lua",
+      "category": "packages",
+      "sizeBytes": 1359,
+      "sha256": "987a9196bd3751044f3f07860db92ac6dbdb4b1a1f6c532806a4fd73d4e5b984",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=13pWwtJUnLfJysSiiRWB64B_Sy3NGSRw8&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/modules/fleet_tracker.lua": {
+      "id": "1u2moRTCEinZxvDLblPQ9oNKAcl4uV1JA",
+      "name": "gcs__modules__fleet_tracker.lua",
+      "repoPath": "src/0_infra/gcs/modules/fleet_tracker.lua",
+      "category": "packages",
+      "sizeBytes": 5402,
+      "sha256": "622451cd3fecc80078eb3452b383a62a868082f87c02d6fb23d5b0c846db03a1",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1u2moRTCEinZxvDLblPQ9oNKAcl4uV1JA&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/modules/live_bridge_client.lua": {
+      "id": "1GUUZRXKcGWy-UZTJLANoekeysBSeVw6T",
+      "name": "gcs__modules__live_bridge_client.lua",
+      "repoPath": "src/0_infra/gcs/modules/live_bridge_client.lua",
+      "category": "packages",
+      "sizeBytes": 4442,
+      "sha256": "aa30483462b71d6ce4db5924b317e651eb546a2ac85537acacd4a6df63f2700a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1GUUZRXKcGWy-UZTJLANoekeysBSeVw6T&export=download&confirm=t"
+    },
+    "src/0_infra/gcs/modules/ui_renderer.lua": {
+      "id": "1qqu-ZTmQm9JmIO7g7hjo3mOLyidjVArB",
+      "name": "gcs__modules__ui_renderer.lua",
+      "repoPath": "src/0_infra/gcs/modules/ui_renderer.lua",
+      "category": "packages",
+      "sizeBytes": 6124,
+      "sha256": "bef40cf537120624894cbebf5cc7223b6b17d2370d0efc357848d46465892cb2",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1qqu-ZTmQm9JmIO7g7hjo3mOLyidjVArB&export=download&confirm=t"
+    },
+    "src/0_development/fdr/main.lua": {
+      "id": "1v94Tzl5p043E8v-LPFBPesX6ByN6fU51",
+      "name": "fdr__main.lua",
+      "repoPath": "src/0_development/fdr/main.lua",
+      "category": "packages",
+      "sizeBytes": 12198,
+      "sha256": "2aadd83cccd6034a3007b7dd2d04dc34a9a47ef15b571f0c33fabd3aeac84e8c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1v94Tzl5p043E8v-LPFBPesX6ByN6fU51&export=download&confirm=t"
+    },
+    "src/0_development/fdr/modules/packet_tap.lua": {
+      "id": "1yLuvhPqD85rX0CqB97qzwLjRAvw1zsCT",
+      "name": "fdr__modules__packet_tap.lua",
+      "repoPath": "src/0_development/fdr/modules/packet_tap.lua",
+      "category": "packages",
+      "sizeBytes": 6480,
+      "sha256": "c34a0f1f1977783762e1fd342d74b6478b1d1ffea8627b7d034c812aa6314a3a",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1yLuvhPqD85rX0CqB97qzwLjRAvw1zsCT&export=download&confirm=t"
+    },
+    "src/0_development/fdr/modules/ring_buffer.lua": {
+      "id": "18RO9IL9OIwUmRDnX2-xC_LN4gY43o6Hj",
+      "name": "fdr__modules__ring_buffer.lua",
+      "repoPath": "src/0_development/fdr/modules/ring_buffer.lua",
+      "category": "packages",
+      "sizeBytes": 1879,
+      "sha256": "d9b601e0ab781e891b312c6610d7eff013bb65ddf15088df20d45e024d9e6d3e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=18RO9IL9OIwUmRDnX2-xC_LN4gY43o6Hj&export=download&confirm=t"
+    },
+    "src/0_development/fdr/config/fdr_config.json": {
+      "id": "1x8KSJPVm-SiXHZaRx4kMGuw_-30lWlBQ",
+      "name": "fdr__config__fdr_config.json",
+      "repoPath": "src/0_development/fdr/config/fdr_config.json",
+      "category": "packages",
+      "sizeBytes": 970,
+      "sha256": "9b8ee83db062c1d56a11f7dd2ba3e711e7a3455b059e60cd8a73573d0c97af7b",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1x8KSJPVm-SiXHZaRx4kMGuw_-30lWlBQ&export=download&confirm=t"
+    },
+    "src/0_development/fdr/modules/storage_pool.lua": {
+      "id": "1fQngSpgES5cAopgIl0X5wj8Eyz0wu7Zo",
+      "name": "fdr__modules__storage_pool.lua",
+      "repoPath": "src/0_development/fdr/modules/storage_pool.lua",
+      "category": "packages",
+      "sizeBytes": 6573,
+      "sha256": "e9cb35a554c1cf9b0862020e4bebffd376a717660a7937d11672afc86c28b96b",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1fQngSpgES5cAopgIl0X5wj8Eyz0wu7Zo&export=download&confirm=t"
+    },
+    "src/0_development/fdr/modules/jsonl_dumper.lua": {
+      "id": "1XWozQpozXgE8rcJtK4SyX8rH6Rlojui1",
+      "name": "fdr__modules__jsonl_dumper.lua",
+      "repoPath": "src/0_development/fdr/modules/jsonl_dumper.lua",
+      "category": "packages",
+      "sizeBytes": 8901,
+      "sha256": "2bcef8ecd1814d338402eea3aa0f19a8395cdd96d5bb5ce5080060811439820d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1XWozQpozXgE8rcJtK4SyX8rH6Rlojui1&export=download&confirm=t"
+    },
+    "src/0_development/fdr/modules/cloud_exporter.lua": {
+      "id": "1igAMGGXaOwBdCq_FJiIXOYxS7FEboaUg",
+      "name": "fdr__modules__cloud_exporter.lua",
+      "repoPath": "src/0_development/fdr/modules/cloud_exporter.lua",
+      "category": "packages",
+      "sizeBytes": 3668,
+      "sha256": "5606a35731d47365c70148dd13a8418b8b3b698382ebcea8ff166dc67c7e60b9",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1igAMGGXaOwBdCq_FJiIXOYxS7FEboaUg&export=download&confirm=t"
+    },
+    "src/0_development/fdr/modules/fdr_ui.lua": {
+      "id": "12R_sdksjBi64P5zb8lsErQEwE-eganeg",
+      "name": "fdr__modules__fdr_ui.lua",
+      "repoPath": "src/0_development/fdr/modules/fdr_ui.lua",
+      "category": "packages",
+      "sizeBytes": 3224,
+      "sha256": "5eedbc8fbc8e1f1f147345b0d5ea849ab2769e74016ebb764ed4be7d9d995161",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=12R_sdksjBi64P5zb8lsErQEwE-eganeg&export=download&confirm=t"
+    },
+    "src/0_development/ota/main.lua": {
+      "id": "16pef9rYqI_0cMlQPlke4GaE4kvuMJ61G",
+      "name": "ota__ota__main.lua",
+      "repoPath": "src/0_development/ota/main.lua",
+      "category": "packages",
+      "sizeBytes": 12444,
+      "sha256": "b560633fa61ca6e1bd689bfd4faa98cab9090415d446feaeb0adb94f75dfd1ab",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=16pef9rYqI_0cMlQPlke4GaE4kvuMJ61G&export=download&confirm=t"
+    },
+    "src/0_development/ota/modules/ota_ui.lua": {
+      "id": "18aenQSFUx1BdgjUx5X2mmQssnlXOpYz6",
+      "name": "ota__ota__modules__ota_ui.lua",
+      "repoPath": "src/0_development/ota/modules/ota_ui.lua",
+      "category": "packages",
+      "sizeBytes": 5893,
+      "sha256": "d5cd4039a9c053ec0386f23a5f16856ce9fdd4897a462ced3bdeafb2fd93eb63",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=18aenQSFUx1BdgjUx5X2mmQssnlXOpYz6&export=download&confirm=t"
+    },
+    "src/0_development/ota/config/ota_config.json": {
+      "id": "1-ItvHsoMBO-5EgG14EMvK_TdYg4_H3Xq",
+      "name": "ota__ota__config__ota_config.json",
+      "repoPath": "src/0_development/ota/config/ota_config.json",
+      "category": "packages",
+      "sizeBytes": 502,
+      "sha256": "5d0609c4a91553edea2a3795acddb44e520c84fabc9b8aec1cafe528fa522f3e",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1-ItvHsoMBO-5EgG14EMvK_TdYg4_H3Xq&export=download&confirm=t"
+    },
+    "src/0_development/ota/modules/ota_protocol.lua": {
+      "id": "1W_g1JN5cdfSoI5Itgs9vvCWoNDS3C8XT",
+      "name": "ota__ota__modules__ota_protocol.lua",
+      "repoPath": "src/0_development/ota/modules/ota_protocol.lua",
+      "category": "packages",
+      "sizeBytes": 5057,
+      "sha256": "4ff896fb6a0be0c3a538c390929756efb7296decdeff1a39a45415a03146d8c2",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1W_g1JN5cdfSoI5Itgs9vvCWoNDS3C8XT&export=download&confirm=t"
+    },
+    "src/0_development/ota/modules/ota_server.lua": {
+      "id": "1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG",
+      "name": "ota__ota__modules__ota_server.lua",
+      "repoPath": "src/0_development/ota/modules/ota_server.lua",
+      "category": "packages",
+      "sizeBytes": 35698,
+      "sha256": "6068f75bd968697ef81f66f9a38e58bb1719e9377f02225ac9b1dbe7f0ced851",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG&export=download&confirm=t"
     }
   },
   "bootstrapMap": {
@@ -95,6 +1229,132 @@
     "src/0_development/installer/modules/downloader.lua": "1EIS_Ife6L12eCijlDPDKx8Z5GVdnYU4F",
     "src/0_development/installer/modules/tui_view.lua": "1O6TC-Teg0_VIifb-DzcsfCyeGrBylzRt",
     "installer.lua": "1FSk8Fya18HXyPdL8lhhfBGqIV500D5UN",
-    "src/0_development/sensors/avionics_sensors.lua": "1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL"
+    "src/0_development/sensors/avionics_sensors.lua": "1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL",
+    "src/1_control/vas/modules/actuator_adapter_tca.lua": "1V6DU2fbjYVLNWnV-iunMSrL3JI1tsjoK",
+    "src/1_control/vas/modules/actuator_adapter_asa.lua": "1Est8Gm_IIv3-iehK-QwK9D8wOJewJF77",
+    "src/1_control/vas/modules/flight_dynamics_core.lua": "1MQnRr1It0iMvUAebEgTAHzg9arFIVVVH",
+    "src/1_control/vas/modules/core_daemon.lua": "1RW9YNZI5w_FhA58aAwbUY2lQF7W0cAuE",
+    "src/1_control/vas/modules/network_manager.lua": "1dA_g5anRkvP-wuRNN7wHrXw2IAGzyajH",
+    "src/1_control/vas/main.lua": "1DbJlRF0bvr0L8A71HD4Q0LY-qOp_2efD",
+    "src/1_control/vas/modules/quat.lua": "1TZSyjtkzrtGEfPC1zVj1SdW-vhBlGYtx",
+    "src/1_control/vas/modules/thrust_mixer.lua": "1Qfp_FMztHqJiwsX1u80B0q-E3DrVsqLG",
+    "src/1_control/vas/modules/state_machine.lua": "1xiQx0vuAxOS2K1oMMp6sEJ4F2gYh_WLK",
+    "src/1_control/vas/modules/ui_renderer.lua": "1-FinhAfvHxQgEdznS33znTzZQWLAdIsu",
+    "src/1_control/vas/modules/sensor_pipeline.lua": "1J95PdSrgCSv2Hrh6Pzxw1_xf2nYhvDUP",
+    "src/1_control/vas/modules/telemetry_feeder.lua": "1FfcWK1tEuU66q8X1vs_jBqTTtfGq8T8U",
+    "src/1_control/vas/modules/vec3.lua": "1cvHN07z2At4OcE9bctLOHiGRQdM45wHp",
+    "src/1_control/vas/modules/vehicle_policy.lua": "13RQvS-hsaMbaeH9w8WMiBlDzMCQOo7OR",
+    "src/0_development/ota/ota_agent.lua": "1av9t1QqFdiSUBSlkQ_RMMEmqriY44uqX",
+    "src/1_control/tca/main.lua": "1cXXsKHmzHoV6A8AQf89OxVdwNoFDJYAP",
+    "src/1_control/tca/modules/actuator_adapter.lua": "1rOkeE4ZQChNfVWsJKCEHXCo3M6T1TmmT",
+    "src/1_control/tca/modules/channel_rebind_handler.lua": "1K_ZRdIKVZB1hneB0x-qzPSRErh83n-f5",
+    "src/1_control/tca/modules/discovery_handler.lua": "16vnT_DxoNZ0nO1K45f-f1MUn2gZ7K1x9",
+    "src/1_control/tca/modules/config_manager.lua": "1mqn6ur0pLkYAkuMN3-L0n7L93OZErU5y",
+    "src/1_control/tca/modules/group_allocator.lua": "16DLrkpoMFyuMKmFjbmZ1Xu2cZBCitSUE",
+    "src/1_control/tca/tools/tca_setup.lua": "1MUhc4csOLouqUclLgtJpwEk73C9n_6hq",
+    "src/1_control/tca/modules/packet_protocol.lua": "14W3ldI89hZudL0-zay8BFTwWQ6LeLY-K",
+    "src/1_control/tca/modules/status_reporter.lua": "1hompaYxGMXtvp1M8zYawFImvvxem5jeC",
+    "src/1_control/tca/modules/tui_dashboard.lua": "1RQn1Y6UYoB_nJJkYS2QjHVABeFuaPO3h",
+    "src/1_control/tca/modules/watchdog_sentinel.lua": "1YH0QAz8jKbPiLamNxx-XI9OJhQ20Pvdx",
+    "src/1_control/tca/modules/tca_daemon.lua": "12IuZWXfk_zUbu9fvQBJR_9RApO00nYOI",
+    "src/2_guidance/fcp/main.lua": "1sGLn5sHzvPIrHrJHG-zNvJ9sVwkrkL5U",
+    "src/2_guidance/fcp/config/fcp_config.json": "1HQpjGiZAfXbn4UqNriky_xYGwoF_4wyo",
+    "src/2_guidance/fcp/modules/flight_fsm.lua": "1g8SmGdT8dY9Fm62fvg_adaJ9cWgxl4Ib",
+    "src/2_guidance/fcp/modules/network_manager.lua": "1poah4I0VyHpkO5zyr-OD6wGCNQAjRY3D",
+    "src/2_guidance/fcp/modules/outer_loop_controller.lua": "1pu1EVQwxD22p5MD8yaSz3kpR9t5nKEXv",
+    "src/2_guidance/fcp/modules/state_propagator.lua": "1VyPaMxjh47ZF15pJMev3OXB72RnJtGy1",
+    "src/2_guidance/fcp/modules/ui_renderer.lua": "1UTxx4xW_lJxKutkGHMQbIWcYtDw6uCXt",
+    "src/0_development/alignment/main.lua": "1ufrk8V7WW1poMLnr8Yg_Xi-vGY8aX7_o",
+    "src/0_development/alignment/modules/controllability_checker.lua": "121bVco07Ah-NquPmO7MP6ZuRy_IQyOjT",
+    "src/0_development/alignment/modules/align_master.lua": "1J4a3Lq6GTSRBa3JMSJ57j5d556qO-CW1",
+    "src/0_development/alignment/modules/discovery_client.lua": "14SQnGMQSDQ-RPmRAKvw29cyf3frR_Bbk",
+    "src/0_development/alignment/modules/impulse_integrator.lua": "1QW0RWsyrwbpNt-YkBwK3zznRJOH9X_1h",
+    "src/0_development/alignment/modules/hud_renderer.lua": "1R-Smk5_GPLU9vwmZh_6tQYveY7Qibz0V",
+    "src/0_development/alignment/modules/multi_pulse_sequencer.lua": "1bMARylGydl4bOsbADjVJTf1eVhWjx6MG",
+    "src/0_development/alignment/modules/profile_exporter.lua": "1pyB9Q-E9cDc-vry6wKtsR10NyMAm9c58",
+    "src/0_development/alignment/modules/ols_regression_engine.lua": "1SkWChaFEGRA3FTI1haMvIAZ5YqDerYH5",
+    "src/0_development/alignment/modules/safety_sentinel.lua": "1T96dvV_Z6D0jtSbir-BpNs6IvdRH3vQC",
+    "src/0_development/alignment/modules/settling_guard.lua": "1S7F4tP40ldoiLXu145sL4fH-5KmRRFO9",
+    "src/0_infra/gps/main.lua": "1qwdkXwaHc95KP1HpAwqnvW8tXVuf82JO",
+    "src/0_infra/gps/hal/storage_hal.lua": "1jDf94JrI1KLE48PRmx8M-sHL8co7i2j5",
+    "src/0_infra/gps/server.lua": "1g9Pjpv-G2N0qxARsUcB-6zlDgs558icq",
+    "src/0_infra/gps/modules/config_store.lua": "17J_XpBVtPBu6PGGL3JSaNUdAu8TJASNf",
+    "src/0_infra/gps/modules/protocol.lua": "1iz4g_nou1nRu9ipWU3XxOxrfrX2rUyP3",
+    "src/0_infra/gps/modules/monitor_ui.lua": "1uHL-jWAZ4gsy9S23NbQwrQEXY-DEUP9F",
+    "src/0_infra/gps/modules/radar_math.lua": "1ftqvegHnxjQG9nSl2HBrvYfwxi2MX0yy",
+    "src/0_infra/gps/modules/session_scheduler.lua": "1o10mp5w6HjHOW8-1UWPb33DEZ9pN7fTk",
+    "src/0_infra/gps/modules/trilateration.lua": "1FbXaif4rlJEjdOeZGQsvVRMWGf4-rDiL",
+    "src/0_infra/gps/node.lua": "1qjNi-QPO4rHPBBQV6x2Bp7DOJ7Cars0p",
+    "src/0_infra/gps/hal/wizard_cli.lua": "1CUecU4hMf9hGnRdNhGej9VOMcqF93quH",
+    "src/0_infra/gps/client_entry.lua": "1Fb0HXfXJ8mefarzoK67wX6LLbq0inZHc",
+    "src/0_infra/gps/modules/commissioning.lua": "1Q2QafEd1SqtzI_NBq8g8gvG3P0MLmgWi",
+    "src/0_infra/gps/hal/gps_client.lua": "1R9-tDxEOG9BjR1BRolWVckcWcO4SESgZ",
+    "src/0_infra/gac/main.lua": "1yyB_X2A0Dq-EOHZZv55zv3wk9teL17Ng",
+    "src/0_infra/gps/modules/client_core.lua": "1bTaiJG8L27tUftjoWuS9VxAvSE5fcByF",
+    "src/0_infra/gac/config.lua": "1SSoOakqbSdi1OWamzZLp-mQj2d5ZUAAN",
+    "src/0_infra/gac/modules/config_loader.lua": "1w-ZKzKjBvFsLtamro6XlKSyZGXbp27Ll",
+    "src/0_infra/gac/modules/facility_inventory.lua": "1aqekpEUA_Zi_9caoMZKiEq9Y7TPo77d4",
+    "src/0_infra/gac/modules/beacon_broadcaster.lua": "1MC6QVJRv2SKX5WGbNpgxKEdT0mQ1c17o",
+    "src/0_infra/gac/modules/allocation_engine.lua": "1863Xjn_fYC6tsOpDWZZZfgA3swaJo6tu",
+    "src/0_infra/gac/modules/gac_fsm.lua": "1lroLZ56ckrI-OUThbFk9iP-ymb0BqckE",
+    "src/0_infra/gac/modules/tui_view.lua": "15FIrnusK_TxOTerRcUD_TS21Ug2wGOw2",
+    "src/0_infra/landing_pad/main.lua": "1cz2Tar0_EN1GP7bOrRB446Od_wpsqHDp",
+    "src/0_infra/landing_pad/modules/config_store.lua": "13ScLe2gKeI7tqSBxJVcAqrkEmh_Rxy65",
+    "src/0_infra/landing_pad/config.lua": "1mMINj_22uuOwJJ3VHViWGkzrXjlgW2wH",
+    "src/0_infra/landing_pad/modules/offset_transform.lua": "1wqWa45oTs3iNl1172dZ8vdiHn4Beo6Gb",
+    "src/0_infra/landing_pad/modules/sensor_adapter.lua": "1Y1O2aaymF5Z5mLx4RJvsrf7ZpAx2QVot",
+    "src/0_infra/landing_pad/modules/gps_client.lua": "1CNlXqIz5QuEPGeiPoG6bQCvHZzD_CLYY",
+    "src/0_infra/landing_pad/modules/tactical_streamer.lua": "1ZPWqV3G5PCdrVn3NUSEtJLFssaKBJ57K",
+    "src/0_infra/landing_pad/modules/pad_fsm.lua": "1DGpTXBDlwbHVFKwLD2BSatkfDC9-Sno1",
+    "src/0_infra/landing_pad/modules/setup_wizard.lua": "13UkSI5mhuxXko_ehDYbiGjEPDKjq6lwN",
+    "src/0_infra/runway/main.lua": "1IG8WbyE1FXP09BcqhuoJDCMULJC88Bvm",
+    "src/0_infra/landing_pad/modules/tui_view.lua": "1XH5J3riloKmW-x-SmuFKyQDFt1ZT258M",
+    "src/0_infra/runway/modules/config_store.lua": "1uAWaIeqNCPgoiZ6S5ZsdnhdFoozFr6nE",
+    "src/0_infra/runway/modules/offset_transform.lua": "15B5huPd0AUYVu4XeWs00X_vMy82Vka_n",
+    "src/0_infra/runway/modules/lighting_controller.lua": "1BXJo0dgAqlTXpvJHxxTqdHG6SwNJCh4T",
+    "src/0_infra/runway/modules/sensor_adapter.lua": "1RtFah4PscIvPg8mQDcSEjSW_e-Fxfsal",
+    "src/0_infra/runway/modules/gps_client.lua": "1rWHnKtqVe_gJZgOYnTw2_aIRil_WW_fM",
+    "src/0_infra/runway/modules/tactical_streamer.lua": "13NFvG_YbERQ_2YZbQ_F5NTM0d5eHJDwh",
+    "src/0_infra/runway/modules/runway_fsm.lua": "1YAI62mOg2BGbjPFWx02tIt27sHYj-bki",
+    "src/0_infra/runway/modules/setup_wizard.lua": "1gQHUrkzVh85lY809kpwhrvf5f_J9ryz_",
+    "src/0_infra/runway/modules/tui_view.lua": "12xZPuwEwk71H5XYC3WhMEb4LHk0qLQ0R",
+    "src/3_planning/amm/config/amm_config.json": "1zqS8CSCfewvwEvBy-5lgIBk6avAp1-S6",
+    "src/3_planning/amm/modules/action_registry.lua": "1-GgFtHgDkzJleh6AFhshvGnnQm-y-3mG",
+    "src/3_planning/amm/modules/chattering_guard.lua": "1QHjJ565NwPagq-2NpWvG6T-oTyu1DYiW",
+    "src/3_planning/amm/main.lua": "1bW8QGRKS3PZVNoLOhK1ddb-txD_lu7tK",
+    "src/3_planning/amm/modules/channel_sentinel.lua": "1y1pOG4c0trA4iV-y_OViDhB-SMemaCLM",
+    "src/3_planning/amm/modules/facility_client.lua": "1u2E8pHSNSRAJ3H6UPBTYKagMYkK3XxHm",
+    "src/3_planning/amm/modules/nav_engine.lua": "1rN4aWIItR_za9K4Xs-YwKzZW-baI8Vn0",
+    "src/3_planning/amm/modules/waypoint_queue.lua": "15d5_A8GuLrtWiMPwhKGt3XLBiM2su8mZ",
+    "src/3_planning/amm/modules/network_manager.lua": "1UHA3CwFWuAbMTYOdlwbfHrUhHJmEfAkM",
+    "src/3_planning/amm/modules/condition_evaluator.lua": "11FKssYezhRL_hdZtrwYQ2frfZRzSbfVf",
+    "src/3_planning/amm/modules/mission_engine.lua": "1s8NbAGcXLwh3T9Ht_v-CfhlmgnGugVuo",
+    "src/3_planning/amm/modules/hook_runner.lua": "1OI1RugCxDgeOGmML9o7K5ryKmMTO6aAg",
+    "src/3_planning/amm/modules/input_handler.lua": "1hGs88n0M5kzqtzEO7a21BUtq2aarjmTd",
+    "src/3_planning/amm/modules/c2_arbiter.lua": "1kT2slrUNo97veikRZHE_d3RN2Lsk3Hqr",
+    "src/3_planning/amm/modules/ui_renderer.lua": "1sKY6vyh0SGO8PkY-ZBL8GoSnoRUCbQn8",
+    "src/3_planning/amm/modules/trajectory_generator.lua": "1Lxljo38VHV927_BATPBNTWcfo7P1ZGMG",
+    "src/0_infra/gcs/main.lua": "1mv0BYqmSdziuZFe77zxaW-F1NxXlEUb-",
+    "src/0_infra/gcs/config/gcs_config.json": "1jJ5aCq2uUh52x519ZAH9VpVqPGUQokk0",
+    "src/0_infra/gcs/modules/channel_manager.lua": "14B8LSFjr8P2I5rfEW6RbK38Z3Ce-55Vc",
+    "src/0_infra/gcs/config/channel_registry.json": "1kP80bOVaq1HndP__9UjlQKrEUH7C502b",
+    "src/0_infra/gcs/modules/network_manager.lua": "1Pb-62eLGHLl9oMTqZxAUoouyJEzsgaaA",
+    "src/0_infra/gcs/modules/c2_commander.lua": "13pWwtJUnLfJysSiiRWB64B_Sy3NGSRw8",
+    "src/0_infra/gcs/modules/fleet_tracker.lua": "1u2moRTCEinZxvDLblPQ9oNKAcl4uV1JA",
+    "src/0_infra/gcs/modules/live_bridge_client.lua": "1GUUZRXKcGWy-UZTJLANoekeysBSeVw6T",
+    "src/0_infra/gcs/modules/ui_renderer.lua": "1qqu-ZTmQm9JmIO7g7hjo3mOLyidjVArB",
+    "src/0_development/fdr/main.lua": "1v94Tzl5p043E8v-LPFBPesX6ByN6fU51",
+    "src/0_development/fdr/modules/packet_tap.lua": "1yLuvhPqD85rX0CqB97qzwLjRAvw1zsCT",
+    "src/0_development/fdr/modules/ring_buffer.lua": "18RO9IL9OIwUmRDnX2-xC_LN4gY43o6Hj",
+    "src/0_development/fdr/config/fdr_config.json": "1x8KSJPVm-SiXHZaRx4kMGuw_-30lWlBQ",
+    "src/0_development/fdr/modules/storage_pool.lua": "1fQngSpgES5cAopgIl0X5wj8Eyz0wu7Zo",
+    "src/0_development/fdr/modules/jsonl_dumper.lua": "1XWozQpozXgE8rcJtK4SyX8rH6Rlojui1",
+    "src/0_development/fdr/modules/cloud_exporter.lua": "1igAMGGXaOwBdCq_FJiIXOYxS7FEboaUg",
+    "src/0_development/fdr/modules/fdr_ui.lua": "12R_sdksjBi64P5zb8lsErQEwE-eganeg",
+    "src/0_development/ota/main.lua": "16pef9rYqI_0cMlQPlke4GaE4kvuMJ61G",
+    "src/0_development/ota/modules/ota_ui.lua": "18aenQSFUx1BdgjUx5X2mmQssnlXOpYz6",
+    "src/0_development/ota/config/ota_config.json": "1-ItvHsoMBO-5EgG14EMvK_TdYg4_H3Xq",
+    "src/0_development/ota/modules/ota_protocol.lua": "1W_g1JN5cdfSoI5Itgs9vvCWoNDS3C8XT",
+    "src/0_development/ota/modules/ota_server.lua": "1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG"
   }
 }

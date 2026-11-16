@@ -674,9 +674,19 @@
             "sectorId",
             "facilitiesSummary"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "sectorName",
+            "sectorType",
+            "towerAtcChannel",
+            "gacChannel",
+            "surfaceWind",
+            "mobility",
+            "status",
+            "facilities"
+          ],
           "specs": [
             "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
             "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
             "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
             "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
@@ -717,6 +727,9 @@
             "abortAlert"
           ],
           "optionalKeys": [
+            "endPoint",
+            "glideSlopeAngle",
+            "touchdownZoneLength",
             "clearanceRadius",
             "safeDescentRate",
             "tiltAngleDeg",
@@ -910,6 +923,33 @@
             "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
             "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
           ]
+        },
+        "MSG_RUNWAY_TOUCHDOWN": {
+          "requiredKeys": [
+            "facilityId",
+            "touchdownSpeed"
+          ],
+          "optionalKeys": [
+            "arrestedWire",
+            "craftState"
+          ],
+          "specs": [
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md"
+          ]
+        },
+        "MSG_RUNWAY_VACATED": {
+          "requiredKeys": [
+            "facilityId",
+            "runwayCleared"
+          ],
+          "optionalKeys": [
+            "exitTaxiway"
+          ],
+          "specs": [
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -976,10 +1016,13 @@
           "optionalKeys": [
             "missionName",
             "executionMode",
-            "forceRestart"
+            "forceRestart",
+            "missionData",
+            "saveToDisk"
           ],
           "enums": {
             "action": [
+              "LOAD",
               "RUN",
               "STOP",
               "PAUSE",
@@ -1715,7 +1758,8 @@
       "ACT_FS_GOTO_RALLY",
       "ACT_FS_FENCE_BRAKE",
       "ACT_FS_HOVER_HOLD",
-      "ACT_FS_EMERG_LAND"
+      "ACT_FS_EMERG_LAND",
+      "ACT_TKL_LAND_NEAREST"
     ],
     "activeDecorators": [
       "DEC_EMCON",

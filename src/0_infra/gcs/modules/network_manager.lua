@@ -23,10 +23,13 @@ function network_manager.init(config, modem)
     local ctx = {
         domainId = cfg_sys.domainId or cfg_sys.id or "GCS_01",
         bootstrap_channel = cfg_chan.bootstrapChannel or 50000,
+        facility_beacon_channel = cfg_chan.facilityBeaconChannel or 50003,
+        mission_ack_channel = cfg_chan.missionAckChannel or 50004,
         modem = modem,
         seq = 0,
         active_base = nil,
-        open_channels = {}
+        open_channels = {},
+        registered_bases = {},
     }
     return ctx
 end
@@ -57,10 +60,33 @@ function network_manager.close_bootstrap_channel(ctx)
     return true
 end
 
+function network_manager.open_infra_channels(ctx)
+    if not ctx or not ctx.modem then return false end
+    local b_ch = ctx.facility_beacon_channel or 50003
+    local m_ch = ctx.mission_ack_channel or 50004
+    ctx.modem:open(b_ch)
+    ctx.modem:open(m_ch)
+    ctx.open_channels[b_ch] = true
+    ctx.open_channels[m_ch] = true
+    return true
+end
+
+function network_manager.register_craft_channels(ctx, base_channel)
+    if not ctx or not ctx.modem or not base_channel then return false end
+    ctx.registered_bases[base_channel] = true
+    local c2_ch = base_channel + OFFSET_C2
+    local telem_ch = base_channel + OFFSET_TELEMETRY
+    ctx.modem:open(c2_ch)
+    ctx.modem:open(telem_ch)
+    ctx.open_channels[c2_ch] = true
+    ctx.open_channels[telem_ch] = true
+    return true
+end
+
 function network_manager.set_active_craft(ctx, base_channel)
     if not ctx or not ctx.modem then return false end
 
-    if ctx.active_base and ctx.active_base ~= base_channel then
+    if ctx.active_base and ctx.active_base ~= base_channel and not ctx.registered_bases[ctx.active_base] then
         local old_telem_ch = ctx.active_base + OFFSET_TELEMETRY
         ctx.modem:close(old_telem_ch)
         ctx.open_channels[old_telem_ch] = nil
@@ -91,6 +117,16 @@ function network_manager.send_c2_command(ctx, target_base, cmd_payload)
     end
     local env = build_envelope(ctx, "MSG_OPERATOR_CMD", cmd_payload)
     ctx.modem:transmit(target_base + OFFSET_C2, ctx.bootstrap_channel, env)
+    return true
+end
+
+function network_manager.send_mission_cmd(ctx, target_base, cmd_payload)
+    if not ctx or not ctx.modem or not target_base or not cmd_payload then
+        return false
+    end
+    local env = build_envelope(ctx, "MSG_MISSION_CMD", cmd_payload)
+    local reply_ch = ctx.mission_ack_channel or 50004
+    ctx.modem:transmit(target_base + OFFSET_C2, reply_ch, env)
     return true
 end
 

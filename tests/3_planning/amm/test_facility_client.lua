@@ -78,6 +78,59 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_not_nil(state.beacons["RUNWAY_01"])
         end)
 
+        it("ingests GAC sector facilities[] batch and filters by type, dedicated flag, and maxRangeM", function()
+            local state = facility_client.init(create_test_config())
+            local sectorBeacon = {
+                sectorId = "BASE_ALPHA_SECTOR_01",
+                gacChannel = 50201,
+                facilities = {
+                    {
+                        facilityId = "PAD_DEDICATED",
+                        facilityType = "LANDING_PAD",
+                        status = "FREE",
+                        position = { x = 10, y = 64, z = 10 },
+                        dedicated = true,
+                    },
+                    {
+                        facilityId = "RWY_CLOSE",
+                        facilityType = "RUNWAY",
+                        status = "FREE",
+                        position = { x = 80, y = 64, z = 0 },
+                        dedicated = false,
+                    },
+                    {
+                        facilityId = "PAD_MID",
+                        facilityType = "LANDING_PAD",
+                        status = "FREE",
+                        position = { x = 150, y = 64, z = 0 },
+                        dedicated = false,
+                    },
+                    {
+                        facilityId = "PAD_FAR",
+                        facilityType = "LANDING_PAD",
+                        status = "FREE",
+                        position = { x = 800, y = 64, z = 0 },
+                        dedicated = false,
+                    },
+                },
+            }
+
+            facility_client.update_beacons(state, sectorBeacon, 2000)
+            assert_not_nil(state.beacons["PAD_DEDICATED"])
+            assert_eq(state.beacons["RWY_CLOSE"].gacChannel, 50201)
+
+            local anyNearest = facility_client.find_nearest_free_landing_facility(state, { x = 0, z = 0 }, "ANY")
+            assert_not_nil(anyNearest)
+            assert_eq(anyNearest.facilityId, "RWY_CLOSE")
+
+            local padOnly = facility_client.find_nearest_free_landing_facility(state, { x = 0, z = 0 }, "LANDING_PAD")
+            assert_not_nil(padOnly)
+            assert_eq(padOnly.facilityId, "PAD_MID")
+
+            local outOfRange = facility_client.find_nearest_free_landing_facility(state, { x = 0, z = 0 }, "LANDING_PAD", 100)
+            assert_nil(outOfRange)
+        end)
+
         it("builds compliant MSG_GAC_CHECKIN_REQ packet", function()
             local state = facility_client.init(create_test_config())
             local craftInfo = {

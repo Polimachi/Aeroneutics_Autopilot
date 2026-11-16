@@ -2,9 +2,9 @@
 local action_registry = require("action_registry")
 
 describe("AMM v2.0.0 3-Tier Action Registry, Macros, Decorators, and Preconditions (TASK-204)", function()
-    local ACTIVE_36 = {
+    local ACTIVE_37 = {
         "ACT_SYS_LOAD", "ACT_SYS_PREFLIGHT", "ACT_SYS_SET_HOME", "ACT_SYS_ARM", "ACT_SYS_DISARM", "ACT_SYS_TERMINATE",
-        "ACT_TKL_TAKEOFF_VERT", "ACT_TKL_TRANS_MC2FW", "ACT_TKL_TRANS_FW2MC", "ACT_TKL_LAND_NORM", "ACT_TKL_LAND_PREC", "ACT_TKL_ABORT_LAND",
+        "ACT_TKL_TAKEOFF_VERT", "ACT_TKL_TRANS_MC2FW", "ACT_TKL_TRANS_FW2MC", "ACT_TKL_LAND_NORM", "ACT_TKL_LAND_PREC", "ACT_TKL_LAND_NEAREST", "ACT_TKL_ABORT_LAND",
         "ACT_NAV_GOTO_WP", "ACT_NAV_SPLINE_WP", "ACT_NAV_CORRIDOR", "ACT_NAV_CHANGE_ALT", "ACT_NAV_CHANGE_SPD", "ACT_NAV_CHANGE_YAW",
         "ACT_PAT_HOLD_POS", "ACT_PAT_POI_HOLD", "ACT_PAT_LOITER_TIME", "ACT_PAT_LOITER_TURNS", "ACT_PAT_LOITER_ALT",
         "ACT_PAY_BUS_CMD", "ACT_PAY_REDSTONE", "ACT_PAY_SET_ROI", "ACT_PAY_CLEAR_ROI",
@@ -30,14 +30,20 @@ describe("AMM v2.0.0 3-Tier Action Registry, Macros, Decorators, and Preconditio
         "TAKEOFF_RUNWAY", "LAND_RUNWAY", "DOCK_ARM", "UNDOCK_ARM",
     }
 
-    it("registers exactly 36 active ACT_*, 22 deferred ACT_* (19 roadmap + 3 TASK-401), and Zero-Fallback rejects 13 legacy names", function()
-        assert_eq(#ACTIVE_36, 36)
+    it("registers exactly 37 active ACT_*, 22 deferred ACT_* (19 roadmap + 3 TASK-401), and Zero-Fallback rejects 13 legacy names", function()
+        assert_eq(#ACTIVE_37, 37)
         assert_eq(#DEFERRED_22, 22)
-        for _, act in ipairs(ACTIVE_36) do
+        for _, act in ipairs(ACTIVE_37) do
             assert_true(action_registry.is_action_supported(act), act .. " must be active")
             assert_false(action_registry.is_action_deferred(act), act .. " must not be deferred")
             assert_not_nil(action_registry.resolve_lifecycle(act), act .. " must resolve 5-stage lifecycle")
         end
+
+        local nearest_meta = action_registry.ACTIVE_LIFECYCLES["ACT_TKL_LAND_NEAREST"]
+        assert_not_nil(nearest_meta)
+        assert_eq(nearest_meta.group, "TKL")
+        assert_eq(nearest_meta.complete, "TOUCHDOWN")
+        assert_eq(nearest_meta.abort, "ACT_TKL_ABORT_LAND")
 
         for _, act in ipairs(DEFERRED_22) do
             assert_false(action_registry.is_action_supported(act), act .. " must not be active")

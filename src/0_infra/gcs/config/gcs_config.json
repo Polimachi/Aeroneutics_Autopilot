@@ -9,10 +9,17 @@
   },
   "channels": {
     "bootstrapChannel": 50000,
+    "facilityBeaconChannel": 50003,
+    "missionAckChannel": 50004,
     "bandwidth": 40,
     "baseChannelMin": 10000,
     "baseChannelMax": 49960,
     "maxCraftBlocks": 1000
+  },
+  "liveBridge": {
+    "enabled": false,
+    "url": "ws://127.0.0.1:8765",
+    "telemetrySyncHz": 5
   },
   "ui": {
     "screenWidth": 51,

@@ -6,30 +6,32 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.1.0` |
-| **최종 수정일 (Date)** | `2026-11-15` |
+| **문서 버전 (Version)** | `v2.3.0` |
+| **최종 수정일 (Date)** | `2026-11-16` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획, 외부 인프라 게이트웨이, 항법·궤적 생성 및 조종석 통합 단말 (AMM / Node 03) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.34.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.18.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.2.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사 v1.5.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사 v1.6.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS v2.3.3)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.1.0)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.2.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
-> - [AMM_MISSION_EDITOR_SPECIFICATION.md](AMM_MISSION_EDITOR_SPECIFICATION.md) (외부 웹 GUI 미션 에디터 v0.3.1 Implemented)
+> - [AMM_MISSION_EDITOR_SPECIFICATION.md](AMM_MISSION_EDITOR_SPECIFICATION.md) (외부 웹 GUI 미션 에디터 v0.5.0 Implemented)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 컨텍스트 및 규칙)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.3.0` | `2026-11-16` | **`TASK-404` `MSG_MISSION_CMD` 원격 인라인 적재·저장(`action = "LOAD"`) 확장 (`Implemented` $\to$ `Approved`)**: ① `Base+0` (`CH_OPERATOR_C2`) `MSG_MISSION_CMD`에 `"LOAD"` 액션 및 선택 필드 `missionData` (테이블), `saveToDisk` (불리언, 기본 `true`) 추가, ② 수신 시 `EN_ROUTE` 충돌 검사(`BUSY_REJECTED`)·스키마 검증(`SCHEMA_INVALID`)·`/missions/<missionId>.json` 원자적 저장·`mission_engine:load_table` 적재 후 `MSG_MISSION_ACK` (`ACCEPTED`) 회신 규격화, ③ `GCS v1.2.0` / `AMM_MISSION_EDITOR v0.5.0` / `ICD v1.34.0` / `Diagram v2.18.0` 동기화 | WebUI Live Mode `'Push to Aircraft'` 원클릭 무선 미션 전송 및 즉시 적재 지원 |
+| `v2.2.0` | `2026-11-16` | **`TASK-403` `ACT_TKL_LAND_NEAREST` (`37`종) 신설 및 `MSG_FACILITY_BEACON.facilities[]` 수집 연동 (`Implemented` $\to$ `Approved`)**: ① `action_registry.lua` `ACT_TKL_*`에 `ACT_TKL_LAND_NEAREST` 추가(활성 `ACT_*` `36종` $\to$ `37종`), 파라미터 `facilityTypeFilter` (`"ANY"`\|`"LANDING_PAD"`\|`"RUNWAY"`), 선택 `maxRangeM > 0`, 선택 `targetPos`, 기본 완료 조건 `FACILITY_TOUCHDOWN`, ② `facility_client.update_beacons()`에서 GAC 비콘 `facilities[]` 일괄 수집 및 `find_nearest_free_landing_facility()`에서 `dedicated == true` 제외·`facilityTypeFilter`/`maxRangeM` 필터링, ③ `mission_engine` 실행 시점 최근접 무료 착륙 시설 동적 배정 및 가용 시설 부재 시 Abort 폴백(`DEC_RETRY_N` 재시도 루프 방지 가드 포함), ④ `AMM_MISSION_EDITOR_SPECIFICATION.md v0.4.0` 및 `GAC v1.6.0`/`ICD v1.33.0`/`Diagram v2.17.0` 동기화 | `TASK-403` 동적 최근접 착륙 행동 및 월드 프리셋 시설 연동 |
 | `v2.1.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `network_manager.open_channels`에 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 회신 추가, ② `app.arbiter.fsmState` 및 `app.arbiter.latest_telem.isAirborne` 안전 게이트 연동, ③ 메인 루프 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/3_planning/amm/` 반영 후 `Implemented` 재승격 예정) |
 | `v2.0.1` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Approved` 유지)**: ① `[I-9]` `MSG_CHANNEL_REBIND` Option A 단일화(`transactionId`/`action`/`oldBaseChannel`/`newBaseChannel`/`bandwidth=40`, `MSG_CHANNEL_REBIND_ACK` · `MSG_REBIND_ACK [DEPRECATED]`, 500ms 롤백), ② `[I-6]`/`[I-1]` `actuatorHealth = { tap, asa, allOk }` 및 `MSG_MFD_STATE` 필드(`sensorOk`, `controlState`, `groundSpeed`) 정렬, ③ §3.2 `MSG_MISSION_CMD` `CONFIRM` 명령 보강, 조건 표 14종(`SYS_ARMED`, `IMMEDIATE` 추가) 확장, `defaults.acceptanceRadius` `15.0`m 일원화, 연료 임계 부등호(`<= 0.20` / `<= 0.10`) 통일, ④ 연관 문서 버전 배지 일괄 동기화 | Q1~Q6 사용자 확정 결정 및 Wave 1 전역 사양 무결성 확보 (`TASK-402` 완료 시 `Implemented` 승격 예정) |
 | `v2.0.0` | `2026-11-14` | **`TASK-204` 표준 행동 아키텍처(`ACT_*`/`DEC_*`/`MAC_*`) 전면 개편 및 `TASK-124` 채터링 방지 가드 통합**: ① 구 13종 평면 액션(`FLY_OVER` 등) 및 `v1.0.0 items[]` 하위 호환 변환을 `[DEPRECATED - v2.0.0]` Zero-Fallback 전면 폐기, ② `action_registry.lua` 기반 3계층 조합 체계 신설: 9개 도메인 원자 행동(`ACT_*`: `[즉시]` 36종 + `[로드맵]` 19종 + `TBD [TASK-401]` `ACT_PAY_CARGO_DROP`/`FIRE_CTRL`/`GEO_SCAN`), 직교 데코레이터(`DEC_*`: `[즉시]` 6종 + `[로드맵]` 1종), 복합 매크로(`MAC_*`: `[즉시]` 3종 + `[로드맵]` 2종), ③ 4대 범주 사전 진입 조건(`preconditions`: `State Flag`, `Sensor & Est`, `Resource`, `Spatial & Safety`) 및 정적(`SCHEMA_INVALID`)·동적(`PRECONDITION_FAILED`) 검증 도입, ④ `DEC_HUMAN_AUTH` 승인 대기(`CONFIRM` 명령) 및 `Base+0` `MSG_MISSION_ACK` `PRECONDITION_FAILED` 코드 반영, ⑤ `chattering_guard.lua` 및 `amm_config.json` `safety.chattering`(20개 키) 신설(지오펜스 히스테리시스/디바운스/유지 틱, 단방향 연료 래치, 상향 우선순위 선점 예외, VTOL 천이 가드, `settleTicks` 도착 안착 틱) | `TASK-204` 상태 폭발 방지형 확장 행동 프리미티브 체계 확립 및 `TASK-124` 이산 틱 채터링 억제 규격 구현 착수 (`AMM v2.0.0` 사양 확정; WebUI 에디터 `TASK-402` 구현 전까지 `Approved` 유지) |
@@ -49,7 +51,7 @@
 자율 비행 생태계에서 하위 **FCP (Node 04)**가 `Base+4` $\leftrightarrow$ `Base+1` 구간에 격리된 **순수 온보드 `SE(3)` 외루프 추종 제어기** 역할에 전념하고, **VAS (Node 01)**가 `SO(3)` 내루프 자세·추력·공력면 믹싱을 전담하는 구조로 개편됨에 따라, **AMM (Node 03)**은 다음 **5대 핵심 책임**을 총괄합니다:
 
 1. **전략 임무 계획 및 `ACT_*`/`DEC_*`/`MAC_*` 체크포인트 시퀀서 (`v2.0.0`)**:
-   - 5모듈 미션 코어(`mission_engine.lua`, `action_registry.lua`, `chattering_guard.lua`, `condition_evaluator.lua`, `hook_runner.lua`) 기반 3계층 행동 시퀀싱(36종 `[즉시]` + 19종 `[로드맵]` + `TBD [TASK-401]` `ACT_*`, 6종 `[즉시]` + 1종 `[로드맵]` `DEC_*`, 3종 `[즉시]` + 2종 `[로드맵]` `MAC_*`), 4대 범주 진입 조건(`preconditions`), 14종 복합 완료/중단 조건(`completeWhen`/`abortWhen`) 및 `settleTicks`, 0-tick 라이프사이클 훅(`onEnter`/`onExit`/`onAbort`), Zone 3(`Base+20~29`) 동적 탑재체 제어, 로컬 레드스톤 입출력, **호스트 PC 무설치 웹 GUI 미션 에디터(`tools/amm_mission_editor.html`)** 및 **외부 파일 즉시 구동 파이프라인(`resolve_path`, `validate_mission_table`, `file_transfer`, 셸 부팅 인자)**을 통합 관장합니다.
+   - 5모듈 미션 코어(`mission_engine.lua`, `action_registry.lua`, `chattering_guard.lua`, `condition_evaluator.lua`, `hook_runner.lua`) 기반 3계층 행동 시퀀싱(37종 `[즉시]` + 19종 `[로드맵]` + `TBD [TASK-401]` `ACT_*`, 6종 `[즉시]` + 1종 `[로드맵]` `DEC_*`, 3종 `[즉시]` + 2종 `[로드맵]` `MAC_*`), 4대 범주 진입 조건(`preconditions`), 14종 복합 완료/중단 조건(`completeWhen`/`abortWhen`) 및 `settleTicks`, 0-tick 라이프사이클 훅(`onEnter`/`onExit`/`onAbort`), Zone 3(`Base+20~29`) 동적 탑재체 제어, 로컬 레드스톤 입출력, **호스트 PC 무설치 웹 GUI 미션 에디터(`tools/amm_mission_editor.html`)** 및 **외부 파일 즉시 구동 파이프라인(`resolve_path`, `validate_mission_table`, `file_transfer`, 셸 부팅 인자)**을 통합 관장합니다.
 2. **외부 인프라 단일 무선 게이트웨이 (`facility_client`, `channel_sentinel`)**:
    - **GCS 부트스트랩 및 채널 무결성**: `CH 50000` (`[I-8]`, `MSG_BLOCK_REQUEST`/`ASSIGN`), `Base+0` 채널 선점 프로브(`MSG_CHANNEL_PROBE`/`ACK`), 4계층 채널 재바인딩(`MSG_CHANNEL_REBIND` via `Base+4 -> Base+1 -> Base+10/11`)을 주도합니다.
    - **3-Tier 공항·시설물 관제 연동 (`[I-5]`)**: `CH 50003` 1Hz 섹터 대표 비콘(`MSG_FACILITY_BEACON`), `CH 50004` GAC 디스패치, `CH 50001` Tower ATC 접근/이륙 관제, $Base_{\text{sec}} + 0$ GAC 섹터 체크인/패드 배정/로컬 복행 중재, $Base_{\text{sec}} + 10 + \text{Idx}$ 전술 정밀 유도(`MSG_FACILITY_STATIC_GUIDE` 1Hz / `MSG_FACILITY_DYNAMIC_GUIDE` 20Hz) 및 `Base+5` 도킹 체결/엄빌리컬 통보를 전담 종단합니다.
@@ -112,7 +114,7 @@ flowchart TD
 
 ### 1.2 8대 설계 목표 (Goals)
 1. **3계층 조합형 표준 행동 (`ACT_*` / `DEC_*` / `MAC_*`) 및 Zero-Fallback 단일화**:
-   - 구 13종 평면 액션(`FLY_OVER` 등) 및 `v1.0.0 items[]` 포맷을 `[DEPRECATED - v2.0.0]` Zero-Fallback으로 완전 폐기하고, 9개 도메인 원자 행동(`ACT_*`: `[즉시]` 36종 + `[로드맵]` 19종 + `TBD [TASK-401]`), 7종 직교 데코레이터(`DEC_*`: `[즉시]` 6종 + `[로드맵]` 1종), 5종 복합 매크로(`MAC_*`: `[즉시]` 3종 + `[로드맵]` 2종) 및 4대 범주 `preconditions`(`checkPrecondition`)로 상태 폭발 없이 확장합니다. 예약(`[로드맵]`) 식별자 진입 시 `DEFERRED_ACTION_UNSUPPORTED`를 반환합니다.
+   - 구 13종 평면 액션(`FLY_OVER` 등) 및 `v1.0.0 items[]` 포맷을 `[DEPRECATED - v2.0.0]` Zero-Fallback으로 완전 폐기하고, 9개 도메인 원자 행동(`ACT_*`: `[즉시]` 37종 + `[로드맵]` 19종 + `TBD [TASK-401]`), 7종 직교 데코레이터(`DEC_*`: `[즉시]` 6종 + `[로드맵]` 1종), 5종 복합 매크로(`MAC_*`: `[즉시]` 3종 + `[로드맵]` 2종) 및 4대 범주 `preconditions`(`checkPrecondition`)로 상태 폭발 없이 확장합니다. 예약(`[로드맵]`) 식별자 진입 시 `DEFERRED_ACTION_UNSUPPORTED`를 반환합니다.
 2. **계층 직교 분리: AMM(20Hz 외부 게이트웨이·항법·궤적·시퀀서) $\leftrightarrow$ FCP(20Hz 순수 `SE(3)` 외루프)**:
    - AMM은 외부 인프라 교신, GPS/DR 항법 융합, 미션 시퀀싱 및 20Hz 목표 궤적(`targetPos`, `targetVel`, `feedforwardAccel`, `targetHeading`) 생성을 전담하여 `Base+4` (`[I-12]`)로 하달하며, FCP는 오직 `SE(3)` 가속도/자세 투영(`Base+1` `QUATERNION_RATE`)만을 담당합니다.
 3. **이산 틱 채터링 방지 가드 (`chattering_guard.lua`) 및 2차 테일러 동적 궤적 생성**:
@@ -193,7 +195,7 @@ AMM은 기체 전용 40채널 블록(Zone 1/3)과 외부 인프라 대역을 모
 | 대역 / 모뎀 | 채널 식별자 | 채널 번호 | 통신 방향 | 패킷 타입 | 주기 / 트리거 | 통신 목적 및 거동 |
 | :---: | :--- | :---: | :---: | :--- | :---: | :--- |
 | **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | Cockpit / GCS $\to$ AMM (수신) | `MSG_OPERATOR_CMD` | 이벤트 | 조종사/GCS 비행 모드·목표·`RTH`/`HOVER_HOLD`/`EMERGENCY_LAND` 단일 진입 *(구 `AMM -> FCP` `MSG_OPERATOR_CMD` `[DEPRECATED]`)* |
-| **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | GCS $\leftrightarrow$ AMM (송수신) | `MSG_MISSION_CMD` / `MSG_MISSION_ACK` | 이벤트 | GCS 원격 미션 제어(`RUN`/`STOP`/`PAUSE`/`RESUME`/`NEXT`/`CONFIRM`) 및 상태 회신 |
+| **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | GCS $\leftrightarrow$ AMM (송수신) | `MSG_MISSION_CMD` / `MSG_MISSION_ACK` | 이벤트 | GCS 원격 미션 제어(`LOAD`/`RUN`/`STOP`/`PAUSE`/`RESUME`/`NEXT`/`CONFIRM`) 및 상태 회신 |
 | **온보드 (`top`)** | **`CH_OPERATOR_C2`** | `Base + 0` | AMM $\leftrightarrow$ 인접 기체 (송수신) | `MSG_CHANNEL_PROBE` / `MSG_CHANNEL_PROBE_ACK` | Arming 전 200ms | 독립 기동 시 채널 선점 충돌 탐색 및 충돌 감지 시 `ARMING_LOCKED` |
 | **온보드 (`top`)** | **`CH_FLIGHT_GUIDANCE`** | `Base + 1` | AMM $\to$ VAS (송신)<br>VAS $\to$ AMM (수신) | `MSG_EMERGENCY_OVERRIDE`<br>`MSG_EMERGENCY_ALERT` | 비상 이벤트 | `[X]`/`Ctrl+X` 하드 킬스위치(`E_STOP`) 직결 차단 및 VAS 공중 셧다운 경보 수신 |
 | **온보드 (`top`)** | **`CH_TELEMETRY`** | `Base + 2` | VAS $\to$ AMM (수신) | `MSG_FLIGHT_TELEMETRY` | 20Hz (50ms) | `nav_engine` DR 적분, `condition_evaluator` 조건/연료 평가, `activeSource == "MFD_ACRO"` 양보 감지, HUD 계측 |
@@ -265,10 +267,12 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
     type = "MSG_MISSION_CMD",
     time = 1729845010000,
     payload = {
-        action = "RUN",                -- "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT" | "CONFIRM"
+        action = "RUN",                -- "LOAD" | "RUN" | "STOP" | "PAUSE" | "RESUME" | "NEXT" | "CONFIRM"
         missionName = "patrol_alpha",  -- "RUN" 시 로드할 미션 식별자 또는 외부 경로 (예: "/disk/sortie.json", 생략 시 현재 큐 실행)
         executionMode = "SINGLE",      -- "SINGLE" (1회 완주) | "REPEAT" (무한 순환)
-        forceRestart = false           -- 실행 중 재기동 강제 여부 (false이고 EN_ROUTE이면 BUSY_REJECTED)
+        forceRestart = false,          -- 실행 중 재기동/덮어쓰기 강제 여부 (false이고 EN_ROUTE이면 BUSY_REJECTED)
+        missionData = nil,             -- "LOAD" 시 인라인 v2.0.0 미션 JSON 테이블 (유효성 통과 시 engine 적재)
+        saveToDisk = true              -- "LOAD" 시 /missions/<missionId>.json 영구 저장 여부 (기본 true)
     }
 }
 
@@ -478,7 +482,7 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 3. **고정밀 GPS 비동기 파이프라인 (`[I-7]`, `CH 60001/60002`, `Base + 5`)**:
    - `nav_engine`은 5~10Hz 간격으로 `VAS Base+2`의 실측 `altitudeY`를 주입한 `MSG_GPS_REQUEST` (`replyChannel = Base + 5`, 구 `10045` `[DEPRECATED]`)를 `CH 60001`로 송출하고, `Base + 5`에 도착한 `MSG_GPS_RESPONSE`를 `gpsClient.handleMessage()`로 직접 주입하여 이벤트 큐 오염 없이 2D 위치 `{ x, z }`, `accuracy`, `hdop`를 획득합니다(`CH 60002` `MSG_GPS_STATUS_REQ`/`RESP` 진단 조회 지원).
 4. **3-Tier 시설물 관제 및 전술 유도 (`[I-5]`, `CH 50001~50004`, $Base_{\text{sec}} + 0/+10+\text{Idx}$, `Base + 5`)**:
-   - `facility_client`는 `CH 50003` (`1Hz` GAC 집약 `MSG_FACILITY_BEACON`: `sectorId`, `facilitiesSummary`) 및 `CH 50004` (`MSG_GAC_DISPATCH`)를 상시 수집해 가용 시설물 인벤토리를 유지합니다.
+   - `facility_client`는 `CH 50003` (`1Hz` GAC 집약 `MSG_FACILITY_BEACON`: `sectorId`, `facilitiesSummary`, 선택 `facilities[]` 스냅샷) 및 `CH 50004` (`MSG_GAC_DISPATCH`)를 상시 수집해 가용 시설물 인벤토리(`dedicated ~= true` 필터링)를 유지합니다.
    - 착륙/도킹/이륙 절차 시 `CH 50001` (`MSG_ATC_APPROACH_REQ` $\to$ `MSG_ATC_HANDOFF_CLEARANCE`) $\to$ $Base_{\text{sec}} + 0$ (`MSG_GAC_CHECKIN_REQ` $\to$ `MSG_GAC_APPROACH_CLEARANCE`) $\to$ $Base_{\text{sec}} + 10 + \text{Idx}$ (`MSG_FACILITY_STATIC_GUIDE` 1Hz / `MSG_FACILITY_DYNAMIC_GUIDE` 20Hz — 공통 `touchdownPoint`, `attitude`, `approachDirection`, `deckStatus`, `landingPermitted`, `abortAlert` / `MSG_ABORT_APPROACH` / `MSG_TOUCHDOWN_COMPLETE`) $\to$ `Base + 5` (`MSG_DOCK_CAPTURE_STAGE`, `MSG_UMBILICAL_STATUS`) 순으로 교신하며, 도킹 `stage == "HARD_LOCKED"` 수신 즉시 `Base+4`로 `arm = false, flightActive = false`를 하달하여 추진기를 안전 차단합니다.
 
 ---
@@ -541,17 +545,17 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
 flowchart TD
     M["MAC_* (복합 임무 매크로 5종: 즉시 3 + 로드맵 2)<br/>* 로드 시 선형 ACT_* + DEC_* 체크포인트로 전개"]
     D["DEC_* (직교 데코레이터 7종: 즉시 6 + 로드맵 1)<br/>* EMCON / ENERGY_ECO / SMOOTH_TRAJ / HUMAN_AUTH / RETRY_N / TIMEOUT_GUARD"]
-    A["ACT_* (9개 도메인 원자 행동: 즉시 36종 + 로드맵 19종 + TASK-401)"]
+    A["ACT_* (9개 도메인 원자 행동: 즉시 37종 + 로드맵 19종 + TASK-401)"]
     G["chattering_guard.lua & precondition (4대 범주)<br/>* 히스테리시스 / debounce / dwell / 단방향 연료 래치 / settleTicks"]
     M --> D --> A --> G
 ```
 
-#### 1. `[즉시]` 활성 원자 행동 (`ACT_*`, 36종)
+#### 1. `[즉시]` 활성 원자 행동 (`ACT_*`, 37종)
 
 | 도메인 | 행동 식별자 (`action`) | 수량 | AMM 궤적 / FCP 하달 모드 (`Base+4`) | 핵심 파라미터(`params`) 및 거동 요약 |
 | :--- | :--- | :---: | :---: | :--- |
 | **`ACT_SYS_*`** | `ACT_SYS_LOAD`, `ACT_SYS_PREFLIGHT`, `ACT_SYS_SET_HOME`, `ACT_SYS_ARM`, `ACT_SYS_DISARM`, `ACT_SYS_TERMINATE` | 6 | `DISARMED` / `IDLE_ARMED` / `Base+1` `E_STOP` | 스키마/BIT 점검, Home `(X,Y,Z)` 고정, 2단계 시동(`arm=true, flightActive=false`), 접지 시동 해제, 하드 `E_STOP`(`authKey = "ESTOP_CONFIRM_KEY"`) |
-| **`ACT_TKL_*`** | `ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_TRANS_MC2FW`, `ACT_TKL_TRANS_FW2MC`, `ACT_TKL_LAND_NORM`, `ACT_TKL_LAND_PREC`, `ACT_TKL_ABORT_LAND` | 6 | `TAKEOFF` / `CRUISE` / `APPROACH_LAND` / `LANDING` | 수직 이륙(`targetAlt`, `facilityId`), `WINGED_VTOL` 천이(`18.0`/`8.0 m/s`, `10 Ticks` 디바운스, `100 Ticks` 유지), 일반/비콘 정밀 착륙(`Base_sec+10+Idx`), 복행(`GO_AROUND`, `60 Ticks` 유지) |
+| **`ACT_TKL_*`** | `ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_TRANS_MC2FW`, `ACT_TKL_TRANS_FW2MC`, `ACT_TKL_LAND_NORM`, `ACT_TKL_LAND_PREC`, `ACT_TKL_LAND_NEAREST`, `ACT_TKL_ABORT_LAND` | 7 | `TAKEOFF` / `CRUISE` / `APPROACH_LAND` / `LANDING` | 수직 이륙(`targetAlt`, `facilityId`), `WINGED_VTOL` 천이(`18.0`/`8.0 m/s`, `10 Ticks` 디바운스, `100 Ticks` 유지), 일반/비콘 정밀 착륙(`Base_sec+10+Idx`), 실행 시점 최근접 무료 시설 자동 탐색 착륙(`facilityTypeFilter`, `maxRangeM`), 복행(`GO_AROUND`, `60 Ticks` 유지) |
 | **`ACT_NAV_*`** | `ACT_NAV_GOTO_WP`, `ACT_NAV_SPLINE_WP`, `ACT_NAV_CORRIDOR`, `ACT_NAV_CHANGE_ALT`, `ACT_NAV_CHANGE_SPD`, `ACT_NAV_CHANGE_YAW` | 6 | `CRUISE` / `HOVER_HOLD` | 정밀 3D 이동(`tangentEntryOffsetM` 접선 오프셋 지원), 무정지 통과(`settleTicks=0`), 항공 회랑(`startPos`~`endPos` 횡오차 제어), `Y` 고도/속도/기수 방위각(`FIXED`) 단독 변경 |
 | **`ACT_PAT_*`** | `ACT_PAT_HOLD_POS`, `ACT_PAT_POI_HOLD`, `ACT_PAT_LOITER_TIME`, `ACT_PAT_LOITER_TURNS`, `ACT_PAT_LOITER_ALT` | 5 | `HOVER_HOLD` / `POI_HOLD` / `LOITER` | 정밀 호버 대기, 표적 `poiPos` 지속 조준($\le 30^\circ/\text{s}$), 시간 지정 원궤도(`radius >= 5m`, `CW`/`CCW`), 회전 수(`turns >= 1`) 원궤도, 나선형 승강 선회 |
 | **`ACT_PAY_*`** | `ACT_PAY_BUS_CMD`, `ACT_PAY_REDSTONE`, `ACT_PAY_SET_ROI`, `ACT_PAY_CLEAR_ROI` | 4 | 현 궤적 유지 / `POI` 조준 | Zone 3(`Base+20~29`) `MSG_PAYLOAD_REQ/ACK` 송수신, 레드스톤/16색 번들 `EMIT`/`WAIT_INPUT`, 기수/Zone 3 터렛 `poiPos` 고정 및 중립 복귀(`AUTO`) |
@@ -678,7 +682,7 @@ flowchart TD
 - `ACT_NAV_GOTO_WP` / `ACT_NAV_CORRIDOR`: `PROXIMITY_3D` (`toleranceM = params.acceptanceRadius or 5.0`, `settleTicks = safety.chattering.arrivalSettleTicks`).
 - `ACT_NAV_CHANGE_ALT` / `ACT_PAT_LOITER_ALT`: `ALTITUDE_REACHED` (`toleranceM = 5.0`, `settleTicks = 4`).
 - `ACT_TKL_TAKEOFF_VERT` / `ACT_MOB_MOVING_TKOFF`: `ALTITUDE_REACHED` (`toleranceM = 5.0`, `settleTicks = 4`, 또는 `flightMode == "CRUISE"` 전이).
-- `ACT_TKL_LAND_NORM` / `ACT_TKL_LAND_PREC`: `FACILITY_TOUCHDOWN`.
+- `ACT_TKL_LAND_NORM` / `ACT_TKL_LAND_PREC` / `ACT_TKL_LAND_NEAREST`: `FACILITY_TOUCHDOWN` (`ACT_TKL_LAND_NEAREST`는 진입 시 해결된 `facilityId` 또는 미지정 조건; 가용 시설 부재 시 Abort 폴백).
 - `ACT_PAT_HOLD_POS` / `ACT_PAT_POI_HOLD` / `ACT_PAT_LOITER_TIME` / `ACT_PAT_LOITER_TURNS`: `DURATION_SEC`(`durationSec` 지정 시), `ACT_PAT_LOITER_TURNS`는 누적 회전각 $\ge 360 \times \text{turns}$, 미지정 시 수동 체공.
 - `ACT_PAY_BUS_CMD` / `ACT_PAY_SET_ROI` / `ACT_PAY_CLEAR_ROI`: `waitForAck == false` 시 즉시 완료, 기본 `PAYLOAD_RESP_MATCH`.
 - `ACT_PAY_REDSTONE`: `mode == "EMIT"` 시 `DURATION_SEC(durationMs/1000)`, `WAIT_INPUT` 시 `REDSTONE_INPUT_HIGH`.
@@ -699,7 +703,7 @@ flowchart TD
 - **`resolve_path`**: 원문 $\to$ `.json` $\to$ `missions/` $\to$ `/disk/` $\to$ `/disk/missions/` 탐색 유지.
 - **`validate_mission_table(tbl, config)` (`Zero-Fallback`)**:
   - 최상위에 `checkpoints[]` 배열(1개 이상) 필수 — `v1.0.0 items[]` 단독 구조는 `"SCHEMA_INVALID"` 거부.
-  - 각 체크포인트 `action`이 `action_registry` 36종 `[즉시]` 또는 예약 19종+`TASK-401`에 속하지 않으면(구 13종 포함) `false, "SCHEMA_INVALID", "CP#<idx>: UNKNOWN_ACTION"`; `[로드맵]` 액션/데코레이터/매크로 포함 시 `action_registry`에서 `DEFERRED_ACTION_UNSUPPORTED` 판별.
+  - 각 체크포인트 `action`이 `action_registry` 37종 `[즉시]` 또는 예약 19종+`TASK-401`에 속하지 않으면(구 13종 포함) `false, "SCHEMA_INVALID", "CP#<idx>: UNKNOWN_ACTION"`; `[로드맵]` 액션/데코레이터/매크로 포함 시 `action_registry`에서 `DEFERRED_ACTION_UNSUPPORTED` 판별.
   - 정적 `preconditions`(`allowedAirframes`/`disallowedAirframes`, 정적 지오펜스 범위) 위반 시 `"SCHEMA_INVALID"` 반환, 유효 `MAC_*` 매크로는 검증 직후 선형 체크포인트로 전개.
 - **3대 외부 파일 구동 채널**: CLI `run`/`load`/`files`, 셸 부팅 인자(`main.lua <spec> [loop]`), CC 창 드래그 앤 드롭 `file_transfer` 유지.
 
@@ -762,7 +766,8 @@ flowchart TD
    - GCS가 요청한 기동(`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `RTH`, `HOVER_HOLD`, `EMERGENCY_LAND`, `ABORT`)을 `AMM` 내부 `trajectory_generator`에 즉시 반영하고, `Base + 4` (`[I-12]`, `MSG_TRAJECTORY_SETPOINT`)를 통해 `arm`/`flightActive`/`flightMode`/3D 세트포인트만 `FCP`로 하달합니다(하드 킬스위치 `E_STOP`은 `Base + 1` 직결).
    - 화면 17행 배너에 `[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]`를 표시합니다.
 2. **`MSG_MISSION_CMD` 수신 시**:
-   - `action == "RUN"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`로 `MSG_MISSION_ACK`를 회신합니다. 그 외에는 지정된 `missionName`을 다중 경로 리졸버 및 `v2.0.0` 스키마 검증기로 로드(파일 부재 `"FILE_NOT_FOUND"`, 스키마 오류 `"SCHEMA_INVALID"`, 예약 액션 포함 `"DEFERRED_ACTION_UNSUPPORTED"`, 동적 사전조건 실패 `"PRECONDITION_FAILED"` 회신)하고 활성 스텝을 시작하며 `status = "ACCEPTED"`를 회신합니다.
+   - `action == "LOAD"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`를 회신합니다. 그 외에는 `payload.missionData` 테이블을 `v2.0.0` 스키마 검증기로 검증하고(누락/스키마 오류 `"SCHEMA_INVALID"`, 예약 액션 포함 `"DEFERRED_ACTION_UNSUPPORTED"`), `saveToDisk ~= false`이면 `/missions/<missionId>.json`으로 원자적 저장한 뒤 `mission_engine:load_table`에 적재하고 `status = "ACCEPTED"` (`IDLE`)를 회신합니다.
+   - `action == "RUN"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`로 `MSG_MISSION_ACK`를 회신합니다. `payload.missionData`가 동봉된 경우 `LOAD`와 동일하게 적재(선택적 `/missions/<missionId>.json` 저장)하며, `missionName` 지정 시 다중 경로 리졸버 및 `v2.0.0` 스키마 검증기로 로드(파일 부재 `"FILE_NOT_FOUND"`, 스키마 오류 `"SCHEMA_INVALID"`, 예약 액션 포함 `"DEFERRED_ACTION_UNSUPPORTED"`, 동적 사전조건 실패 `"PRECONDITION_FAILED"` 회신)하고 활성 스텝을 시작하며 `status = "ACCEPTED"`를 회신합니다.
    - `action == "STOP" | "PAUSE" | "RESUME" | "NEXT" | "CONFIRM"`: 각각 시퀀서 중단(`ABORTED`), 일시정지(`SUSPENDED`), 재개(`EN_ROUTE`), 다음 스텝 스킵, `DEC_HUMAN_AUTH` 승인 해제를 수행하고 결과를 `MSG_MISSION_ACK`로 회신하며 `Base+4` 궤적을 갱신합니다.
 
 ### 8.2 조종사 즉시 권한 탈환 (Pilot Takeover)
@@ -775,11 +780,11 @@ flowchart TD
 ## 9. 호스트 PC 외부 비주얼 미션 에디터 규격 (`tools/amm_mission_editor.html`)
 
 ### 9.1 설계 목적 및 구동 환경
-CC:Tweaked 인게임 51x19 터미널의 제한된 해상도 밖에서 사용자가 `v2.0.0` 미션(`ACT_*` / `DEC_*` / `MAC_*`, 4대 `preconditions`, 14종 조건/`settleTicks`, 4종 훅)을 직관적으로 설계·수정할 수 있도록 **호스트 PC 브라우저 기반 단일 파일 웹 GUI 에디터(`tools/amm_mission_editor.html`, 상세 규격: [AMM_MISSION_EDITOR_SPECIFICATION.md](AMM_MISSION_EDITOR_SPECIFICATION.md) `v0.2.1 Draft`)**를 제공합니다.
+CC:Tweaked 인게임 51x19 터미널의 제한된 해상도 밖에서 사용자가 `v2.0.0` 미션(`ACT_*` / `DEC_*` / `MAC_*`, 4대 `preconditions`, 14종 조건/`settleTicks`, 4종 훅) 및 월드 프리셋 시설 연동(`TASK-403`)을 직관적으로 설계·수정할 수 있도록 **호스트 PC 브라우저 기반 단일 파일 웹 GUI 에디터(`tools/amm_mission_editor.html`, 상세 규격: [AMM_MISSION_EDITOR_SPECIFICATION.md](AMM_MISSION_EDITOR_SPECIFICATION.md) `v0.4.0 Approved`)**를 제공합니다.
 
 ### 9.2 5대 핵심 기능 요약
 1. **미션 헤더 및 전역 기본값(`defaults`)**: `missionId`, `"version": "2.0.0"`, `executionMode`, `fallbackPolicy`, `defaults` 편집.
-2. **3계층 체크포인트 카드 빌더**: `[즉시]` 36종 `ACT_*` / `[로드맵]` 19종+`TASK-401` (`DEFERRED_ACTION_UNSUPPORTED` 배지) 팔레트, `DEC_*` 7종 데코레이터 토글, `MAC_*` 5종 매크로 템플릿 전개 및 `preconditions` 4대 범주 입력 지원.
+2. **3계층 체크포인트 카드 빌더**: `[즉시]` 37종 `ACT_*` / `[로드맵]` 19종+`TASK-401` (`DEFERRED_ACTION_UNSUPPORTED` 배지) 팔레트, `DEC_*` 7종 데코레이터 토글, `MAC_*` 5종 매크로 템플릿 전개 및 `preconditions` 4대 범주 입력 지원.
 3. **14종 조건(`completeWhen` / `abortWhen`, `settleTicks` 포함) 및 4종 훅 빌더**.
 4. **2D $(X, Z)$ 전술 경로 프리뷰 캔버스**: 좌표·반경·`LOITER`·접선 진입(Tangent Entry)·`POI` 조준선 렌더링 및 드래그 편집.
 5. **실시간 `v2.0.0` 스키마 검증 및 JSON 입출력**: Zero-Fallback 단일 `"version": "2.0.0"` JSON Import/Export (`v1.0.0 items[]` 및 구 13종 액션 거부).
@@ -963,7 +968,7 @@ src/3_planning/amm/
    - `python tools/verify_manifest_sync.py` 통과 (`manifest.lua` 내 `action_registry.lua`, `chattering_guard.lua` 포함 15개 파일 및 버전 `"2.0.0"` 등록, `0 Errors, 0 Warnings`).
    - 모든 개별 Lua 함수는 50줄 이하 크기 준수 (`test-driven-development` / `ponytail`).
 2. **단위 테스트 (`tools/run_unit_tests.py -t 3_planning/amm`)**:
-   - `action_registry`: 36종 `[즉시]` `ACT_*`, 19종 `[로드맵]` + 3종 `TASK-401` (`DEFERRED_ACTION_UNSUPPORTED`), 6+1종 `DEC_*`, 3+2종 `MAC_*` 전개, 4대 `preconditions`(`SCHEMA_INVALID` vs `PRECONDITION_FAILED`), 구 13종 액션 및 `items[]` Zero-Fallback 거부 검증.
+   - `action_registry`: 37종 `[즉시]` `ACT_*`, 19종 `[로드맵]` + 3종 `TASK-401` (`DEFERRED_ACTION_UNSUPPORTED`), 6+1종 `DEC_*`, 3+2종 `MAC_*` 전개, 4대 `preconditions`(`SCHEMA_INVALID` vs `PRECONDITION_FAILED`), 구 13종 액션 및 `items[]` Zero-Fallback 거부 검증.
    - `chattering_guard`: 6대 채터링 시나리오(지오펜스 히스테리시스/디바운스/유지 틱, 단방향 연료 래치 및 해제 경계, 상향 선점 예외, VTOL 천이 히스테리시스/유지, `PROXIMITY`/`ALTITUDE` `settleTicks`, 틱-vs-ms 이원화 시간축) 검증.
    - `nav_engine`, `trajectory_generator`, `facility_client`, `channel_sentinel`, `network_manager`, `condition_evaluator`, `hook_runner`, `mission_engine`, `ui_renderer`, `input_handler`, `main` 전 모듈 단위 검증(`DEC_EMCON`, `DEC_HUMAN_AUTH` `CONFIRM`, `REPEAT` 이륙/초기화 스킵 포함).
 3. **외부 에디터 (`tools/amm_mission_editor.html`) 및 E2E/돌연변이 검증**:

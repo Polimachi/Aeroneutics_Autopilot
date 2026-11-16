@@ -243,8 +243,9 @@ local function make_alt_reached(cp, p, def)
     return { logic = "ANY", conditions = { { type = "ALTITUDE_REACHED", toleranceM = 5.0, targetAlt = p.targetAlt or def.targetAlt, allowFsmCruise = allow, settleTicks = 4 } } }
 end
 
-local function make_touchdown(_cp, p)
-    return { logic = "ALL", conditions = { { type = "FACILITY_TOUCHDOWN", facilityId = p.facilityId } } }
+local function make_touchdown(cp, p)
+    local fac_id = (cp and cp._resolvedFacilityId) or p.facilityId
+    return { logic = "ALL", conditions = { { type = "FACILITY_TOUCHDOWN", facilityId = fac_id } } }
 end
 
 local function make_hold_or_dur(_cp, p)
@@ -301,7 +302,8 @@ local DEFAULT_RESOLVERS = {
     ACT_NAV_GOTO_WP = make_prox3d, ACT_NAV_CORRIDOR = make_prox3d, ACT_MOB_RV_TRACK = make_prox3d,
     ACT_TKL_TAKEOFF_VERT = make_alt_reached, ACT_MOB_MOVING_TKOFF = make_alt_reached,
     ACT_TKL_ABORT_LAND = make_alt_reached, ACT_NAV_CHANGE_ALT = make_alt_reached, ACT_PAT_LOITER_ALT = make_alt_reached,
-    ACT_TKL_LAND_PREC = make_touchdown, ACT_TKL_LAND_NORM = make_touchdown, ACT_FS_EMERG_LAND = make_touchdown,
+    ACT_TKL_LAND_PREC = make_touchdown, ACT_TKL_LAND_NORM = make_touchdown,
+    ACT_TKL_LAND_NEAREST = make_touchdown, ACT_FS_EMERG_LAND = make_touchdown,
     ACT_PAT_LOITER_TIME = make_hold_or_dur, ACT_PAT_POI_HOLD = make_hold_or_dur,
     ACT_PAT_HOLD_POS = make_hold_or_dur, ACT_COM_ATC_HOLD = make_hold_or_dur,
     ACT_PAT_LOITER_TURNS = make_loiter_turns,

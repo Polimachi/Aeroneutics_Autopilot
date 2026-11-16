@@ -69,9 +69,9 @@ class TestProtocolContractsSchema(unittest.TestCase):
         m_schema = contracts["missionSchema"]
         self.assertEqual(m_schema["version"], "2.0.0")
 
-        # 36 ACT_*, 6 DEC_*, 3 MAC_*, 14 CONDITION_TYPES
+        # 37 ACT_*, 6 DEC_*, 3 MAC_*, 14 CONDITION_TYPES
         active_actions = m_schema["activeActions"]
-        self.assertEqual(len(active_actions), 36)
+        self.assertEqual(len(active_actions), 37)
         for act in active_actions:
             self.assertTrue(act.startswith("ACT_"), f"Expected ACT_ prefix for {act}")
 

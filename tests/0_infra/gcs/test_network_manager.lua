@@ -165,4 +165,38 @@ describe("GCS network manager", function()
         assert_nil(p4)
         assert_not_nil(err4)
     end)
+
+    it("opens infra channels (50003/50004), keeps registered fleet Base+3/+0 open, and sends MSG_MISSION_CMD", function()
+        local modem = create_mock_modem()
+        local ctx = network_manager.init(cfg, modem)
+
+        assert_true(network_manager.open_infra_channels(ctx))
+        assert_true(modem:isOpen(50003))
+        assert_true(modem:isOpen(50004))
+
+        assert_true(network_manager.register_craft_channels(ctx, 10000))
+        assert_true(network_manager.register_craft_channels(ctx, 10040))
+        assert_true(modem:isOpen(10000))
+        assert_true(modem:isOpen(10003))
+        assert_true(modem:isOpen(10040))
+        assert_true(modem:isOpen(10043))
+
+        -- Switching active craft must NOT close persistent registered craft telemetry channels
+        network_manager.set_active_craft(ctx, 10000)
+        network_manager.set_active_craft(ctx, 10040)
+        assert_true(modem:isOpen(10003))
+        assert_true(modem:isOpen(10043))
+
+        local ok_m = network_manager.send_mission_cmd(ctx, 10000, {
+            action = "LOAD",
+            missionData = { version = "2.0.0", missionId = "M1", checkpoints = {} },
+            saveToDisk = true,
+        })
+        assert_true(ok_m)
+        local tx = modem.transmissions[#modem.transmissions]
+        assert_eq(tx.channel, 10000)
+        assert_eq(tx.replyChannel, 50004)
+        assert_eq(tx.payload.type, "MSG_MISSION_CMD")
+        assert_eq(tx.payload.payload.action, "LOAD")
+    end)
 end)

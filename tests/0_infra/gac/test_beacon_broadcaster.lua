@@ -75,4 +75,53 @@ describe("GAC aggregated beacon broadcaster", function()
         assert_true(ok3)
         assert_eq(#sentChannels, 4)
     end)
+
+    it("includes facilities[] snapshot when inventory provides get_all_facilities", function()
+        local facility_inventory = require("facility_inventory")
+        local inv = facility_inventory.create({
+            {
+                facilityId = "PAD_PUB",
+                type = "LANDING_PAD",
+                status = "FREE",
+                coordinates = { x = 100, y = 64, z = -200 },
+                heading = 90.0,
+                tacticalChannel = 50211,
+            },
+            {
+                facilityId = "PAD_DED",
+                type = "LANDING_PAD",
+                status = "FREE",
+                coordinates = { x = 150, y = 65, z = -250 },
+                heading = 180.0,
+                tacticalChannel = 50212,
+                dedicatedCraftIds = { "AIRCRAFT_02" },
+            },
+            {
+                facilityId = "RWY_01",
+                type = "RUNWAY",
+                status = "OCCUPIED",
+                coordinates = { x = 300, y = 64, z = 0 },
+                endPoint = { x = 600, y = 64, z = 0 },
+                heading = 90.0,
+                tacticalChannel = 50213,
+            },
+        })
+        local bc = beacon_broadcaster.create(cfg)
+        local pkt = bc:build_sector_beacon(inv, { speed = 1.0, direction = 0.0 }, "OPERATIONAL")
+        assert_not_nil(pkt.payload.facilities)
+        assert_eq(#pkt.payload.facilities, 3)
+
+        local byId = {}
+        for _, f in ipairs(pkt.payload.facilities) do
+            byId[f.facilityId] = f
+        end
+        assert_eq(byId["PAD_PUB"].facilityType, "LANDING_PAD")
+        assert_eq(byId["PAD_PUB"].status, "FREE")
+        assert_eq(byId["PAD_PUB"].position.x, 100)
+        assert_eq(byId["PAD_PUB"].tacticalChannel, 50211)
+        assert_false(byId["PAD_PUB"].dedicated)
+        assert_true(byId["PAD_DED"].dedicated)
+        assert_eq(byId["RWY_01"].facilityType, "RUNWAY")
+        assert_eq(byId["RWY_01"].endPoint.x, 600)
+    end)
 end)

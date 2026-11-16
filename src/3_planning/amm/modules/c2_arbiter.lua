@@ -116,14 +116,28 @@ local function send_ack(self, action, status, reason)
     })
 end
 
-local function handle_cmd_run(self, p, now_ms)
-    local eng = self.engine
-    if eng.state == "EN_ROUTE" and not p.forceRestart then
-        send_ack(self, "RUN", "BUSY_REJECTED", nil)
-        return false, "BUSY_REJECTED"
-    end
+local function persist_mission_if_requested(eng, p, default_save)
+    local should_save = (p.saveToDisk == nil) and default_save or (p.saveToDisk == true)
+    if not should_save or not eng or not eng.save then return true end
+    local safe_id = tostring(eng.missionId or "MISSION_01"):gsub("[^%w_%-]", "_")
+    if safe_id == "" then safe_id = "MISSION_01" end
+    return eng:save("/missions/" .. safe_id .. ".json")
+end
 
-    local data = nil
+local function preflight_inline_mission(self, action, tbl)
+    local ok_v, err_v, det_v = mission_engine.validate_mission_table(tbl, self.config)
+    if not ok_v then
+        local status = LOAD_ERR_TO_ACK[err_v] or "SCHEMA_INVALID"
+        send_ack(self, action, status, det_v or err_v)
+        return nil, status
+    end
+    return tbl, nil
+end
+
+local function resolve_run_mission_data(self, p, eng)
+    if type(p.missionData) == "table" then
+        return preflight_inline_mission(self, "RUN", p.missionData)
+    end
     if p.missionName then
         local pre_data, err_load, detail = mission_engine.preflight_file(
             p.missionName,
@@ -136,26 +150,66 @@ local function handle_cmd_run(self, p, now_ms)
         if not pre_data then
             local status = LOAD_ERR_TO_ACK[err_load] or "INVALID_CMD"
             send_ack(self, "RUN", status, detail or err_load)
-            return false, status
+            return nil, status
         end
-        data = pre_data
-    elseif eng:count() == 0 then
-        send_ack(self, "RUN", "INVALID_CMD", "NO_MISSION")
-        return false, "INVALID_CMD"
+        return pre_data, nil
     end
+    if eng:count() == 0 then
+        send_ack(self, "RUN", "INVALID_CMD", "NO_MISSION")
+        return nil, "INVALID_CMD"
+    end
+    return false, nil
+end
+
+local function handle_cmd_load(self, p, now_ms)
+    local eng = self.engine
+    if eng.state == "EN_ROUTE" and not p.forceRestart then
+        send_ack(self, "LOAD", "BUSY_REJECTED", nil)
+        return false, "BUSY_REJECTED"
+    end
+    if type(p.missionData) ~= "table" then
+        send_ack(self, "LOAD", "SCHEMA_INVALID", "MISSING_MISSION_DATA")
+        return false, "SCHEMA_INVALID"
+    end
+    local data, v_status = preflight_inline_mission(self, "LOAD", p.missionData)
+    if not data then return false, v_status end
+    if p.forceRestart and (eng.state == "EN_ROUTE" or eng.state == "SUSPENDED") then
+        eng:stop(now_ms)
+    end
+    local ok_lt, err_lt = eng:load_table(data)
+    if not ok_lt then
+        local status = (err_lt == "DEFERRED_ACTION_UNSUPPORTED") and err_lt or "SCHEMA_INVALID"
+        send_ack(self, "LOAD", status, err_lt)
+        return false, status
+    end
+    persist_mission_if_requested(eng, p, true)
+    send_ack(self, "LOAD", "ACCEPTED", nil)
+    self.lastBanner = "MISSION LOADED: " .. (eng.missionId or "ACTIVE")
+    return true, "ACCEPTED"
+end
+
+local function handle_cmd_run(self, p, now_ms)
+    local eng = self.engine
+    if eng.state == "EN_ROUTE" and not p.forceRestart then
+        send_ack(self, "RUN", "BUSY_REJECTED", nil)
+        return false, "BUSY_REJECTED"
+    end
+    local data, err_status = resolve_run_mission_data(self, p, eng)
+    if data == nil then return false, err_status end
 
     if p.forceRestart and (eng.state == "EN_ROUTE" or eng.state == "SUSPENDED") then
         eng:stop(now_ms)
     end
-
     if data then
         local ok_lt, err_lt = eng:load_table(data)
         if not ok_lt then
             send_ack(self, "RUN", "SCHEMA_INVALID", err_lt)
             return false, "SCHEMA_INVALID"
         end
+        if type(p.missionData) == "table" then
+            persist_mission_if_requested(eng, p, false)
+        end
     end
-
     local ok_start, err_start = eng:start(p.executionMode, now_ms)
     if not ok_start then
         local passthrough = (err_start == "DEFERRED_ACTION_UNSUPPORTED" or err_start == "PRECONDITION_FAILED" or err_start == "SCHEMA_INVALID")
@@ -163,7 +217,6 @@ local function handle_cmd_run(self, p, now_ms)
         send_ack(self, "RUN", status, err_start)
         return false, status
     end
-
     send_ack(self, "RUN", "ACCEPTED", nil)
     self.lastBanner = "MISSION RUN: " .. (eng.missionId or "ACTIVE")
     return true, "ACCEPTED"
@@ -223,6 +276,7 @@ local function handle_cmd_confirm(self, _p, now_ms)
 end
 
 local MISSION_CMD_HANDLERS = {
+    LOAD = handle_cmd_load,
     RUN = handle_cmd_run,
     STOP = handle_cmd_stop,
     PAUSE = handle_cmd_pause,
