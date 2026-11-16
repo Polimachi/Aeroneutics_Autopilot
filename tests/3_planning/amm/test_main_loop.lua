@@ -497,13 +497,13 @@ describe("AMM Main Event Pump and Command Processing", function()
             return c
         end
 
-        -- 1. VAS sends MFD_ACRO at t=1000 -> yields immediately
+        -- 1. VAS sends MFD_ACRO at t=1000 via Base+3 -> yields immediately
         app.arbiter:handle_mfd_state({
-            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", activeSource = "MFD_ACRO", acroActive = true },
+            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", acroActive = true },
         }, 1000)
-        -- 2. VAS returns to FCP at t=1050 -> still held until 1300
-        app.arbiter:handle_mfd_state({
-            payload = { fsmState = "NORMAL", activeSource = "FCP" },
+        -- 2. VAS returns to FCP via Base+2 at t=1050 -> still held until 1300
+        app.arbiter:handle_flight_telemetry({
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
         }, 1050)
 
         app.tickCount = 3
@@ -517,6 +517,61 @@ describe("AMM Main Event Pump and Command Processing", function()
 
         -- 3. At t=1300 (>= 300ms since lastVasPriorityMs=1000), step_5hz_downlink resumes Base+3
         local ok_res = main_mod.step_5hz_downlink(app, 1300)
+        assert_true(ok_res)
+        assert_eq(count_mfd(), 1)
+    end)
+
+    it("keeps simulated monotonic app.clock_ms consistent across handle_modem_message and step_5hz_downlink without wall-clock drift", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 1000,
+            safety = { acroRecoveryHoldMs = 300 },
+        }, { top = top_m, back = back_m })
+
+        local function count_mfd()
+            local c = 0
+            for _, tx in ipairs(top_m._transmitted) do
+                if tx.tx == 10003 then c = c + 1 end
+            end
+            return c
+        end
+
+        -- 1. Base+3 MFD_ACRO arrives via process_event/handle_modem_message at clock_ms=1000
+        main_mod.process_event(app, "modem_message", "top", 10003, 10003, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, type = "MSG_MFD_STATE", time = 1000,
+            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", acroActive = true },
+        }, 1)
+        assert_eq(app.arbiter.lastVasPriorityMs, 1000)
+
+        -- 2. Base+2 returns to FCP at clock_ms=1050 via handle_modem_message (no explicit now_ms arg)
+        app.clock_ms = 1050
+        main_mod.handle_modem_message(app, 10002, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_FLIGHT_TELEMETRY", time = 1050,
+            payload = { controlState = "NORMAL", activeSource = "FCP", fuel = 0.9 },
+        })
+        assert_eq(app.arbiter.activeSource, "FCP")
+
+        -- 3. step_5hz_downlink(app) without explicit now_ms uses app.clock_ms=1299 -> ACRO_RECOVERY_HOLD
+        app.clock_ms = 1299
+        local ok_hold, err_hold = main_mod.step_5hz_downlink(app)
+        assert_false(ok_hold)
+        assert_eq(err_hold, "ACRO_RECOVERY_HOLD")
+        assert_eq(count_mfd(), 0)
+
+        -- 4. Direct net:send_mfd_state without explicit now_ms also consults arbiter.clockFn -> ACRO_RECOVERY_HOLD
+        local ok_net_hold, err_net_hold = app.net:send_mfd_state({ fsmState = "NORMAL" }, "FCP")
+        assert_false(ok_net_hold)
+        assert_eq(err_net_hold, "ACRO_RECOVERY_HOLD")
+        assert_eq(count_mfd(), 0)
+
+        -- 5. Advance clock_ms=1350 (>= 300ms) -> step_5hz_downlink resumes Base+3
+        app.clock_ms = 1350
+        local ok_res = main_mod.step_5hz_downlink(app)
         assert_true(ok_res)
         assert_eq(count_mfd(), 1)
     end)

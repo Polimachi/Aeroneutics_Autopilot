@@ -56,7 +56,6 @@ local function build_mfd_payload(comState, fsmState, mixerState, diagState, isAc
     local d = diagState or {}
     return {
         source = isAcro and "CORE_ACRO_TAKEOVER" or "CORE_FAILSAFE",
-        activeSource = (fsmState and fsmState.activeSource) or (isAcro and "MFD_ACRO" or "FCP"),
         fsmState = fsmState.currentState,
         controlState = fsmState.currentState,
         flightMode = isAcro and "ACRO" or fsmState.currentState,

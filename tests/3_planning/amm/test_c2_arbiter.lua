@@ -77,7 +77,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- FCP still taking off
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "TAKEOFF",
+                controlState = "TAKEOFF",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
@@ -86,7 +86,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- FCP reaches clearance altitude and transitions to CRUISE
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 0, z = 0 } }
             }
         })
@@ -105,7 +105,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Craft arrives at WP1
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 100, z = 100 } }
             }
         })
@@ -116,7 +116,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Craft arrives at WP2 (final waypoint with facilityId)
         arb:handle_flight_telemetry({
             payload = {
-                fsmState = "CRUISE",
+                controlState = "CRUISE",
                 navigation = { currentPos = { x = 200, z = 200 } }
             }
         })
@@ -582,7 +582,7 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         -- Base+2 MSG_FLIGHT_TELEMETRY drives mission_engine progression (4 ticks satisfy PROXIMITY_3D settleTicks = 4)
         for i = 1, 4 do
             arb:handle_flight_telemetry({
-                payload = { fsmState = "CRUISE", activeSource = "FCP", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
+                payload = { controlState = "CRUISE", activeSource = "FCP", navigation = { currentPos = { x = 100, y = 100, z = 0 } }, dynamics = { altitudeY = 100 } },
             }, 1300 + (i - 1) * 50)
         end
         assert_eq(eng.active_index, 2)
@@ -601,9 +601,9 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
 
         assert_true(arb:can_transmit_mfd(900))
 
-        -- 1. MFD_ACRO entry sets yield window [1000, 1300)
+        -- 1. MFD_ACRO entry via canonical Base+3 (I-6) sets yield window [1000, 1300)
         arb:handle_mfd_state({
-            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", activeSource = "MFD_ACRO", acroActive = true },
+            payload = { source = "CORE_ACRO_TAKEOVER", fsmState = "NORMAL", acroActive = true },
         }, 1000)
         assert_eq(arb.activeSource, "MFD_ACRO")
         assert_eq(arb.lastVasPriorityMs, 1000)
@@ -612,9 +612,9 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_false(ok_acro)
         assert_eq(err_acro, "YIELDED_TO_MFD_ACRO")
 
-        -- 2. Return to FCP at t=1100: still inside t < 300ms recovery hold window (1100..1299)
-        arb:handle_mfd_state({
-            payload = { source = "VAS_TELEM", fsmState = "NORMAL", activeSource = "FCP" },
+        -- 2. Return to FCP via canonical Base+2 (I-1) at t=1100: still inside t < 300ms recovery hold window (1100..1299)
+        arb:handle_flight_telemetry({
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
         }, 1100)
         assert_eq(arb.activeSource, "FCP")
 
@@ -636,10 +636,10 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
 
         -- 4. FAILSAFE_HOLD -> FCP recovery also enforces 300ms hold
         arb:handle_mfd_state({
-            payload = { source = "CORE_FAILSAFE", fsmState = "FAILSAFE_HOLD", activeSource = "FCP" },
+            payload = { source = "CORE_FAILSAFE", fsmState = "FAILSAFE_HOLD" },
         }, 2000)
         arb:handle_flight_telemetry({
-            payload = { controlState = "NORMAL", fsmState = "NORMAL", activeSource = "FCP" },
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
         }, 2050)
         local ok_fs_hold, err_fs_hold = arb:can_transmit_mfd(2299)
         assert_false(ok_fs_hold)
@@ -655,10 +655,10 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
 
         -- 5. EMERGENCY_LAND -> FCP recovery also enforces 300ms hold
         arb:handle_mfd_state({
-            payload = { source = "CORE_FAILSAFE", fsmState = "EMERGENCY_LAND", activeSource = "FCP" },
+            payload = { source = "CORE_FAILSAFE", fsmState = "EMERGENCY_LAND" },
         }, 3000)
         arb:handle_flight_telemetry({
-            payload = { controlState = "NORMAL", fsmState = "NORMAL", activeSource = "FCP" },
+            payload = { controlState = "NORMAL", activeSource = "FCP" },
         }, 3050)
         local ok_em_hold, err_em_hold = arb:can_transmit_mfd(3299)
         assert_false(ok_em_hold)

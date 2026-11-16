@@ -40,7 +40,13 @@ local function load_config(path)
 end
 
 local function get_now_ms(app)
-    return (app and app.now_ms) or (os.epoch and os.epoch("utc")) or (os.time() * 1000)
+    if app and type(app.clock_ms) == "number" then
+        return app.clock_ms
+    end
+    if app and type(app.now_ms) == "number" then
+        return app.now_ms
+    end
+    return (os.epoch and os.epoch("utc")) or (os.time() * 1000)
 end
 
 local function is_config_path(str)
@@ -507,13 +513,14 @@ end
 
 local function handle_timer_event(app, timer_id, now_ms)
     if timer_id ~= app.render_timer and app.render_timer ~= nil then return end
+    local t_ms = now_ms or get_now_ms(app)
     if app.render_timer and os.startTimer then
         app.render_timer = os.startTimer(0.2)
     end
     if app.engine and not app.coroutineActive then
-        app.engine:tick(now_ms)
+        app.engine:tick(t_ms)
     end
-    render_ui_frame(app, now_ms)
+    render_ui_frame(app, t_ms)
 end
 
 local function open_fac_channels(app)
@@ -579,32 +586,33 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
     if not app.net or not app.net.decode_envelope then return end
     local ok, pkt = app.net:decode_envelope(raw_msg)
     if not ok or not pkt then return end
+    local t_ms = now_ms or get_now_ms(app)
     local base = (app.config and app.config.baseChannel) or (app.net and app.net.baseChannel) or 10000
     if chan == base + 3 and app.arbiter and app.arbiter.handle_mfd_state then
-        app.arbiter:handle_mfd_state(pkt, now_ms)
+        app.arbiter:handle_mfd_state(pkt, t_ms)
     elseif chan == base + 2 then
         if app.arbiter and app.arbiter.handle_flight_telemetry then
-            app.arbiter:handle_flight_telemetry(pkt, now_ms)
+            app.arbiter:handle_flight_telemetry(pkt, t_ms)
         end
         if app.nav and nav_engine.integrate_dr then
-            nav_engine.integrate_dr(app.nav, pkt.payload, 0.05, now_ms)
+            nav_engine.integrate_dr(app.nav, pkt.payload, 0.05, t_ms)
         end
     elseif chan == base + 4 then
         if pkt.type == "MSG_OUTER_LOOP_STATUS" and app.arbiter and app.arbiter.handle_outer_loop_status then
-            app.arbiter:handle_outer_loop_status(pkt, now_ms)
+            app.arbiter:handle_outer_loop_status(pkt, t_ms)
         elseif pkt.type == "MSG_CHANNEL_REBIND_ACK" and app.sentinel then
-            channel_sentinel.on_rebind_ack(app.sentinel, pkt, now_ms)
+            channel_sentinel.on_rebind_ack(app.sentinel, pkt, t_ms)
         end
     elseif chan == base + 5 and app.nav and pkt.type == "MSG_GPS_RESPONSE" then
-        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, now_ms)
-    elseif handle_sentinel_rx(app, chan, pkt, base, now_ms) then
+        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, t_ms)
+    elseif handle_sentinel_rx(app, chan, pkt, base, t_ms) then
         return
     elseif chan == base + 0 and app.arbiter and app.arbiter.handle_gcs_packet then
-        app.arbiter:handle_gcs_packet(pkt, now_ms)
-    elseif handle_facility_rx(app, chan, pkt, now_ms) then
+        app.arbiter:handle_gcs_packet(pkt, t_ms)
+    elseif handle_facility_rx(app, chan, pkt, t_ms) then
         return
     elseif app.net.is_payload_channel and app.net:is_payload_channel(chan) and app.engine then
-        app.engine:on_payload_ack(pkt, chan, now_ms)
+        app.engine:on_payload_ack(pkt, chan, t_ms)
     elseif app.otaAgent then
         app.otaAgent:handle_packet(chan, chan, pkt)
     end
@@ -740,10 +748,14 @@ local function create_app(config, modems)
         input = input,
         screen_buf = screen_buf,
         render_timer = os.startTimer(0.2),
+        clock_ms = cfg.clock_ms,
         tickCount = 0,
         ctrlHeld = false,
         running = true,
     }
+    if arbiter then
+        arbiter.clockFn = function() return get_now_ms(app) end
+    end
     local okOta, ota_agent = pcall(require, "ota_agent")
     if okOta and type(ota_agent) == "table" and type(ota_agent.new) == "function" then
         local otaCfg = cfg.ota or {}
@@ -1031,6 +1043,7 @@ return {
     create_app = create_app,
     step_20hz_tick = step_20hz_tick,
     step_5hz_downlink = step_5hz_downlink,
+    handle_modem_message = handle_modem_message,
     render_ui_frame = render_ui_frame,
     handle_timer_event = handle_timer_event,
     make_coroutine_a = make_coroutine_a,

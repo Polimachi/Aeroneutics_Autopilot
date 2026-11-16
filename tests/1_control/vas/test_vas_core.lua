@@ -325,7 +325,6 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(acro10003, 3)
         assert_not_nil(lastAcroPkt)
         assert_eq(lastAcroPkt.payload.source, "CORE_ACRO_TAKEOVER")
-        assert_eq(lastAcroPkt.payload.activeSource, "MFD_ACRO")
         assert_eq(lastAcroPkt.payload.controlState, "NORMAL")
         assert_eq(lastAcroPkt.payload.flightMode, "ACRO")
         assert_true(lastAcroPkt.payload.acroActive)
@@ -355,7 +354,6 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(failsafe10003, 1)
         assert_not_nil(lastFailsafePkt)
         assert_eq(lastFailsafePkt.payload.source, "CORE_FAILSAFE")
-        assert_eq(lastFailsafePkt.payload.activeSource, "FCP")
         assert_eq(lastFailsafePkt.payload.flightMode, "FAILSAFE_HOLD")
         assert_false(lastFailsafePkt.payload.acroActive)
 
@@ -377,7 +375,6 @@ describe("vas telemetry feeder MFD silence guard and failsafe rate limiting", fu
         assert_eq(emerg10003, 1)
         assert_not_nil(lastEmergPkt)
         assert_eq(lastEmergPkt.payload.source, "CORE_FAILSAFE")
-        assert_eq(lastEmergPkt.payload.activeSource, "FCP")
         assert_eq(lastEmergPkt.payload.flightMode, "EMERGENCY_LAND")
         assert_false(lastEmergPkt.payload.acroActive)
     end)
