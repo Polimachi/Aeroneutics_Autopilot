@@ -6,12 +6,13 @@ network_manager.CRAFT_BASE_MIN = 10000
 network_manager.CRAFT_BASE_MAX = 49960
 network_manager.CRAFT_BANDWIDTH = 40
 network_manager.ZONE_OFFSETS = {
-    c2 = 0,
     guidance = 1,
     telemetry = 2,
     mfd = 3,
     trajectory = 4,
     clientReply = 5,
+    calibration = 8,
+    emergency = 9,
     actuation = 10,
     aero = 11,
     asaActuation = 11,
@@ -40,12 +41,13 @@ local function build_channel_map(baseCh, sub)
     local zo = network_manager.ZONE_OFFSETS
     local aeroOff = s.asaActuation or zo.asaActuation
     return {
-        c2 = baseCh + (s.c2Command or zo.c2),
         guidance = baseCh + (s.guidance or zo.guidance),
         telemetry = baseCh + (s.telemetry or zo.telemetry),
         mfd = baseCh + (s.mfd or zo.mfd),
         trajectory = baseCh + (s.trajectory or zo.trajectory),
         clientReply = baseCh + (s.clientReply or zo.clientReply),
+        calibration = baseCh + (s.calibration or zo.calibration),
+        emergency = baseCh + (s.emergency or zo.emergency),
         actuation = baseCh + (s.actuation or zo.actuation),
         aero = baseCh + aeroOff,
         asaActuation = baseCh + aeroOff,
@@ -103,8 +105,9 @@ function network_manager.init(systemConfig)
     local ch = build_channel_map(baseCh, sub)
 
     if topM and topM.open then
-        topM.open(ch.c2)
+        topM.open(ch.calibration)
         topM.open(ch.guidance)
+        topM.open(ch.emergency)
         topM.open(ch.actuation)
         topM.open(ch.aero)
     end
@@ -160,7 +163,7 @@ end
 
 function network_manager.send_emergency_alert(state, alertData)
     local data = alertData or {}
-    local ch = (state and state.channels and state.channels.guidance) or 10001
+    local ch = (state and state.channels and state.channels.emergency) or 10009
     return network_manager.send_packet(state, ch, "MSG_EMERGENCY_ALERT", {
         reason = data.reason or "UNKNOWN", isAirborne = data.isAirborne == true,
         fsmState = data.fsmState or "UNKNOWN", altitude = data.altitude or 0.0
@@ -281,8 +284,9 @@ local function set_rebind_channels(state, baseCh, isOpen)
     local chMap = build_channel_map(baseCh, state.subchannels)
     local fn = isOpen and state.wirelessModem.open or state.wirelessModem.close
     if not fn then return end
-    fn(chMap.c2)
+    fn(chMap.calibration)
     fn(chMap.guidance)
+    fn(chMap.emergency)
     fn(chMap.actuation)
     fn(chMap.asaActuation)
 end
@@ -442,16 +446,21 @@ function network_manager.dispatch(state, fsm, controller, mixer, channel, replyC
     local msgType = rawPacket.type
 
     if msgType == "MSG_EMERGENCY_OVERRIDE" then
+        if channel ~= state.channels.emergency then return false, "WRONG_CHANNEL" end
         if fsm and fsm.arbitrate_c2 then fsm.arbitrate_c2(fsm, rawPacket.payload)
         elseif fsm and fsm.transition_to then fsm.transition_to(fsm, "AIRBORNE_EMERGENCY", "UAC_OVERRIDE") end
         return true
-    elseif msgType == "MSG_CALIBRATION_INIT" and (channel == (state.channels and state.channels.c2) or channel == state.baseChannel) then
+    elseif msgType == "MSG_CALIBRATION_INIT" then
+        if channel ~= state.channels.calibration then return false, "WRONG_CHANNEL" end
         return handle_calibration_init(state, fsm, rawPacket.payload)
     elseif msgType == "MSG_CHANNEL_REBIND" then
         return handle_channel_rebind(state, rawPacket)
     elseif msgType == "MSG_CHANNEL_REBIND_ACK" then
         return handle_rebind_ack(state, channel, rawPacket.payload)
-    elseif channel == (state.channels and state.channels.guidance) or msgType == "MSG_ATTITUDE_CMD" then
+    elseif msgType == "MSG_ATTITUDE_CMD" then
+        if channel ~= state.channels.guidance then return false, "WRONG_CHANNEL" end
+        return handle_guidance_cmd(state, fsm, msgType, rawPacket)
+    elseif channel == (state.channels and state.channels.guidance) then
         return handle_guidance_cmd(state, fsm, msgType, rawPacket)
     elseif msgType == "MSG_ACTUATOR_DISCOVER_ACK" then
         if mixer and mixer.register_actuator_node then mixer.register_actuator_node(mixer, rawPacket.payload) end

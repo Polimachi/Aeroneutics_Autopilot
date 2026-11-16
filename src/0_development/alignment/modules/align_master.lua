@@ -127,7 +127,7 @@ function align_master.init_bay_session(cfg, domain_id, craft_base_ch, modem, now
     modem_open(self.modem, self.telem_ch)
     modem_open(self.modem, self.tap_ch)
     self.state = "TUNING"
-    send_pkt(self, self.craft_base_ch, "MSG_CALIBRATION_INIT", {
+    send_pkt(self, self.craft_base_ch + 8, "MSG_CALIBRATION_INIT", {
         stationId = station.stationId or "HANGAR_BAY_01",
         bayId = station.bayId or 1,
         baseHangarChannel = base,

@@ -5,8 +5,8 @@
 local network_manager = {}
 
 local ENVELOPE_VERSION = "1.9.5"
-local OFFSET_C2 = 0         -- Base + 0: CH_OPERATOR_C2 (FCP)
-local OFFSET_ESTOP = 1      -- Base + 1: CH_FLIGHT_GUIDANCE (VAS direct)
+local OFFSET_C2 = 0         -- Base + 0: CH_OPERATOR_C2 (AMM)
+local OFFSET_ESTOP = 9      -- Base + 9: CH_EMERGENCY_CORE (VAS direct)
 local OFFSET_TELEMETRY = 3  -- Base + 3: CH_MFD_INSTRUMENT (FCP)
 
 local function get_time_ms()

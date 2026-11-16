@@ -66,6 +66,7 @@ describe("fdr passive packet_tap", function()
 
         assert_true(modem.isOpen(10001))
         assert_true(modem.isOpen(10002))
+        assert_true(modem.isOpen(10009))
         assert_true(modem.isOpen(10010))
         assert_true(modem.isOpen(10011))
         assert_true(modem.isOpen(10004))
@@ -83,8 +84,10 @@ describe("fdr passive packet_tap", function()
         assert_true(ok, err)
         assert_false(modem.isOpen(10001))
         assert_false(modem.isOpen(10002))
+        assert_false(modem.isOpen(10009))
         assert_true(modem.isOpen(10081))
         assert_true(modem.isOpen(10082))
+        assert_true(modem.isOpen(10089))
         assert_true(modem.isOpen(10090))
         assert_true(modem.isOpen(10091))
         assert_true(modem.isOpen(10084))
@@ -140,7 +143,18 @@ describe("fdr passive packet_tap", function()
         assert_not_nil(rEstop)
         assert_true(packet_tap.is_estop_trigger(rEstop))
 
-        local rOver = packet_tap.classify_packet(tap, 10001, {
+        local rOverLegacy, legacyWhy = packet_tap.classify_packet(tap, 10001, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 21,
+            type = "MSG_EMERGENCY_OVERRIDE",
+            time = 6010,
+            payload = { action = "E_STOP", source = "GCS" },
+        }, 6012)
+        assert_nil(rOverLegacy)
+        assert_eq(legacyWhy, "ERR_FILTERED_MSG_TYPE")
+
+        local rOver = packet_tap.classify_packet(tap, 10009, {
             ver = "1.9.5",
             domainId = "AIRCRAFT_01",
             seq = 21,
@@ -149,7 +163,20 @@ describe("fdr passive packet_tap", function()
             payload = { action = "E_STOP", source = "GCS" },
         }, 6012)
         assert_not_nil(rOver)
+        assert_eq(rOver.offset, 9)
         assert_true(packet_tap.is_estop_trigger(rOver))
+
+        local rAlert = packet_tap.classify_packet(tap, 10009, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 22,
+            type = "MSG_EMERGENCY_ALERT",
+            time = 6015,
+            payload = { reason = "SENSOR_TIMEOUT", isAirborne = true, fsmState = "FAILSAFE_HOLD", altitude = 80.0 },
+        }, 6016)
+        assert_not_nil(rAlert)
+        assert_eq(rAlert.offset, 9)
+        assert_true(packet_tap.is_estop_trigger(rAlert))
 
         local rNorm = packet_tap.classify_packet(tap, 10001, {
             ver = "1.9.5",

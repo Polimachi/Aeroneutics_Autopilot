@@ -66,11 +66,12 @@ describe("test_fcp_main_v2: configuration loader and defaults", function()
         assert_eq(cfg.channels.trajectoryOffset, 4, "trajectoryOffset must be 4")
         assert_eq(cfg.channels.telemetryOffset, 2, "telemetryOffset must be 2")
         assert_eq(cfg.channels.guidanceOffset, 1, "guidanceOffset must be 1")
+        assert_eq(cfg.channels.emergencyOffset, 9, "emergencyOffset must be 9")
     end)
 end)
 
 describe("test_fcp_main_v2: context creation and channel binding", function()
-    it("initializes runtime context and opens 3 core channels on primary modem", function()
+    it("initializes runtime context and opens 4 core channels on primary modem", function()
         local mock_modem = create_mock_modem()
         local cfg = fcp_main.load_config("config/fcp_config.json")
         local ctx = fcp_main.create_context(cfg, function() return mock_modem end)
@@ -83,10 +84,11 @@ describe("test_fcp_main_v2: context creation and channel binding", function()
         assert_true(ctx.running, "Context running flag must be true")
         assert_eq(ctx.tick, 0, "Initial tick must be 0")
 
-        -- Verify 3 channels opened: 10004, 10002, 10001
+        -- Verify 4 channels opened: 10004, 10002, 10001, 10009
         assert_true(mock_modem.isOpen(10004), "Trajectory channel 10004 must be open")
         assert_true(mock_modem.isOpen(10002), "Telemetry channel 10002 must be open")
         assert_true(mock_modem.isOpen(10001), "Guidance channel 10001 must be open")
+        assert_true(mock_modem.isOpen(10009), "Emergency channel 10009 must be open")
     end)
 end)
 
@@ -260,6 +262,50 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
         -- Advance 2.0s (100% of ramp)
         fcp_main.step_tick(ctx, 0.05, 7000)
         assert_eq(ctx.rampAlpha, 1.0, "rampAlpha should reach 1.0 after bumplessRampSec")
+    end)
+
+    it("transitions to EMERGENCY_HOLD on Base+9 MSG_EMERGENCY_ALERT and ignores Base+1 MSG_EMERGENCY_ALERT", function()
+        local network_manager = require("network_manager")
+        local mock_modem = create_mock_modem()
+        local cfg = fcp_main.load_config("config/fcp_config.json")
+        local ctx = fcp_main.create_context(cfg, function() return mock_modem end)
+        ctx.fsm.currentState = "ACTIVE_TRACKING"
+        ctx.fsm.flightActive = true
+        ctx.fsm.arm = true
+
+        local alert_pkt = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "VAS-01",
+            seq = 10,
+            type = "MSG_EMERGENCY_ALERT",
+            payload = { reason = "SENSOR_TIMEOUT_15TICKS", isAirborne = true, fsmState = "FAILSAFE_HOLD", altitude = 80.0 },
+        }
+
+        -- Base+1 alert must be ignored
+        assert_false(network_manager.ingest_modem_event(ctx.net, "top", 10001, 10001, alert_pkt, 0, 1000))
+        mock_modem.transmitted = {}
+        fcp_main.step_tick(ctx, 0.05, 1000)
+        assert_eq(ctx.fsm.currentState, "ACTIVE_TRACKING")
+
+        -- Base+9 alert triggers EMERGENCY_HOLD, silences Base+1, and reports status on Base+4
+        assert_true(network_manager.ingest_modem_event(ctx.net, "top", 10009, 10009, alert_pkt, 0, 1050))
+        mock_modem.transmitted = {}
+        fcp_main.step_tick(ctx, 0.05, 1050)
+        assert_eq(ctx.fsm.currentState, "EMERGENCY_HOLD")
+        assert_false(ctx.fsm.flightActive)
+
+        local att_count = 0
+        local status_pkt = nil
+        for _, tx in ipairs(mock_modem.transmitted) do
+            if tx.channel == 10001 then att_count = att_count + 1 end
+            if tx.channel == 10004 and tx.payload.type == "MSG_OUTER_LOOP_STATUS" then
+                status_pkt = tx.payload
+            end
+        end
+        assert_eq(att_count, 0, "Base+1 must be silent in EMERGENCY_HOLD")
+        assert_not_nil(status_pkt, "Base+4 MSG_OUTER_LOOP_STATUS must be emitted in EMERGENCY_HOLD")
+        assert_eq(status_pkt.payload.fsmState, "EMERGENCY_HOLD")
     end)
 end)
 

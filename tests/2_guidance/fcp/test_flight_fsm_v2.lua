@@ -4,8 +4,8 @@
 package.path = package.path .. ";/modules/?.lua;/?/init.lua"
 local flight_fsm = require("flight_fsm")
 
-describe("test_flight_fsm_v2: FCP v2.0.0 6-State FSM definition and transition validation", function()
-    it("defines exactly the 6 valid v2.0.0 FSM states in flight_fsm.STATES", function()
+describe("test_flight_fsm_v2: FCP v2.3.0 7-State FSM definition and transition validation", function()
+    it("defines exactly the 7 valid v2.3.0 FSM states in flight_fsm.STATES", function()
         assert_not_nil(flight_fsm.STATES, "flight_fsm.STATES table must exist")
         local expected = {
             BOOT = true,
@@ -14,6 +14,7 @@ describe("test_flight_fsm_v2: FCP v2.0.0 6-State FSM definition and transition v
             PASSIVE_TRACKING = true,
             AMM_TIMEOUT_HOLD = true,
             EMERGENCY_LAND = true,
+            EMERGENCY_HOLD = true,
         }
         local count = 0
         for k, v in pairs(flight_fsm.STATES) do
@@ -21,7 +22,7 @@ describe("test_flight_fsm_v2: FCP v2.0.0 6-State FSM definition and transition v
             assert_true(v == true, "State value must be boolean true")
             count = count + 1
         end
-        assert_eq(count, 6, "Must define exactly 6 valid states")
+        assert_eq(count, 7, "Must define exactly 7 valid states")
 
         -- Explicitly verify deprecated legacy states are absent
         local legacy = { "BOOTSTRAP", "CRUISE", "TAKEOFF", "LOITER", "POI_HOLD", "APPROACH_LAND", "FAILSAFE_HOLD", "FAILSAFE_RTH" }
@@ -43,18 +44,25 @@ describe("test_flight_fsm_v2: FCP v2.0.0 6-State FSM definition and transition v
         assert_true(flight_fsm.is_transition_allowed("ACTIVE_TRACKING", "PASSIVE_TRACKING"))
         assert_true(flight_fsm.is_transition_allowed("ACTIVE_TRACKING", "AMM_TIMEOUT_HOLD"))
         assert_true(flight_fsm.is_transition_allowed("ACTIVE_TRACKING", "EMERGENCY_LAND"))
+        assert_true(flight_fsm.is_transition_allowed("ACTIVE_TRACKING", "EMERGENCY_HOLD"))
 
         -- PASSIVE_TRACKING transitions
         assert_true(flight_fsm.is_transition_allowed("PASSIVE_TRACKING", "ACTIVE_TRACKING"))
         assert_true(flight_fsm.is_transition_allowed("PASSIVE_TRACKING", "IDLE_ARMED"))
+        assert_true(flight_fsm.is_transition_allowed("PASSIVE_TRACKING", "EMERGENCY_HOLD"))
 
         -- AMM_TIMEOUT_HOLD transitions
         assert_true(flight_fsm.is_transition_allowed("AMM_TIMEOUT_HOLD", "ACTIVE_TRACKING"))
         assert_true(flight_fsm.is_transition_allowed("AMM_TIMEOUT_HOLD", "EMERGENCY_LAND"))
         assert_true(flight_fsm.is_transition_allowed("AMM_TIMEOUT_HOLD", "IDLE_ARMED"))
+        assert_true(flight_fsm.is_transition_allowed("AMM_TIMEOUT_HOLD", "EMERGENCY_HOLD"))
 
         -- EMERGENCY_LAND transitions
         assert_true(flight_fsm.is_transition_allowed("EMERGENCY_LAND", "IDLE_ARMED"))
+        assert_true(flight_fsm.is_transition_allowed("EMERGENCY_LAND", "EMERGENCY_HOLD"))
+
+        -- EMERGENCY_HOLD transitions
+        assert_true(flight_fsm.is_transition_allowed("EMERGENCY_HOLD", "IDLE_ARMED"))
     end)
 
     it("rejects invalid state transitions in is_transition_allowed", function()
@@ -84,6 +92,13 @@ describe("test_flight_fsm_v2: FCP v2.0.0 6-State FSM definition and transition v
         assert_false(flight_fsm.is_transition_allowed("EMERGENCY_LAND", "PASSIVE_TRACKING"))
         assert_false(flight_fsm.is_transition_allowed("EMERGENCY_LAND", "AMM_TIMEOUT_HOLD"))
         assert_false(flight_fsm.is_transition_allowed("EMERGENCY_LAND", "BOOT"))
+
+        -- Invalid transitions from EMERGENCY_HOLD
+        assert_false(flight_fsm.is_transition_allowed("EMERGENCY_HOLD", "ACTIVE_TRACKING"))
+        assert_false(flight_fsm.is_transition_allowed("EMERGENCY_HOLD", "PASSIVE_TRACKING"))
+        assert_false(flight_fsm.is_transition_allowed("EMERGENCY_HOLD", "AMM_TIMEOUT_HOLD"))
+        assert_false(flight_fsm.is_transition_allowed("EMERGENCY_HOLD", "EMERGENCY_LAND"))
+        assert_false(flight_fsm.is_transition_allowed("EMERGENCY_HOLD", "BOOT"))
 
         -- Nil, self, and legacy checks
         assert_false(flight_fsm.is_transition_allowed(nil, "IDLE_ARMED"))
@@ -260,8 +275,8 @@ describe("test_flight_fsm_v2: FCP v2.0.0 flight_fsm.step lifecycle and state tra
         assert_true(ev2.resetIntegrators)
     end)
 
-    it("handles Pre-Flight Ruling 3 E_STOP and MSG_EMERGENCY_ALERT cleanly into IDLE_ARMED", function()
-        -- 1. activeSource == "EMERGENCY_DIRECT" from ACTIVE_TRACKING
+    it("handles E_STOP and MSG_EMERGENCY_ALERT into EMERGENCY_HOLD and returns to IDLE_ARMED only on disarm & clear", function()
+        -- 1. activeSource == "EMERGENCY_DIRECT" from ACTIVE_TRACKING -> EMERGENCY_HOLD
         local s1 = make_fsm()
         s1.currentState = "ACTIVE_TRACKING"
         s1.flightActive = true
@@ -271,12 +286,26 @@ describe("test_flight_fsm_v2: FCP v2.0.0 flight_fsm.step lifecycle and state tra
             telemState = { activeSource = "EMERGENCY_DIRECT", controlState = "E_STOP" },
         }
         local r1, ev1 = flight_fsm.step(s1, ctx_estop1, 7000)
-        assert_eq(r1.currentState, "IDLE_ARMED")
+        assert_eq(r1.currentState, "EMERGENCY_HOLD")
         assert_true(ev1.resetIntegrators, "E-STOP must clear integrators")
         assert_false(ev1.triggerBumpless, "E-STOP must not trigger bumpless")
         assert_false(r1.flightActive, "flightActive must be false after E-STOP")
 
-        -- 2. emergencyAlert == true from PASSIVE_TRACKING
+        -- Remains in EMERGENCY_HOLD if alert clears while still armed
+        local r1_still_armed = flight_fsm.step(r1, {
+            setpoint = { arm = true, flightActive = false },
+            telemState = { activeSource = "FCP", controlState = "IDLE_ARMED" },
+        }, 7050)
+        assert_eq(r1_still_armed.currentState, "EMERGENCY_HOLD")
+
+        -- Transitions to IDLE_ARMED only when emergency clears AND arm == false
+        local r1_cleared = flight_fsm.step(r1_still_armed, {
+            setpoint = { arm = false, flightActive = false },
+            telemState = { activeSource = "FCP", controlState = "DISARMED" },
+        }, 7100)
+        assert_eq(r1_cleared.currentState, "IDLE_ARMED")
+
+        -- 2. emergencyAlert == true from PASSIVE_TRACKING -> EMERGENCY_HOLD
         local s2 = make_fsm()
         s2.currentState = "PASSIVE_TRACKING"
         s2.flightActive = true
@@ -286,11 +315,11 @@ describe("test_flight_fsm_v2: FCP v2.0.0 flight_fsm.step lifecycle and state tra
             telemState = { activeSource = "MFD_ACRO" },
         }
         local r2, ev2 = flight_fsm.step(s2, ctx_estop2, 7100)
-        assert_eq(r2.currentState, "IDLE_ARMED")
+        assert_eq(r2.currentState, "EMERGENCY_HOLD")
         assert_true(ev2.resetIntegrators)
         assert_false(r2.flightActive)
 
-        -- 3. controlState == "E_STOP" from AMM_TIMEOUT_HOLD
+        -- 3. controlState == "E_STOP" from AMM_TIMEOUT_HOLD -> EMERGENCY_HOLD
         local s3 = make_fsm()
         s3.currentState = "AMM_TIMEOUT_HOLD"
         s3.flightActive = true
@@ -299,11 +328,11 @@ describe("test_flight_fsm_v2: FCP v2.0.0 flight_fsm.step lifecycle and state tra
             telemState = { controlState = "E_STOP" },
         }
         local r3, ev3 = flight_fsm.step(s3, ctx_estop3, 7200)
-        assert_eq(r3.currentState, "IDLE_ARMED")
+        assert_eq(r3.currentState, "EMERGENCY_HOLD")
         assert_true(ev3.resetIntegrators)
         assert_false(r3.flightActive)
 
-        -- 4. E_STOP from EMERGENCY_LAND
+        -- 4. E_STOP from EMERGENCY_LAND -> EMERGENCY_HOLD
         local s4 = make_fsm()
         s4.currentState = "EMERGENCY_LAND"
         s4.flightActive = true
@@ -312,7 +341,7 @@ describe("test_flight_fsm_v2: FCP v2.0.0 flight_fsm.step lifecycle and state tra
             emergencyAlert = true,
         }
         local r4, ev4 = flight_fsm.step(s4, ctx_estop4, 7300)
-        assert_eq(r4.currentState, "IDLE_ARMED")
+        assert_eq(r4.currentState, "EMERGENCY_HOLD")
         assert_true(ev4.resetIntegrators)
         assert_false(r4.flightActive)
     end)
@@ -382,6 +411,7 @@ describe("test_flight_fsm_v2: FCP v2.0.0 config/fcp_config.json schema validatio
         assert_eq(cfg.channels.trajectoryOffset, 4)
         assert_eq(cfg.channels.telemetryOffset, 2)
         assert_eq(cfg.channels.guidanceOffset, 1)
+        assert_eq(cfg.channels.emergencyOffset, 9)
 
         -- OuterLoop v2.1.0 section
         assert_not_nil(cfg.outerLoop, "outerLoop section required")

@@ -14,7 +14,8 @@
     "bandwidth": 40,
     "trajectoryOffset": 4,
     "telemetryOffset": 2,
-    "guidanceOffset": 1
+    "guidanceOffset": 1,
+    "emergencyOffset": 9
   },
   "outerLoop": {
     "gravityMps2": 11.0,

@@ -178,6 +178,8 @@ function network_manager:send_mfd_state(payload, activeSource)
     return ok, err
 end
 
+local OFFSET_EMERGENCY = 9
+
 function network_manager:send_emergency_override(action, reason, authKey, source)
     local now_ms = (os.epoch and os.epoch("utc")) or (os.time() * 1000)
     local payload = {
@@ -191,7 +193,7 @@ function network_manager:send_emergency_override(action, reason, authKey, source
     local m = self.onboardModem or self.modem
     if not m then return false, "MODEM_UNBOUND" end
     local ok, err = pcall(function()
-        m.transmit(self.baseChannel + 1, self.baseChannel + 1, pkt)
+        m.transmit(self.baseChannel + OFFSET_EMERGENCY, self.baseChannel + OFFSET_EMERGENCY, pkt)
     end)
     return ok, err
 end

@@ -311,10 +311,11 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         fs.delete("/disk/disk_sortie.json")
     end)
 
-    it("emits E_STOP with ESTOP_CONFIRM_KEY and source AMM on ESTOP pilot action", function()
+    it("emits E_STOP with ESTOP_CONFIRM_KEY and source AMM on Base+9 on ESTOP pilot action", function()
         local q, net, arb, tx = create_fixture()
         arb:handle_pilot_action("ESTOP", {}, 1000)
         assert_eq(#tx, 1)
+        assert_eq(tx[1].chan, 10009)
         assert_eq(tx[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(tx[1].payload.payload.action, "E_STOP")
         assert_eq(tx[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")

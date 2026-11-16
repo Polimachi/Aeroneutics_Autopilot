@@ -3,15 +3,15 @@
 local packet_tap = {}
 
 local ALLOWED_TYPES_BY_OFFSET = {
-    [1] = {
-        MSG_ATTITUDE_CMD = true,
-        MSG_EMERGENCY_OVERRIDE = true,
-        MSG_EMERGENCY_ALERT = true,
-    },
+    [1] = { MSG_ATTITUDE_CMD = true },
     [2] = { MSG_FLIGHT_TELEMETRY = true },
     [4] = {
         MSG_TRAJECTORY_SETPOINT = true,
         MSG_OUTER_LOOP_STATUS = true,
+    },
+    [9] = {
+        MSG_EMERGENCY_OVERRIDE = true,
+        MSG_EMERGENCY_ALERT = true,
     },
     [10] = {
         MSG_THRUST_CMD = true,
@@ -40,7 +40,7 @@ end
 --- Build tapped channel map from config and resolved baseChannel.
 function packet_tap.build_channel_map(cfg, baseChannel)
     local tapOpts = (cfg and cfg.tapOptions) or {}
-    local offsets = { 1, 2, 10 }
+    local offsets = { 1, 2, 9, 10 }
     if tapOpts.aero ~= false then
         table.insert(offsets, 11)
     end
@@ -91,7 +91,7 @@ function packet_tap.init(cfg, modemOverride)
         lockedDomainId = domain,
         channelMap = cmap,
         seqIdx = 0,
-        countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [10] = 0, [11] = 0 },
+        countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [9] = 0, [10] = 0, [11] = 0 },
     }
 end
 
@@ -124,7 +124,7 @@ function packet_tap.bind_aircraft(tap, aircraftIndexN, domainIdOrWildcard)
     tap.baseChannel = newBase
     tap.lockedDomainId = domainIdOrWildcard or tap.cfg.domainId or "*"
     tap.channelMap = packet_tap.build_channel_map(tap.cfg, newBase)
-    tap.countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [10] = 0, [11] = 0 }
+    tap.countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [9] = 0, [10] = 0, [11] = 0 }
     local ok, openErr = packet_tap.open_channels(tap)
     if not ok then return false, openErr end
     return true, nil

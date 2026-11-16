@@ -44,7 +44,7 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_nil(net.send_operator_cmd)
     end)
 
-    it("builds and sends MSG_EMERGENCY_OVERRIDE onto Base+1 with E_STOP and ESTOP_CONFIRM_KEY", function()
+    it("builds and sends MSG_EMERGENCY_OVERRIDE onto Base+9 with E_STOP and ESTOP_CONFIRM_KEY", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local transmitted = {}
         local mock_modem = {
@@ -57,7 +57,7 @@ describe("AMM Network Manager and Packet Protocol", function()
         local ok = net:send_emergency_override()
         assert_true(ok)
         assert_eq(#transmitted, 1)
-        assert_eq(transmitted[1].chan, 10001) -- Base+1
+        assert_eq(transmitted[1].chan, 10009) -- Base+9
         assert_eq(transmitted[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(transmitted[1].payload.payload.action, "E_STOP")
         assert_eq(transmitted[1].payload.payload.reason, "PILOT_ESTOP_HOTKEY")

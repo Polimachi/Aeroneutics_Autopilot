@@ -91,7 +91,7 @@ describe("GCS E2E closed-loop simulation integration", function()
         app:process_key(nil, "x")
         assert_eq(#modem.transmissions, 3)
         local estop_tx = modem.transmissions[3]
-        assert_eq(estop_tx.channel, 10001) -- Base + 1 (direct to VAS)
+        assert_eq(estop_tx.channel, 10009) -- Base + 9 (CH_EMERGENCY_CORE)
         assert_eq(estop_tx.payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(estop_tx.payload.payload.action, "E_STOP")
         assert_eq(estop_tx.payload.payload.source, "GCS")

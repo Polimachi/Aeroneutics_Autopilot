@@ -707,7 +707,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         main_mod.process_event(app, "key_up", keys.leftCtrl or 29)
         assert_false(app.ctrlHeld)
         local estop_tx = left_m._transmitted[#left_m._transmitted]
-        assert_eq(estop_tx.tx, 10081)
+        assert_eq(estop_tx.tx, 10089)
         assert_eq(estop_tx.pkt.type, "MSG_EMERGENCY_OVERRIDE")
 
         -- 5. ATC denial triggers retry transmission MSG_ATC_APPROACH_REQ without crashing, and CH 50004 dispatch is ignored by update_beacons

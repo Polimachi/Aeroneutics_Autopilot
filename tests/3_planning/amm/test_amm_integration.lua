@@ -112,10 +112,10 @@ describe("AMM End-to-End Multi-Tick Simulation", function()
         assert_eq(fin.flightMode, "LANDING")
         assert_eq(fin.designatedFacilityId, "PAD_BRAVO_01")
 
-        -- Step 9: Emergency E-STOP hotkey fires E_STOP to Base+1
+        -- Step 9: Emergency E-STOP hotkey fires E_STOP to Base+9
         arbiter:handle_pilot_action("ESTOP")
         assert_eq(#sent_packets, 1)
-        assert_eq(sent_packets[1].chan, 10001) -- Base+1
+        assert_eq(sent_packets[1].chan, 10009) -- Base+9
         assert_eq(sent_packets[1].payload.type, "MSG_EMERGENCY_OVERRIDE")
         assert_eq(sent_packets[1].payload.payload.action, "E_STOP")
         assert_eq(sent_packets[1].payload.payload.authKey, "ESTOP_CONFIRM_KEY")

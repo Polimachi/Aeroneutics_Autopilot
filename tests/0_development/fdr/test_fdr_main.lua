@@ -247,9 +247,15 @@ describe("FDR main daemon lifecycle and keybindings", function()
             type = "MSG_EMERGENCY_OVERRIDE",
             payload = { action = "E_STOP", source = "GCS" },
         }
-        fdr_main.handle_event(st, "modem_message", "top", 10001, 10001, estopPkt)
+        -- Legacy Base+1 E_STOP must NOT be collected or flush
+        assert_false(fdr_main.handle_event(st, "modem_message", "top", 10001, 10001, estopPkt))
+        assert_false(st.estopFlushed)
+
+        -- Base+9 E_STOP triggers autoFlushOnEstop
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10009, 10009, estopPkt))
         assert_true(st.estopFlushed)
         assert_not_nil(st.lastSessionManifest)
+        assert_eq(st.tap.countsByOffset[9], 1)
         local firstDumpPath = st.lastSessionManifest.manifestPath
 
         -- Second E_STOP packet should NOT re-flush repeatedly while latched
@@ -272,6 +278,7 @@ describe("FDR main daemon lifecycle and keybindings", function()
         fdr_main.handle_event(st, "key", cKey, false)
         assert_false(st.estopFlushed)
         assert_eq(st.tap.countsByOffset[1], 0)
+        assert_eq(st.tap.countsByOffset[9], 0)
     end)
 
     it("formats 64-bit UTC epoch timestamps without 32-bit %d overflow", function()

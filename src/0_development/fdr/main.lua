@@ -234,7 +234,7 @@ local function handle_key(state, code)
     elseif code == key_code("u", 22) then trigger_export(state)
     elseif code == key_code("c", 46) then
         ring_buffer.clear(state.ring)
-        state.tap.countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [10] = 0, [11] = 0 }
+        state.tap.countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [9] = 0, [10] = 0, [11] = 0 }
         state.estopFlushed = false
         state.lastEventMsg = "CLEARED"
     elseif code == key_code("n", 49) and state.apis and state.apis.promptAircraftN then

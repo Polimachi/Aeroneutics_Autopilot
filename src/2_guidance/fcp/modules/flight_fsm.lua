@@ -1,5 +1,5 @@
 -- src/2_guidance/fcp/modules/flight_fsm.lua
--- FCP v2.0.0 6-State Outer-Loop Flight Finite State Machine
+-- FCP v2.3.0 7-State Outer-Loop Flight Finite State Machine
 -- CC:Tweaked Lua 5.2 / Cobalt VM compliant
 
 local flight_fsm = {}
@@ -11,6 +11,7 @@ flight_fsm.STATES = {
     PASSIVE_TRACKING = true,
     AMM_TIMEOUT_HOLD = true,
     EMERGENCY_LAND = true,
+    EMERGENCY_HOLD = true,
 }
 
 local ALLOWED_TRANSITIONS = {
@@ -25,17 +26,24 @@ local ALLOWED_TRANSITIONS = {
         PASSIVE_TRACKING = true,
         AMM_TIMEOUT_HOLD = true,
         EMERGENCY_LAND = true,
+        EMERGENCY_HOLD = true,
     },
     PASSIVE_TRACKING = {
         ACTIVE_TRACKING = true,
         IDLE_ARMED = true,
+        EMERGENCY_HOLD = true,
     },
     AMM_TIMEOUT_HOLD = {
         ACTIVE_TRACKING = true,
         EMERGENCY_LAND = true,
         IDLE_ARMED = true,
+        EMERGENCY_HOLD = true,
     },
     EMERGENCY_LAND = {
+        IDLE_ARMED = true,
+        EMERGENCY_HOLD = true,
+    },
+    EMERGENCY_HOLD = {
         IDLE_ARMED = true,
     },
 }
@@ -89,7 +97,12 @@ local function is_emergency_condition(ctx, telem)
 end
 
 local function handle_emergency_stop(state, events)
-    do_transition(state, "IDLE_ARMED")
+    local curr = state.currentState or "BOOT"
+    if curr == "BOOT" then
+        do_transition(state, "IDLE_ARMED")
+    elseif curr ~= "IDLE_ARMED" and curr ~= "EMERGENCY_HOLD" then
+        do_transition(state, "EMERGENCY_HOLD")
+    end
     state.flightActive = false
     state.arm = false
     events.resetIntegrators = true
@@ -214,6 +227,16 @@ local function step_emergency_land(state, ctx, sp, events)
     end
 end
 
+local function step_emergency_hold(state, sp, events)
+    state.flightActive = false
+    state.arm = false
+    if sp.arm == false then
+        if do_transition(state, "IDLE_ARMED") then
+            events.resetIntegrators = true
+        end
+    end
+end
+
 function flight_fsm.step(state, ctx, now_ms)
     local s = state or flight_fsm.init()
     local c = ctx or {}
@@ -245,6 +268,8 @@ function flight_fsm.step(state, ctx, now_ms)
         step_amm_timeout_hold(s, c, sp, now, events)
     elseif curr == "EMERGENCY_LAND" then
         step_emergency_land(s, c, sp, events)
+    elseif curr == "EMERGENCY_HOLD" then
+        step_emergency_hold(s, sp, events)
     end
 
     return s, events
