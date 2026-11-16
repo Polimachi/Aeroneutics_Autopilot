@@ -31,6 +31,7 @@ function network_manager.new(config)
         onboardModem = nil,
         infraModem = nil,
         modemFallbackActive = false,
+        fullBlockBound = false,
         openPayloadChannels = {},
         openInfraChannels = {},
         otaAgent = nil,
@@ -76,6 +77,7 @@ function network_manager:bind_modems(top_modem, back_modem, base_ch)
     if self.otaAgent then
         self:open_channels(self.otaAgent)
     end
+    self.fullBlockBound = true
 end
 
 function network_manager:open_channels(ota_agent_inst)
@@ -294,7 +296,7 @@ function network_manager:close_payload_channel(channel_or_offset)
     local ch, err = self:resolve_payload_channel(channel_or_offset)
     if not ch then return false, err end
     local m = self.onboardModem or self.modem
-    if m and type(m.close) == "function" then
+    if not self.fullBlockBound and m and type(m.close) == "function" then
         pcall(function()
             m.close(ch)
         end)

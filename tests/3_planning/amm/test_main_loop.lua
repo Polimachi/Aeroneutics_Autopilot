@@ -150,13 +150,14 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(blit_calls, 0)
         assert_false(rs.getOutput("top"))
 
-        -- Zone 3 MSG_PAYLOAD_ACK arrives on Base+20 (10020) -> closes 10020 and advances to CP_HOLD (index 2)
+        -- Zone 3 MSG_PAYLOAD_ACK arrives on Base+20 (10020) -> deactivates openPayloadChannels[10020] while preserving full-block open state
         app.now_ms = 1600
         main_mod.process_event(app, "modem_message", "back", 10020, 10020, {
             ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2, type = "MSG_PAYLOAD_ACK", time = 1600,
             payload = { checkpointId = "CP_PAYLOAD", command = "SCAN", status = "DONE" },
         }, 1)
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
         assert_eq(eng.active_index, 2)
     end)
 
@@ -242,7 +243,8 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_false(app.running)
         assert_eq(eng.state, "ABORTED")
         assert_false(rs.getOutput("bottom"))
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
     end)
 
     it("executes run, load, files, stop, next, and mission CLI commands with PILOT_PRIMARY takeover and queue fallback", function()
@@ -985,6 +987,92 @@ describe("AMM Main Event Pump and Command Processing", function()
         assert_eq(app.arbiter.emergencyGoal.flightMode, "HOVER_HOLD")
         local sp = main_mod.step_20hz_tick(app, 0.05, 32100)
         assert_eq(sp.flightMode, "HOVER_HOLD")
+
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+    end)
+
+    it("allows all valid Base+5 and Base+0 infra/C2 packets without false intrusion while blocking Base+0/Base+5 spoofing", function()
+        local main_mod = require("main")
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease_path = "config/test_lease_main_infra_allow.json"
+        if fs.exists(lease_path) then fs.delete(lease_path) end
+
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 1000,
+            leasePath = lease_path,
+            system = { hardwareUuid = "AMM-INFRA-ALLOW", primaryModemSide = "top", infraModemSide = "back" },
+            safety = { intrusionAlertWindowMs = 30000 },
+        }, { top = top_m, back = back_m })
+        app.sentinel.status = "ACQUIRED"
+
+        -- 1. Valid Base+5 facility/pad/runway/dock/GPS responses from foreign domainIds must NOT trigger intrusion
+        local base5_valid = {
+            { domainId = "GPS_BASE_NET", type = "MSG_GPS_STATUS_RESP", payload = { activeNodes = 4 } },
+            { domainId = "GAC_01", type = "MSG_FACILITY_LIST_ACK", payload = { facilities = {} } },
+            { domainId = "PAD_01", type = "MSG_PAD_RESERVE_ACK", payload = { status = "RESERVED" } },
+            { domainId = "PAD_01", type = "MSG_PAD_TELEMETRY", payload = { deckStatus = "STABLE" } },
+            { domainId = "PAD_01", type = "MSG_LANDING_STATUS", payload = { status = "CLEARED" } },
+            { domainId = "PAD_01", type = "MSG_LANDING_ACK", payload = { status = "OK" } },
+            { domainId = "PAD_01", type = "MSG_PAD_STATUS", payload = { status = "FREE" } },
+            { domainId = "RUNWAY_01", type = "MSG_RUNWAY_ACK", payload = { status = "CLEARED" } },
+            { domainId = "RUNWAY_01", type = "MSG_ILS_BEACON", payload = { heading = 90 } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_ACK", payload = { status = "READY" } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_STATUS", payload = { stage = "ALIGNING" } },
+            { domainId = "DOCK_01", type = "MSG_DOCKING_STATUS", payload = { stage = "ENGAGED" } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_CAPTURE_STAGE", payload = { stage = "CAPTURED" } },
+            { domainId = "DOCK_01", type = "MSG_UMBILICAL_STATUS", payload = { connected = true } },
+            { domainId = "PAD_01", type = "MSG_TOUCHDOWN_COMPLETE", payload = { facilityId = "PAD_01", craftState = "GROUND_IDLE" } },
+        }
+        for i, item in ipairs(base5_valid) do
+            app.clock_ms = 1000 + i * 2500
+            main_mod.process_event(app, "modem_message", "back", 10005, 10005, {
+                ver = "1.9.5", domainId = item.domainId, seq = i, type = item.type, time = app.clock_ms,
+                payload = item.payload,
+            })
+        end
+        assert_eq(app.sentinel.intrusionCount, 0)
+        assert_eq(app.fac.dockingStage, "CAPTURED")
+
+        -- 2. Valid Base+0 packets: GCS_OVERRIDE from non-"GCS*" domainId ("TOWER_CMD"), GCS MSG_MISSION_CMD, MSG_BLOCK_ASSIGN, probes
+        app.clock_ms = 40000
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "TOWER_CMD", seq = 50, type = "MSG_OPERATOR_CMD", time = 40000,
+            payload = { authority = "GCS_OVERRIDE", command = "HOLD", params = {} },
+        })
+        assert_eq(app.sentinel.intrusionCount, 0)
+        assert_eq(app.arbiter.authority, "GCS_OVERRIDE")
+        app.arbiter.authority = "PILOT_PRIMARY"
+
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "GCS_01", seq = 51, type = "MSG_MISSION_CMD", time = 40100,
+            payload = { action = "STOP" },
+        })
+        assert_eq(app.sentinel.intrusionCount, 0)
+
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 52, type = "MSG_CHANNEL_PROBE", time = 40200,
+            payload = { hardwareUuid = "OTHER-02", candidateBase = 10000, bandwidth = 40 },
+        })
+        assert_eq(app.sentinel.intrusionCount, 0)
+
+        -- 3. Unauthorized spoofing on Base+0 and Base+5 MUST be blocked and counted as intrusion
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 60, type = "MSG_OPERATOR_CMD", time = 41000,
+            payload = { authority = "PILOT_PRIMARY", command = "LAND", params = {} },
+        })
+        main_mod.process_event(app, "modem_message", "top", 10000, 10000, {
+            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 61, type = "MSG_TRAJECTORY_SETPOINT", time = 41100,
+            payload = {},
+        })
+        main_mod.process_event(app, "modem_message", "top", 10005, 10005, {
+            ver = "1.9.5", domainId = "ROGUE_CRAFT", seq = 62, type = "MSG_THRUST_CMD", time = 41200,
+            payload = {},
+        })
+        assert_eq(app.sentinel.intrusionCount, 3)
 
         if fs.exists(lease_path) then fs.delete(lease_path) end
     end)

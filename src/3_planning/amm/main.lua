@@ -557,7 +557,7 @@ local function handle_sentinel_rx(app, chan, pkt, base, now_ms)
     elseif pkt.type == "MSG_CHANNEL_PROBE_ACK" and (chan == base + 0 or chan == 50000 or chan == cand) then
         channel_sentinel.on_probe_ack(app.sentinel, pkt)
         return true
-    elseif chan == 50000 and pkt.type == "MSG_BLOCK_ASSIGN" then
+    elseif (chan == 50000 or chan == base + 0) and pkt.type == "MSG_BLOCK_ASSIGN" then
         channel_sentinel.on_block_assign(app.sentinel, pkt.payload, now_ms)
         return true
     end
@@ -597,27 +597,83 @@ local function handle_facility_rx(app, chan, pkt, now_ms)
     return false
 end
 
-local INFRA_EXTERNAL_COMM_TYPES = {
+local BASE_PLUS_5_INFRA_RESPONSES = {
+    -- I-7 GPS
     MSG_GPS_RESPONSE = true,
+    MSG_GPS_STATUS_RESP = true,
+    -- I-5 Facility / GAC / Pad / Runway / Docking Arm replies
+    MSG_FACILITY_BEACON = true,
+    MSG_FACILITY_LIST_ACK = true,
+    MSG_FACILITY_STATIC_GUIDE = true,
+    MSG_FACILITY_DYNAMIC_GUIDE = true,
+    MSG_ATC_APPROACH_CLEARANCE = true,
+    MSG_ATC_HANDOFF_CLEARANCE = true,
+    MSG_ATC_SECTOR_HANDOFF = true,
+    MSG_ATC_FACILITY_UPDATE = true,
+    MSG_ATC_DEPARTURE_CLEARANCE = true,
+    MSG_GAC_APPROACH_CLEARANCE = true,
+    MSG_GAC_DEPARTURE_CLEARANCE = true,
+    MSG_GAC_ABORT_CLEAR = true,
+    MSG_ABORT_APPROACH = true,
+    MSG_PAD_RESERVE_ACK = true,
+    MSG_PAD_TELEMETRY = true,
+    MSG_PAD_STATUS = true,
+    MSG_LANDING_STATUS = true,
+    MSG_LANDING_ACK = true,
+    MSG_RUNWAY_ACK = true,
+    MSG_ILS_BEACON = true,
+    MSG_DOCK_ACK = true,
+    MSG_DOCK_STATUS = true,
+    MSG_DOCKING_STATUS = true,
     MSG_DOCK_CAPTURE_STAGE = true,
     MSG_UMBILICAL_STATUS = true,
     MSG_TOUCHDOWN_COMPLETE = true,
 }
 
-local function is_allowed_cross_domain_on_block(chan, pkt, base, sentinel)
+local function is_allowed_cross_domain_on_block(chan, pkt, base, sentinel, own_domain)
     local cand = sentinel and sentinel.candidateBase
     if (chan == base + 0 or (cand and chan == cand))
         and (pkt.type == "MSG_CHANNEL_PROBE" or pkt.type == "MSG_CHANNEL_PROBE_ACK") then
         return true
     end
-    if chan == base + 0 and (pkt.type == "MSG_OPERATOR_CMD" or pkt.type == "MSG_MISSION_CMD")
-        and string.sub(tostring(pkt.domainId), 1, 3) == "GCS" then
-        return true
+    local p = type(pkt.payload) == "table" and pkt.payload or {}
+    local is_gcs_domain = string.sub(tostring(pkt.domainId), 1, 3) == "GCS"
+    if chan == base + 0 then
+        if pkt.type == "MSG_BLOCK_ASSIGN" and (is_gcs_domain or type(p.baseChannel) == "number") then
+            return true
+        end
+        if pkt.type == "MSG_OPERATOR_CMD"
+            and (p.authority == "GCS_OVERRIDE" or is_gcs_domain or p.targetCraft == own_domain) then
+            return true
+        end
+        if pkt.type == "MSG_MISSION_CMD"
+            and (is_gcs_domain or p.authority == "GCS_OVERRIDE" or p.targetCraft == own_domain) then
+            return true
+        end
     end
-    if chan == base + 5 and INFRA_EXTERNAL_COMM_TYPES[pkt.type] then
+    if chan == base + 5 and BASE_PLUS_5_INFRA_RESPONSES[pkt.type] then
         return true
     end
     return false
+end
+
+local function handle_base5_rx(app, pkt, t_ms)
+    if app.nav and pkt.type == "MSG_GPS_RESPONSE" then
+        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, t_ms)
+        return
+    end
+    if not app.fac then return end
+    local pt = pkt.type
+    if pt == "MSG_DOCKING_STATUS" or pt == "MSG_DOCK_CAPTURE_STAGE" or pt == "MSG_DOCK_STATUS" then
+        facility_client.on_docking_status(app.fac, pkt, t_ms)
+    elseif pt == "MSG_FACILITY_STATIC_GUIDE" or pt == "MSG_FACILITY_DYNAMIC_GUIDE" or pt == "MSG_ABORT_APPROACH" then
+        facility_client.on_tactical_guide(app.fac, pkt, t_ms)
+    elseif pt == "MSG_GAC_APPROACH_CLEARANCE" or pt == "MSG_ATC_APPROACH_CLEARANCE" or pt == "MSG_ATC_SECTOR_HANDOFF" then
+        facility_client.on_atc_clearance(app.fac, pkt, app.nav and app.nav.pos, t_ms)
+        open_fac_channels(app)
+    elseif pt == "MSG_GAC_ABORT_CLEAR" then
+        facility_client.on_gac_abort_clear(app.fac, pkt, t_ms)
+    end
 end
 
 local function handle_modem_message(app, chan, raw_msg, now_ms)
@@ -632,7 +688,7 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
 
     if app.sentinel and channel_sentinel.is_in_own_block(app.sentinel, chan) then
         if pkt.domainId ~= nil and pkt.domainId ~= own_domain
-            and not is_allowed_cross_domain_on_block(chan, pkt, base, app.sentinel) then
+            and not is_allowed_cross_domain_on_block(chan, pkt, base, app.sentinel, own_domain) then
             local _, status = channel_sentinel.record_intrusion_sample(app.sentinel, chan, pkt.domainId, t_ms)
             if status == "FAILSAFE_ESCALATE" then
                 trigger_intrusion_failsafe(app)
@@ -658,8 +714,8 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
         elseif pkt.type == "MSG_CHANNEL_REBIND_ACK" and app.sentinel then
             channel_sentinel.on_rebind_ack(app.sentinel, pkt, t_ms)
         end
-    elseif chan == base + 5 and app.nav and pkt.type == "MSG_GPS_RESPONSE" then
-        nav_engine.filter_gps(app.nav, pkt.payload, 0.05, t_ms)
+    elseif chan == base + 5 then
+        handle_base5_rx(app, pkt, t_ms)
     elseif chan == base + 0 and app.arbiter and app.arbiter.handle_gcs_packet then
         app.arbiter:handle_gcs_packet(pkt, t_ms)
     elseif handle_facility_rx(app, chan, pkt, t_ms) then

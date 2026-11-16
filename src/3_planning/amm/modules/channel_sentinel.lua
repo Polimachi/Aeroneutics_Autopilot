@@ -27,6 +27,13 @@ local DEFAULT_GCS_BOOTSTRAP_TIMEOUT_MS = channel_sentinel.DEFAULT_GCS_BOOTSTRAP_
 local INTRUSION_ESCALATE_MS = channel_sentinel.INTRUSION_ESCALATE_MS
 local DEFAULT_LEASE_PATH = channel_sentinel.DEFAULT_LEASE_PATH
 
+local function resolve_now_ms(now_ms)
+    if type(now_ms) == "number" then
+        return now_ms
+    end
+    return (os and os.epoch and os.epoch("utc")) or (os and os.time and math.floor(os.time() * 1000)) or 0
+end
+
 local function hash_uuid_seed(hw_uuid, now_ms)
     local h = 2166136261
     local s = tostring(hw_uuid or "AMM")
@@ -168,8 +175,9 @@ function channel_sentinel.init(config, now_ms, lease_path)
         probeMaxRounds = safe.probeRetryCount or cfg.probeRetryCount or DEFAULT_PROBE_RETRIES,
         maxReassignAttempts = safe.maxReassignAttempts or cfg.maxReassignAttempts or DEFAULT_MAX_REASSIGN_ATTEMPTS,
         intrusionAlertWindowMs = safe.intrusionAlertWindowMs or cfg.intrusionAlertWindowMs or INTRUSION_ESCALATE_MS,
-        rngSeed = hash_uuid_seed(hwUuid, now_ms),
+        rngSeed = hash_uuid_seed(hwUuid, resolve_now_ms(now_ms)),
         bootstrapStartMs = 0,
+        gcsWaitStartedAtMs = 0,
         jitterStartMs = 0,
         jitterDelayMs = 0,
         probeStartMs = 0,
@@ -191,7 +199,9 @@ function channel_sentinel.init(config, now_ms, lease_path)
 end
 
 function channel_sentinel.start_bootstrap(state, now_ms)
-    state.bootstrapStartMs = now_ms or 0
+    local t_now = resolve_now_ms(now_ms)
+    state.bootstrapStartMs = t_now
+    state.gcsWaitStartedAtMs = t_now
     state.status = "GCS_WAIT"
     state.offlinePending = false
     state.offlineWarning = nil
@@ -221,7 +231,7 @@ function channel_sentinel.on_block_assign(state, payload, now_ms, rng)
         state.candidateBase = state.baseChannel
     end
     state.jitterDelayMs = sample_jitter(state, rng, state.probeJitterMaxMs)
-    state.jitterStartMs = now_ms or 0
+    state.jitterStartMs = resolve_now_ms(now_ms)
     state.probeRound = 0
     state.offlinePending = false
     state.locked = false
@@ -310,12 +320,13 @@ end
 
 function channel_sentinel.negotiate_and_probe(state, now_ms, inbound_packets, rng)
     if not state then return "NO_STATE", nil end
-    local now = now_ms or 0
+    local now = resolve_now_ms(now_ms)
     if state.status == "INIT" or state.status == "BOOT_VERIFY" or state.status == "REASSIGN_REQUEST" then
         local boot_payload = channel_sentinel.start_bootstrap(state, now)
         return state.status, boot_payload
     elseif state.status == "GCS_WAIT" then
-        if (now - state.bootstrapStartMs) >= state.gcsBootstrapTimeoutMs then
+        local wait_start = state.gcsWaitStartedAtMs or state.bootstrapStartMs or 0
+        if (now - wait_start) >= state.gcsBootstrapTimeoutMs then
             if state.cachedBase and channel_sentinel.is_valid_base(state.cachedBase) then
                 state.candidateBase = state.cachedBase
                 state.offlinePending = true

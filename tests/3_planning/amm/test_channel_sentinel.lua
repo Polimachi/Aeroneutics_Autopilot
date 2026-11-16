@@ -128,6 +128,7 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
 
         -- Conflict 2 -> still REASSIGN_REQUEST (attempt 2 < 3)
         channel_sentinel.on_block_assign(st, { baseChannel = 10080, status = "REASSIGNED" }, 1150, function() return 0 end)
+        assert_nil(st.conflictBase)
         channel_sentinel.negotiate_and_probe(st, 1150)
         channel_sentinel.on_probe_ack(st, {
             type = "MSG_CHANNEL_PROBE_ACK",
@@ -237,10 +238,20 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
         }, 4000, lease_path)
         assert_nil(st4.cachedBase)
         channel_sentinel.start_bootstrap(st4, 4000)
+        assert_eq(st4.gcsWaitStartedAtMs, 4000)
         local st4_to = channel_sentinel.negotiate_and_probe(st4, 6000)
         assert_eq(st4_to, "LOCKED_NO_GCS")
         assert_true(channel_sentinel.is_locked(st4))
         assert_false(channel_sentinel.is_acquired(st4))
+
+        -- 5. Direct start_bootstrap(st) without explicit nowMs records gcsWaitStartedAtMs and times out at +2100ms
+        local st5 = channel_sentinel.init({
+            system = { domainId = "AIRCRAFT_07", hardwareUuid = "AMM-UUID-07" },
+        }, nil, lease_path)
+        channel_sentinel.start_bootstrap(st5)
+        assert_true(type(st5.gcsWaitStartedAtMs) == "number" and st5.gcsWaitStartedAtMs > 0)
+        local st5_to = channel_sentinel.negotiate_and_probe(st5, st5.gcsWaitStartedAtMs + 2100)
+        assert_eq(st5_to, "LOCKED_NO_GCS")
 
         cleanup_lease(lease_path)
     end)

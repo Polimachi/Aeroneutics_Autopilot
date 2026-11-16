@@ -210,7 +210,7 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
     end)
 
     it("delegates abortWhen fallbackPolicy (SKIP_NEXT, RTH, HOVER_HOLD, LOITER) and cleans up Zone 3 on abort/stop", function()
-        local eng, _, m, rs = create_engine_fixture()
+        local eng, net, m, rs = create_engine_fixture()
         assert_true(eng:load_table({
             missionId = "ABORT_TEST",
             version = "2.0.0",
@@ -234,11 +234,13 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         }))
 
         assert_true(eng:start("SINGLE", 1000))
+        assert_true(net.openPayloadChannels[10020])
         assert_true(m.isOpen(10020))
 
         local st_skip = eng:tick(6000)
         assert_eq(st_skip, "SKIPPED")
-        assert_false(m.isOpen(10020))
+        assert_nil(net.openPayloadChannels[10020])
+        assert_true(m.isOpen(10020))
         assert_eq(eng.checkpoints[1].status, "ABORTED")
         assert_eq(eng.active_index, 2)
         assert_eq(eng.state, "EN_ROUTE")
