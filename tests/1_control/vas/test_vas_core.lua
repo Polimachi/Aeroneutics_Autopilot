@@ -245,7 +245,8 @@ describe("vas 40-channel 4-zone layout and network manager initialization", func
         assert_eq(net.channels.asaActuation, 10011)
         assert_eq(net.channels.payloadBus, 10020)
         assert_eq(net.channels.weaponBus, 10021)
-        assert_eq(net.channels.formationLink, 10030)
+        -- TASK-125-7: Formation flight moved to TBD wide-area datalink; Base+30..39 reclassified to Zone 3 payload ext
+        assert_nil(net.channels.formationLink)
 
         assert_false(wirelessModem.isOpen(10000))
         assert_true(wirelessModem.isOpen(10001))

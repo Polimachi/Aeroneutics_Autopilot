@@ -17,8 +17,8 @@ network_manager.ZONE_OFFSETS = {
     aero = 11,
     asaActuation = 11,
     payloadBus = 20,
-    weaponBus = 21,
-    formationLink = 30
+    weaponBus = 21
+    -- Base+30..39: Zone 3 Payload & Special Mission Extension (Formation Link moved to TBD wide-area datalink)
 }
 
 function network_manager.compute_base(aircraftIndexN)
@@ -52,8 +52,8 @@ local function build_channel_map(baseCh, sub)
         aero = baseCh + aeroOff,
         asaActuation = baseCh + aeroOff,
         payloadBus = baseCh + (s.payloadBus or zo.payloadBus),
-        weaponBus = baseCh + (s.weaponBus or zo.weaponBus),
-        formationLink = baseCh + (s.formationLink or zo.formationLink)
+        weaponBus = baseCh + (s.weaponBus or zo.weaponBus)
+        -- Base+30..39: Zone 3 Payload & Special Mission Extension (Formation Link moved to TBD wide-area datalink)
     }
 end
 
