@@ -124,4 +124,46 @@ describe("GAC aggregated beacon broadcaster", function()
         assert_eq(byId["RWY_01"].facilityType, "RUNWAY")
         assert_eq(byId["RWY_01"].endPoint.x, 600)
     end)
+
+    it("includes explicit cfg.position or computes centroid fallback in MSG_FACILITY_BEACON", function()
+        local facility_inventory = require("facility_inventory")
+        local inv = facility_inventory.create({
+            {
+                facilityId = "PAD_A",
+                type = "LANDING_PAD",
+                status = "FREE",
+                coordinates = { x = 100, y = 64, z = -200 },
+                tacticalChannel = 50211,
+            },
+            {
+                facilityId = "PAD_B",
+                type = "LANDING_PAD",
+                status = "FREE",
+                coordinates = { x = 150, y = 65, z = -250 },
+                tacticalChannel = 50212,
+            },
+        })
+
+        local explicitCfg = {
+            sectorId = "BASE_ALPHA_SECTOR_01",
+            sectorName = "Alpha",
+            sectorType = "VERTIPORT",
+            baseSecChannel = 50201,
+            towerAtcChannel = 50001,
+            position = { x = 1275.0, y = 65.0, z = -810.0 },
+        }
+        local bcExplicit = beacon_broadcaster.create(explicitCfg)
+        local pktExplicit = bcExplicit:build_sector_beacon(inv, { speed = 1.0, direction = 0.0 }, "OPERATIONAL")
+        assert_not_nil(pktExplicit.payload.position)
+        assert_eq(pktExplicit.payload.position.x, 1275.0)
+        assert_eq(pktExplicit.payload.position.y, 65.0)
+        assert_eq(pktExplicit.payload.position.z, -810.0)
+
+        local bcCentroid = beacon_broadcaster.create(cfg)
+        local pktCentroid = bcCentroid:build_sector_beacon(inv, { speed = 1.0, direction = 0.0 }, "OPERATIONAL")
+        assert_not_nil(pktCentroid.payload.position)
+        assert_eq(pktCentroid.payload.position.x, 125.0)
+        assert_eq(pktCentroid.payload.position.y, 64.5)
+        assert_eq(pktCentroid.payload.position.z, -225.0)
+    end)
 end)

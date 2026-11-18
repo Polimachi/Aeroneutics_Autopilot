@@ -11,6 +11,7 @@ function config_loader.get_default_config()
         sectorName = "Alpha Base Central Vertiport",
         sectorType = "VERTIPORT",
         sectorIndex = 1,
+        position = { x = 1275.0, y = 65.0, z = -810.0 },
         baseSecChannel = 50201,
         towerAtcChannel = 50001,
         beaconChannel = 50003,

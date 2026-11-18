@@ -81,8 +81,12 @@ class TestEditorBootstrap(unittest.TestCase):
         self.assertIn('<meta name="theme-color" content="#0b0f17">', html)
         self.assertIn("color-scheme: dark", html)
         self.assertIsNone(re.search(r"https?://|fetch\s*\(|XMLHttpRequest|wss://", html))
-        for m in re.finditer(r"ws://[^\s\"'`]+", html):
-            self.assertRegex(m.group(0), r"^ws://(127\.0\.0\.1|localhost)(:\d+)?", f"Non-localhost ws URL found: {m.group(0)}")
+        for m in re.finditer(r"ws://[^\s\"'`<>()]+", html):
+            self.assertRegex(
+                m.group(0),
+                r"^ws://(127\.0\.0\.1|localhost|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|[a-z0-9-]+\.local)(:\d+)?(/|$)",
+                f"Non-local/LAN ws URL found: {m.group(0)}",
+            )
         self.assertIsNone(re.search(r"\bwindow\.(alert|confirm|prompt)\s*\(", html))
         self.assertNotIn("transition: all", html)
 
@@ -1455,6 +1459,313 @@ class TestTask404LiveBridgeAndPush(unittest.TestCase):
         self.assertEqual(res["sentAction"], "LOAD")
         self.assertEqual(res["sentMissionVersion"], "2.0.0")
         self.assertEqual(res["ackStatus"], "ACCEPTED")
+
+
+class TestTask405LanLiveBridgeUrl(unittest.TestCase):
+    def test_lan_and_mdns_urls_accepted_and_public_or_invalid_urls_rejected(self) -> None:
+        res = run_editor_js(
+            """
+            const check = (u) => E.LiveBridge.isAllowedLocalUrl(u);
+            return {
+              loopback: check("ws://127.0.0.1:8765"),
+              localhost: check("ws://localhost:8765"),
+              tenNet: check("ws://10.0.0.12:8765"),
+              net172Start: check("ws://172.16.0.1:8765"),
+              net172End: check("ws://172.31.255.254:8765"),
+              net192: check("ws://192.168.1.50:8765"),
+              mdnsLocal: check("ws://gcs-server.local:8765"),
+              bad172Low: check("ws://172.15.255.254:8765"),
+              bad172High: check("ws://172.32.0.1:8765"),
+              bad192: check("ws://192.169.1.1:8765"),
+              badPublicIp: check("ws://8.8.8.8:8765"),
+              badOctet: check("ws://192.168.1.256:8765"),
+              badPortZero: check("ws://192.168.1.10:0"),
+              badPortHigh: check("ws://192.168.1.10:70000"),
+              badWss: check("wss://192.168.1.10:8765"),
+              badLocalSpoof: check("ws://evil.local.com:8765"),
+            };
+            """
+        )
+        for key in ("loopback", "localhost", "tenNet", "net172Start", "net172End", "net192", "mdnsLocal"):
+            self.assertTrue(res[key], f"Expected {key} to be accepted")
+        for key in ("bad172Low", "bad172High", "bad192", "badPublicIp", "badOctet", "badPortZero", "badPortHigh", "badWss", "badLocalSpoof"):
+            self.assertFalse(res[key], f"Expected {key} to be rejected")
+
+    def test_live_bridge_set_url_persists_valid_url_and_rejects_invalid(self) -> None:
+        res = run_editor_js(
+            """
+            const okSet = E.LiveBridge.setUrl("ws://192.168.1.50:8765");
+            const storedAfterOk = localStorage.getItem("amm_mission_editor_live_ws_url_v1");
+            const afterOkUrl = E.LiveBridge.getUrl();
+            const badSet = E.LiveBridge.setUrl("ws://8.8.8.8:8765");
+            const afterBadUrl = E.LiveBridge.getUrl();
+            const storedAfterBad = localStorage.getItem("amm_mission_editor_live_ws_url_v1");
+            return { okSet, storedAfterOk, afterOkUrl, badSet, afterBadUrl, storedAfterBad };
+            """
+        )
+        self.assertTrue(res["okSet"]["ok"])
+        self.assertEqual(res["storedAfterOk"], "ws://192.168.1.50:8765")
+        self.assertEqual(res["afterOkUrl"], "ws://192.168.1.50:8765")
+        self.assertFalse(res["badSet"]["ok"])
+        self.assertEqual(res["badSet"]["error"], "NON_LOCAL_BRIDGE_URL")
+        self.assertEqual(res["afterBadUrl"], "ws://192.168.1.50:8765")
+        self.assertEqual(res["storedAfterBad"], "ws://192.168.1.50:8765")
+
+
+class TestTask406WideZoomLiveTtlFiltersAndInspection(unittest.TestCase):
+    def test_wide_area_zoom_and_dynamic_grid_step(self) -> None:
+        res = run_editor_js(
+            """
+            const C = E.CanvasRenderer;
+            return {
+              minZoom: C.MIN_ZOOM,
+              maxZoom: C.MAX_ZOOM,
+              z001: C.computeGridStep(0.01),
+              z003: C.computeGridStep(0.03),
+              z006: C.computeGridStep(0.06),
+              z012: C.computeGridStep(0.12),
+              z025: C.computeGridStep(0.25),
+              z050: C.computeGridStep(0.5),
+              z100: C.computeGridStep(1.0),
+              z150: C.computeGridStep(1.5),
+              z250: C.computeGridStep(2.5),
+              z350: C.computeGridStep(3.5),
+            };
+            """
+        )
+        self.assertEqual(res["minZoom"], 0.01)
+        self.assertEqual(res["maxZoom"], 4.0)
+        self.assertEqual(res["z001"], 2500)
+        self.assertEqual(res["z003"], 1000)
+        self.assertEqual(res["z006"], 500)
+        self.assertEqual(res["z012"], 250)
+        self.assertEqual(res["z025"], 100)
+        self.assertEqual(res["z050"], 50)
+        self.assertEqual(res["z100"], 25)
+        self.assertEqual(res["z150"], 10)
+        self.assertEqual(res["z250"], 5)
+        self.assertEqual(res["z350"], 2)
+
+    def test_live_auto_registration_gac_centroid_gps_hangar_and_1min_ttl_stale_and_purge(self) -> None:
+        res = run_editor_js(
+            """
+            const origNow = Date.now;
+            let nowMs = 1000000;
+            Date.now = () => nowMs;
+            try {
+              const sentFrames = [];
+              class MockWebSocket {
+                constructor(url) { this.url = url; this.readyState = 1; globalThis.__sock = this; }
+                send(raw) { sentFrames.push(JSON.parse(raw)); }
+                close() { this.readyState = 3; }
+              }
+              globalThis.WebSocket = MockWebSocket;
+              E.LiveBridge.connect("ws://127.0.0.1:8765");
+              globalThis.__sock.onopen();
+
+              // WORLD_PRESET_SYNC with HANGAR and gacNode creates LIVE_SECTOR_7
+              E.LiveBridge.handleMessage(JSON.stringify({
+                type: "WORLD_PRESET_SYNC",
+                sectorId: 7,
+                sectorName: "Sector Foxtrot",
+                gacNode: {
+                  facilityId: "GAC_7", facilityType: "GAC", status: "OPERATIONAL",
+                  position: { x: 200, y: 70, z: -200 },
+                },
+                facilities: [
+                  { facilityId: "HGR_01", facilityType: "HANGAR", status: "FREE", position: { x: 100, y: 64, z: -100 } },
+                  { facilityId: "PAD_01", facilityType: "LANDING_PAD", status: "FREE", position: { x: 300, y: 76, z: -300 } },
+                ],
+              }));
+
+              // Manual facility created by user in LIVE_SECTOR_7 must survive Purge Offline
+              E.WorldStore.upsertFacility({
+                facilityId: "PAD_MANUAL_01", facilityType: "LANDING_PAD", status: "FREE",
+                position: { x: 10, y: 64, z: 10 }, liveAuto: false,
+              }, null, "LIVE_SECTOR_7");
+
+              // GPS_NODES_SYNC at nowMs = 1000000
+              E.LiveBridge.handleMessage(JSON.stringify({
+                type: "GPS_NODES_SYNC",
+                nodes: [
+                  { facilityId: "GPS_SAT_01", facilityType: "GPS", status: "ONLINE", position: { x: 0, y: 240, z: 0 } },
+                ],
+              }));
+
+              // FLEET_TELEMETRY_SYNC for old craft at 1000000 and fresh craft at 1040000
+              E.LiveBridge.handleMessage(JSON.stringify({
+                type: "FLEET_TELEMETRY_SYNC",
+                crafts: [
+                  { domainId: "CRAFT_OLD", airframeType: "FIXED_WING", fsmState: "CRUISE", position: { x: 50, y: 120, z: 50 }, attitude: { yaw: 90 } },
+                ],
+              }));
+              nowMs = 1040000;
+              E.LiveBridge.handleMessage(JSON.stringify({
+                type: "FLEET_TELEMETRY_SYNC",
+                crafts: [
+                  { domainId: "CRAFT_FRESH", airframeType: "VECTORED_VTOL", fsmState: "HOVER", position: { x: 220, y: 90, z: -220 }, attitude: { yaw: 0 } },
+                ],
+              }));
+              // Also refresh HGR_01 via fresh sync at 1040000 while GPS_SAT_01 & GAC_7 & PAD_01 stay at 1000000
+              E.LiveBridge.handleMessage(JSON.stringify({
+                type: "WORLD_PRESET_SYNC",
+                sectorId: 7,
+                sectorName: "Sector Foxtrot",
+                facilities: [
+                  { facilityId: "HGR_01", facilityType: "HANGAR", status: "FREE", position: { x: 100, y: 64, z: -100 } },
+                ],
+              }));
+
+              // Advance past 60s TTL relative to 1000000 (nowMs = 1061000)
+              nowMs = 1061000;
+              const expired = E.LiveBridge.markExpiredNodes(nowMs);
+              const beforePurgeFacs = E.WorldStore.getFacilities("LIVE_SECTOR_7").map((f) => ({
+                id: f.facilityId, type: f.facilityType, status: f.status, isStale: !!f.isStale, liveAuto: !!f.liveAuto,
+              }));
+              const beforePurgeCrafts = E.LiveBridge.getFleetCrafts().map((c) => ({
+                id: c.domainId, status: c.liveStatus, isStale: !!c.isStale,
+              }));
+
+              // Render on mock canvas to confirm semi-transparent alpha 0.38 is used for OFFLINE nodes
+              const alphas = [];
+              const mockCtx = {
+                fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", _alpha: 1,
+                get globalAlpha() { return this._alpha; },
+                set globalAlpha(v) { this._alpha = v; alphas.push(Number(v.toFixed(2))); },
+                save(){}, restore(){}, setTransform(){}, fillRect(){}, strokeRect(){},
+                beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, closePath(){}, arc(){}, fill(){},
+                setLineDash(){}, fillText(){},
+              };
+              E.CanvasRenderer.attach({ clientWidth: 900, clientHeight: 650, width: 900, height: 650, getContext(){ return mockCtx; }, addEventListener(){} }, null);
+              E.CanvasRenderer.render();
+
+              // Manual Purge Offline removes stale live nodes & offline crafts while preserving manual + fresh nodes
+              const purged = E.LiveBridge.purgeOfflineNodes(nowMs);
+              const afterPurgeFacIds = E.WorldStore.getFacilities("LIVE_SECTOR_7").map((f) => f.facilityId).sort();
+              const afterPurgeCraftIds = E.LiveBridge.getFleetCrafts().map((c) => c.domainId);
+              return { expired, beforePurgeFacs, beforePurgeCrafts, alphas, purged, afterPurgeFacIds, afterPurgeCraftIds };
+            } finally {
+              Date.now = origNow;
+            }
+            """
+        )
+        fac_by_id = {f["id"]: f for f in res["beforePurgeFacs"]}
+        self.assertEqual(fac_by_id["GAC_7"]["type"], "GAC")
+        self.assertTrue(fac_by_id["GAC_7"]["isStale"])
+        self.assertEqual(fac_by_id["GAC_7"]["status"], "OFFLINE")
+        self.assertEqual(fac_by_id["GPS_SAT_01"]["type"], "GPS")
+        self.assertTrue(fac_by_id["GPS_SAT_01"]["isStale"])
+        self.assertEqual(fac_by_id["HGR_01"]["type"], "HANGAR")
+        self.assertFalse(fac_by_id["HGR_01"]["isStale"])
+        self.assertFalse(fac_by_id["PAD_MANUAL_01"]["liveAuto"])
+        self.assertFalse(fac_by_id["PAD_MANUAL_01"]["isStale"])
+        self.assertIn(0.38, res["alphas"])
+        craft_by_id = {c["id"]: c for c in res["beforePurgeCrafts"]}
+        self.assertTrue(craft_by_id["CRAFT_OLD"]["isStale"])
+        self.assertEqual(craft_by_id["CRAFT_OLD"]["status"], "OFFLINE")
+        self.assertFalse(craft_by_id["CRAFT_FRESH"]["isStale"])
+        self.assertEqual(res["afterPurgeFacIds"], ["HGR_01", "PAD_MANUAL_01"])
+        self.assertEqual(res["afterPurgeCraftIds"], ["CRAFT_FRESH"])
+
+    def test_target_filters_for_crafts_and_facilities(self) -> None:
+        res = run_editor_js(
+            """
+            const C = E.CanvasRenderer;
+            E.Store.setFilters({ showCrafts: true, craftAirframeType: "VECTORED_VTOL", showFacilities: true, facilityType: "GPS" });
+            const ui1 = E.Store.getState().ui;
+            const cVtol = C.isCraftVisible({ domainId: "A1", airframeType: "VECTORED_VTOL" }, ui1);
+            const cDrone = C.isCraftVisible({ domainId: "A2", airframeType: "QUAD_DRONE" }, ui1);
+            const fGps = C.isFacilityVisible({ facilityId: "GPS_1", facilityType: "GPS" }, ui1);
+            const fPad = C.isFacilityVisible({ facilityId: "PAD_1", facilityType: "LANDING_PAD" }, ui1);
+
+            E.Store.setFilters({ showCrafts: false, facilityType: "NONE" });
+            const ui2 = E.Store.getState().ui;
+            return {
+              cVtol, cDrone, fGps, fPad,
+              cOff: C.isCraftVisible({ domainId: "A1", airframeType: "VECTORED_VTOL" }, ui2),
+              fNone: C.isFacilityVisible({ facilityId: "GPS_1", facilityType: "GPS" }, ui2),
+            };
+            """
+        )
+        self.assertTrue(res["cVtol"])
+        self.assertFalse(res["cDrone"])
+        self.assertTrue(res["fGps"])
+        self.assertFalse(res["fPad"])
+        self.assertFalse(res["cOff"])
+        self.assertFalse(res["fNone"])
+
+    def test_inspection_mode_locks_mutations_and_supports_hit_test_follow_and_push(self) -> None:
+        res = run_editor_js(
+            """
+            const sentFrames = [];
+            class MockWebSocket {
+              constructor(url) { this.url = url; this.readyState = 1; globalThis.__sock = this; }
+              send(raw) { sentFrames.push(JSON.parse(raw)); }
+              close() { this.readyState = 3; }
+            }
+            globalThis.WebSocket = MockWebSocket;
+            E.LiveBridge.connect("ws://127.0.0.1:8765");
+            globalThis.__sock.onopen();
+
+            E.Store.loadPreset("MSN_RECON_001");
+            const beforeCount = E.Store.getState().mission.checkpoints.length;
+
+            E.Store.setEditorMode("INSPECTION");
+            const modeNow = E.Store.getState().ui.editorMode;
+            const addRes = E.Store.addCheckpoint({ checkpointId: "CP_BLOCKED" });
+            const delRes = E.Store.deleteCheckpoint(0);
+            const moveRes = E.Store.moveCheckpoint(0, 1);
+            const dupRes = E.Store.duplicateCheckpoint(0);
+            const afterCount = E.Store.getState().mission.checkpoints.length;
+
+            // Populate craft at (300, 120, -150) & follow it
+            E.LiveBridge.handleMessage(JSON.stringify({
+              type: "FLEET_TELEMETRY_SYNC",
+              crafts: [
+                { domainId: "VTOL_INSPECT_01", baseChannel: 10000, airframeType: "VECTORED_VTOL", fsmState: "HOVER", position: { x: 300, y: 120, z: -150 }, attitude: { yaw: 15 } },
+              ],
+            }));
+            E.CanvasRenderer.attach({ clientWidth: 900, clientHeight: 650, width: 900, height: 650, getContext(){ return { save(){}, restore(){}, setTransform(){}, fillRect(){}, strokeRect(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, closePath(){}, arc(){}, fill(){}, setLineDash(){}, fillText(){} }; }, addEventListener(){} }, null);
+            const pt = E.CanvasRenderer.worldToScreen(300, -150);
+            const hit = E.CanvasRenderer.hitTestInspectionTarget(pt.sx, pt.sy);
+
+            E.LiveBridge.setFollowCraft("VTOL_INSPECT_01");
+            E.LiveBridge.handleMessage(JSON.stringify({
+              type: "FLEET_TELEMETRY_SYNC",
+              crafts: [
+                { domainId: "VTOL_INSPECT_01", baseChannel: 10000, airframeType: "VECTORED_VTOL", fsmState: "CRUISE", position: { x: 450, y: 140, z: -275 }, attitude: { yaw: 30 } },
+              ],
+            }));
+            const viewAfterFollow = E.CanvasRenderer.getView();
+
+            const pushRes = E.LiveBridge.pushMission({ targetCraft: "VTOL_INSPECT_01", action: "LOAD", saveToDisk: true });
+            return {
+              beforeCount, afterCount, modeNow,
+              addReason: addRes && addRes.reason,
+              delReason: delRes && delRes.reason,
+              moveReason: moveRes && moveRes.reason,
+              dupReason: dupRes && dupRes.reason,
+              hitKind: hit && hit.kind,
+              hitId: hit && hit.id,
+              panX: viewAfterFollow.panX,
+              panY: viewAfterFollow.panY,
+              pushOk: pushRes && pushRes.ok,
+              sentCount: sentFrames.length,
+            };
+            """
+        )
+        self.assertEqual(res["modeNow"], "INSPECTION")
+        self.assertEqual(res["beforeCount"], res["afterCount"])
+        self.assertEqual(res["addReason"], "INSPECTION_MODE_LOCKED")
+        self.assertEqual(res["delReason"], "INSPECTION_MODE_LOCKED")
+        self.assertEqual(res["moveReason"], "INSPECTION_MODE_LOCKED")
+        self.assertEqual(res["dupReason"], "INSPECTION_MODE_LOCKED")
+        self.assertEqual(res["hitKind"], "CRAFT")
+        self.assertEqual(res["hitId"], "VTOL_INSPECT_01")
+        self.assertEqual(res["panX"], 450)
+        self.assertEqual(res["panY"], -275)
+        self.assertTrue(res["pushOk"])
+        self.assertEqual(res["sentCount"], 1)
 
 
 if __name__ == "__main__":

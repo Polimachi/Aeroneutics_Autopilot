@@ -703,6 +703,7 @@
           "optionalKeys": [
             "sectorName",
             "sectorType",
+            "position",
             "towerAtcChannel",
             "gacChannel",
             "surfaceWind",

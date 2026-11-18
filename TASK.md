@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-18  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-130, TASK-125, TASK-501, TASK-404, TASK-103, TASK-403, TASK-117, TASK-014, TASK-120, TASK-402 / 활성 대기: TASK-405, 406, 302, 128, 131, 136, 140, 015, 135, 214, 105, 210, 132, 129)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-405, TASK-406, TASK-130, TASK-125, TASK-501, TASK-404, TASK-103, TASK-403, TASK-117, TASK-014 / 활성 대기: TASK-302, 128, 131, 136, 140, 015, 135, 214, 105, 210, 132, 129)
 
 ---
 
@@ -22,27 +22,10 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-405` (AMM Mission Editor Live Mode LAN 사설 IP 접속 지원) · `TASK-406` (AMM Mission Editor 광역 줌·실시간 노드 자동등록/1분 TTL·대상 필터·Inspection 모드) · `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) · `TASK-128` (GPS 헬스 감시·DR 블렌딩 가드) → **2순위** `TASK-131` (비행 전 자동 자가진단 PBIT·구동기 검증) · `TASK-136` (기체 블록화·재조립 인터록 및 주변장치 재바인딩) · `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) · `TASK-015` (전 계층 모듈·신규 프로그램 통합 플레이북 체계) → **3순위** `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **로드맵(연기)** `TASK-401`
-- [ ] **TASK-405: [1순위 / LAN 원격 연동] AMM Mission Editor `Connect Live` LAN 사설 IP 접속 및 서버 URL 입력 지원** (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md`, `tools/amm_mission_editor.html`, `tests/3_planning/amm/test_amm_mission_editor.py`)
-  - **권장 착수 순위**: **1순위** (`TASK-404` 후속 — 마인크래프트/GCS 서버와 에디터 브라우저 실행 호스트가 분리된 LAN 환경 지원)
-  - **사양서 상태**: 미개정 (`AMM_MISSION_EDITOR_SPECIFICATION.md` `v0.5.0` → `Approved` 개정 필요)
-  - **배경 및 필요성**: 마인크래프트 서버(`GCS` + `tools/gcs_live_bridge.py`)와 `tools/amm_mission_editor.html` 실행 호스트가 분리된 경우 공유기 예하 LAN 사설 IP로만 통신 가능하나, 현행 `LiveBridge`(`LOCAL_WS_RE`)가 `127.0.0.1`·`localhost`만 허용하고 UI에 URL 입력란이 없어 원격 브리지 접속이 불가함.
-  - **주요 작업**:
-    - [ ] **TASK-405-1**: `AMM_MISSION_EDITOR_SPECIFICATION.md` 개정 — 외부 인터넷 `http(s)://`/`wss://` 및 공인 IP 차단은 유지하되, 사용자 명시적 입력·클릭 시 RFC 1918 사설 IPv4(`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) 및 `.local` `ws://` 연결을 허용하도록 보안 정책 보완
-    - [ ] **TASK-405-2**: `tools/amm_mission_editor.html` `LiveBridge` 및 상단 바 UI 확장 — `isAllowedLocalUrl` 사설 IPv4 대역 검증 추가, Live Bridge URL(`ws://<host>:<port>`) 입력·`localStorage` 저장 UI 추가 및 `Connect Live` 연동
-    - [ ] **TASK-405-3**: `tests/3_planning/amm/test_amm_mission_editor.py` 회귀 테스트(사설 IP 허용·공인 IP/외부 `wss://` 차단) 보강 및 사양서 `Implemented` 승격
-
-- [ ] **TASK-406: [1순위 / 관전·전술 관제 확장] AMM Mission Editor 광역 줌·실시간 노드 자동등록/1분 TTL·대상 필터·Inspection 모드** (`docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md`, `tools/amm_mission_editor.html`, `tools/gcs_live_bridge.py`, `src/0_infra/gcs/`, `tests/3_planning/amm/test_amm_mission_editor.py`, `tests/harness/test_gcs_live_bridge.py`)
-  - **권장 착수 순위**: **1순위** (`TASK-404`·`TASK-405` 후속 — 대규모 전역 공역 관제 및 비편집 관전·정보 탐색 워크플로우 고도화)
-  - **사양서 상태**: 미개정 (`AMM_MISSION_EDITOR_SPECIFICATION.md` `v0.5.0` → `Approved` 개정 필요; 필요 시 `GCS` 사양서·`config/protocol_contracts.json` 동기화)
-  - **배경 및 필요성**: 현행 에디터는 줌 하한이 `10%`(`0.1`)로 제한되어 수천 블록 단위 광역 공역 조망이 어렵고, Live Mode에서 비행체 외 `GPS` 노드·`GAC` 및 예하 지상시설(`Landing Pad`, `Runway`, `Hangar` 등)의 실시간 자동 등록 및 신호 두절 시 만료(1분 TTL) 제거가 미흡하며, 화면 표시 대상 필터링과 편집 기능을 배제한 순수 관전·정보 조회 전용 모드가 없음.
-  - **주요 작업**:
-    - [ ] **TASK-406-1**: 사양서 개정 (`AMM_MISSION_EDITOR_SPECIFICATION.md`) — 줌 하한 확장(`10%` 미만 광역 축소 및 그리드 눈금 동적 간격), Live 노드(`GPS`·`GAC`·예하 지상시설) 자동 등록 및 `60s`(1분) 무신호 TTL 만료 제거, 대상 필터링 규격, `Mission Edit` ↔ `Inspection` 모드 분리 UI/상태 머신 정의
-    - [ ] **TASK-406-2**: 광역 줌 아웃(`zoom < 0.1`, 예: `0.01`~`4.0` 및 `fitToMission` 하한 완화)과 축소 비율 연동 그리드·축 눈금(`stepWorld`) 다단계 스케일링 구현 (`tools/amm_mission_editor.html`)
-    - [ ] **TASK-406-3**: Live Mode(`Live: On`) 실시간 노드 자동 등록 및 1분(`60000ms`) 신호 두절 TTL 만료 제거 구현 — `GCS` / `tools/gcs_live_bridge.py` / `WorldStore` 간 `GPS` 노드·`GAC`·예하 지상시설(`Landing Pad`·`Runway`·`Hangar` 등) 하트비트·자동 등록·미수신 만료 제거 연동
-    - [ ] **TASK-406-4**: 화면 표시 대상 필터링 UI/렌더러 구현 — 기체 전체/특정 기체 타입, 시설 전체/특정 시설 타입(`GAC`, `GPS`, `Landing Pad`, `Runway`, `Hangar` 등) 토글 및 캔버스·리스트 필터 동기화
-    - [ ] **TASK-406-5**: `Inspection` 모드 구현 및 검증 — `Mission Edit` 모드와 분리된 읽기 전용 관전·정보 획득 모드(편집 팔레트·수정 인터랙션 잠금/숨김, 선택 기체·시설·GPS 노드 상세 텔레메트리·상태·궤적·예약/점유 정보 집중 HUD) 추가, `test_amm_mission_editor.py`·`test_gcs_live_bridge.py` 회귀 테스트 통과 후 사양서 `Implemented` 승격
-
+> **권장 실행 우선순위**: **1순위** `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) · `TASK-128` (GPS 헬스 감시·DR 블렌딩 가드) → **2순위** `TASK-131` (비행 전 자동 자가진단 PBIT·구동기 검증) · `TASK-136` (기체 블록화·재조립 인터록 및 주변장치 재바인딩) · `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) · `TASK-015` (전 계층 모듈·신규 프로그램 통합 플레이북 체계) → **3순위** `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
+- [-] **TASK-016: [설계 검토 중 / 아키텍처 감사] 시스템 아키텍처 전반 효율성·효용성 검사 (범위·방식 설계 → 읽기 전용 진단 → 보고서·후속 TASK 도출)** (`reports/underReview/`, `docs/superpowers/specs/`)
+  - **현재 상태**: 검사 범위(7대 렌즈 L1~L7)·정량 지표 카탈로그·U/E 0~3 루브릭·판정 매트릭스·P0~P5 실행 단계 설계안 작성 완료, 사용자 결정 Q1~Q4 대기 (기준 커밋 `8966ab0`).
+  - **구분**: `TASK-013`(정합성·결함 감사)과 달리 구조의 비용 대비 효용을 검사하며, 검사 단계에서는 `src/`·활성 사양서·설정·도구를 수정하지 않는다.
 - [ ] **TASK-302: [1순위 / 현장 운용 HMI] CC:Tweaked 포켓 컴퓨터(Pocket PDA) 휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말** (`src/0_infra/pocket_pda/`)
   - **권장 착수 순위**: **1순위** (선행 `TASK-125`·`TASK-120` 완료 — 40채널 분리 규격 및 FDR 동적 바인딩·원격 덤프 트리거 연동 가능)
   - **배경 및 필요성**: 인게임 시험 비행·정비 중 기체 이상 진동이나 경로 이탈 시 고정형 GCS·Alignment·FDR 콘솔까지 이동할 시간적 여유가 없음. 플레이어가 인벤토리에서 꺼내 즉시 기체 비상 제어뿐 아니라 `Alignment`, `FDR` 등 지상/온보드 시스템과의 무선 링크(기체 바인딩·세션 제어)까지 수행할 수 있는 무선 휴대 단말(`src/0_infra/pocket_pda/`)이 필요함.
@@ -191,9 +174,9 @@
   - **사양서 상태**: `docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md` (v1.12.0 Approved)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (`AMM (Node 03)` 주도 4단계 랑데부 연동; 일정 연기 — 사양서 `Approved` 유지, 구현 시 `manifest.lua`·`verify_spec_status.py`·`config/protocol_contracts.json`·`tools/run_boot_smoke.py` 등록 및 `verify_contracts.py`·`verify_runtime_wiring.py` 검증 필요)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
-  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.36.0 Approved) Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
+  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.37.0 Approved) Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
-- [ ] **[연기] TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.36.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.20.0 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.5.0 Implemented), `docs/specs/4_mission/`)
+- [ ] **[연기] TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.37.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.20.1 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.5.0 Implemented), `docs/specs/4_mission/`)
   - **상태 및 이관 사유**: 선행 우선순위 취소 및 로드맵 백로그 이관 (`TASK-204`는 `AMM v2.0.0` 기본 `ACT_PAY_BUS_CMD`/`ACT_PAY_REDSTONE`/`ACT_PAY_SET_ROI` 계약으로 독립 구현 완료; 세부 탑재체 행동은 `[로드맵: TASK-401]` `TBD`로 이관)
   - **사양서 상태**: PAYLOAD 계층 전용 사양서 미작성 (Draft → Approved 수립 및 마스터 ICD Interface I-11·전체 구조도·AMM 사양서 동기화 필요)
   - **배경 및 목적**: 현행 마스터 ICD Interface I-11(`Base+20~29`, Zone 3 탑재체 버스)에는 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK` 기본 예시 패킷만 정의되어 있으며, 전체 구조도의 세부 채널 구분(`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` 예비) 및 다양한 탑재체 노드(화물 투하, 마그넷 래치, 엄빌리컬 급유/충전, `CC:Radars`/터렛 무장 제어 등) 간 표준 통신 계약이 미비함. 탐색/기능 등록(Discovery & Capability), 상태/헬스 텔레메트리, 명령·응답(`ACK`/`NACK`)·오류 코드, 안전 인터록 및 채널 오프셋 배분 규칙을 포함한 PAYLOAD 계층 표준 통신 스키마를 정의함
@@ -223,6 +206,16 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
+
+- [x] **TASK-406: AMM Mission Editor 광역 줌·실시간 노드 자동등록/1분 TTL·대상 필터·Inspection 모드 (`TASK-406-1..5`)** (완료일: 2026-11-18)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-18-task-405-406-amm-editor-live-lan-and-inspection.md`
+  - **핵심 성과**: `GAC`(`config_loader.lua`·`beacon_broadcaster.lua`) `position` 명시 및 Centroid 폴백, `GCS`(`gpsHeartbeatChannel = 60003`·`MSG_GPS_NODE_HEARTBEAT`·`gacNode`·`60s` `OFFLINE`/`STALE` 비파괴 TTL + `purge_offline_gps_nodes()`)·`gcs_live_bridge.py`(`GPS_NODES_SYNC` 캐시), WebUI(`MIN_ZOOM=0.01..4.0` 10단계 그리드·7종 시설/노드 자동 등록 & `0.38` 반투명 `OFFLINE` + `Purge Offline`·기체/시설 필터·`Inspection` 읽기 전용 모드/`Follow`/`Push`) 구현.
+  - **승격·검증**: `AMM_MISSION_EDITOR v0.6.0`, `GCS v1.4.0`, `GAC v1.7.0` `Implemented` 승격(`14 Implemented, 4 Approved`); 단위 `617/617 PASS`, E2E `21/21 PASS`, 부트 스모크 `13/13 PASS`, 에디터 `30/30 PASS`, 브리지 `4/4 PASS`, 배선 `0 violations`.
+
+- [x] **TASK-405: AMM Mission Editor `Connect Live` LAN 사설 IP 접속 및 서버 URL 입력 지원 (`TASK-405-1..3`)** (완료일: 2026-11-18)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-18-task-405-406-amm-editor-live-lan-and-inspection.md`
+  - **핵심 성과**: `tools/gcs_live_bridge.py` 기본 `127.0.0.1` 유지 + `--lan`(`0.0.0.0` 바인딩 및 LAN URL 안내), `tools/amm_mission_editor.html` `LiveBridge.isAllowedLocalUrl`(루프백·RFC 1918 사설 IPv4·`*.local` `ws://` 허용 및 공인 IP/`wss://` 차단)·`#liveBridgeUrlInput`·`localStorage`(`amm_mission_editor_live_ws_url_v1`) 영속화 구현.
+  - **승격·검증**: `AMM_MISSION_EDITOR v0.6.0`, `GCS v1.4.0` `Implemented` 승격(`14 Implemented, 4 Approved`); `test_amm_mission_editor.py` `30/30 PASS`, `test_gcs_live_bridge.py` `4/4 PASS`.
 
 - [x] **TASK-130: 서버 재시작·청크 언로드 대응 공중 콜드부트 복구 (`TASK-130-1..4`)** (완료일: 2026-11-18)
   - **핵심 성과**: `VAS` `/.flight_state.json` 원자적 스냅샷(`fs.move`, `schemaVersion = 1`)·`detect_airborne_at_boot`·10번째 FSM 상태 `AIRBORNE_RECOVERY_HOLD`(10초 타임아웃/`Base+3` 5Hz 백업 송신/조기 `arm=false` 무시), `FCP` 조기 disarm 억제·`AIRBORNE_RECOVERY_HOLD` 시 `Base+1` 침묵 및 2.0초 `trigger_bumpless` 핸드오프, `AMM` `recovery` 설정(`RESUME`/`RTB` 정책)·체크포인트 영속화·부팅 복원 핸들러 구현 및 단위·E2E 강제 리부트 시나리오 추가(`TASK-130-1~4`).
@@ -259,14 +252,4 @@
   - **설계서 및 실행 계획서**: `docs/superpowers/specs/2026-11-14-audit-prevention-guardrails-design.md`, `docs/superpowers/plans/2026-11-14-task-014-audit-prevention-guardrails.md`
   - **핵심 성과**: `config/protocol_contracts.json` SSOT(`MSG_FLIGHT_TELEMETRY` 선택 진단키 포함), `tools/verify_contracts.py`, `virtual_bus.lua` + `tools/run_e2e_tests.py` 실전 패킷 검증(`test_e2e_fdr_blackbox.lua` 계약 정합 교정 포함), `tools/verify_runtime_wiring.py`(11 서브시스템·4 예외 승인), `tools/run_boot_smoke.py`(11개 활성 `main.lua` 실부팅 및 `0_development/fdr` 64비트 타임스탬프 `%d` 오버플로우 교정), `README.md`(`R9`) 및 `.agent/` 게이트 동기화 완료 (`TASK-014-1~6`). `src/1_control/asa/**`(`TASK-105`)는 `0 diff` 동결 유지.
   - **검증**: `verify_contracts.py` 17 사양서·128 코드/설정 `0 errors`, `verify_runtime_wiring.py` `0 violations`, 부트 스모크 `11/11 PASS`, 단위 `13`타겟 `524/524 PASS`, E2E `9`스위트 `14/14 PASS` (`474`패킷 `0` violations), 하네스 `130/130 PASS`, 컨텍스트 `0 findings`, Lua 5.2 `124/124 PASS`, 매니페스트·사양서 `0 Errors, 0 Warnings`.
-
-- [x] **TASK-120: 지상 실환경 비행 식별기(FDR)·멀티 디스크 VFS 로거 및 오프라인 프로파일러 구축 (`FDR v0.3.0`·`VAS v1.21.0 Implemented`)** (완료일: 2026-11-14)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-120-fdr-and-analyzer.md`
-  - **핵심 성과**: 수신 전용(`modem.transmit` 0회) 지상 상주형 FDR (`src/0_development/fdr/` 6모듈+`main.lua`+`fdr_config.json`: `[N]` 동적 기체 바인딩·`domainId` 자동 잠금·다중 `/disk*` Spanned VFS 롤오버·`STREAMING`/`RING_BUFFER`·`E_STOP` 에지 래치·`GDRIVE_WEBHOOK` `FDR_Reports` 반출·51x19 TUI·`manifest.lua` 13모듈 등록), `VAS` Opt-in `telemetryDiag` (`telemetry_feeder.lua`/`core_daemon.lua`), 호스트 오프라인 분석/튜닝 CLI(`tools/analyze_flight_log.py`: 다중 JSONL 병합·`quat.lua` 오일러 변환·포화/추력 분배·`[0.70x, 1.35x]` 가드 `--emit-profile`) 구현 (`TASK-120-0~2`).
-  - **승격·검증**: `FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0 Implemented`), `VAS_PROGRAM_SPECIFICATION.md` (`v1.21.0 Implemented`) 승격(`12 Implemented, 5 Approved`), 단위 `13`타겟 `523/523 PASS` (`0_development/fdr` `16/16`, `1_control/vas` `58/58`, `0_development/installer` `40/40`), E2E `9`스위트 `14/14 PASS`, 돌연변이 `25/25 KILLED`, 하네스 `93/93 PASS`, Lua 5.2 `124/124 PASS`, 매니페스트·사양서 `0 Errors, 0 Warnings`.
-
-- [x] **TASK-402: AMM WebUI 단일 파일 미션 에디터(`tools/amm_mission_editor.html`) 구현, CraftOS-PC 라운드트립 검증 및 `AMM`/`에디터` 사양 `Implemented` 승격** (완료일: 2026-11-14)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-14-task-402-amm-mission-editor.md`
-  - **핵심 성과**: `AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Implemented`) 기준 오프라인 단일 HTML5/CSS/JS 에디터(9 IIFE 모듈, 36+22 `ACT_*`·6+1 `DEC_*`·3+2 `MAC_*`·19종 `preconditions`·14종 조건·4종 훅·2D 전술 캔버스·`#altProfilePane`·50단 Undo/Redo·Raw JSON 드로어·`localStorage` 자동저장) 구현 및 Web Interface Guidelines 준수 정적/DOM-shim 감사 완료.
-  - **승격·검증**: `AMM_PROGRAM_SPECIFICATION.md` (`v2.0.1 Implemented`)·`AMM_MISSION_EDITOR_SPECIFICATION.md` (`v0.3.1 Implemented`) 승격(`11 Implemented, 5 Approved`), `test_amm_mission_editor.py` `17/17 PASS`(CraftOS-PC `mission_engine.validate_mission` 라운드트립 포함), 단위 `504/504 PASS`, E2E `13/13 PASS`.
 

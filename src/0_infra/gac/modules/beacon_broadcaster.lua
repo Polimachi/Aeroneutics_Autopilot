@@ -33,6 +33,32 @@ local function build_facility_snapshots(inventory)
     return list
 end
 
+local function resolve_sector_position(cfg, facilities)
+    if type(cfg.position) == "table" and type(cfg.position.x) == "number" and type(cfg.position.z) == "number" then
+        return {
+            x = cfg.position.x,
+            y = cfg.position.y or 0.0,
+            z = cfg.position.z,
+        }
+    end
+    if type(facilities) == "table" then
+        local sx, sy, sz, count = 0.0, 0.0, 0.0, 0
+        for _, fac in ipairs(facilities) do
+            local pos = fac.position
+            if type(pos) == "table" and type(pos.x) == "number" and type(pos.z) == "number" then
+                sx = sx + pos.x
+                sy = sy + (pos.y or 0.0)
+                sz = sz + pos.z
+                count = count + 1
+            end
+        end
+        if count > 0 then
+            return { x = sx / count, y = sy / count, z = sz / count }
+        end
+    end
+    return nil
+end
+
 function beacon_broadcaster.create(config)
     local cfg = config or {}
     local state = {
@@ -65,6 +91,7 @@ function beacon_broadcaster.create(config)
         local wind = surfaceWind or { speed = 0.0, direction = 0.0 }
         local status = sectorStatus or "OPERATIONAL"
         local facilities = build_facility_snapshots(inventory)
+        local gacPos = resolve_sector_position(cfg, facilities)
 
         return {
             ver = PROTOCOL_VER,
@@ -76,6 +103,7 @@ function beacon_broadcaster.create(config)
                 sectorId = cfg.sectorId or "UNKNOWN_SECTOR",
                 sectorName = cfg.sectorName or "Sector Apron",
                 sectorType = cfg.sectorType or "VERTIPORT",
+                position = gacPos,
                 towerAtcChannel = cfg.towerAtcChannel or 50001,
                 gacChannel = cfg.baseSecChannel or 50201,
                 facilitiesSummary = summary,

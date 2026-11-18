@@ -25,6 +25,7 @@ function network_manager.init(config, modem)
         bootstrap_channel = cfg_chan.bootstrapChannel or 50000,
         facility_beacon_channel = cfg_chan.facilityBeaconChannel or 50003,
         mission_ack_channel = cfg_chan.missionAckChannel or 50004,
+        gps_heartbeat_channel = cfg_chan.gpsHeartbeatChannel or 60003,
         modem = modem,
         seq = 0,
         active_base = nil,
@@ -64,10 +65,13 @@ function network_manager.open_infra_channels(ctx)
     if not ctx or not ctx.modem then return false end
     local b_ch = ctx.facility_beacon_channel or 50003
     local m_ch = ctx.mission_ack_channel or 50004
+    local g_ch = ctx.gps_heartbeat_channel or 60003
     ctx.modem:open(b_ch)
     ctx.modem:open(m_ch)
+    ctx.modem:open(g_ch)
     ctx.open_channels[b_ch] = true
     ctx.open_channels[m_ch] = true
+    ctx.open_channels[g_ch] = true
     return true
 end
 

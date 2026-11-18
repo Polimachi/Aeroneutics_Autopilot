@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.36.0` |
+| **문서 버전 (Version)** | `v1.37.0` |
 | **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.37.0` | `2026-11-18` | **`[I-5]` `GAC` (`v1.7.0 Approved`) 본체 좌표(`position`) 명시화 및 `MSG_FACILITY_BEACON` 동기화**: ① `[I-5]` `MSG_FACILITY_BEACON`(`CH 50003` / `Base_sec+2`) 선택 필드에 GAC 관제소 본체 3D 좌표 `position = { x, y, z }`(`/gac/config.json` 명시값 우선, 미지정 시 예하 `facilities[]` 무게중심 폴백) 추가, ② §1, §3 `I-5`, §5.1 `GAC` 행(`v1.7.0 Approved`) 및 `Diagram v2.20.1` 배지 동기화 | `TASK-406` 연계 GAC 관제소 본체 위치 명시화 및 전술 지도 자동 표시 지원 |
 | `v1.36.0` | `2026-11-17` | **`TASK-130` 공중 콜드부트 복구 및 비휘발성 `/.flight_state.json` 영속 계약 반영 (`Approved`)**: ① `VAS` (`v1.24.0 Approved`) 10번째 FSM 상태 **`"AIRBORNE_RECOVERY_HOLD"`** 신설(`bootTimeoutMs = 500ms` 목표 비차단 20Hz 수평/선회 홀드, `Base+3` 양보, `[I-1]`/`[I-3]`/`[I-10]` `controlState` 및 `[I-13]` OTA `NOT_DISARMED` 거부 상태 추가, 조기 `arm=false` 무시), ② `FCP` (`v2.4.0 Approved`) 콜드부트 중 `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `IDLE_ARMED` 조기 `Base+1` disarm 송출 침묵 및 `AMM` 동기화 후 2.0s 범프리스 추종 규약 추가, ③ `AMM` (`v2.5.0 Approved`) 로컬 `/.flight_state.json` (`schemaVersion = 1`, `.tmp`+`fs.move` 원자적 저장) 및 `coldBootPolicy` (`"RESUME"` \| `"RTB"`) 복구 규약 신설, ④ §4 안전 워치독 매트릭스 및 §5.1 (`AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`, `Diagram v2.20.0`) 동기화 | `TASK-130` 서버 재시작·청크 언로드 공중 콜드부트 생존성 규격 확정 |
 | `v1.35.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로토콜·경합·검증 결함 12종 해소 (`Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `Alignment -> VAS` `MSG_CALIBRATION_INIT` 전용, 구 `Base+0` 직결 바인딩 `[DEPRECATED]`) 및 `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE`/`MSG_EMERGENCY_ALERT` 전용 비상 버스, `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리) 신설, ② `Base+3` `CH_MFD_STATE` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 시 `VAS` 배타적 우선 및 `acroTimeoutMs = 250ms`, `acroRecoveryHoldMs = 300ms` 복귀 히스테리시스 규약 명세, ③ `Base+20~39` Zone 3 탑재체·특수 임무 통합(`Base+30~39` `CH_PAYLOAD_EXT_30~39`, Zone 4 편대 링크 `TBD` 광역 데이터링크 이관), ④ `[I-8]`/`[I-9]` `BW=40` 고정 계약(`requestedBandwidth ~= 40` 시 `"DENIED"`), `"ASSIGNED"`/`"REASSIGNED"`/`"DENIED"`/`"FAILED"` 상태 통일, 랜덤 지터(`0~100ms`)·다회 프로브(`probeRetryCount=2`)·재할당 회피(`maxReassignAttempts=3`)·영속 리스(`channel_registry.json` / `config/channel_lease.json`)·`Base+0` 부팅 즉시 상시 개방·`Base+0..39` 전수 침범 감시(`30,000ms`) 반영, ⑤ `Diagram v2.19.0`, `AMM v2.4.0`, `GCS v1.3.0`, `VAS v1.23.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`, `GAC v1.6.0`, `Runway v1.12.0`, `Editor v0.5.0` 동기화 | `TASK-125` 40채널 스펙트럼 충돌·경합·검증 규칙 결함 12종 일괄 해소 및 `TASK-403`/`404` 통합 |
 | `v1.34.0` | `2026-11-16` | **`TASK-404` `[I-6]` `MSG_MISSION_CMD` `"LOAD"` 확장 및 `GCS` WebSocket Live Bridge 연동 동기화**: ① `[I-6]` `MSG_MISSION_CMD.action`에 `"LOAD"` 및 선택 필드 `missionData`, `saveToDisk` 추가, ② `GCS` (`v1.2.0`) 다중 기체 동시 구독(`Base+3`/`Base+0`), `CH 50003`/`50004` 청취 및 로컬 브리지(`ws://127.0.0.1:8765`, `tools/gcs_live_bridge.py`) 연계 규격 §5.1 반영, ③ 교차 참조(`AMM v2.3.0`, `GCS v1.2.0`, `Editor v0.5.0`, `Diagram v2.18.0`) 동기화 | `TASK-404` 실시간 전술 지도·월드 프리셋 자동 생성 및 원클릭 무선 미션 푸시 지원 |
@@ -44,8 +45,8 @@
 본 문서는 자율 비행체 시스템을 구성하는 소프트웨어/하드웨어 프로그램 간에 오고 가는 **모든 데이터 패킷의 필드 규격, 데이터 타입, 물리 단위, 인코딩 포맷 및 상태 전이 규칙**을 정의한 표준 인터페이스 제어 규격서(ICD)입니다.
 
 > [!TIP]
-> - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.19.0)에 시각화되어 있습니다.
-> - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.6.0)에 상세 기술되어 있습니다.
+> - 전체 시스템 프로그램 간 종합 관계망, 채널 토폴로지 및 생명주기별 패킷 교환 시퀀스 다이어그램은 **[SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md)** (v2.20.1)에 시각화되어 있습니다.
+> - 국지 에이프런/비행갑판/버티포트 시설물 군의 총괄 분배, 3-Tier 관제 위상, 섹터 집약 비콘, 다속성 최적 패드 분배 및 국지 복행 중재 명세는 **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.7.0)에 상세 기술되어 있습니다.
 > - 자율 비행 외루프 제어기(FCP, Node 04)의 순수 온보드 `SE(3)` 가속도/자세 투영 법칙($g = 11.0\text{ m/s}^2$, `Base+4`/`Base+2`/`Base+1` + `Base+9` 비상 경보 구독), 6대 기체 타입별 `QUATERNION_RATE`(`targetQuaternion`, `targetAngularRates`, `collectiveThrust`) 생성, 7-State 외루프 FSM(`PASSIVE_TRACKING` 2.0s 범프리스 복귀, `EMERGENCY_HOLD` 안전 전이 및 `AMM_TIMEOUT` 500ms $\to$ 10s 홀드 $\to$ `EMERGENCY_LAND`) 및 `[I-13]` OTA 연동 명세는 **[FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md)** (v2.3.0)에 상세 기술되어 있습니다.
 > - 공력 날개 및 조종면(에일러론/승강타/방향타/플랩) 분산 구동기, VAS 산하 3구역 노드(Node 06-xx, Base+11, 구 Base+7 `[DEPRECATED]`), `MSG_AERO_CMD`/`MSG_AERO_STATUS`(`MSG_SURFACE_CMD`/`STATUS` `[DEPRECATED]`), `peripheral.find` 동적 탐색 및 300ms 안전 활공 트림(Safe Glide Trim) 규격은 **[ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md)** (v1.8.0)에 상세 기술되어 있습니다.
 > - **ASA 기체 적용 범위**: ASA는 `FIXED_WING` 및 `WINGED_VTOL` 기체에서만 전용 가동되며, `VECTORED_VTOL`, `ADVANCED_VTOL`, `QUADROTOR`, `HEXAROTOR` 등 순수 추력형 기체에서는 ASA 노드가 탑재되지 않고 AMM/FCP/VAS 단계에서 조종면/플랩 연산 및 Base+11 전송이 배제됩니다.
@@ -57,7 +58,7 @@
 > - VTOL 착륙패드의 순수 가상 좌표 비콘화, 무기계식 경량화, 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 동역학 요동 안전 인터록(10°/2.5m/s), GAC 직속 로컬 백본($Base_{\text{sec}}+1$) 연동 및 복행 격리 명세는 **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.5.0)에 상세 기술되어 있습니다.
 > - 고정익 활주로 및 항모 비행갑판의 가상 ILS, 유선 모뎀 조명망(PAPI/RWSL) 제어, 무선 상태 추적 및 유도로 GAC 연동 관제 명세는 **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.12.0)에 상세 기술되어 있습니다.
 > - 기체 주도형 정밀 도킹, 2축 로봇 암 원거리 전개 포획, 격납 인입, 유선 모뎀 주변기기 매핑, 엄빌리컬 보급 및 격납 위치 직접 분리 명세는 **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.12.0)에 상세 기술되어 있습니다.
-> - 조종석 통합 단말 및 외부 게이트웨이(AMM, Node 03)의 듀얼 모뎀 외부 통신(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), 온보드 C2/부팅 프로브(`Base+0`), `Base+9` 비상 `E_STOP` 직결 송출, 평시 5Hz MFD 다운링크(`Base+3`, `MFD_ACRO` 시 양보 및 `300ms` 히스테리시스 복귀), 20Hz `nav_engine` GPS/DR 융합 및 `trajectory_generator`(`Base+4` `[I-12]`), 20Hz 코루틴 A / 5Hz TUI 코루틴 B 분리, 5모듈 미션 코어(`mission_engine`, `action_registry`, `chattering_guard`, `condition_evaluator`, `hook_runner`), `ACT_*`/`DEC_*`/`MAC_*` 3계층 행동(`ACT_TKL_LAND_NEAREST` 포함 `37`종) 및 4대 `preconditions`, Zone 3 탑재체·특수 임무 버스(`Base+20~39`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD` `"LOAD"`/`"RUN"`/`ACK`), 외부 에디터(`tools/amm_mission_editor.html` `v0.5.0`), 다중 경로 구동 및 `[I-13]` OTA 연동 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v2.4.0)에 상세 기술되어 있습니다.
+> - 조종석 통합 단말 및 외부 게이트웨이(AMM, Node 03)의 듀얼 모뎀 외부 통신(`CH 50000~50004`, `CH 60001/60002`, `Base_sec+*`, `Base+5`), 온보드 C2/부팅 프로브(`Base+0`), `Base+9` 비상 `E_STOP` 직결 송출, 평시 5Hz MFD 다운링크(`Base+3`, `MFD_ACRO` 시 양보 및 `300ms` 히스테리시스 복귀), 20Hz `nav_engine` GPS/DR 융합 및 `trajectory_generator`(`Base+4` `[I-12]`), 20Hz 코루틴 A / 5Hz TUI 코루틴 B 분리, 5모듈 미션 코어(`mission_engine`, `action_registry`, `chattering_guard`, `condition_evaluator`, `hook_runner`), `ACT_*`/`DEC_*`/`MAC_*` 3계층 행동(`ACT_TKL_LAND_NEAREST` 포함 `37`종) 및 4대 `preconditions`, Zone 3 탑재체·특수 임무 버스(`Base+20~39`), `Base+0` 원격 미션 제어(`MSG_MISSION_CMD` `"LOAD"`/`"RUN"`/`ACK`), 외부 에디터(`tools/amm_mission_editor.html` `v0.6.0`), 다중 경로 구동 및 `[I-13]` OTA 연동 명세는 **[AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)** (v2.5.0)에 상세 기술되어 있습니다.
 
 ### 1.1 공통 패킷 엔벨로프 (Common Message Envelope)
 CC:Tweaked Rednet 및 모뎀 전송의 직렬화 오버헤드를 최소화하고 고속 역직렬화를 보장하기 위해, 모든 메시지는 다음의 표준 공통 Lua 테이블 엔벨로프를 필수 적용합니다.
@@ -863,7 +864,7 @@ flowchart TD
 
 > [!TIP]
 > 지상/함상 관제 및 시설물별 세부 하드웨어 제어·FSM은 다음의 세부 규격서를 참조하십시오.
-> - **지상 구역 관제사(GAC)**: **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.6.0 - 3-Tier 관제, 2단계 핸드오프, 섹터 집약 비콘, 전용 VTOL/드론 대기 시설 및 다속성 최적 패드 분배, 국지 복행 중재, 섹터 200채널 블록 할당)
+> - **지상 구역 관제사(GAC)**: **[GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md)** (v1.7.0 - 3-Tier 관제, 2단계 핸드오프, 섹터 집약 비콘, GAC 본체 좌표 명시화, 전용 VTOL/드론 대기 시설 및 다속성 최적 패드 분배, 국지 복행 중재, 섹터 200채널 블록 할당)
 > - **수직이착륙 착륙패드**: **[LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md)** (v2.5.0 - 무기계식 순수 가상 비콘화, 컴퓨터 바디 상대 오프셋 보정, TUI 셋업 마법사, 동적 패드 항법 센서 3종 바인딩, 갑판 요동 10°/2.5m/s 안전 인터록, GAC 로컬 백본 $Base_{\text{sec}}+1$ 연동, `CH 60001` 송신 전용 및 `computerId` 위상 분산)
 > - **고정익 활주로 및 항공모함 비행갑판**: **[RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md)** (v1.12.0 - 유선 모뎀 조명 제어망, `Landing Pad` 준거 `Base_sec+1`/`+5` 연동 및 GAC 유도로 관제 연계)
 > - **정밀 도킹암 및 모선 붐**: **[DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md)** (v1.12.0 - 2축 로봇 암 원거리 전개 포획·인입·격납 분리 및 GAC 에이프런 연계)
@@ -881,7 +882,7 @@ flowchart TD
 
 #### 패킷 흐름 및 계층형 절차 규격
 1. **섹터 집약 비콘 (`MSG_FACILITY_BEACON`, CH 50003 / $Base_{\text{sec}}+2$, 1Hz)**:
-   - 상위 GAC 노드가 관할 섹터 내 3종 시설물 군의 가용 현황(`sectorId`, `facilitiesSummary = { totalLandingPads, freeLandingPads, totalRunways, freeRunways, totalDockingArms, freeDockingArms, maxSupportWeight, maxSupportRadius }`) 및 선택적 `facilities[]` 스냅샷 배열(`facilityId`, `facilityType`, `status`, `position`, `heading`, `endPoint`, `tacticalChannel`, `dedicated`)을 집약하여 단일 대표 패킷으로 송출하며 `AMM (Node 03)`이 이를 청취합니다(개별 패드/활주로/도킹암은 `CH 50003` 직접 비콘 송출 금지, `Base_sec+1` `MSG_ATC_FACILITY_UPDATE`로 GAC에 상태 보고).
+   - 상위 GAC 노드가 관할 섹터 내 3종 시설물 군의 가용 현황(`sectorId`, `facilitiesSummary = { totalLandingPads, freeLandingPads, totalRunways, freeRunways, totalDockingArms, freeDockingArms, maxSupportWeight, maxSupportRadius }`), 선택적 GAC 관제소 본체 좌표(`position = { x, y, z }`, `/gac/config.json` 명시값 우선 및 미지정 시 관할 `facilities[]` 무게중심 폴백) 및 선택적 `facilities[]` 스냅샷 배열(`facilityId`, `facilityType`, `status`, `position`, `heading`, `endPoint`, `tacticalChannel`, `dedicated`)을 집약하여 단일 대표 패킷으로 송출하며 `AMM (Node 03)`이 이를 청취합니다(개별 패드/활주로/도킹암은 `CH 50003` 직접 비콘 송출 금지, `Base_sec+1` `MSG_ATC_FACILITY_UPDATE`로 GAC에 상태 보고).
 2. **2단계 주파수 핸드오프 및 분배 관제 (`CH 50001` $\to$ $Base_{\text{sec}}+0$ $\to$ $Base_{\text{sec}}+10+\text{Idx}$)**:
    - **1단계 (Tower ATC 광역 관제)**: `AMM`이 `CH 50001`로 진입 요청(`MSG_ATC_APPROACH_REQ`) $\rightarrow$ 관제탑이 관할 GAC와 광역 백본(`CH 50002`, `MSG_ATC_SECTOR_HANDOFF_REQ/ACK`) 협상 후 `AMM`에 섹터 관제 채널 하달(`MSG_ATC_HANDOFF_CLEARANCE`).
    - **2단계 (GAC 섹터 국지 관제)**: `AMM`은 $Base_{\text{sec}}+0$으로 전환하여 체크인(`MSG_GAC_CHECKIN_REQ`) $\rightarrow$ GAC가 다속성 최적 분배 알고리즘으로 패드 낙점 $\rightarrow$ 섹터 로컬 백본($Base_{\text{sec}}+1$)으로 패드에 슬롯 배정(`MSG_ATC_SLOT_ASSIGN/ACK`) $\rightarrow$ `AMM`에 최종 패드 전술 채널 하달(`MSG_GAC_APPROACH_CLEARANCE`, assignedChannel: $Base_{\text{sec}}+10+\text{Idx}$).
@@ -1645,7 +1646,7 @@ flowchart TD
 ### 5.1 온보드 및 인프라 프로그램 사양·구현 현황
 | 프로그램 명 | 노드 ID | 사양 버전 / 상태 | 구현 및 검증 현황 | 비고 |
 | :--- | :---: | :---: | :--- | :--- |
-| **AMM** | Node 03 | `v2.5.0` (`Implemented`) | `v2.4.0` 기반 `TASK-130`: `/.flight_state.json` (`.tmp`+`fs.move`, `schemaVersion=1`), 공중 콜드부트 `RESUME`/`RTB` 복구(`recovery.coldBootPolicy`), `Base+3` `"AIRBORNE_RECOVERY_HOLD"` 양보 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.5.0` (`Implemented`) |
+| **AMM** | Node 03 | `v2.5.0` (`Implemented`) | `v2.4.0` 기반 `TASK-130`: `/.flight_state.json` (`.tmp`+`fs.move`, `schemaVersion=1`), 공중 콜드부트 `RESUME`/`RTB` 복구(`recovery.coldBootPolicy`), `Base+3` `"AIRBORNE_RECOVERY_HOLD"` 양보 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.6.0` (`Implemented`) |
 | **FCP** | Node 04 | `v2.4.0` (`Implemented`) | `v2.3.0` 기반 `TASK-130`: `VAS Base+2` `"AIRBORNE_RECOVERY_HOLD"` 중 조기 `arm=false` 송출 침묵 및 `AMM` 동기화 후 2.0s 범프리스 추종, OTA `getStatusFn` 정합 | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
 | **VAS** | Node 01 | `v1.24.0` (`Implemented`) | `v1.23.0` 기반 `TASK-130`: `/.flight_state.json` 영속화, `isAirborneAtBoot` (`<=500ms` 목표), 10번째 상태 `AIRBORNE_RECOVERY_HOLD` 및 조기 `arm=false` 무시 | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
 | **TCA 클러스터** | Node 02-xx | `v1.13.0` (`Implemented`) | `v1.12.0` 기반 `[I-13]` `/lib/ota_agent.lua` 안전 게이트(`DISARMED`/`BOOT`/`IDLE_ARMED`) 및 `tick_boot_commit()` 연동 추가 | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독, $Base_{\text{hangar}}+4/+5$ |
@@ -1654,11 +1655,11 @@ flowchart TD
 | **Installer** | Ground / Dev | `v1.2.0` (`Implemented`) | [INSTALLER_PROGRAM_SPECIFICATION.md](../specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md) `startup_generator.lua` 2단계 OTA 부팅 커밋 워치독 및 자가 복구 후크 사양 추가 | 3종 실행 모드, `/startup/00_<id>.lua`, `/.ota_pending.json` 롤백 가드 |
 | **OTA** | Ground / Lib | `v0.1.0` (`Implemented`) | [OTA_PROGRAM_SPECIFICATION.md](../specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md) `[I-13]` 무선 OTA 배포 서버 및 `/lib/ota_agent.lua` 규격 신설 | $Base_{\text{hangar}}+4/+5$, CRC32 스테이징, `/ota_packages/` 원격 동기화, 51x19 TUI/CLI |
 | **FDR** | Ground / Dev | `v0.4.0` (`Implemented`) | [FDR_PROGRAM_SPECIFICATION.md](../specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) `TASK-125`: 패시브 감청 채널에 `Base+9` (`CH_EMERGENCY_CORE`) 추가 및 `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리 | `Base+1/+2/+9/+10`(+선택 `+11/+4`) 수신 전용 패시브 감청 (`modem.transmit` 0회) |
-| **GAC** | Node 07 | `v1.6.0` (`Implemented`) | `v1.5.0` 기반 `CH 50003`/`Base_sec+2` 선택적 `facilities[]` 스냅샷 배열 확장 | 3-Tier 섹터 관제, `CH 50002/50003/50004`, $Base_{\text{sec}}+0/+1/+2/+5$ |
+| **GAC** | Node 07 | `v1.7.0` (`Implemented`) | `v1.6.0` 기반 `/gac/config.json` 및 `MSG_FACILITY_BEACON` 내 GAC 본체 좌표 `position = { x, y, z }` 명시화 | 3-Tier 섹터 관제, `CH 50002/50003/50004`, $Base_{\text{sec}}+0/+1/+2/+5$ |
 | **LANDING_PAD** | Infra | `v2.5.0` (`Implemented`) | `v2.4.4` 구현 기반 3-시설 대칭형 `[I-5]` `MSG_FACILITY_STATIC/DYNAMIC_GUIDE` 정합 사양 개정 | 순수 가상 비콘, 동적 갑판 10°/2.5m/s 인터록, `CH 60001` 송신 전용·위상 분산 |
 | **RUNWAY** | Infra | `v1.12.0` (`Implemented`) | `v1.11.0` 기반 `Landing Pad` 준거 `Base_sec+1`/`+5` 연동, 시단·종단 오프셋 변환, 유선 등화/클러치 우아한 성능 저하 규격 개정 | 가상 ILS, 유선 PAPI/RWSL 조명, `src/0_infra/runway/` |
 | **DOCKING_ARM** | Infra | `v1.12.0` (`Approved`) | `v1.11.2` 기반 GAC `CH 50003` 중앙 집중화·3-시설 대칭형 `[I-5]` 가이드·`MSG_DOCKING_ARM_CMD [DEPRECATED]` 사양 개정 | 2축 갠트리 포획, `AMM` 주도 4단계 랑데부 및 엄빌리컬 보급 |
-| **GCS** | Infra | `v1.3.0` (`Implemented`) | `TASK-404` (다중 기체 `Base+3`/`+0` 동시 구독, `CH 50003`/`50004` 수집, 선택적 WebSocket Live Bridge `ws://127.0.0.1:8765`) + `TASK-125` (`OFFSET_ESTOP = 9` `Base+9`, `BW=40` 고정 검증 `"DENIED"`, 영속 리스 `"REASSIGNED"` 및 4인자 블록 충돌 검사) | `CH 50000` 부트스트랩 채널 관리자, `CH 50003`/`50004` 청취 및 원격 C2 콘솔 |
+| **GCS** | Infra | `v1.4.0` (`Implemented`) | `TASK-405`/`406` (`--lan` 브리지 바인딩, `CH 60003` GPS 하트비트, `gacNode` 무게중심, `60s` `OFFLINE` TTL) + `TASK-404`/`125` (`OFFSET_ESTOP = 9`, `BW=40`, `"REASSIGNED"`) | `CH 50000` 부트스트랩 채널 관리자, `CH 50003`/`50004`/`60003` 청취 및 원격 C2 콘솔 |
 | **GPS** | Infra | `v2.3.3` (`Implemented`) | `v2.3.2` 구현 기반 `60001 ~ 60004` 활성 및 `60005 ~ 60020` 예비 범위 명문화 사양 개정 | `CH 60001/60002` 측위 서버 군, 구형 세션 축출·HWM·단조 응답 가드·위상 분산 |
 
 ### 5.2 VAS & TCA 폐루프 클러스터 통합 시험 결과 (`VAS_TCA_Integration` (구 `VAC_TAP_Integration`))

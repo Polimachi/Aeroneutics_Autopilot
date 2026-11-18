@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.20.0` |
-| **최종 수정일 (Date)** | `2026-11-17` |
+| **문서 버전 (Version)** | `v2.20.1` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 시스템 프로그램 관계망 및 채널 토폴로지 구조도 (Architecture Map) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.20.1` | `2026-11-18` | **`GAC v1.7.0` (`Approved`) 본체 `position` 명시화 및 마스터 ICD(`v1.37.0`) 배지 동기화**: 마스터 ICD(`v1.37.0`)·`GAC`(`v1.7.0 Approved`) 상호 참조 버전 및 `[I-5]` `MSG_FACILITY_BEACON.position` 반영 | `GAC` 관제소 본체 좌표 명시화 전역 동기화 |
 | `v2.20.0` | `2026-11-17` | **`TASK-130` 공중 콜드부트 복구 및 `/.flight_state.json` 영속 토폴로지 반영 (`Approved`)**: ① `VAS` (`v1.24.0 Approved`) 부팅 시 `isAirborneAtBoot` $\to$ `AIRBORNE_RECOVERY_HOLD` (`<=500ms` 목표) 및 `/.flight_state.json` 반영, ② `FCP` (`v2.4.0 Approved`) `AIRBORNE_RECOVERY_HOLD` 중 조기 `arm=false` `Base+1` 송출 침묵·복구 시 2.0s 범프리스 추종 반영, ③ `AMM` (`v2.5.0 Approved`) `/.flight_state.json` 영속화·`RESUME`/`RTB` 복구 및 `Base+3` 양보 확장 반영, ④ 마스터 ICD(`v1.36.0`) 및 §2/§5.1 배지 동기화 | `TASK-130` 서버 재시작·청크 언로드 공중 콜드부트 복구 아키텍처 동기화 |
 | `v2.19.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로토콜·경합·검증 결함 12종 동기화 (`Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `Alignment -> VAS` 전용) 및 `Base+9` (`CH_EMERGENCY_CORE`: `E_STOP` & `MSG_EMERGENCY_ALERT` 전용) 신설·`Base+1` 순수 `MSG_ATTITUDE_CMD` 분리, ② `Base+3` `acroTimeoutMs=250ms`·`acroRecoveryHoldMs=300ms` 히스테리시스 및 `Base+20~39` Zone 3 통합(`CH_PAYLOAD_EXT_30~39`, Zone 4 편대 `TBD` 이관), ③ §4.5/§6.2 랜덤 지터(`0~100ms`)·다회 프로브(`probeRetryCount=2`)·GCS 재할당 회피 루프(`maxReassignAttempts=3`, `"REASSIGNED"`)·`Base+0` 부팅 상시 개방·영속 리스(`channel_registry.json` / `config/channel_lease.json`) 반영, ④ §6.1 `checkCollision` 4인자 정합·`BW=40` 고정(`"DENIED"`)·§6.3 침범 감시 전 블록(`Base+0..39`) 확대·§7.2 중복 Rule 3 제거 및 `ChannelValidator` 단순화, ⑤ 마스터 ICD(`v1.35.0`) 및 연관 규격서(`AMM v2.4.0`, `GCS v1.3.0`, `VAS v1.23.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`, `GAC v1.6.0`, `Runway v1.12.0`, `Editor v0.5.0`) 배지 동기화 | `TASK-125` 40채널 블록 스펙트럼·경합·검증 결함 12종 일괄 해소 및 `TASK-403`/`404` 통합 |
 | `v2.18.0` | `2026-11-16` | **`TASK-404` `GCS v1.2.0` WebSocket Live Bridge 및 `AMM v2.3.0` `MSG_MISSION_CMD` `"LOAD"` 동기화**: ① 마스터 ICD(`v1.34.0`)·`AMM`(`v2.3.0`)·`GCS`(`v1.2.0`) 상호 참조 및 §2 도메인 관계도 갱신, ② §3 `I-6` `MSG_MISSION_CMD` (`"LOAD"`, `missionData`, `saveToDisk`) 및 §5.1 `GCS 비행 콘솔` 수신 채널(`50003`, `50004`, 선택적 로컬 WebSocket `ws://127.0.0.1:8765`) 반영 | WebUI Live Mode 실시간 전술 지도 및 무선 미션 푸시 토폴로지 반영 |
@@ -37,10 +38,10 @@
 | `v2.7.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 ($Base = 10000 + (N-1)\times 40$, $N=1\sim 1000$), 4대 Zone(Zone 1: 코어, Zone 2: 구동계, Zone 3: 탑재체, Zone 4: 편대/확장) 전면 재편, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 20채널 및 `Base+6`, `Base+7`에 `[DEPRECATED]` 배지 부여, 하위 사양서 5종 `approved/` 승격 전이 상대 링크 동기화 | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.36.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0)
 > - [AMM_PROGRAM_SPECIFICATION.md](../specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.5.0)
-> - [AMM_MISSION_EDITOR_SPECIFICATION.md](../specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md) (AMM WebUI 미션 에디터 규격서 v0.5.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.6.0)
+> - [AMM_MISSION_EDITOR_SPECIFICATION.md](../specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md) (AMM WebUI 미션 에디터 규격서 v0.6.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.7.0)
 > - [FCP_PROGRAM_SPECIFICATION.md](../specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.4.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.8.0)
 > - [VAS_PROGRAM_SPECIFICATION.md](../specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (VAS 상세 규격서 v1.24.0)
@@ -53,7 +54,7 @@
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.3.0)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.4.0)
 
 ---
 
@@ -80,8 +81,8 @@ flowchart TD
     %% Domain 1: Ground Control Station (GCS)
     %% ==========================================
     subgraph DOMAIN_GCS["[인프라] GCS 지상 관제 센터"]
-        GCS_CHAN["GCS 채널 관리자<br/>(channel_manager.lua / v1.3.0)<br/>* CH 50000 게이트웨이<br/>* 10000~49999 연속 블록 배정 & 영속 리스"]
-        GCS_C2["GCS 비행 지휘 콘솔<br/>(gcs_terminal.lua / v1.3.0)<br/>* 원격 C2 / 미션 제어 / Base+9 비상 E-Stop<br/>* CH 50003·50004 & ws://127.0.0.1:8765(옵션)"]
+        GCS_CHAN["GCS 채널 관리자<br/>(channel_manager.lua / v1.4.0)<br/>* CH 50000 게이트웨이<br/>* 10000~49999 연속 블록 배정 & 영속 리스"]
+        GCS_C2["GCS 비행 지휘 콘솔<br/>(gcs_terminal.lua / v1.4.0)<br/>* 원격 C2 / 미션 제어 / Base+9 비상 E-Stop<br/>* CH 50003·50004·60003 & ws:// Live Bridge(옵션)"]
     end
 
     %% ==========================================
@@ -280,7 +281,7 @@ flowchart TD
 | **I-4** | `MSG_CALIB_ACK` | `VAS` (Node 01) | `Alignment` (Node 05) | $Base_{\text{hangar}} + 1$<br>(`CH_CALIBRATION_TELEM`) | 프로파일 반영 직후 1회 | `profileId` (수신 반영 ID), `status` (`"ACCEPTED"` / `"REJECTED"`) |
 | **I-4** | `MSG_CALIBRATION_CLOSE` | `Alignment` (Node 05) | `VAS` (Node 01) | $Base_{\text{hangar}} + 0$<br>(`CH_CALIBRATION_CMD`) | 교정 세션 종료 시 | `bayId`, `action` (`"CLOSE_SESSION"`), `saveProfile` (선택, boolean), `reason` |
 | **I-4** | `MSG_CALIBRATION_CLOSE_ACK` | `VAS` (Node 01) | `Alignment` (Node 05) | $Base_{\text{hangar}} + 1$<br>(`CH_CALIBRATION_TELEM`) | 세션 종료 즉시 | `bayId`, `status` (`"CLOSED"`), `currentFsmState` (선택, 예: `"IDLE"`) |
-| **I-5** | `MSG_FACILITY_BEACON` | `GAC Node` (대표 송신) | `AMM` (Node 03) | `50003` / $Base_{\text{sec}} + 2$<br>(`CH_FACILITY_BEACON` / `CH_SECTOR_BEACON`) | 1Hz 주기 브로드캐스트 | `sectorId`, `gacChannel`, `facilitiesSummary` (`totalLandingPads`, `freeLandingPads`, `totalRunways`, `freeRunways`, `totalDockingArms`, `freeDockingArms`, `maxSupportWeight`, `maxSupportRadius`), `surfaceWind`, `mobility`, `status`, `facilities[]` (선택) |
+| **I-5** | `MSG_FACILITY_BEACON` | `GAC Node` (대표 송신) | `AMM` (Node 03) | `50003` / $Base_{\text{sec}} + 2$<br>(`CH_FACILITY_BEACON` / `CH_SECTOR_BEACON`) | 1Hz 주기 브로드캐스트 | `sectorId`, `gacChannel`, `position` (선택), `facilitiesSummary` (`totalLandingPads`, `freeLandingPads`, `totalRunways`, `freeRunways`, `totalDockingArms`, `freeDockingArms`, `maxSupportWeight`, `maxSupportRadius`), `surfaceWind`, `mobility`, `status`, `facilities[]` (선택) |
 | **I-5** | `MSG_ATC_APPROACH_REQ` | `AMM` (Node 03) | `Tower ATC Node` | `50001`<br>(`CH_ATC_COMM`) | 광역 진입 시 (또는 재요청) | `aircraftId`, `targetSector`, `airframeType`, `estimatedArrivalTime`, `retryCount` |
 | **I-5** | `MSG_ATC_SECTOR_HANDOFF_REQ` | `Tower ATC Node` | `GAC Node` | `50002`<br>(`CH_ATC_FACILITY`) | 광역 진입 협상 | `aircraftId`, `sectorId`, `airframeType`, `eta` |
 | **I-5** | `MSG_ATC_SECTOR_HANDOFF_ACK` | `GAC Node` | `Tower ATC Node` | `50002`<br>(`CH_ATC_FACILITY`) | 협상 즉시 응답 | `aircraftId`, `status` (`ACCEPTED`/`DENIED`), `gacChannel` ($Base_{\text{sec}} + 0$) |
@@ -677,7 +678,7 @@ sequenceDiagram
 | 프로그램 명칭 | 파일명 | 소속 도메인 | 송신 채널 (Tx) | 수신(개방) 채널 (Rx) | 통신 매체 및 포트 | 핵심 프로토콜 및 역할 |
 | :--- | :--- | :--- | :---: | :---: | :---: | :--- |
 | **GCS 채널 관리자** | `channel_manager.lua` | 지상 관제 | `50000` | `50000` | 무선 모뎀 (Ender) | 기체별 고유 채널 블록($N$, $Base = 10000 + (N - 1) \times 40$, $BW=40$ 고정, $N=1\sim 1000$, 구 $BW=20$ [DEPRECATED]) 배정, 4인자 블록 충돌 검사, `"ASSIGNED"`/`"REASSIGNED"`/`"DENIED"`/`"FAILED"`, 영속 리스 관리 |
-| **GCS 비행 콘솔** | `gcs_terminal.lua` | 지상 관제 | `Base + 0`, `Base + 9` (`E_STOP`) | `Base + 0`, `Base + 3`, `50003`, `50004`, `Base + 2` (옵션), `Base + 9` (옵션) | 무선 모뎀 (Ender) & `http.websocket` (`ws://127.0.0.1:8765`, 옵션) | 다중 기체 동시 모니터링(`Base+3`), 시설 비콘(`50003`)·미션 ACK(`50004`) 수집, 조종사 C2 오버라이드, 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), WebSocket 브리지 중계, 하드 킬스위치(`E_STOP` on `Base+9`, `OFFSET_ESTOP = 9`) |
+| **GCS 비행 콘솔** | `gcs_terminal.lua` | 지상 관제 | `Base + 0`, `Base + 9` (`E_STOP`) | `Base + 0`, `Base + 3`, `50003`, `50004`, `60003`, `Base + 2` (옵션), `Base + 9` (옵션) | 무선 모뎀 (Ender) & `http.websocket` (`ws://127.0.0.1:8765`, 옵션) | 다중 기체 동시 모니터링(`Base+3`), 시설 비콘(`50003`)·미션 ACK(`50004`)·GPS 하트비트(`60003`) 수집, 조종사 C2 오버라이드, 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), WebSocket 브리지 중계, 하드 킬스위치(`E_STOP` on `Base+9`, `OFFSET_ESTOP = 9`) |
 | **GPS 중앙 연산 서버** | `gps/server.lua` | 고정밀 GPS | `Base + 5`, `60004` | `60002`, `60003`, `60004` | 무선 모뎀 (Ender) & 유선 모니터 | 4+ 노드 거리 취합, 2D WLS/가우스-뉴턴 조기 연산($\le 50\text{ms}$), Advanced Monitor 4탭 터치 GCS 및 자동 피팅 레이더 |
 | **GPS 스웜 노드 군** | `gps/node.lua` (#01~#K)| 고정밀 GPS | `60003`, `60004` | `60001`, `60004` | 무선 모뎀 (Ender) | 3초 핫키 부팅, 핑 수신 즉시 3D 거리 보고(`MSG_GPS_NODE_REPORT`), 경량 콘솔 로깅 데몬 |
 | **GPS 클라이언트 API** | `gps/client.lua` | 고정밀 GPS | `60001` | `Base + 5` (지정 채널) | 무선 모뎀 (Ender) | 하이브리드 측위 API: 동기식 `locate()`(500ms, 1회 재전송) + 20Hz 비동기 `request()`/`poll()` |

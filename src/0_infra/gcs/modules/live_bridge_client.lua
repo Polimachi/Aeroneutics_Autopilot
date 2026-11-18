@@ -59,15 +59,87 @@ local function send_json(state, tbl)
     return true
 end
 
+local function compute_gac_position(beacon_payload)
+    local explicit = beacon_payload.position
+    if type(explicit) == "table" and type(explicit.x) == "number" and type(explicit.z) == "number" then
+        return {
+            x = explicit.x,
+            y = explicit.y or 0.0,
+            z = explicit.z,
+        }
+    end
+    if type(beacon_payload.facilities) == "table" then
+        local sx, sy, sz, count = 0.0, 0.0, 0.0, 0
+        for _, fac in ipairs(beacon_payload.facilities) do
+            local pos = type(fac) == "table" and (fac.position or fac.coordinates)
+            if type(pos) == "table" and type(pos.x) == "number" and type(pos.z) == "number" then
+                sx = sx + pos.x
+                sy = sy + (pos.y or 0.0)
+                sz = sz + pos.z
+                count = count + 1
+            end
+        end
+        if count > 0 then
+            return { x = sx / count, y = sy / count, z = sz / count }
+        end
+    end
+    return nil
+end
+
 function live_bridge_client.send_world_preset(state, beacon_payload)
     if type(beacon_payload) ~= "table" then return false end
+    local gac_pos = compute_gac_position(beacon_payload)
+    local gac_node = nil
+    if gac_pos then
+        gac_node = {
+            facilityId = "GAC_" .. tostring(beacon_payload.sectorId or "SECTOR"),
+            facilityType = "GAC",
+            status = beacon_payload.status or "OPERATIONAL",
+            position = gac_pos,
+            sectorId = beacon_payload.sectorId,
+            gacChannel = beacon_payload.gacChannel,
+        }
+    end
     return send_json(state, {
         type = "WORLD_PRESET_SYNC",
         sectorId = beacon_payload.sectorId,
         sectorName = beacon_payload.sectorName,
         surfaceWind = beacon_payload.surfaceWind,
         facilities = beacon_payload.facilities or {},
+        gacNode = gac_node,
     })
+end
+
+function live_bridge_client.send_gps_nodes(state, gps_nodes_map)
+    if not state or not state.connected or type(gps_nodes_map) ~= "table" then return false end
+    local keys = {}
+    for k, _ in pairs(gps_nodes_map) do
+        table.insert(keys, k)
+    end
+    table.sort(keys)
+    local list = {}
+    for _, k in ipairs(keys) do
+        local n = gps_nodes_map[k]
+        if type(n) == "table" then
+            local pos = n.position or {}
+            table.insert(list, {
+                facilityId = n.facilityId or k,
+                facilityType = "GPS",
+                status = n.status or (n.isStale and "OFFLINE" or "ONLINE"),
+                isStale = (n.isStale == true),
+                lastSeen = n.lastSeen,
+                computerId = n.computerId,
+                uptime = n.uptime or 0,
+                reportsSent = n.reportsSent or 0,
+                position = {
+                    x = pos.x or 0.0,
+                    y = pos.y or 0.0,
+                    z = pos.z or 0.0,
+                },
+            })
+        end
+    end
+    return send_json(state, { type = "GPS_NODES_SYNC", nodes = list })
 end
 
 function live_bridge_client.send_fleet_telemetry(state, fleet_state)

@@ -184,4 +184,78 @@ describe("GCS main application loop and event dispatcher", function()
 
         if fs.exists("config/test_ws_registry.json") then fs.delete("config/test_ws_registry.json") end
     end)
+
+    it("collects CH 60003 MSG_GPS_NODE_HEARTBEAT, marks >60s silent nodes OFFLINE/STALE without delete, and supports manual purge", function()
+        local modem = create_mock_modem()
+        local sent_ws = {}
+        local mock_ws = {
+            send = function(_, raw) table.insert(sent_ws, textutils.unserializeJSON(raw)) end,
+            close = function() end,
+        }
+        local now_ms = 1000000
+        local orig_epoch = os.epoch
+        os.epoch = function() return now_ms end
+
+        local ok, err = pcall(function()
+            local cfg_ws = {
+                system = { id = "GCS_01", domainId = "GCS_01", modemSide = "top" },
+                channels = {
+                    bootstrapChannel = 50000, facilityBeaconChannel = 50003,
+                    missionAckChannel = 50004, gpsHeartbeatChannel = 60003,
+                    bandwidth = 40, baseChannelMin = 10000, baseChannelMax = 49960, maxCraftBlocks = 1000,
+                },
+                liveBridge = { enabled = true, url = "ws://127.0.0.1:8765", telemetrySyncHz = 5 },
+                ui = { screenWidth = 51, screenHeight = 19, telemetryTimeoutSec = 5.0 },
+            }
+            local app = main.create_app(cfg_ws, modem, "config/test_gps_registry.json", {
+                websocket = function() return mock_ws end,
+            })
+
+            assert_true(modem:isOpen(60003))
+
+            assert_true(app:process_modem_message(60003, 60003, {
+                ver = "1.9.5", domainId = "GPS_NODE_01", seq = 1, type = "MSG_GPS_NODE_HEARTBEAT", time = now_ms,
+                payload = {
+                    nodeId = "GPS_NODE_01", computerId = 11,
+                    pos = { x = 100, y = 240, z = -300 },
+                    status = "ONLINE", uptime = 50, reportsSent = 12,
+                },
+            }))
+
+            assert_not_nil(app.gps_nodes["GPS_NODE_01"])
+            assert_eq(app.gps_nodes["GPS_NODE_01"].status, "ONLINE")
+            assert_false(app.gps_nodes["GPS_NODE_01"].isStale)
+            assert_eq(sent_ws[#sent_ws].type, "GPS_NODES_SYNC")
+            assert_eq(#sent_ws[#sent_ws].nodes, 1)
+            assert_eq(sent_ws[#sent_ws].nodes[1].facilityId, "GPS_NODE_01")
+
+            -- Advance past 60s TTL (61000ms) + second active node at 1050000ms
+            now_ms = 1050000
+            assert_true(app:process_modem_message(60003, 60003, {
+                ver = "1.9.5", domainId = "GPS_NODE_02", seq = 2, type = "MSG_GPS_NODE_HEARTBEAT", time = now_ms,
+                payload = {
+                    nodeId = "GPS_NODE_02", computerId = 12,
+                    pos = { x = 200, y = 245, z = -350 },
+                    status = "ONLINE", uptime = 20, reportsSent = 4,
+                },
+            }))
+
+            now_ms = 1061000
+            assert_true(app:sync_bridge_telemetry())
+            assert_not_nil(app.gps_nodes["GPS_NODE_01"])
+            assert_eq(app.gps_nodes["GPS_NODE_01"].status, "OFFLINE")
+            assert_true(app.gps_nodes["GPS_NODE_01"].isStale)
+            assert_eq(app.gps_nodes["GPS_NODE_02"].status, "ONLINE")
+            assert_false(app.gps_nodes["GPS_NODE_02"].isStale)
+
+            local purged = app:purge_offline_gps_nodes()
+            assert_eq(purged, 1)
+            assert_nil(app.gps_nodes["GPS_NODE_01"])
+            assert_not_nil(app.gps_nodes["GPS_NODE_02"])
+        end)
+
+        os.epoch = orig_epoch
+        if fs.exists("config/test_gps_registry.json") then fs.delete("config/test_gps_registry.json") end
+        if not ok then error(err) end
+    end)
 end)

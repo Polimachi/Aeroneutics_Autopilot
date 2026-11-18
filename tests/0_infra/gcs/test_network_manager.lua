@@ -173,6 +173,7 @@ describe("GCS network manager", function()
         assert_true(network_manager.open_infra_channels(ctx))
         assert_true(modem:isOpen(50003))
         assert_true(modem:isOpen(50004))
+        assert_true(modem:isOpen(60003))
 
         assert_true(network_manager.register_craft_channels(ctx, 10000))
         assert_true(network_manager.register_craft_channels(ctx, 10040))

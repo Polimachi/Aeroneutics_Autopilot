@@ -5,6 +5,7 @@ Relays real-time messages between in-game CC:Tweaked GCS (http.websocket) and
 the offline host browser WebUI (tools/amm_mission_editor.html) on localhost:
   - WORLD_PRESET_SYNC     (GCS -> Bridge -> WebUI, cached for late joiners)
   - FLEET_TELEMETRY_SYNC  (GCS -> Bridge -> WebUI, cached for late joiners)
+  - GPS_NODES_SYNC        (GCS -> Bridge -> WebUI, cached for late joiners)
   - MISSION_PUSH_CMD      (WebUI -> Bridge -> GCS)
   - MISSION_PUSH_ACK      (GCS -> Bridge -> WebUI)
 
@@ -17,6 +18,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import socket
 import struct
 import sys
 from typing import Any
@@ -99,6 +101,7 @@ class GCSLiveBridgeServer:
         self.clients: set[asyncio.StreamWriter] = set()
         self.latest_world: dict[str, Any] | None = None
         self.latest_fleet: dict[str, Any] | None = None
+        self.latest_gps: dict[str, Any] | None = None
 
     async def start(self) -> None:
         self.server = await asyncio.start_server(self._handle_client, self.host, self.port)
@@ -145,6 +148,8 @@ class GCSLiveBridgeServer:
             await self._send_json(writer, self.latest_world)
         if self.latest_fleet is not None:
             await self._send_json(writer, self.latest_fleet)
+        if self.latest_gps is not None:
+            await self._send_json(writer, self.latest_gps)
 
     async def _process_text(self, writer: asyncio.StreamWriter, raw: bytes) -> None:
         try:
@@ -158,6 +163,8 @@ class GCSLiveBridgeServer:
             self.latest_world = msg
         elif mtype == "FLEET_TELEMETRY_SYNC":
             self.latest_fleet = msg
+        elif mtype == "GPS_NODES_SYNC":
+            self.latest_gps = msg
         if self.dump_state:
             print(f"[BRIDGE] {mtype}: {json.dumps(msg, ensure_ascii=False)}", flush=True)
         await self._broadcast_other(writer, msg)
@@ -210,10 +217,39 @@ class GCSLiveBridgeServer:
             writer.close()
 
 
+def detect_lan_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("10.255.255.255", 1))
+            ip = sock.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                return ip
+    except OSError:
+        pass
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        if ip and not ip.startswith("127."):
+            return ip
+    except OSError:
+        pass
+    return "<lan-ip>"
+
+
+def resolve_bind_host(args: argparse.Namespace) -> str:
+    if getattr(args, "lan", False) and args.host == "127.0.0.1":
+        return "0.0.0.0"
+    return str(args.host)
+
+
 async def serve_forever(host: str, port: int, dump_state: bool) -> None:
     bridge = GCSLiveBridgeServer(host=host, port=port, dump_state=dump_state)
     await bridge.start()
     print(f"[GCS Live Bridge] Listening on ws://{host}:{bridge.bound_port}", flush=True)
+    if host == "0.0.0.0":
+        print(
+            f"[GCS Live Bridge] LAN URL hint: ws://{detect_lan_ip()}:{bridge.bound_port} (or ws://<hostname>.local:{bridge.bound_port})",
+            flush=True,
+        )
     assert bridge.server is not None
     try:
         async with bridge.server:
@@ -227,6 +263,7 @@ async def serve_forever(host: str, port: int, dump_state: bool) -> None:
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Create_Aeroneutics Localhost WebSocket Live Bridge")
     parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+    parser.add_argument("--lan", action="store_true", help="Bind to 0.0.0.0 for LAN WebUI access (alias for --host 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8765, help="WebSocket port (default: 8765)")
     parser.add_argument("--dump-state", action="store_true", help="Print relayed JSON frames to stdout")
     return parser
@@ -234,8 +271,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
+    bind_host = resolve_bind_host(args)
     try:
-        asyncio.run(serve_forever(args.host, args.port, args.dump_state))
+        asyncio.run(serve_forever(bind_host, args.port, args.dump_state))
     except KeyboardInterrupt:
         return 0
     return 0

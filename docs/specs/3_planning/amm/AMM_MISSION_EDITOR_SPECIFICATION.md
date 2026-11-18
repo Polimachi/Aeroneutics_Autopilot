@@ -8,22 +8,23 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v0.5.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v0.6.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `tools/amm_mission_editor.html` |
 | **주관 도메인 (Domain)** | 임무 계획 외부 웹 GUI 미션 에디터 (AMM Companion Tool / Host PC) |
 
 > **연관 문서**:
-> - [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) (AMM 항공 임무 관리자 v2.4.0 Implemented)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 실시간 브리지 v1.3.0 Implemented)
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0 Approved)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0 Approved)
+> - [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) (AMM 항공 임무 관리자 v2.5.0 Implemented)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 실시간 브리지 v1.4.0 Implemented)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0 Approved)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.1 Approved)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 컨텍스트 및 규칙)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.6.0` | `2026-11-18` | **`TASK-405` LAN 사설 IP/mDNS 접속 지원 및 `TASK-406` 광역 줌·실시간 노드 자동등록/1분 TTL·대상 필터·`Inspection` 모드 규격 신설 (`Implemented` $\to$ `Approved`)**: ① `LiveBridge.isAllowedLocalUrl`을 루프백 + RFC 1918 사설 IPv4(`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) + `*.local` `ws://`로 확장(공인 IP·`wss://` 차단 유지) 및 `#liveBridgeUrlInput` + `localStorage`(`uafs_amm_live_bridge_url_v1`) 영속화, ② 줌 하한 `0.01 .. 4.0 px/m` (`1% .. 400%`) 및 10단계 동적 그리드(`10..10000m`) 확장, ③ `WorldStore` 시설 타입 7종(`LANDING_PAD`, `RUNWAY`, `HANGAR`, `DOCKING_ARM`, `GPS`, `GAC`, `WAYPOINT`)·`WORLD_PRESET_SYNC.gacNode`(명시 좌표 또는 시설 무게중심)·`GPS_NODES_SYNC` 자동 등록 및 `60,000ms` 무신호 시 자동 삭제 없이 `OFFLINE`/`STALE` 반투명 표시 + 수동 `Purge Offline` 정리(`!fac.liveAuto` 수동 시설 보존), ④ 기체/시설 타입 필터링 UI(`ui.filters`), ⑤ 읽기 전용 `Inspection` 모드(미션 편집 잠금, 기체 카메라 자동 추적 `Follow` 및 `'Push to Aircraft'` 허용, 상세 텔레메트리·시설·GPS HUD) 정의 및 `GCS v1.4.0` 동기화 | `TASK-405` 분리 호스트 LAN Live Bridge 접속 지원 및 `TASK-406` 광역 공역 관제·실시간 노드 관리·비편집 관전 모드 고도화 |
 | `v0.5.0` | `2026-11-16` | **`TASK-404` localhost WebSocket Live Mode (`LiveBridge`), 다중 기체 전술 궤적 및 `'Push to Aircraft'` 원클릭 무선 전송 규격 추가 (`Implemented` $\to$ `Approved`)**: ① `LiveBridge` 모듈 (`ws://127.0.0.1:8765`, 사용자 `'Connect Live'` 클릭 시에만 연결; 외부 URL/`fetch`/`XMLHttpRequest`/비로컬 `ws://`·`wss://`는 영구 차단), ② `WORLD_PRESET_SYNC` 수신 시 `WorldStore` 자동 생성·병합 및 `#liveFleetBadge` 상태 표시, ③ `FLEET_TELEMETRY_SYNC` 수신 시 2D 캔버스 위 다중 기체 실시간 위치·기수 삼각 마커·궤적 폴리라인(`Trail`) 오버레이, ④ `'Push to Aircraft'` 인페이지 모달(`LOAD` vs `RUN`, 대상 기체 선택, `saveToDisk` 옵션)로 `MISSION_PUSH_CMD` 송출 및 `MISSION_PUSH_ACK` 토스트 수신, ⑤ `AMM v2.3.0`, `GCS v1.2.0`, `ICD v1.34.0`, `Diagram v2.18.0` 동기화 | `TASK-404` WebUI 에디터-`GCS`-`AMM` 실시간 양방향 전술 지도 및 무선 미션 푸시 지원 |
 | `v0.4.0` | `2026-11-16` | **`TASK-403` 멀티-월드 지상 시설 프리셋(`WorldStore`), `ACT_TKL_LAND_NEAREST` (`37`종) 및 2D 좌표 눈금자 규격 추가 (`Implemented` $\to$ `Approved`)**: ① `WorldStore` (`localStorage` 키 `uafs_amm_world_presets_v1`, 멀티 월드 스위칭/CRUD, 시설 스키마 `{ facilityId, label, type, x, z, y, headingDeg, notes }`, Export/Import World JSON), ② 상단 `World` 선택기·`#worldPresetDrawer`·`PICK_FACILITY` 도구 및 캔버스 4변 `(X, Z)` 눈금 라벨 + 배경 시설 핀 레이어, ③ 인스펙터 시설 호환 드롭다운·미등록 `facilityId` `WARNING`(`UNREGISTERED_FACILITY_ID`) + `'Register to Current World'` 버튼·`'From World…'`/`'Save as Facility'`(스마트 Y 매핑), ④ `ACT_TKL_LAND_NEAREST` (`37`종 활성 `ACT_*`) 추가 및 검증·라운드트립 확장 | `TASK-403` 서버별/월드별 지상 시설 좌표 프리셋·체크포인트 원클릭 연동·`ACT_TKL_LAND_NEAREST` 지원 |
 | `v0.3.1` | `2026-11-14` | **`frontend-design` + `web-design-guidelines` 기반 UI 크래프트·접근성 규격 정제 (`Draft` 유지)**: ① 4단 타이포 스케일(`11/12/13/14px`)·계측 코너 반경(`2px/4px/6px`)·무그림자 헤어라인 및 2D 캔버스 단일 시각 초점 원칙 명시, ② 빈 상태(`checkpoints=[]`)·오류 복구 지침 카피 및 능동형 버튼-토스트 일관성(`Export .json` $\to$ `Exported …`) 규격화, ③ `<meta name="theme-color">`, `pointer: fine` `overscroll-behavior: none`, 드래그 중 `user-select: none`, `paste` 차단 금지, 다이얼로그 `aria-modal`/포커스 복원, 긴 ID 말줄임(`min-width: 0`) 및 `translate="no"` 추가 | `TASK-402` 구현 계획 수립 직전 격리 HTML 스킬 기준선 반영 |
@@ -39,20 +40,20 @@
 ### 1.1 목적 및 기능 범위
 `tools/amm_mission_editor.html`은 마인크래프트 CC:Tweaked 인게임 `51x19` 터미널의 해상도 한계 밖에서, 호스트 PC 브라우저를 통해 `AMM (Node 03)`의 `v2.0.0` 다중 체크포인트 미션 JSON 파일을 시각적으로 설계·검증·입출력하는 **독립형 오프라인 웹 GUI 컴패니언 도구**입니다.
 
-1. **AMM `v2.0.0` 미션 스키마 동등성**: `AMM_PROGRAM_SPECIFICATION.md` (`v2.4.0 Implemented`) §6·§9가 정의한 **3계층 `ACT_*`(활성 37종 + 예약 19종 + `TASK-401`) / `DEC_*`(7종) / `MAC_*`(5종) 매크로 전개**, **4대 범주 `preconditions`**, **14종 `completeWhen`/`abortWhen` 조건(`settleTicks` 포함)**, **4종 `onEnter`/`onExit`/`onAbort` 라이프사이클 훅**을 지원합니다. 구 `v1.0.0` `items[]` 및 구 13종 액션(`FLY_OVER` 등 `[DEPRECATED - v2.0.0]`)은 Zero-Fallback 정책에 따라 오류(`ERROR`)로 거부합니다.
-2. **2D `(X, Z)` 전술 경로 시각화 및 실시간 오버레이**: 마인크래프트 수평 좌표계($+X$ 동쪽, $-Z$ 북쪽) 위에서 웨이포인트, 도달 허용 반경(`acceptanceRadius`), `ACT_PAT_LOITER_*` 선회 원, `ACT_NAV_GOTO_WP` 접선 진입 오프셋(`tangentEntryOffsetM`), `ACT_NAV_CORRIDOR` 회랑선, `ACT_PAT_POI_HOLD` 조준선을 실시간 렌더링하고 마우스 클릭·드래그로 좌표를 편집하며, Live Mode 연결 시 다중 기체 실시간 위치·기수각·비행 궤적(`Trail`)을 중첩 표출합니다.
+1. **AMM `v2.0.0` 미션 스키마 동등성**: `AMM_PROGRAM_SPECIFICATION.md` (`v2.5.0 Implemented`) §6·§9가 정의한 **3계층 `ACT_*`(활성 37종 + 예약 19종 + `TASK-401`) / `DEC_*`(7종) / `MAC_*`(5종) 매크로 전개**, **4대 범주 `preconditions`**, **14종 `completeWhen`/`abortWhen` 조건(`settleTicks` 포함)**, **4종 `onEnter`/`onExit`/`onAbort` 라이프사이클 훅**을 지원합니다. 구 `v1.0.0` `items[]` 및 구 13종 액션(`FLY_OVER` 등 `[DEPRECATED - v2.0.0]`)은 Zero-Fallback 정책에 따라 오류(`ERROR`)로 거부합니다.
+2. **2D `(X, Z)` 전술 경로 시각화 및 실시간 오버레이 (`Mission Edit` / `Inspection`)**: 마인크래프트 수평 좌표계($+X$ 동쪽, $-Z$ 북쪽) 위에서 `1%..400%`(`0.01..4.0 px/m`) 광역 줌과 10단계 동적 그리드(`10..10000m`)로 웨이포인트, 도달 허용 반경(`acceptanceRadius`), `ACT_PAT_LOITER_*` 선회 원, `ACT_NAV_GOTO_WP` 접선 진입 오프셋(`tangentEntryOffsetM`), `ACT_NAV_CORRIDOR` 회랑선, `ACT_PAT_POI_HOLD` 조준선을 실시간 렌더링합니다. Live Mode 연결 시 다중 기체 실시간 위치·기수각·비행 궤적(`Trail`), `GAC`·`GPS`·예하 지상시설(`Landing Pad`, `Runway`, `Hangar`, `Docking Arm`) 자동 등록 및 `60s` 무신호 `OFFLINE`/`STALE` 상태 전이, 대상 필터링, 읽기 전용 `Inspection` 모드(카메라 `Follow` 포함)를 제공합니다.
 3. **실시간 프리플라이트 검증 및 원클릭 무선 미션 푸시**: 온보드 `mission_engine.validate_mission_table` 및 `action_registry` 규칙과 동등한 정적 검증(`validateMission()`)을 편집 즉시 실행해, 인게임 투입 전 `CP#idx` 단위 오류(`SCHEMA_INVALID`)와 예약(`DEFERRED_ACTION_UNSUPPORTED`) 경고를 사전 검출하며, Live Mode 연결 시 `'Push to Aircraft'` 모달을 통해 `GCS` 브리지 경유 `MSG_MISSION_CMD` (`LOAD` / `RUN`)를 무선 전송합니다.
 
 ### 1.2 불변 제약 (Hard Constraints)
 - **무설치(Zero-Install) 단일 파일 구조**: `tools/amm_mission_editor.html`은 별도 빌드 도구, 로컬 HTTP 서버, npm 패키지 없이 단일 `.html` 파일(인라인 `<style>` + `<script>`)로 완결되어야 하며 `file://` 프로토콜에서 즉시 열려야 합니다.
-- **외부 네트워크·CDN 차단 (Localhost Live Bridge 한정 예외)**: `<script src="http...">`, `<link href="https...">`, Google Fonts, `fetch()`, `XMLHttpRequest`, 외부 `http://`/`https://`/`wss://`/비로컬 `ws://` 요청은 영구 금지(`0`건)합니다. 단, 사용자가 UI `'Connect Live'` 버튼을 클릭할 때에 한해 호스트 PC 로컬 브리지(`ws://127.0.0.1:8765`, `tools/gcs_live_bridge.py`) 연결을 허용합니다.
+- **외부 네트워크·CDN 차단 (로컬/LAN 사설망 Live Bridge 한정 예외)**: `<script src="http...">`, `<link href="https...">`, Google Fonts, `fetch()`, `XMLHttpRequest`, 외부 `http://`/`https://`/`wss://` 및 공인 IP/외부 인터넷 `ws://` 요청은 영구 금지(`0`건)합니다. 단, 사용자가 UI에서 브리지 URL(`#liveBridgeUrlInput`)을 명시 입력하고 `'Connect Live'` 버튼을 클릭할 때에 한해 루프백(`127.0.0.0/8`, `localhost`), RFC 1918 사설 IPv4(`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, 각 옥텟 `0..255`), 및 mDNS `.local`(`*.local`) `ws://<host>:<port>` (`1..65535`) 연결(`tools/gcs_live_bridge.py`)을 허용합니다.
 - **DOM XSS 안전성**: 사용자가 불러오거나 붙여넣거나 WebSocket 브리지로부터 수신한 문자열(`missionId`, `description`, `checkpointId`, `facilityId`, `sectorName`, `domainId`, `command`, `message`, 오류 문구 등)을 DOM에 출력할 때는 반드시 `document.createElement` + `textContent` (또는 `value`)만 사용하며, 비신뢰 문자열을 `innerHTML` / `insertAdjacentHTML`에 직접 결합하지 않습니다.
 - **네이티브 대화상자 금지 (In-Page Modal & Toast Only)**: 브라우저 기본 차단 대화상자(`window.alert`, `window.confirm`, `window.prompt`) 호출을 금지하며, 오류 포함 내보내기(`#exportConfirmModal`) 및 원클릭 푸시(`#pushAircraftModal`) 확인은 인페이지 모달로, 입출력/복사/푸시 응답 알림은 비차단 토스트 컨테이너(`#toastContainer`)로 처리합니다.
 - **생태계 용어 및 금지 모드 준수**: `.agent/rules/domain-aeronautics.md`의 금지 모드·네임스페이스 및 `tests/harness/test_terminology_guard.py`의 금지 구버전 용어를 UI·주석·식별자 어디에도 포함하지 않습니다.
 
 ### 1.3 비목표 (Non-Goals)
 - 3D WebGL 지형 렌더링이나 마인크래프트 월드 세이브(`.mca`) 직접 파싱은 수행하지 않습니다.
-- 외부 인터넷 서버/클라우드 중계 WebSocket 또는 자동 백그라운드 연결 시도는 수행하지 않습니다(로컬 브리지 `ws://127.0.0.1:8765`는 명시적 사용자 토글 시에만 연결).
+- 외부 인터넷 서버/클라우드 중계 WebSocket 또는 자동 백그라운드 연결 시도는 수행하지 않습니다(로컬/LAN 사설망 브리지 `ws://`는 명시적 사용자 토글 시에만 연결).
 
 ---
 
@@ -163,19 +164,19 @@ flowchart LR
 
 1. **Top Action & Mission Header Bar (`header.top-header`, `52px`)**:
    - `1280px` 해상도에서도 1행 유지가 가능하도록 핵심 식별·전역 파일 제어만 배치합니다(`Fallback Policy`·`Aircraft #N` 프리뷰는 우측 `Mission Settings` 모드로 이관).
-   - **좌측**: 앱 타이틀(`AMM MISSION EDITOR`), `Mission ID` 입력(`spellcheck="false"`, `autocomplete="off"`), `Execution Mode` 세그멘트 토글(`SINGLE` / `REPEAT`), **활성 월드 선택 드롭다운(`World`) + `World Presets` 드로어 버튼**.
-   - **우측**: `Undo` / `Redo`, `Presets` 드롭다운, `Import .json`, `Raw JSON` 드로어 토글(활성 시 시안 강조), `Copy JSON`, `Export .json`.
+   - **좌측**: 앱 타이틀(`AMM MISSION EDITOR`), **`[Mission Edit | Inspection]` 워크스페이스 모드 토글(`#btnModeMissionEdit` / `#btnModeInspection`)**, `Mission ID` 입력(`spellcheck="false"`, `autocomplete="off"`), `Execution Mode` 세그멘트 토글(`SINGLE` / `REPEAT`), **활성 월드 선택 드롭다운(`World`) + `World Presets` 드로어 버튼**.
+   - **우측**: `Undo` / `Redo`, `Presets` 드롭다운, `Import .json`, `Raw JSON` 드로어 토글(활성 시 시안 강조), `Copy JSON`, `Export .json`, **Live Bridge URL 입력(`#liveBridgeUrlInput`) + `Connect Live` / `#liveFleetBadge` / `Push to Aircraft`**.
 2. **Left Checkpoint Sequence Rail (`300px`) & `#actionPickerPopover`**:
-   - **레일 헤더**: `CHECKPOINTS (N)` 카운터, `+ Add` 버튼(전술 `ACT_*` 팔레트 오픈), `+ Macro` 버튼(`MAC_*` 매크로 팔레트 오픈).
+   - **레일 헤더**: `CHECKPOINTS (N)` 카운터, `+ Add` 버튼(전술 `ACT_*` 팔레트 오픈), `+ Macro` 버튼(`MAC_*` 매크로 팔레트 오픈). **`Inspection` 모드에서는 편집 버튼을 숨기고 실시간 기체·시설(`GAC`/`GPS`/하위 시설)·체크포인트 탐색 목록을 표시**합니다.
    - **액션·매크로 팔레트 팝오버 (`#actionPickerPopover`)**: 64종 액션(`37` 활성 + `19+3` 예약 + `5` 매크로)을 평면 드롭다운 대신 도메인 탭(`ALL | SYS | TKL | NAV | PAT | PAY | COM | MOB | FS | MAC | DEFERRED`), 실시간 검색 입력, `[즉시]`(초록)/`[예약]`(주황) 배지, 1줄 설명과 함께 제공합니다. `MAC_*` 선택 시에는 원형 `MAC_*` 노드로 삽입하되 인스펙터 상단의 `Expand Now` 버튼으로 즉시 전개(`ACT_*` 배열 변환)할 수 있습니다.
    - **스크롤 가능한 체크포인트 카드 목록**: 순번(`#1..#N`), `checkpointId`, 도메인/액션 배지, 상태 테두리(`[ERR]` 빨강 / `[DEF]` 주황 / `[OK]` 초록), 1줄 요약(예: `(120, -80) · 150m` 또는 `CH+20 · SCAN`), 메타 칩(`DEC(n)`, `PRE(n)`, `COND`, `HOOK`), 상하 이동(`▲`/`▼`)·복제·삭제 버튼, 드래그 재정렬 핸들.
 3. **Center Interactive 2D `(X, Z)` Tactical Canvas + Collapsible `#altProfilePane` (`minmax(420px, 1fr)`)**:
    - 중앙 컬럼은 수직 Flex Column(`flex: 1` 2D 캔버스 + 하단 접이식 `120px` `#altProfilePane`)으로 구성합니다.
-   - **상단 플로팅 툴바**: 도구 선택(`SELECT`, `ADD_SPLINE_WP`, `PICK_TARGET`, `PICK_POI`, `PICK_FACILITY`), `Grid Snap`(`Off | 1m | 10m | 50m`), **`Facilities` 레이어 토글**, `Alt Profile` 토글(기본 접힘), `Fit All`, `Zoom +/-`.
+   - **상단 플로팅 툴바**: 도구 선택(`SELECT`, `ADD_SPLINE_WP`, `PICK_TARGET`, `PICK_POI`, `PICK_FACILITY`), `Grid Snap`(`Off | 1m | 10m | 50m`), **`Facilities` 레이어 토글**, **`Crafts` 토글 + 기체 타입 필터(`#filterCraftTypeSelect`) + 시설 타입 필터(`#filterFacilityTypeSelect`) + `Purge Offline` 수동 정리 버튼(`#btnPurgeOffline`)**, `Alt Profile` 토글(기본 접힘), `Fit All`, `Zoom +/-`.
    - **좌상단 텔레메트리 HUD 오버레이**: `Cursor (X, Z)`, `Zoom`, `Legs`, `2D Path (m)`, `Est. Time (s)`.
    - **고도 미니 프로필 (`#altProfilePane`, `120px`)**: `Alt Profile` 활성화 시 캔버스 하단에 열리며, `Seq #1..#N`을 가로축, 유효 고도 `Y`(m)를 세로축으로 연결선·`defaults.targetAlt` 점선을 표시합니다. 포인트 클릭 시 해당 체크포인트가 선택되고, 상하 드래그(`5m` 스냅 / `Alt` 미세 조정)로 `params.targetAlt`를 직접 편집합니다(상세 §8.4).
 4. **Right Inspector (`420px`) & `#rawJsonDrawer` (`460px`)**:
-   - **우측 패널 상단 2모드 전환 바**: **`[Checkpoint]`** vs **`[Mission Settings]`**.
+   - **우측 패널 상단 2모드 전환 바**: **`[Checkpoint]`** vs **`[Mission Settings]`** (`Inspection` 모드에서는 선택된 `CRAFT`/`FACILITY`/`CHECKPOINT`의 읽기 전용 텔레메트리·자세·연료·시설 점유·GPS 수신 지표·`60s` TTL 상태를 표출하는 **Inspection HUD**와 선택 기체 **`Follow Craft`** 카메라 추적 토글을 제공하며 `'Push to Aircraft'` 전송도 허용합니다).
    - **`[Checkpoint]` 모드**:
      - 상단 고정 엔벨로프 헤더: `checkpointId`, `action` 변경 드롭다운/피커 버튼, `fallbackPolicy` 오버라이드, `MAC_*` 선택 시 `Expand Now` 버튼(`targetAirframe` 반영 전개).
      - **4개 서브 탭**:
@@ -224,6 +225,16 @@ flowchart LR
     "checkpoints": []
   },
   "ui": {
+    "editorMode": "MISSION_EDIT",
+    "inspectedEntity": null,
+    "followCraftId": null,
+    "filters": {
+      "showCrafts": true,
+      "craftAirframeFilter": "ALL",
+      "showFacilities": true,
+      "facilityTypeFilter": "ALL",
+      "facilityTypes": { "GAC": true, "GPS": true, "LANDING_PAD": true, "RUNWAY": true, "HANGAR": true, "DOCKING_ARM": true, "WAYPOINT": true }
+    },
     "selectedIndex": 0,
     "activeRightMode": "CHECKPOINT",
     "activeInspectorTab": "PARAMS",
@@ -267,14 +278,18 @@ flowchart LR
 `TASK-202-4` `mission_engine.extract_target_pos`와 동등하게, 임포트된 체크포인트의 `params`에 `params.targetPos`가 없고 유한 수치 `params.x`와 `params.z`가 존재하면 즉시 `params.targetPos = { x: params.x, z: params.z }`로 승격하고 임시 `params.x`, `params.z` 키는 제거합니다.
 
 ### 4.4 브라우저 자동 저장 및 멀티-월드 지상 시설 프리셋 (`localStorage` & `WorldStore`)
-- **미션 자동 저장 키**: `uafs_amm_editor_autosave_v1`
-- **디바운스 주기**: 상태 변경 후 `500ms` 디바운스 기록 (`{ savedAtIso, mission }`, `localStorage` 비활성 환경에서는 예외를 삼키고 메모리 내 동작 유지).
-- **초기 복구 배너**: 페이지 로드 시 저장된 초안이 기본 스타터 템플릿과 다르면 사용자 작업물을 묵시적으로 덮어쓰지 않고 상단 비차단 복구 배너(`[Restore Draft]` / `[Dismiss]`)를 표출합니다.
-- **멀티-월드 지상 시설 프리셋 (`WorldStore`, 키 `uafs_amm_world_presets_v1`)**:
-  - 서버/세이브별로 다른 지상 시설물 좌표·ID를 에디터 내에서 영속 관리(`worlds[]`, `activeWorldId`)하며 미션 JSON(`"version": "2.0.0"`)과는 분리 저장합니다.
-  - **시설 스키마 (`FacilityEntry`)**: `{ facilityId, label, type ("LANDING_PAD"|"RUNWAY"|"DOCKING_ARM"|"WAYPOINT"), x, z, y (opt), headingDeg (opt), notes (opt) }`. 동일 월드 내 `facilityId` 중복 불가.
-  - **연동 규칙 (Pure Value Copy & Smart Y Mapping)**: 체크포인트에 월드 시설을 연동할 때는 순수 좌표·ID 값만 복사(`facilityId` / `targetPos` / `poiPos`)하여 월드 편집 시 기존 미션을 소급 변형하지 않습니다. 고도 `Y` 자동 매핑은 착륙/이륙/도킹(`ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_LAND_*`, `ACT_MOB_*`) 및 `poiPos.y` 지시 시에만 `fac.y`를 적용하고 순항 웨이포인트(`ACT_NAV_*`, `ACT_PAT_*`)는 수평 `(x, z)`만 반영합니다.
-  - **JSON 입출력**: 전체 월드 배열(`worlds`) 및 활성 월드 단위의 Export/Import World JSON을 지원합니다(중복 `worldId`/`facilityId` 병합 시 신규 ID 정규화 또는 사용자 선택 덮어쓰기, `textContent` 기반 XSS 차단).
+- **브라우저 자동 저장, Live URL 영속성 및 멀티-월드 지상 시설 프리셋 (`localStorage` & `WorldStore`)**:
+  - **미션 자동 저장 키**: `uafs_amm_editor_autosave_v1` (`500ms` 디바운스 기록 `{ savedAtIso, mission }`, 초기 복구 배너 `[Restore Draft]` / `[Dismiss]`).
+  - **Live Bridge URL 영속 키 (`TASK-405`)**: `uafs_amm_live_bridge_url_v1` (사용자가 입력한 허용된 `ws://` LAN/로컬 브리지 URL 저장 및 재방문 시 자동 복원).
+  - **멀티-월드 지상 시설 프리셋 (`WorldStore`, 키 `uafs_amm_world_presets_v1`)**:
+    - 서버/세이브별로 다른 지상 시설물 좌표·ID를 에디터 내에서 영속 관리(`worlds[]`, `activeWorldId`)하며 미션 JSON(`"version": "2.0.0"`)과는 분리 저장합니다.
+    - **시설 스키마 (`FacilityEntry`)**: `{ facilityId, label, type ("LANDING_PAD"|"RUNWAY"|"HANGAR"|"DOCKING_ARM"|"GPS"|"GAC"|"WAYPOINT"), x, z, y (opt), headingDeg (opt), notes (opt), liveAuto (opt), lastSeenMs (opt), isStale (opt), liveStatus (opt), status (opt), sectorId (opt), sectorName (opt), gacChannel (opt), tacticalChannel (opt), surfaceWind (opt), dedicated (opt), currentCraft (opt), reservedBy (opt), computerId (opt), uptime (opt), reportsSent (opt) }`. 동일 월드 내 `facilityId` 중복 불가.
+    - **Live 노드 자동 등록 및 1분(`60,000ms`) TTL 상태 전이 (`TASK-406-3`)**:
+      - `WORLD_PRESET_SYNC` 수신 시 `msg.facilities[]` 및 선택적 `msg.gacNode`(명시적 `position` 우선, 없으면 예하 시설물 좌표 무게중심)를 `liveAuto: true`, `lastSeenMs`, `liveStatus: "ONLINE"`, `isStale: false`로 자동 등록·갱신합니다.
+      - `GPS_NODES_SYNC` 수신 시 활성 Live 섹터 월드(없으면 `LIVE_SECTOR_0`)에 `type: "GPS"`, `liveAuto: true`로 자동 등록·갱신합니다.
+      - 마지막 수신 시각으로부터 `60,000ms`(1분) 경과 시 Live 자동 등록 노드(`liveAuto: true`)와 Live 기체는 **자동 삭제하지 않고 `isStale: true`, `liveStatus: "OFFLINE"` 상태로 전환하여 반투명(`globalAlpha = 0.38`) 및 `[OFFLINE]` 배지로 표시**합니다. 사용자가 **`Purge Offline`** 버튼을 클릭할 때만 `OFFLINE`/`STALE` 상태인 `liveAuto: true` 노드 및 stale 기체를 정리하며, 수동 등록 시설(`!fac.liveAuto`)은 삭제하지 않고 영구 보존합니다.
+    - **연동 규칙 (Pure Value Copy & Smart Y Mapping)**: 체크포인트에 월드 시설을 연동할 때는 순수 좌표·ID 값만 복사(`facilityId` / `targetPos` / `poiPos`)하여 월드 편집 시 기존 미션을 소급 변형하지 않습니다. 고도 `Y` 자동 매핑은 착륙/이륙/도킹(`ACT_TKL_TAKEOFF_VERT`, `ACT_TKL_LAND_*`, `ACT_MOB_*`) 및 `poiPos.y` 지시 시에만 `fac.y`를 적용하고 순항 웨이포인트(`ACT_NAV_*`, `ACT_PAT_*`)는 수평 `(x, z)`만 반영합니다.
+    - **JSON 입출력**: 전체 월드 배열(`worlds`) 및 활성 월드 단위의 Export/Import World JSON을 지원합니다(중복 `worldId`/`facilityId` 병합 시 신규 ID 정규화 또는 사용자 선택 덮어쓰기, `textContent` 기반 XSS 차단).
 
 ---
 
@@ -488,7 +503,7 @@ type ValidationIssue = {
 - **HiDPI 스케일링**: 리사이즈마다 `dpr = window.devicePixelRatio || 1`를 반영해 `canvas.width = rect.width * dpr`, `canvas.height = rect.height * dpr`, `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`를 적용합니다.
 
 ### 8.2 8계층 순차 렌더링 파이프라인
-1. **배경, 적응형 격자 및 4변 `(X, Z)` 좌표 눈금자**: 줌 레벨에 따라 `10m` / `50m` / `100m` / `500m` 간격 중 화면상 `40..120px` 간격이 되는 축척 자동 선택, 4변(상/하단 X축, 좌/우측 Z축 — HUD 오버레이 영역과 겹치지 않는 클리핑) 고정폭(`tabular-nums`) 눈금 라벨, 원점 `(0, 0)` 십자선, 우상단 `N(-Z) / E(+X) / S(+Z) / W(-X)` 나침반 및 활성 월드 시설물 배경 핀 레이어(토글 가능, 50% 반투명 마커 + 호버 툴팁 + 좌클릭 시 선택 체크포인트에 ID·좌표 즉시 할당) 표시.
+1. **배경, 적응형 격자 및 4변 `(X, Z)` 좌표 눈금자**: 줌 레벨(`0.01 .. 4.0 px/m`)에 따라 **10단계 계단(`10, 25, 50, 100, 200, 500, 1000, 2000, 5000, 10000`m)** 중 화면 간격 `>= 55px`가 되는 최소 축척(`computeGridStep(zoom)`)을 자동 선택하고, 4변 고정폭(`tabular-nums`) 눈금 라벨, 원점 `(0, 0)` 십자선, 우상단 `N(-Z) / E(+X) / S(+Z) / W(-X)` 나침반, 및 **`ui.filters` 필터를 반영한 활성 월드 시설물(`GAC`, `GPS`, `LANDING_PAD`, `RUNWAY`, `HANGAR`, `DOCKING_ARM`, `WAYPOINT`) 핀 레이어**를 렌더링합니다(`OFFLINE`/`STALE` 노드는 반투명 `0.38` + `[OFFLINE]` 라벨).
 2. **주 비행 경로선 (Primary Trajectory Legs)**: 공간 좌표를 가진 체크포인트(`ACT_NAV_SPLINE_WP`, `ACT_NAV_GOTO_WP`, `ACT_NAV_CORRIDOR`, `ACT_PAT_LOITER_*`, `ACT_PAT_POI_HOLD`, `targetPos`가 있는 `ACT_TKL_*` 및 `ACT_FS_*`)를 순차 연결하고 구간 중앙에 방향 화살표를 렌더링합니다. `executionMode === "REPEAT"`일 때는 마지막 공간 체크포인트에서 첫 번째 비행 체크포인트(`ACT_SYS_*`, `ACT_TKL_TAKEOFF_*`, `ACT_MOB_MOVING_TKOFF`를 건너뛴 첫 비행 체크포인트 — `mission_engine.lua` 순환 규칙 일치)로 이어지는 점선 귀환 레그를 그립니다.
 3. **도달 허용 반경 및 `LOITER` 선회원**: `ACT_NAV_SPLINE_WP` / `ACT_NAV_GOTO_WP`의 해석된 `acceptanceRadius` 점선 원, `ACT_NAV_GOTO_WP.tangentEntryOffsetM` 접선 진입점 마커, `ACT_PAT_LOITER_*`의 `params.radius` 점선 원 및 원주 위 `CW`/`CCW` 접선 방향 화살표.
 4. **`ACT_NAV_CORRIDOR` 회랑 및 무게중심 핸들**: `startPos` $\to$ `endPos` 중심선과 $\pm \text{maxCrossTrackM}$ 회랑 경계 점선 렌더링.
@@ -498,12 +513,15 @@ type ValidationIssue = {
    - `ACT_PAY_*` / `ACT_SYS_*` 등 좌표 없는 비공간 스텝은 직전 공간 체크포인트 옆에 위성 배지(`P#idx`, `R#idx`)로 부착해 시퀀스 내 위치를 시각화합니다.
    - **중첩 좌표 라벨 스태킹 (`Coord Stack Offset`)**: 동일 `(X, Z)` 좌표를 공유하는 노드(예: 동일 패드의 이륙/착륙)는 우측 라벨 Y 좌표를 `15px`씩 계단식으로 분리 렌더링하여 텍스트 겹침을 방지합니다.
    - 선택 체크포인트는 시안(`--accent-cyan`) 외곽선, 오류 체크포인트는 적색(`--accent-red`), `DEFERRED` 체크포인트는 호박색 점선 외곽선을 부여합니다.
-7. **`FIXED` 기수 방위 벡터**: 유효 `headingMode == "FIXED"` 또는 `ACT_NAV_CHANGE_YAW` 노드에 짧은 노즈 방향 화살표를 렌더링합니다.
-8. **좌상단 캔버스 HUD 오버레이**: `Cursor (X, Z)`, `Zoom`, `Legs`, `Total 2D Path (m)`, `Est. Transit Time (s)`.
+7. **`FIXED` 기수 방위 벡터 및 필터링된 Live 기체 궤적(`ui.filters`)**: 유효 `headingMode == "FIXED"` 또는 `ACT_NAV_CHANGE_YAW` 노드에 짧은 노즈 방향 화살표를 렌더링하고, `isCraftVisible(craft, ui)`를 통과한 Live 기체의 기수 삼각 마커·궤적 폴리라인·`[OFFLINE]` 반투명 상태를 오버레이합니다.
+8. **좌상단 캔버스 HUD 오버레이**: `Cursor (X, Z)`, `Zoom` (`1%..400%`), `Legs`, `Total 2D Path (m)`, `Est. Transit Time (s)`.
 
-### 8.3 포인터 상태 머신, 노드 히트 테스트 및 `Fit All`
-- **줌**: 마우스 휠로 커서 위치 월드 좌표를 고정한 채 `0.05 .. 10.0 px/m` 범위 줌 인/아웃.
-- **팬(Pan)**: 마우스 중클릭 드래그, 우클릭 드래그, 또는 `Space + 좌클릭 드래그`(`cursor: grab`).
+### 8.3 포인터 상태 머신, 노드 히트 테스트, `Inspection` 모드 & `Fit All`
+- **줌**: 마우스 휠로 커서 위치 월드 좌표를 고정한 채 **`0.01 .. 4.0 px/m` (`1% .. 400%`)** 범위 줌 인/아웃.
+- **팬(Pan)**: 마우스 중클릭 드래그, 우클릭 드래그, 또는 `Space + 좌클릭 드래그`(`cursor: grab`). **`Inspection` 모드에서는 빈 캔버스 좌클릭 드래그도 팬으로 동작**하며 체크포인트/시설 좌표 변경을 잠급니다.
+- **`Inspection` 모드 인터랙션 (`ui.editorMode === "INSPECTION"`)**:
+  - `Store.addCheckpoint`·`deleteCheckpoint`·`moveCheckpoint`·`duplicateCheckpoint`·`expandSelectedMacro`·`mutateMission`·`setMission`·`loadPreset` 및 캔버스 체크포인트 드래그/`PICK_FACILITY`를 모두 잠금 차단합니다.
+  - 캔버스 좌클릭 시 필터를 통과해 화면에 표시 중인 대상을 우선순위(`CRAFT` $\to$ `FACILITY`(`GAC`/`GPS`/지상시설) $\to$ `CHECKPOINT`)로 히트 테스트(`hitTestInspectionTarget`)하여 `ui.inspectedEntity`를 갱신하고, 우측 Inspection HUD에 상세 텔레메트리/상태·**`Follow Craft` 카메라 추적 토글**을 표출합니다(기작성 미션 `'Push to Aircraft'` 전송 허용).
 - **`SELECT` 도구 직접 드래그 규격 (`hitTestCanvas` 대상)**:
 
 | 드래그 대상 분류 | 히트 테스트 범위 (`hitTestCanvas`) | `mousemove` 드래그 동작 |
@@ -518,7 +536,7 @@ type ValidationIssue = {
   - `PICK_TARGET`: 캔버스 클릭 위치로 현재 선택된 체크포인트의 `targetPos` 지정/갱신.
   - `PICK_POI`: 캔버스 클릭 위치로 현재 선택된 체크포인트의 `poiPos.{x, z}` 지정/갱신.
   - `PICK_FACILITY`: 캔버스 클릭 위치(스냅 적용)를 좌측 `#worldPresetDrawer` 시설 등록 폼의 `(x, z)` 좌표로 즉시 채웁니다.
-- **`Fit All`**: 모든 공간 좌표(`targetPos`, `poiPos`, `startPos`/`endPos`) 및 `LOITER` `radius`의 바운딩 박스를 계산해 `15%` 여백으로 뷰포트를 맞춥니다.
+- **`Fit All`**: 모든 공간 좌표(`targetPos`, `poiPos`, `startPos`/`endPos`), 활성 월드 시설 및 Live 기체 좌표를 반영해 `0.01 .. 3.0` 범위로 뷰포트를 맞춥니다.
 
 ### 8.4 접이식 고도(`Y`) 미니 프로필 서브 창 (`#altProfilePane`, `120px`)
 - **표시 토글**: 캔버스 상단 툴바의 `Alt Profile` 버튼으로 여닫으며 초기 상태는 접힘(`ui.altProfileOpen = false`)입니다.
@@ -571,19 +589,19 @@ type ValidationIssue = {
 | **`MacroExpander`** | `MAC_RECON_ORBIT` / `MAC_SHIP_RECOVERY`(`targetAirframe` 반영) / `MAC_CARGO_SORTIE` 전개 및 `_extra` 추출/병합 | `expandMacros()` |
 | **`DefaultResolver`** | 액션별 `defaults` 상속 및 `settleTicks` (`ACT_NAV_SPLINE_WP=0` vs `4`) 해석 | — |
 | **`Validator`** | Zero-Fallback `v2.0.0` 스키마·4대 `preconditions`(19키)·`DEFERRED_*` 3분리·`ACT_TKL_LAND_NEAREST`·`UNREGISTERED_FACILITY_ID`·`settleTicks` Lua 동등성 검증 | `validateMission()` |
-| **`Store`** | `EditorState`, `undo`/`redo`(깊은 50, `Presets`/`Import`/`Apply JSON` 포함), `500ms` `localStorage` 자동 저장·복구 | — |
-| **`WorldStore`** | 멀티-월드 지상 시설 프리셋(`worlds`, `activeWorldId`, `uafs_amm_world_presets_v1`), 시설 CRUD 및 Export/Import World JSON | `WorldStore` (`__AMM_EDITOR__.WorldStore`) |
-| **`CanvasRenderer`** | `(X, Z)` 아핀 변환, HiDPI 스케일링, 8계층 렌더링 + 4변 `(X, Z)` 눈금 라벨 + 배경 시설 핀 레이어, 줌/팬/드래그/클릭 도구(`PICK_FACILITY` 포함) 및 `#altProfilePane` 고도 프로필 렌더링·드래그 | `renderCanvas()` |
-| **`InspectorUI`** | 5영역·2모드(`[Checkpoint \| Mission Settings]`)·4탭(`Params \| Guards \| Conditions \| Hooks`), 호환 시설 드롭다운·`'From World…'`/`'Save as Facility'`·1클릭 시설 등록, `#actionPickerPopover`, `#worldPresetDrawer`, `fieldPath` 자동 점프 | `renderCheckpoints()` |
+| **`Store`** | `EditorState`, `undo`/`redo`(깊은 50, `Presets`/`Import`/`Apply JSON` 포함), `500ms` `localStorage` 자동 저장·복구, `editorMode` (`MISSION_EDIT`/`INSPECTION`)·`filters`·`followCraftId`·`inspectedEntity` 상태 및 편집 잠금 가드 | — |
+| **`WorldStore`** | 멀티-월드 지상 시설 프리셋(`worlds`, `activeWorldId`, `uafs_amm_world_presets_v1`), 7종 시설 타입 CRUD, `liveAuto`/`lastSeenMs`/`isStale` TTL 상태 전이 및 수동 `purgeOfflineLiveFacilities()`, Export/Import World JSON | `WorldStore` (`__AMM_EDITOR__.WorldStore`) |
+| **`CanvasRenderer`** | `(X, Z)` 아핀 변환, HiDPI 스케일링, `0.01..4.0` 광역 줌 & 10단계 `computeGridStep()`, 8계층 렌더링 + 4변 `(X, Z)` 눈금 라벨 + `isFacilityVisible`/`isCraftVisible` 필터링된 핀/기체 레이어(`OFFLINE` 반투명), `hitTestInspectionTarget()`, `#altProfilePane` | `renderCanvas()` |
+| **`InspectorUI`** | 5영역·`Mission Edit` (`[Checkpoint \| Mission Settings]`) / `Inspection` HUD(`Follow Craft` 포함)·4탭(`Params \| Guards \| Conditions \| Hooks`), 호환 시설 드롭다운·`'From World…'`/`'Save as Facility'`·1클릭 시설 등록, `#actionPickerPopover`, `#worldPresetDrawer`, `fieldPath` 자동 점프 | `renderCheckpoints()` |
 | **`JsonIO`** | 파일 `<input>`/드롭 임포트, 정규 `v2.0.0` 직렬화, 다운로드/복사, `#rawJsonDrawer` 슬라이드오버 드로어 | `importJson()`, `exportJson()` |
-| **`LiveBridge`** | 사용자 토글 `ws://127.0.0.1:8765` WebSocket 연동, `WORLD_PRESET_SYNC` 자동 병합, `FLEET_TELEMETRY_SYNC` 다중 기체 위치·궤적(`Trail`) 버퍼, `'Push to Aircraft'` (`LOAD`/`RUN`) 전송·ACK 처리 | `LiveBridge` (`__AMM_EDITOR__.LiveBridge`) |
+| **`LiveBridge`** | 사용자 토글 `ws://` (루프백·RFC 1918·`*.local` 허용 + URL 영속화) WebSocket 연동, `WORLD_PRESET_SYNC`(`gacNode` 포함)·`GPS_NODES_SYNC`·`FLEET_TELEMETRY_SYNC` 병합·궤적 버퍼·`60,000ms` `OFFLINE` 전이(`markExpiredNodes`)·수동 정리(`purgeOfflineNodes`), `'Push to Aircraft'` (`LOAD`/`RUN`) 전송·ACK 처리 | `LiveBridge` (`__AMM_EDITOR__.LiveBridge`) |
 | **`AppBootstrap`** | DOM 초기화, 단축키(`Escape` 포함) 바인딩, 자동 저장 복구 배너 및 초기 프리셋/빈 초안 로드 | *(선택적 읽기전용 테스트 훅 `window.__AMM_EDITOR__`)* |
 
-### 10.2 `TASK-402` / `TASK-403` / `TASK-404` 구현 및 검증 인수 기준 (Acceptance Criteria)
+### 10.2 `TASK-402` ~ `TASK-406` 구현 및 검증 인수 기준 (Acceptance Criteria)
 구현·검증 시 다음 4대 게이트를 모두 통과해야 합니다:
 
 1. **정적·보안·접근성 게이트**:
-   - `tools/amm_mission_editor.html` 내 외부 `http://` · `https://` `<script>`/`<link>`/`fetch()`/`XMLHttpRequest` 및 비로컬 `ws://`/`wss://` 호출 `0`건 (`ws://127.0.0.1:<port>` 로컬 Live Bridge만 사용자 클릭으로 연결 허용).
+   - `tools/amm_mission_editor.html` 내 외부 `http://` · `https://` `<script>`/`<link>`/`fetch()`/`XMLHttpRequest`, `wss://`, 공인 IP/외부 인터넷 `ws://` 호출 `0`건 (루프백·RFC 1918 사설 IPv4·`*.local` `ws://<host>:<port>`만 사용자 명시 클릭으로 연결 허용).
    - 비신뢰 JSON 문자열(테스트용 `<img src=x onerror=...>` 포함 `missionId`/`message`, `WorldStore` `label`/`notes`, WebSocket `WORLD_PRESET_SYNC`/`FLEET_TELEMETRY_SYNC` 필드) 임포트 및 Raw JSON/드롭다운/캔버스 프리뷰 시 `innerHTML` 실행 없이 리터럴 텍스트로 렌더링됨을 확인.
    - Valkyrien Skies / `kontraption:` / 금지 레거시 용어 `0`건.
    - Web Interface Guidelines 핵심 규격(`color-scheme: dark`, `<select>` 다크 스타일, `:focus-visible`, `<button>` 시맨틱 컨트롤, `aria-live="polite"`, `overscroll-behavior: contain`, `prefers-reduced-motion`) 준수 확인.

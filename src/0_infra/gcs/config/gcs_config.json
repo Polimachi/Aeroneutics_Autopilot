@@ -11,6 +11,7 @@
     "bootstrapChannel": 50000,
     "facilityBeaconChannel": 50003,
     "missionAckChannel": 50004,
+    "gpsHeartbeatChannel": 60003,
     "bandwidth": 40,
     "baseChannelMin": 10000,
     "baseChannelMax": 49960,

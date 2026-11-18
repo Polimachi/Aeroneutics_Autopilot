@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.6.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v1.7.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/0_infra/gac/` |
 | **주관 도메인 (Domain)** | 국지 에이프런 총괄 관제사 (Ground Apron Controller / GAC) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.7.0` | `2026-11-18` | **`TASK-406` 연계 `[I-5]` `GAC` 관제소 본체 좌표(`position = { x, y, z }`) 명시화 및 `MSG_FACILITY_BEACON` 확장 (`Implemented` $\to$ `Approved`)**: ① `/gac/config.json`(`config.lua`) 섹터 루트 설정 및 TUI `[S]` 섹터 환경 설정에 GAC 관제소 본체 3D 좌표 `position = { x, y, z }` 명시 규격 신설, ② `CH 50003` / `Base_sec+2` `MSG_FACILITY_BEACON` 페이로드에 GAC 본체 좌표 `position = { x, y, z }` 필드 추가(설정 미지정 레거시 환경에서는 관할 `facilities[]` 좌표의 무게중심 Centroid 자동 산출 폴백 허용), ③ 연관 문서 배지(`ICD v1.37.0`, `Diagram v2.20.1`, `AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`) 동기화 | `TASK-406` Live Mode 2D 전술 지도 내 `GAC` 본체 노드 정밀 위치 표시 및 관제소 좌표 SSOT 명시화 |
 | `v1.6.0` | `2026-11-16` | **`TASK-403` `[I-5]` `MSG_FACILITY_BEACON` 선택적 `facilities[]` 스냅샷 배열 확장 (`Implemented` $\to$ `Approved`)**: ① `CH 50003` / `Base_sec+2` 비콘 페이로드에 선택 배열 `facilities[]` (`facilityId`, `facilityType`, `status`, `position = { x, y, z }`, `heading`, `endPoint`, `tacticalChannel`, `dedicated`) 추가(미설정 시 생략 가능), ② 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`) 동기화 | `AMM` `ACT_TKL_LAND_NEAREST` 및 지상 월드 프리셋 시설 자동 발견 지원 |
 | `v1.5.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `CH 50003` / `Base_sec+2` `MSG_FACILITY_BEACON` 집약 송출 내 `facilitiesSummary`(`totalDockingArms`, `freeDockingArms`) 통합 및 `clearanceRadius` 필드명 정렬, 이륙 허가 패킷 역할 분리(`GAC` `Base_sec+0` `MSG_GAC_DEPARTURE_CLEARANCE` vs `Tower ATC` `CH 50001` `MSG_ATC_DEPARTURE_CLEARANCE`) 명시 및 연관 문서 버전(`ICD v1.30.0`, `Diagram v2.15.0`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Landing Pad v2.5.0`, `Runway v1.11.0`, `Docking Arm v1.12.0`, `GPS v2.3.3`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 섹터 비콘/출발 관제 및 시설물 공통 스키마 정렬 |
 | `v1.4.2` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0)에 따른 기체 외부 교신 주체 용어 정렬(`FCP (Node 04)` $\to$ `AMM (Node 03)`, `FCP`는 `Base+4` 경유 궤적 수신) 및 연관 규격서 버전 동기화 (`src/0_infra/gac/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·항법 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
@@ -25,11 +26,11 @@
 | `v1.1.4` | 2026-11-07 | 40채널 규격 및 영구 단일 경로 반영 | 지상 인프라 및 전역 통신 규격 일원화 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.19.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.4.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.3.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.20.1)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.5.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.4.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
@@ -148,6 +149,7 @@ GAC 노드가 관할하는 지상 시설물들의 상태를 집약하여 광역 
         sectorId = "BASE_ALPHA_SECTOR_01",
         sectorName = "Alpha Base Central Vertiport",
         sectorType = "VERTIPORT",            -- "VERTIPORT", "AIRPORT", "CARRIER_DECK", "OUTPOST"
+        position = { x = 1275.0, y = 65.0, z = -810.0 }, -- GAC 관제소 본체 3D 좌표 (config.position 명시값 우선, 미지정 시 관할 facilities[] 무게중심 Centroid 자동 산출)
         towerAtcChannel = 50001,             -- 상위 Tower ATC 교신 채널
         gacChannel = 50201,                  -- 지상 구역 관제 교신 채널 (Base_sec + 0)
         facilitiesSummary = {
@@ -761,7 +763,7 @@ GAC TUI는 전자동 다속성 분배 알고리즘에 우선하여 관제사가 
    - 접근 중인 모든 기체에 즉시 `MSG_ABORT_APPROACH`를 송출하여 안전 고도 대기 선회 지시.
    - 상위 Tower ATC 및 섹터 집약 비콘의 상태를 `DECK_DANGEROUS`로 강제 전이하고 신규 섹터 진입 차단.
 4. **섹터 환경 및 운영 관리 (`[S]` Sector Config)**:
-   - 섹터 운영 파라미터 실시간 조정: 섹터 명칭, 국지풍 풍향/풍속 수동 오버라이드, 집약 비콘 송출 주기/on-off, 모선/육상 모빌리티 모드(`STATIC`/`DYNAMIC`) 전환.
+   - 섹터 운영 파라미터 실시간 조정: 섹터 명칭, GAC 본체 좌표(`position = { x, y, z }`), 국지풍 풍향/풍속 수동 오버라이드, 집약 비콘 송출 주기/on-off, 모선/육상 모빌리티 모드(`STATIC`/`DYNAMIC`) 전환.
 
 ---
 
@@ -799,4 +801,6 @@ GAC TUI는 전자동 다속성 분배 알고리즘에 우선하여 관제사가 
      - `dedicatedCraftIds`: 문자열(단일 기체 ID) 또는 문자열 배열(복수 기체 ID 목록). 예: `"VTOL_VIP_01"` 또는 `{"VTOL_VIP_01", "DRONE_SCOUT_02"}`.
      - `dedicatedAirframeTypes`: 문자열(단일 기종) 또는 문자열 배열(복수 기종 목록). 예: `"VECTORED_VTOL"` 또는 `{"DRONE", "VECTORED_VTOL"}`.
      - 두 필드가 모두 생략되거나 비어 있으면 일반 공용 시설물(`PUBLIC`)로 동작합니다.
+5. **섹터 본체 좌표 명시 스키마 (`position`, `/gac/config.json` / `config.lua`)**:
+   - 섹터 루트 설정에 GAC 관제소 컴퓨터의 월드 3D 절대 좌표 `position = { x = number, y = number, z = number }` (예: `{ x = 1275.0, y = 65.0, z = -810.0 }`)를 명시하며, `beacon_broadcaster`는 `MSG_FACILITY_BEACON.payload.position`으로 이를 1Hz 송출합니다(설정 파일에 `position`이 생략된 경우 관할 `facilities[]` 좌표의 산술 평균 무게중심 Centroid를 자동 산출하여 채웁니다).
 

@@ -11,6 +11,7 @@ import os
 import struct
 import unittest
 
+from tools import gcs_live_bridge
 from tools.gcs_live_bridge import (
     GCSLiveBridgeServer,
     OPCODE_CLOSE,
@@ -151,6 +152,57 @@ class TestGCSLiveBridge(unittest.TestCase):
 
                 ui_w.write(encode_masked_frame(OPCODE_CLOSE, b""))
                 await ui_w.drain()
+                gcs_w.close()
+                ui_w.close()
+            finally:
+                await server.stop()
+
+        asyncio.run(scenario())
+
+    def test_lan_flag_resolves_0_0_0_0_and_preserves_localhost_default(self) -> None:
+        parser = gcs_live_bridge.build_arg_parser()
+        default_args = parser.parse_args([])
+        lan_args = parser.parse_args(["--lan"])
+        explicit_args = parser.parse_args(["--lan", "--host", "192.168.1.10"])
+        self.assertEqual(default_args.host, "127.0.0.1")
+        self.assertFalse(default_args.lan)
+        self.assertEqual(gcs_live_bridge.resolve_bind_host(default_args), "127.0.0.1")
+        self.assertTrue(lan_args.lan)
+        self.assertEqual(gcs_live_bridge.resolve_bind_host(lan_args), "0.0.0.0")
+        self.assertEqual(gcs_live_bridge.resolve_bind_host(explicit_args), "192.168.1.10")
+
+    def test_caches_and_replays_gps_nodes_sync_to_new_client(self) -> None:
+        async def scenario() -> None:
+            server = GCSLiveBridgeServer(host="127.0.0.1", port=0)
+            await server.start()
+            try:
+                port = server.bound_port
+                gcs_r, gcs_w, _ = await ws_connect("127.0.0.1", port)
+
+                gps_msg = {
+                    "type": "GPS_NODES_SYNC",
+                    "nodes": [
+                        {
+                            "facilityId": "GPS_NODE_01",
+                            "facilityType": "GPS",
+                            "status": "ONLINE",
+                            "position": {"x": 100.0, "y": 240.0, "z": -300.0},
+                        }
+                    ],
+                }
+                gcs_w.write(encode_masked_frame(OPCODE_TEXT, json.dumps(gps_msg).encode("utf-8")))
+                await gcs_w.drain()
+                await asyncio.sleep(0.05)
+
+                self.assertIsNotNone(server.latest_gps)
+
+                ui_r, ui_w, _ = await ws_connect("127.0.0.1", port)
+                op1, raw1 = await asyncio.wait_for(read_frame(ui_r), timeout=2.0)  # type: ignore[misc]
+                self.assertEqual(op1, OPCODE_TEXT)
+                got1 = json.loads(raw1.decode("utf-8"))
+                self.assertEqual(got1["type"], "GPS_NODES_SYNC")
+                self.assertEqual(got1["nodes"][0]["facilityId"], "GPS_NODE_01")
+
                 gcs_w.close()
                 ui_w.close()
             finally:

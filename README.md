@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 공중 콜드부트 복구(`TASK-130`, `VAS v1.24.0`·`FCP v2.4.0`·`AMM v2.5.0`), 40채널 블록 개편·경합·검증 결함 12종 해소(`TASK-125`, `GCS v1.3.0`·`AMM v2.4.0`), GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge·실시간 전술 지도·원클릭 미션 푸시(`TASK-404`, `에디터 v0.5.0`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset·`ACT_TKL_LAND_NEAREST`(`TASK-403`), 무선 OTA 배포·롤백 가드(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-405`·`TASK-406`·`TASK-302`(Pocket PDA 원격 관제 단말)·`TASK-128`(GPS 헬스·DR 가드)입니다 (`TASK-015`는 2순위; 이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — WebUI LAN Live/광역 줌·노드 TTL/Inspection(`TASK-405`·`TASK-406`, `에디터 v0.6.0`·`GCS v1.4.0`·`GAC v1.7.0`), 공중 콜드부트 복구(`TASK-130`, `VAS v1.24.0`·`FCP v2.4.0`·`AMM v2.5.0`), 40채널 블록 개편·결함 12종 해소(`TASK-125`), GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge(`TASK-404`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset(`TASK-403`), 무선 OTA(`TASK-117`), 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-302`(Pocket PDA 원격 관제 단말)·`TASK-128`(GPS 헬스·DR 가드)입니다 (`TASK-015`는 2순위; 이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `FDR`(`TASK-120`), 무선 `OTA`(`TASK-117`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
@@ -89,9 +89,9 @@ Create_Aeroneutics/
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
 │
 ├── tools/                                 # 개발·검증 CLI 도구
-│   ├── amm_mission_editor.html            # 호스트 PC WebUI 미션 에디터 (`v0.5.0 Implemented`, Live Mode 지원)
+│   ├── amm_mission_editor.html            # 호스트 PC WebUI 미션 에디터 (`v0.6.0 Implemented`, LAN Live·Inspection 지원)
 │   ├── analyze_flight_log.py              # FDR JSONL 오프라인 분석·튜닝 CLI
-│   ├── gcs_live_bridge.py                 # localhost RFC 6455 GCS ↔ WebUI 실시간 WebSocket 브리지
+│   ├── gcs_live_bridge.py                 # localhost/LAN(`--lan`) RFC 6455 GCS ↔ WebUI 실시간 WebSocket 브리지
 │   ├── run_boot_smoke.py                  # 전체 활성 서브시스템 부트 스모크 및 채널·예외 검증기
 │   ├── run_e2e_tests.py                   # 멀티노드 E2E 패킷 시뮬레이션 러너
 │   ├── run_mutation_tests.py              # 테스트 실효성 검증용 돌연변이 테스터 (살상률 측정)

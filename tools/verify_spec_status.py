@@ -1,8 +1,8 @@
 """
 Specification status validation tool.
 Asserts that all 18 active specifications have expected in-document status:
-- 13 Implemented specs
-- 5 Approved specs
+- 14 Implemented specs
+- 4 Approved specs
 """
 from __future__ import annotations
 

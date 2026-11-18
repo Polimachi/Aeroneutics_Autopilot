@@ -93,4 +93,72 @@ describe("GCS live_bridge_client WebSocket module", function()
         assert_true(ws.closed)
         assert_false(st.connected)
     end)
+
+    it("attaches gacNode (explicit position or facility centroid) to WORLD_PRESET_SYNC and sends GPS_NODES_SYNC", function()
+        local sent = {}
+        local mock_ws = {
+            send = function(_, txt) table.insert(sent, txt) end,
+            close = function() end,
+        }
+        local st = live_bridge_client.init({
+            liveBridge = { enabled = true, url = "ws://127.0.0.1:8765" },
+        }, {
+            websocket = function() return mock_ws end,
+        })
+        assert_true(live_bridge_client.connect(st))
+
+        -- 1. Explicit GAC position
+        assert_true(live_bridge_client.send_world_preset(st, {
+            sectorId = "ALPHA_01",
+            sectorName = "Alpha Apron",
+            gacChannel = 50201,
+            status = "OPERATIONAL",
+            position = { x = 500, y = 70, z = -600 },
+            facilities = {
+                { facilityId = "PAD_01", facilityType = "LANDING_PAD", position = { x = 100, y = 64, z = -200 } },
+            },
+        }))
+        local msg_exp = textutils.unserializeJSON(sent[1])
+        assert_eq(msg_exp.type, "WORLD_PRESET_SYNC")
+        assert_not_nil(msg_exp.gacNode)
+        assert_eq(msg_exp.gacNode.facilityId, "GAC_ALPHA_01")
+        assert_eq(msg_exp.gacNode.facilityType, "GAC")
+        assert_eq(msg_exp.gacNode.position.x, 500)
+        assert_eq(msg_exp.gacNode.position.z, -600)
+
+        -- 2. Legacy centroid fallback when position omitted
+        assert_true(live_bridge_client.send_world_preset(st, {
+            sectorId = "BETA_02",
+            sectorName = "Beta Outpost",
+            facilities = {
+                { facilityId = "PAD_1", facilityType = "LANDING_PAD", position = { x = 100, y = 60, z = 200 } },
+                { facilityId = "PAD_2", facilityType = "LANDING_PAD", position = { x = 200, y = 80, z = 400 } },
+            },
+        }))
+        local msg_cen = textutils.unserializeJSON(sent[2])
+        assert_not_nil(msg_cen.gacNode)
+        assert_eq(msg_cen.gacNode.facilityId, "GAC_BETA_02")
+        assert_eq(msg_cen.gacNode.position.x, 150)
+        assert_eq(msg_cen.gacNode.position.y, 70)
+        assert_eq(msg_cen.gacNode.position.z, 300)
+
+        -- 3. GPS_NODES_SYNC sorted list
+        assert_true(live_bridge_client.send_gps_nodes(st, {
+            GPS_02 = {
+                facilityId = "GPS_02", facilityType = "GPS", status = "ONLINE", isStale = false,
+                position = { x = 20, y = 240, z = 30 }, computerId = 2, uptime = 10, reportsSent = 5, lastSeen = 1000,
+            },
+            GPS_01 = {
+                facilityId = "GPS_01", facilityType = "GPS", status = "OFFLINE", isStale = true,
+                position = { x = 10, y = 240, z = 15 }, computerId = 1, uptime = 90, reportsSent = 50, lastSeen = 500,
+            },
+        }))
+        local msg_gps = textutils.unserializeJSON(sent[3])
+        assert_eq(msg_gps.type, "GPS_NODES_SYNC")
+        assert_eq(#msg_gps.nodes, 2)
+        assert_eq(msg_gps.nodes[1].facilityId, "GPS_01")
+        assert_eq(msg_gps.nodes[1].status, "OFFLINE")
+        assert_true(msg_gps.nodes[1].isStale)
+        assert_eq(msg_gps.nodes[2].facilityId, "GPS_02")
+    end)
 end)

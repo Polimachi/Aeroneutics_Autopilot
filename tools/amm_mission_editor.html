@@ -621,6 +621,19 @@
       flex-direction: column;
       gap: 10px;
     }
+    .live-url-input {
+      width: 175px;
+      font-size: 11px;
+    }
+    .filter-select {
+      font-size: 11px;
+      padding: 2px 4px;
+      max-width: 112px;
+    }
+    .btn-danger-ghost {
+      color: #fca5a5;
+      border-color: rgba(248, 113, 113, 0.45);
+    }
     @media (pointer: fine) {
       ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -646,6 +659,10 @@
   <div class="app-shell">
     <header class="top-header">
       <span class="brand-pill">AMM v2.0.0</span>
+      <div class="segmented" role="group" aria-label="Editor workspace mode">
+        <button id="btnModeEdit" type="button" aria-pressed="true">Mission Edit</button>
+        <button id="btnModeInspection" type="button" aria-pressed="false">Inspection</button>
+      </div>
       <label for="missionIdInput" class="field-label">Mission ID</label>
       <input id="missionIdInput" type="text" class="mono" style="width:150px" aria-label="Mission ID" data-field-path="missionId">
       <div class="segmented" role="group" aria-label="Execution mode">
@@ -667,8 +684,10 @@
       <button id="btnRawJson" type="button" aria-expanded="false" aria-controls="rawJsonDrawer">Raw JSON</button>
       <button id="btnCopyJson" type="button">Copy JSON</button>
       <button id="btnExportJson" type="button" class="btn-primary">Export .json</button>
-      <button id="btnConnectLive" type="button" aria-pressed="false" title="Connect to localhost GCS Live Bridge">Connect Live</button>
+      <input id="liveBridgeUrlInput" type="text" class="mono live-url-input" value="ws://127.0.0.1:8765" placeholder="ws://127.0.0.1:8765" aria-label="Live Bridge WebSocket URL" translate="no" spellcheck="false" autocomplete="off">
+      <button id="btnConnectLive" type="button" aria-pressed="false" title="Connect to local or LAN GCS Live Bridge">Connect Live</button>
       <span id="liveFleetBadge" class="live-badge mono tabular" role="status" aria-live="polite" translate="no">LIVE: OFF</span>
+      <button id="btnPurgeOffline" type="button" class="btn-danger-ghost" title="Remove OFFLINE / STALE live-auto nodes (keeps manual facilities)">Purge Offline</button>
       <button id="btnPushAircraft" type="button">Push to Aircraft</button>
       <div class="header-spacer"></div>
       <div id="toastBanner" class="toast-banner" role="status" aria-live="polite" hidden></div>
@@ -701,6 +720,25 @@
             <button id="btnToggleAltProfile" type="button" aria-expanded="false" aria-controls="altProfilePane">Alt Profile</button>
             <button id="btnToggleFacilities" type="button" aria-pressed="true" title="Show/hide active world facilities on 2D map">Facilities</button>
             <button id="btnPickFacilityTool" type="button" aria-pressed="false" title="Click map to pick coordinates for facility form">Pick Fac</button>
+            <button id="btnFilterCrafts" type="button" aria-pressed="true" title="Show/hide live craft markers">Crafts</button>
+            <select id="filterCraftTypeSelect" class="filter-select" aria-label="Filter crafts by airframe type">
+              <option value="ALL">Craft: ALL</option>
+              <option value="QUAD_DRONE">QUAD_DRONE</option>
+              <option value="VECTORED_VTOL">VECTORED_VTOL</option>
+              <option value="FIXED_WING">FIXED_WING</option>
+              <option value="HYBRID">HYBRID</option>
+            </select>
+            <select id="filterFacilityTypeSelect" class="filter-select" aria-label="Filter facilities by type">
+              <option value="ALL">Fac: ALL</option>
+              <option value="GAC">GAC</option>
+              <option value="GPS">GPS</option>
+              <option value="LANDING_PAD">LANDING_PAD</option>
+              <option value="RUNWAY">RUNWAY</option>
+              <option value="HANGAR">HANGAR</option>
+              <option value="DOCKING_ARM">DOCKING_ARM</option>
+              <option value="WAYPOINT">WAYPOINT</option>
+              <option value="NONE">NONE</option>
+            </select>
             <span id="zoomReadout" class="mono tabular" style="font-size:11px;color:var(--text-muted)">100%</span>
           </div>
           <div id="emptyCanvasCta" class="empty-cta">
@@ -766,7 +804,7 @@
         <div class="form-grid">
           <label class="field-group"><span class="field-label">facilityId</span><input id="facIdInput" type="text" class="mono" placeholder="PAD_ALPHA" translate="no" spellcheck="false" autocomplete="off"></label>
           <label class="field-group"><span class="field-label">label</span><input id="facLabelInput" type="text" placeholder="Alpha North Pad" spellcheck="false" autocomplete="off"></label>
-          <label class="field-group"><span class="field-label">type</span><select id="facTypeSelect"><option value="LANDING_PAD">LANDING_PAD</option><option value="RUNWAY">RUNWAY</option><option value="DOCKING_ARM">DOCKING_ARM</option><option value="WAYPOINT">WAYPOINT</option></select></label>
+          <label class="field-group"><span class="field-label">type</span><select id="facTypeSelect"><option value="GAC">GAC</option><option value="GPS">GPS</option><option value="LANDING_PAD">LANDING_PAD</option><option value="RUNWAY">RUNWAY</option><option value="HANGAR">HANGAR</option><option value="DOCKING_ARM">DOCKING_ARM</option><option value="WAYPOINT">WAYPOINT</option></select></label>
           <label class="field-group"><span class="field-label">headingDeg</span><input id="facHdgInput" type="number" step="5" placeholder="0"></label>
           <label class="field-group"><span class="field-label">X</span><input id="facXInput" type="number" step="1" placeholder="0"></label>
           <label class="field-group"><span class="field-label">Z</span><input id="facZInput" type="number" step="1" placeholder="0"></label>
@@ -1016,8 +1054,9 @@
         const HOOK_TYPES = ["REDSTONE_SET", "REDSTONE_PULSE", "ZONE3_PAYLOAD_CMD", "NOTIFY_OPERATOR"];
         const HOOK_PHASES = ["onEnter", "onExit", "onAbort"];
 
-        const FACILITY_TYPES = ["LANDING_PAD", "RUNWAY", "DOCKING_ARM", "WAYPOINT"];
+        const FACILITY_TYPES = ["GAC", "GPS", "LANDING_PAD", "RUNWAY", "HANGAR", "DOCKING_ARM", "WAYPOINT"];
         const FACILITY_TYPE_FILTERS = ["ANY", "LANDING_PAD", "RUNWAY"];
+        const MAP_FACILITY_FILTER_TYPES = ["ALL", "GAC", "GPS", "LANDING_PAD", "RUNWAY", "HANGAR", "DOCKING_ARM", "WAYPOINT", "NONE"];
         const getCompatibleFacilityTypes = (action) => {
           const act = String(action || "");
           if (act.startsWith("ACT_MOB_")) return ["DOCKING_ARM", "LANDING_PAD", "RUNWAY"];
@@ -1033,6 +1072,7 @@
           AIRFRAME_TYPES,
           FACILITY_TYPES,
           FACILITY_TYPE_FILTERS,
+          MAP_FACILITY_FILTER_TYPES,
           getCompatibleFacilityTypes,
           REDSTONE_SIDES,
           BUNDLED_COLORS,
@@ -1272,6 +1312,7 @@
       })();
       const WorldStore = (() => {
         const STORAGE_KEY = "uafs_amm_world_presets_v1";
+        const LIVE_FACILITY_TTL_MS = 60000;
         const listeners = new Set();
         const DEFAULT_WORLD_ID = "WORLD_DEFAULT";
         const makeDefaultWorld = () => ({ worldId: DEFAULT_WORLD_ID, name: "Default World", facilities: [] });
@@ -1279,19 +1320,34 @@
         const sanitizeFacility = (raw) => {
           if (!raw || typeof raw !== "object") return null;
           const fid = typeof raw.facilityId === "string" ? raw.facilityId.trim() : "";
-          const x = Number(raw.x), z = Number(raw.z);
+          const pos = (raw.position && typeof raw.position === "object") ? raw.position : raw;
+          const x = Number(raw.x !== undefined ? raw.x : pos.x);
+          const z = Number(raw.z !== undefined ? raw.z : pos.z);
+          const rawY = raw.y !== undefined ? raw.y : pos.y;
           if (!fid || !Number.isFinite(x) || !Number.isFinite(z)) return null;
-          const ftype = SchemaConstants.FACILITY_TYPES.includes(raw.type) ? raw.type : "LANDING_PAD";
+          const rawType = raw.type || raw.facilityType;
+          const ftype = SchemaConstants.FACILITY_TYPES.includes(rawType) ? rawType : "LANDING_PAD";
           const entry = {
             facilityId: fid,
             label: typeof raw.label === "string" && raw.label.trim() ? raw.label.trim() : fid,
             type: ftype,
+            facilityType: ftype,
             x,
             z,
+            liveAuto: Boolean(raw.liveAuto),
+            isStale: Boolean(raw.isStale),
           };
-          if (raw.y !== undefined && raw.y !== "" && Number.isFinite(Number(raw.y))) entry.y = Number(raw.y);
-          if (raw.headingDeg !== undefined && raw.headingDeg !== "" && Number.isFinite(Number(raw.headingDeg))) {
-            entry.headingDeg = Number(raw.headingDeg);
+          if (rawY !== undefined && rawY !== "" && Number.isFinite(Number(rawY))) entry.y = Number(rawY);
+          if (typeof raw.status === "string" && raw.status.trim()) entry.status = raw.status.trim();
+          if (typeof raw.lastSeenMs === "number" && Number.isFinite(raw.lastSeenMs)) entry.lastSeenMs = raw.lastSeenMs;
+          if (raw.sectorId !== undefined && raw.sectorId !== null) entry.sectorId = raw.sectorId;
+          if (typeof raw.gacChannel === "number" && Number.isFinite(raw.gacChannel)) entry.gacChannel = raw.gacChannel;
+          if (typeof raw.computerId === "number" && Number.isFinite(raw.computerId)) entry.computerId = raw.computerId;
+          if (typeof raw.uptime === "number" && Number.isFinite(raw.uptime)) entry.uptime = raw.uptime;
+          if (typeof raw.reportsSent === "number" && Number.isFinite(raw.reportsSent)) entry.reportsSent = raw.reportsSent;
+          const rawHdg = raw.headingDeg !== undefined ? raw.headingDeg : raw.heading;
+          if (rawHdg !== undefined && rawHdg !== "" && Number.isFinite(Number(rawHdg))) {
+            entry.headingDeg = Number(rawHdg);
           }
           if (typeof raw.notes === "string" && raw.notes.trim()) entry.notes = raw.notes.trim();
           return entry;
@@ -1524,8 +1580,41 @@
           }
         };
 
+        const markExpiredLiveFacilities = (worldId, nowMs, ttlMs) => {
+          const now = typeof nowMs === "number" && Number.isFinite(nowMs) ? nowMs : Date.now();
+          const ttl = typeof ttlMs === "number" && Number.isFinite(ttlMs) ? ttlMs : LIVE_FACILITY_TTL_MS;
+          const targets = worldId ? [findWorld(worldId)] : storeState.worlds;
+          let marked = 0;
+          for (const w of targets) {
+            if (!w || !Array.isArray(w.facilities)) continue;
+            for (const fac of w.facilities) {
+              if (fac.liveAuto && typeof fac.lastSeenMs === "number" && (now - fac.lastSeenMs) > ttl) {
+                if (!fac.isStale || fac.status !== "OFFLINE") marked += 1;
+                fac.isStale = true;
+                fac.status = "OFFLINE";
+              }
+            }
+          }
+          if (marked > 0) emit("facility_stale");
+          return marked;
+        };
+
+        const purgeOfflineLiveFacilities = (worldId) => {
+          const targets = worldId ? [findWorld(worldId)] : storeState.worlds;
+          let removed = 0;
+          for (const w of targets) {
+            if (!w || !Array.isArray(w.facilities)) continue;
+            const before = w.facilities.length;
+            w.facilities = w.facilities.filter((fac) => !(fac.liveAuto && (fac.isStale === true || String(fac.status || "").toUpperCase() === "OFFLINE")));
+            removed += before - w.facilities.length;
+          }
+          if (removed > 0) emit("facility_purge");
+          return removed;
+        };
+
         return {
           STORAGE_KEY,
+          LIVE_FACILITY_TTL_MS,
           subscribe,
           getState,
           getWorlds,
@@ -1539,6 +1628,8 @@
           getFacilitiesByType,
           upsertFacility,
           deleteFacility,
+          markExpiredLiveFacilities,
+          purgeOfflineLiveFacilities,
           applyFacilityToCheckpoint,
           exportWorldsJson,
           importWorldsJson,
@@ -1926,6 +2017,15 @@
             zoom: 1.0,
             activePopover: null,
             focusedFieldPath: "",
+            editorMode: "MISSION_EDIT",
+            inspectedEntity: null,
+            followCraftId: null,
+            filters: {
+              showCrafts: true,
+              craftAirframeType: "ALL",
+              showFacilities: true,
+              facilityType: "ALL",
+            },
           },
           undoStack: [],
           redoStack: [],
@@ -1933,6 +2033,9 @@
           dirty: false,
           lastValidation: { valid: true, errors: [], warnings: [] },
         };
+
+        const isInspectionLocked = () => state.ui.editorMode === "INSPECTION";
+        const lockedResult = () => ({ ok: false, reason: "INSPECTION_MODE_LOCKED" });
 
         const makeSnapshot = () => ({
           mission: deepClone(state.mission),
@@ -2036,6 +2139,8 @@
         };
 
         const setMission = (missionObj, opts) => {
+          const allowRestore = opts && (opts.source === "autosave_restore" || opts.allowInInspection === true);
+          if (isInspectionLocked() && !allowRestore) return lockedResult();
           const push = !opts || opts.pushUndo !== false;
           if (push) pushUndoSnapshot(makeSnapshot());
           state.mission = deepClone(missionObj);
@@ -2047,6 +2152,7 @@
         };
 
         const mutateMission = (mutatorFn, opts) => {
+          if (isInspectionLocked() && !(opts && opts.allowInInspection === true)) return lockedResult();
           const push = !opts || opts.pushUndo !== false;
           if (push) pushUndoSnapshot(makeSnapshot());
           mutatorFn(state.mission, state.ui);
@@ -2065,6 +2171,7 @@
         };
 
         const addCheckpoint = (actionOrMacro, posOrParams, insertAt) => {
+          if (isInspectionLocked()) return lockedResult();
           pushUndoSnapshot(makeSnapshot());
           const rawParams = posOrParams && typeof posOrParams === "object" ? deepClone(posOrParams) : {};
           const params = MacroExpander.cleanActionSwitchParams(rawParams, actionOrMacro);
@@ -2089,6 +2196,7 @@
         };
 
         const deleteCheckpoint = (index) => {
+          if (isInspectionLocked()) return lockedResult();
           const list = state.mission.checkpoints;
           if (index < 0 || index >= list.length) return false;
           pushUndoSnapshot(makeSnapshot());
@@ -2101,6 +2209,7 @@
         };
 
         const moveCheckpoint = (fromIdx, toIdx) => {
+          if (isInspectionLocked()) return lockedResult();
           const list = state.mission.checkpoints;
           if (fromIdx < 0 || fromIdx >= list.length || toIdx < 0 || toIdx >= list.length || fromIdx === toIdx) return false;
           pushUndoSnapshot(makeSnapshot());
@@ -2114,6 +2223,7 @@
         };
 
         const duplicateCheckpoint = (index) => {
+          if (isInspectionLocked()) return lockedResult();
           const list = state.mission.checkpoints;
           if (index < 0 || index >= list.length) return false;
           pushUndoSnapshot(makeSnapshot());
@@ -2128,6 +2238,7 @@
         };
 
         const expandSelectedMacro = (index) => {
+          if (isInspectionLocked()) return lockedResult();
           const list = state.mission.checkpoints;
           const idx = Number.isInteger(index) ? index : state.ui.selectedIndex;
           if (idx < 0 || idx >= list.length) return false;
@@ -2163,7 +2274,31 @@
           emit("ui");
         };
 
+        const setEditorMode = (mode) => {
+          const next = mode === "INSPECTION" ? "INSPECTION" : "MISSION_EDIT";
+          state.ui.editorMode = next;
+          if (next === "INSPECTION") {
+            state.ui.activeTool = "SELECT";
+            state.ui.activePopover = null;
+          }
+          emit("mode_changed");
+          return next;
+        };
+
+        const setInspectedEntity = (target) => {
+          state.ui.inspectedEntity = target ? deepClone(target) : null;
+          emit("inspect_entity");
+          return state.ui.inspectedEntity;
+        };
+
+        const setFilters = (patch) => {
+          state.ui.filters = Object.assign({}, state.ui.filters || {}, patch || {});
+          emit("filters");
+          return deepClone(state.ui.filters);
+        };
+
         const loadPreset = (presetKey) => {
+          if (isInspectionLocked()) return lockedResult();
           const preset = JsonIO.getPreset(presetKey);
           if (!preset) return false;
           setMission(preset, { pushUndo: true, source: "preset" });
@@ -2269,6 +2404,9 @@
           expandSelectedMacro,
           selectCheckpoint,
           setUi,
+          setEditorMode,
+          setInspectedEntity,
+          setFilters,
           focusFieldPath,
           revalidate,
           saveAutosave,
@@ -2277,6 +2415,43 @@
         };
       })();
       const CanvasRenderer = (() => {
+        const MIN_ZOOM = 0.01;
+        const MAX_ZOOM = 4.0;
+        const computeGridStep = (zoom) => {
+          const z = Number(zoom) || 1;
+          if (z < 0.02) return 2500;
+          if (z < 0.04) return 1000;
+          if (z < 0.08) return 500;
+          if (z < 0.15) return 250;
+          if (z < 0.3) return 100;
+          if (z < 0.6) return 50;
+          if (z < 1.2) return 25;
+          if (z < 2.0) return 10;
+          if (z < 3.0) return 5;
+          return 2;
+        };
+        const isCraftVisible = (craft, ui) => {
+          if (!craft) return false;
+          const f = (ui && ui.filters) || {};
+          if (f.showCrafts === false) return false;
+          const filterType = String(f.craftAirframeType || "ALL").toUpperCase();
+          if (filterType !== "ALL" && String(craft.airframeType || "UNKNOWN").toUpperCase() !== filterType) {
+            return false;
+          }
+          return true;
+        };
+        const isFacilityVisible = (fac, ui) => {
+          if (!fac) return false;
+          if (ui && ui.showWorldFacilities === false) return false;
+          const f = (ui && ui.filters) || {};
+          if (f.showFacilities === false) return false;
+          const filterType = String(f.facilityType || "ALL").toUpperCase();
+          if (filterType === "NONE") return false;
+          const fType = String(fac.type || fac.facilityType || "LANDING_PAD").toUpperCase();
+          if (filterType !== "ALL" && fType !== filterType) return false;
+          return true;
+        };
+
         const COLORS = {
           bg: "#0b0f17",
           gridMinor: "rgba(148, 163, 184, 0.08)",
@@ -2299,6 +2474,10 @@
           facRunway: "rgba(16, 185, 129, 0.55)",
           facDock: "rgba(167, 139, 250, 0.55)",
           facWp: "rgba(245, 158, 11, 0.55)",
+          facGac: "rgba(14, 165, 233, 0.75)",
+          facGps: "rgba(250, 204, 21, 0.75)",
+          facHangar: "rgba(249, 115, 22, 0.75)",
+          offline: "rgba(148, 163, 184, 0.55)",
           text: "#e2e8f0",
           muted: "#94a3b8",
         };
@@ -2321,15 +2500,46 @@
           return v;
         };
 
-        const worldToScreen = (wx, wz, view) => ({
-          sx: (view.width || 800) / 2 + (wx - (view.offsetX || 0)) * (view.zoom || 1),
-          sy: (view.height || 600) / 2 + (wz - (view.offsetZ || 0)) * (view.zoom || 1),
-        });
+        const worldToScreen = (wx, wz, view) => {
+          const v = getViewRect(mapCanvasEl, view);
+          return {
+            sx: (v.width || 800) / 2 + (wx - (v.offsetX || 0)) * (v.zoom || 1),
+            sy: (v.height || 600) / 2 + (wz - (v.offsetZ || 0)) * (v.zoom || 1),
+          };
+        };
 
-        const screenToWorld = (sx, sy, view) => ({
-          x: (view.offsetX || 0) + (sx - (view.width || 800) / 2) / (view.zoom || 1),
-          z: (view.offsetZ || 0) + (sy - (view.height || 600) / 2) / (view.zoom || 1),
-        });
+        const screenToWorld = (sx, sy, view) => {
+          const v = getViewRect(mapCanvasEl, view);
+          return {
+            x: (v.offsetX || 0) + (sx - (v.width || 800) / 2) / (v.zoom || 1),
+            z: (v.offsetZ || 0) + (sy - (v.height || 600) / 2) / (v.zoom || 1),
+          };
+        };
+
+        const getView = () => {
+          const st = Store.getState();
+          return {
+            panX: st.ui.viewOffset.x,
+            panY: st.ui.viewOffset.z,
+            offsetX: st.ui.viewOffset.x,
+            offsetZ: st.ui.viewOffset.z,
+            zoom: st.ui.zoom,
+          };
+        };
+
+        const setView = (patch) => {
+          if (!patch || typeof patch !== "object") return;
+          const st = Store.getState();
+          const nextOffset = {
+            x: patch.panX !== undefined ? Number(patch.panX) : (patch.offsetX !== undefined ? Number(patch.offsetX) : st.ui.viewOffset.x),
+            z: patch.panY !== undefined ? Number(patch.panY) : (patch.offsetZ !== undefined ? Number(patch.offsetZ) : st.ui.viewOffset.z),
+          };
+          const uiPatch = { viewOffset: nextOffset };
+          if (patch.zoom !== undefined && Number.isFinite(Number(patch.zoom))) {
+            uiPatch.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Number(patch.zoom)));
+          }
+          Store.setUi(uiPatch);
+        };
 
         const snapCoord = (val, step, enabled) => {
           if (!enabled) return Math.round(val * 10) / 10;
@@ -2474,7 +2684,7 @@
           // Layer 1: Background & Adaptive Grid
           ctx.fillStyle = COLORS.bg;
           ctx.fillRect(0, 0, width, height);
-          const stepWorld = view.zoom < 0.35 ? 200 : (view.zoom < 0.8 ? 100 : 50);
+          const stepWorld = computeGridStep(view.zoom);
           const topLeft = screenToWorld(0, 0, view);
           const botRight = screenToWorld(width, height, view);
           const startX = Math.floor(topLeft.x / stepWorld) * stepWorld;
@@ -2502,29 +2712,70 @@
           ctx.strokeStyle = COLORS.axisZ;
           ctx.beginPath(); ctx.moveTo(origin.sx, 0); ctx.lineTo(origin.sx, height); ctx.stroke();
 
-          // Layer 1.5: Active World Background Facility Pins
+          // Layer 1.5: Active World Background Facility & Node Pins
           if (st.ui.showWorldFacilities !== false) {
             const worldFacs = WorldStore.getFacilities();
             ctx.font = "10px monospace";
             for (const fac of worldFacs) {
+              if (!isFacilityVisible(fac, st.ui)) continue;
               const sf = worldToScreen(fac.x, fac.z, view);
               if (sf.sx < -40 || sf.sx > width + 40 || sf.sy < -40 || sf.sy > height + 40) continue;
-              const fCol = fac.type === "RUNWAY" ? COLORS.facRunway : (fac.type === "DOCKING_ARM" ? COLORS.facDock : (fac.type === "WAYPOINT" ? COLORS.facWp : COLORS.facPad));
+              const fType = String(fac.type || fac.facilityType || "LANDING_PAD").toUpperCase();
+              const isOffline = Boolean(fac.isStale || String(fac.status || "").toUpperCase() === "OFFLINE");
+              const fCol = isOffline ? COLORS.offline : (
+                fType === "GAC" ? COLORS.facGac
+                  : (fType === "GPS" ? COLORS.facGps
+                    : (fType === "HANGAR" ? COLORS.facHangar
+                      : (fType === "RUNWAY" ? COLORS.facRunway
+                        : (fType === "DOCKING_ARM" ? COLORS.facDock
+                          : (fType === "WAYPOINT" ? COLORS.facWp : COLORS.facPad)))))
+              );
               ctx.save();
+              ctx.globalAlpha = isOffline ? 0.38 : 1;
               ctx.strokeStyle = fCol;
               ctx.fillStyle = fCol;
               ctx.lineWidth = 1.5;
-              if (fac.type === "RUNWAY") {
+              if (fType === "RUNWAY") {
                 ctx.strokeRect(sf.sx - 8, sf.sy - 4, 16, 8);
-              } else if (fac.type === "DOCKING_ARM") {
+              } else if (fType === "DOCKING_ARM") {
                 ctx.beginPath();
                 ctx.moveTo(sf.sx, sf.sy - 7); ctx.lineTo(sf.sx + 7, sf.sy);
                 ctx.lineTo(sf.sx, sf.sy + 7); ctx.lineTo(sf.sx - 7, sf.sy);
                 ctx.closePath(); ctx.stroke();
+              } else if (fType === "GAC") {
+                ctx.beginPath();
+                for (let k = 0; k < 8; k++) {
+                  const ang = (k * Math.PI) / 4 + Math.PI / 8;
+                  const gx = sf.sx + Math.cos(ang) * 8;
+                  const gy = sf.sy + Math.sin(ang) * 8;
+                  if (k === 0) ctx.moveTo(gx, gy); else ctx.lineTo(gx, gy);
+                }
+                ctx.closePath(); ctx.stroke();
+              } else if (fType === "GPS") {
+                ctx.beginPath();
+                ctx.arc(sf.sx, sf.sy, 5, 0, Math.PI * 2);
+                ctx.moveTo(sf.sx - 8, sf.sy); ctx.lineTo(sf.sx + 8, sf.sy);
+                ctx.moveTo(sf.sx, sf.sy - 8); ctx.lineTo(sf.sx, sf.sy + 8);
+                ctx.stroke();
+              } else if (fType === "HANGAR") {
+                ctx.beginPath();
+                ctx.moveTo(sf.sx - 7, sf.sy + 5);
+                ctx.lineTo(sf.sx - 7, sf.sy - 2);
+                ctx.lineTo(sf.sx, sf.sy - 7);
+                ctx.lineTo(sf.sx + 7, sf.sy - 2);
+                ctx.lineTo(sf.sx + 7, sf.sy + 5);
+                ctx.closePath(); ctx.stroke();
               } else {
                 ctx.strokeRect(sf.sx - 5, sf.sy - 5, 10, 10);
               }
-              ctx.fillText(fac.facilityId, sf.sx + 9, sf.sy + 3);
+              if (st.ui.inspectedEntity && st.ui.inspectedEntity.kind === "FACILITY" && st.ui.inspectedEntity.id === fac.facilityId) {
+                ctx.strokeStyle = COLORS.cpSelected;
+                ctx.beginPath();
+                ctx.arc(sf.sx, sf.sy, 12, 0, Math.PI * 2);
+                ctx.stroke();
+              }
+              ctx.fillStyle = fCol;
+              ctx.fillText(isOffline ? `${fac.facilityId} [OFFLINE]` : fac.facilityId, sf.sx + 10, sf.sy + 3);
               ctx.restore();
             }
           }
@@ -2647,15 +2898,18 @@
             ctx.fillText(c.label, c.sx + 10, ly);
           }
 
-          // Layer 7.5: Live Multi-Craft Telemetry & Trails (TASK-404)
+          // Layer 7.5: Live Multi-Craft Telemetry & Trails (TASK-404 / TASK-406)
           if (typeof LiveBridge !== "undefined") {
             const liveCrafts = LiveBridge.getFleetCrafts();
             const trailsMap = LiveBridge.getTrails();
             for (const lc of liveCrafts) {
+              if (!isCraftVisible(lc, st.ui)) continue;
+              const isCraftOffline = Boolean(lc.isStale || String(lc.liveStatus || "").toUpperCase() === "OFFLINE");
               const pts = trailsMap[lc.domainId] || [];
               if (pts.length > 1) {
                 ctx.save();
-                ctx.strokeStyle = lc.isStale ? COLORS.muted : COLORS.facRunway;
+                ctx.globalAlpha = isCraftOffline ? 0.38 : 1;
+                ctx.strokeStyle = isCraftOffline ? COLORS.muted : COLORS.facRunway;
                 ctx.lineWidth = 1.5;
                 if (typeof ctx.setLineDash === "function") ctx.setLineDash([4, 3]);
                 ctx.beginPath();
@@ -2676,7 +2930,9 @@
                 const fwdY = -Math.cos(rad);
                 const rightX = Math.cos(rad);
                 const rightY = Math.sin(rad);
-                ctx.fillStyle = lc.isStale ? COLORS.muted : COLORS.facRunway;
+                ctx.save();
+                ctx.globalAlpha = isCraftOffline ? 0.38 : 1;
+                ctx.fillStyle = isCraftOffline ? COLORS.muted : COLORS.facRunway;
                 ctx.beginPath();
                 ctx.moveTo(sc.sx + fwdX * 10, sc.sy + fwdY * 10);
                 ctx.lineTo(sc.sx - fwdX * 7 + rightX * 6, sc.sy - fwdY * 7 + rightY * 6);
@@ -2684,9 +2940,21 @@
                 ctx.lineTo(sc.sx - fwdX * 7 - rightX * 6, sc.sy - fwdY * 7 - rightY * 6);
                 ctx.closePath();
                 ctx.fill();
-                ctx.fillStyle = lc.isStale ? COLORS.muted : COLORS.text;
+                if (st.ui.inspectedEntity && st.ui.inspectedEntity.kind === "CRAFT" && st.ui.inspectedEntity.id === lc.domainId) {
+                  ctx.strokeStyle = COLORS.cpSelected;
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  ctx.arc(sc.sx, sc.sy, 14, 0, Math.PI * 2);
+                  ctx.stroke();
+                }
+                ctx.fillStyle = isCraftOffline ? COLORS.muted : COLORS.text;
                 ctx.font = "11px monospace";
-                ctx.fillText(`${lc.domainId} (${lc.fsmState || "?"})`, sc.sx + 10, sc.sy - 6);
+                ctx.fillText(
+                  isCraftOffline ? `${lc.domainId} [OFFLINE]` : `${lc.domainId} (${lc.fsmState || "?"})`,
+                  sc.sx + 10,
+                  sc.sy - 6
+                );
+                ctx.restore();
               }
             }
           }
@@ -2716,10 +2984,37 @@
         };
 
         const hitTestFacilityPin = (sx, sy, view) => {
+          const st = Store.getState();
+          const v = getViewRect(mapCanvasEl, view);
           const facs = WorldStore.getFacilities();
           for (const fac of facs) {
-            const sf = worldToScreen(fac.x, fac.z, view);
+            if (!isFacilityVisible(fac, st.ui)) continue;
+            const sf = worldToScreen(fac.x, fac.z, v);
             if (Math.hypot(sx - sf.sx, sy - sf.sy) <= 14) return fac;
+          }
+          return null;
+        };
+
+        const hitTestInspectionTarget = (sx, sy, view) => {
+          const st = Store.getState();
+          const v = getViewRect(mapCanvasEl, view);
+          if (typeof LiveBridge !== "undefined") {
+            for (const lc of LiveBridge.getFleetCrafts()) {
+              if (!isCraftVisible(lc, st.ui)) continue;
+              if (!lc.position || !isFiniteNum(Number(lc.position.x)) || !isFiniteNum(Number(lc.position.z))) continue;
+              const sc = worldToScreen(Number(lc.position.x), Number(lc.position.z), v);
+              if (Math.hypot(sx - sc.sx, sy - sc.sy) <= 16) {
+                return { kind: "CRAFT", id: lc.domainId, entity: deepClone(lc) };
+              }
+            }
+          }
+          const facs = WorldStore.getFacilities();
+          for (const fac of facs) {
+            if (!isFacilityVisible(fac, st.ui)) continue;
+            const sf = worldToScreen(fac.x, fac.z, v);
+            if (Math.hypot(sx - sf.sx, sy - sf.sy) <= 16) {
+              return { kind: "FACILITY", id: fac.facilityId, entity: deepClone(fac) };
+            }
           }
           return null;
         };
@@ -2779,6 +3074,18 @@
             if (p) pts.push(p);
             if (cp && cp.params && isPosXZ(cp.params.endPos)) pts.push(cp.params.endPos);
           }
+          if (pts.length === 0 || st.ui.editorMode === "INSPECTION") {
+            for (const fac of WorldStore.getFacilities()) {
+              if (isFacilityVisible(fac, st.ui)) pts.push({ x: fac.x, z: fac.z });
+            }
+            if (typeof LiveBridge !== "undefined") {
+              for (const lc of LiveBridge.getFleetCrafts()) {
+                if (isCraftVisible(lc, st.ui) && lc.position && isFiniteNum(lc.position.x) && isFiniteNum(lc.position.z)) {
+                  pts.push({ x: lc.position.x, z: lc.position.z });
+                }
+              }
+            }
+          }
           if (pts.length === 0) {
             Store.setUi({ viewOffset: { x: 0, z: 0 }, zoom: 1.0 });
             return;
@@ -2794,7 +3101,7 @@
           const spanZ = Math.max(100, maxZ - minZ);
           const w = (mapCanvasEl && (mapCanvasEl.clientWidth || mapCanvasEl.width)) || 800;
           const h = (mapCanvasEl && (mapCanvasEl.clientHeight || mapCanvasEl.height)) || 600;
-          const zoom = Math.max(0.15, Math.min(3.0, Math.min((w * 0.72) / spanX, (h * 0.72) / spanZ)));
+          const zoom = Math.max(MIN_ZOOM, Math.min(3.0, Math.min((w * 0.72) / spanX, (h * 0.72) / spanZ)));
           Store.setUi({ viewOffset: { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2 }, zoom });
         };
 
@@ -2814,6 +3121,19 @@
             const st = Store.getState();
             const pt = localPt(e);
             const view = { offsetX: st.ui.viewOffset.x, offsetZ: st.ui.viewOffset.z, zoom: st.ui.zoom, width: pt.width, height: pt.height };
+            if (st.ui.editorMode === "INSPECTION") {
+              if (e.button === 0) {
+                const target = hitTestInspectionTarget(pt.sx, pt.sy, view);
+                if (target) {
+                  Store.setInspectedEntity(target);
+                  return;
+                }
+              }
+              if (e.button === 0 || e.button === 1 || e.button === 2) {
+                dragState = { target: "PAN", startSx: pt.sx, startSy: pt.sy, origOffset: deepClone(st.ui.viewOffset) };
+              }
+              return;
+            }
             if (e.button === 0 && st.ui.activeTool === "PICK_FACILITY") {
               const cw = screenToWorld(pt.sx, pt.sy, view);
               const snapOn = e.altKey ? false : st.ui.gridSnap;
@@ -2894,7 +3214,7 @@
             if (e.preventDefault) e.preventDefault();
             const st = Store.getState();
             const factor = (e.deltaY || 0) > 0 ? 0.9 : 1.1;
-            const nextZoom = Math.max(0.1, Math.min(4.0, st.ui.zoom * factor));
+            const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, st.ui.zoom * factor));
             Store.setUi({ zoom: nextZoom });
           });
         };
@@ -2965,13 +3285,21 @@
         };
 
         return {
+          MIN_ZOOM,
+          MAX_ZOOM,
+          computeGridStep,
+          isCraftVisible,
+          isFacilityVisible,
           worldToScreen,
           screenToWorld,
+          getView,
+          setView,
           snapCoord,
           snapAlt,
           computeRepeatLoopTarget,
           computeLabelStackOffsets,
           hitTestCanvas,
+          hitTestInspectionTarget,
           getAltPointScreen,
           centerOnCheckpoint,
           fitView,
@@ -3104,7 +3432,32 @@
           const btnFacVis = document.getElementById("btnToggleFacilities");
           if (btnFacVis) btnFacVis.setAttribute("aria-pressed", String(st.ui.showWorldFacilities !== false));
           const btnPickFac = document.getElementById("btnPickFacilityTool");
-          if (btnPickFac) btnPickFac.setAttribute("aria-pressed", String(st.ui.activeTool === "PICK_FACILITY"));
+          const isInsp = st.ui.editorMode === "INSPECTION";
+          if (btnPickFac) {
+            btnPickFac.setAttribute("aria-pressed", String(st.ui.activeTool === "PICK_FACILITY"));
+            btnPickFac.disabled = isInsp;
+          }
+          const btnModeEdit = document.getElementById("btnModeEdit");
+          const btnModeInsp = document.getElementById("btnModeInspection");
+          if (btnModeEdit) btnModeEdit.setAttribute("aria-pressed", String(!isInsp));
+          if (btnModeInsp) btnModeInsp.setAttribute("aria-pressed", String(isInsp));
+          for (const editId of ["missionIdInput", "execModeSingle", "execModeRepeat", "presetSelect", "btnImportJson", "btnApplyJson", "btnOpenAddPicker", "btnOpenMacroPicker", "btnEmptyPreset", "btnEmptyAdd"]) {
+            const node = document.getElementById(editId);
+            if (node) node.disabled = isInsp;
+          }
+          if (btnUndo) btnUndo.disabled = isInsp || !Store.canUndo();
+          if (btnRedo) btnRedo.disabled = isInsp || !Store.canRedo();
+          const filters = st.ui.filters || {};
+          const btnFilterCrafts = document.getElementById("btnFilterCrafts");
+          if (btnFilterCrafts) btnFilterCrafts.setAttribute("aria-pressed", String(filters.showCrafts !== false));
+          const craftFilterSel = document.getElementById("filterCraftTypeSelect");
+          if (craftFilterSel && craftFilterSel.value !== (filters.craftAirframeType || "ALL")) {
+            craftFilterSel.value = filters.craftAirframeType || "ALL";
+          }
+          const facFilterSel = document.getElementById("filterFacilityTypeSelect");
+          if (facFilterSel && facFilterSel.value !== (filters.facilityType || "ALL")) {
+            facFilterSel.value = filters.facilityType || "ALL";
+          }
         };
 
         const renderWorldDrawer = (st) => {
@@ -3179,6 +3532,50 @@
         };
 
         const renderLeftRail = (st) => {
+          if (st.ui.editorMode === "INSPECTION") {
+            const countEl = document.getElementById("cpCountBadge");
+            const listEl = document.getElementById("cpList");
+            if (!listEl) return;
+            clearNode(listEl);
+            const crafts = (typeof LiveBridge !== "undefined" ? LiveBridge.getFleetCrafts() : []).filter((c) => CanvasRenderer.isCraftVisible(c, st.ui));
+            const facs = WorldStore.getFacilities().filter((f) => CanvasRenderer.isFacilityVisible(f, st.ui));
+            if (countEl) countEl.textContent = String(crafts.length + facs.length);
+            if (crafts.length === 0 && facs.length === 0) {
+              listEl.appendChild(el("div", "empty-state", "No live crafts or facilities matching active filters."));
+              return;
+            }
+            for (const c of crafts) {
+              const isSel = st.ui.inspectedEntity && st.ui.inspectedEntity.kind === "CRAFT" && st.ui.inspectedEntity.id === c.domainId;
+              const row = el("div", isSel ? "cp-row selected" : "cp-row");
+              const btn = el("button", "cp-select-btn");
+              btn.type = "button";
+              btn.appendChild(el("span", "badge", c.isStale ? "OFFLINE" : (c.fsmState || "LIVE")));
+              btn.appendChild(el("strong", "mono", c.domainId));
+              btn.addEventListener("click", () => {
+                Store.setInspectedEntity({ kind: "CRAFT", id: c.domainId, entity: deepClone(c) });
+                if (c.position && isFiniteNum(Number(c.position.x)) && isFiniteNum(Number(c.position.z))) {
+                  CanvasRenderer.setView({ panX: Number(c.position.x), panY: Number(c.position.z) });
+                }
+              });
+              row.appendChild(btn);
+              listEl.appendChild(row);
+            }
+            for (const f of facs) {
+              const isSel = st.ui.inspectedEntity && st.ui.inspectedEntity.kind === "FACILITY" && st.ui.inspectedEntity.id === f.facilityId;
+              const row = el("div", isSel ? "cp-row selected" : "cp-row");
+              const btn = el("button", "cp-select-btn");
+              btn.type = "button";
+              btn.appendChild(el("span", "badge", f.isStale ? "OFFLINE" : (f.type || f.facilityType || "FAC")));
+              btn.appendChild(el("strong", "mono", f.facilityId));
+              btn.addEventListener("click", () => {
+                Store.setInspectedEntity({ kind: "FACILITY", id: f.facilityId, entity: deepClone(f) });
+                CanvasRenderer.setView({ panX: f.x, panY: f.z });
+              });
+              row.appendChild(btn);
+              listEl.appendChild(row);
+            }
+            return;
+          }
           const cps = st.mission.checkpoints || [];
           const countEl = document.getElementById("cpCountBadge");
           if (countEl) countEl.textContent = String(cps.length);
@@ -3573,6 +3970,54 @@
           if (!body) return;
           clearNode(body);
 
+          if (st.ui.editorMode === "INSPECTION") {
+            const infoBanner = el("div", "section-card");
+            infoBanner.appendChild(el("strong", "", "Inspection Mode (Read-Only)"));
+            infoBanner.appendChild(el("div", "cp-summary", "Mission edits are locked. Camera Follow and Push to Aircraft remain active."));
+            body.appendChild(infoBanner);
+
+            const target = st.ui.inspectedEntity;
+            if (!target) {
+              body.appendChild(el("div", "section-card", "Click a Craft, GAC, GPS, or Ground Facility on the 2D canvas or left roster to inspect telemetry and metadata."));
+              return;
+            }
+            if (target.kind === "CRAFT") {
+              const live = (typeof LiveBridge !== "undefined" ? LiveBridge.getFleetCrafts().find((c) => c.domainId === target.id) : null) || target.entity || {};
+              const pos = live.position || {};
+              const att = live.attitude || {};
+              const card = el("div", "section-card");
+              card.appendChild(el("strong", "mono", `${live.domainId || target.id} [${live.liveStatus || (live.isStale ? "OFFLINE" : "ONLINE")}]`));
+              card.appendChild(el("div", "cp-summary", `FSM: ${live.fsmState || "?"} | Airframe: ${live.airframeType || "UNKNOWN"} | Base CH: ${live.baseChannel ?? "?"}`));
+              card.appendChild(el("div", "cp-summary", `Pos: (${Math.round(pos.x || 0)}, ${Math.round(pos.y || 0)}, ${Math.round(pos.z || 0)}) | Fuel: ${live.fuel != null ? Math.round(Number(live.fuel) * 100) + "%" : "?"} | GS: ${live.groundSpeed ?? "?"}m/s`));
+              card.appendChild(el("div", "cp-summary", `Attitude Y/P/R: ${Math.round(att.yaw || 0)}° / ${Math.round(att.pitch || 0)}° / ${Math.round(att.roll || 0)}°`));
+              const isFollowing = st.ui.followCraftId === (live.domainId || target.id);
+              const followBtn = el("button", isFollowing ? "btn-primary" : "", isFollowing ? "Stop Follow" : "Follow Craft");
+              followBtn.type = "button";
+              followBtn.addEventListener("click", () => {
+                if (typeof LiveBridge !== "undefined") {
+                  LiveBridge.setFollowCraft(isFollowing ? null : (live.domainId || target.id));
+                }
+              });
+              card.appendChild(followBtn);
+              body.appendChild(card);
+              return;
+            }
+            const fac = WorldStore.getFacility(target.id) || target.entity || {};
+            const card = el("div", "section-card");
+            card.appendChild(el("strong", "mono", `${fac.facilityId || target.id} [${fac.status || (fac.isStale ? "OFFLINE" : "FREE")}]`));
+            card.appendChild(el("div", "cp-summary", `Type: ${fac.type || fac.facilityType || "FACILITY"} | Origin: ${fac.liveAuto ? "LIVE AUTO" : "MANUAL PRESET"}`));
+            card.appendChild(el("div", "cp-summary", `Pos: (${Math.round(fac.x || 0)}, ${fac.y != null ? Math.round(fac.y) : "?"}, ${Math.round(fac.z || 0)}) | Hdg: ${fac.headingDeg ?? 0}°`));
+            if (fac.sectorId != null || fac.gacChannel != null) {
+              card.appendChild(el("div", "cp-summary", `Sector: ${fac.sectorId ?? "-"} | GAC CH: ${fac.gacChannel ?? "-"}`));
+            }
+            if (fac.computerId != null || fac.uptime != null || fac.reportsSent != null) {
+              card.appendChild(el("div", "cp-summary", `Computer #${fac.computerId ?? "?"} | Uptime: ${fac.uptime ?? 0}s | Reports: ${fac.reportsSent ?? 0}`));
+            }
+            if (fac.notes) card.appendChild(el("div", "cp-summary", fac.notes));
+            body.appendChild(card);
+            return;
+          }
+
           if (st.ui.rightMode === "MISSION_SETTINGS") {
             const m = st.mission;
             const grid = el("div", "form-grid");
@@ -3718,6 +4163,10 @@
           if (typeof LiveBridge === "undefined") return;
           const connected = LiveBridge.isConnected();
           const crafts = LiveBridge.getFleetCrafts();
+          const urlEl = document.getElementById("liveBridgeUrlInput");
+          if (urlEl && document.activeElement !== urlEl) {
+            urlEl.value = LiveBridge.getUrl();
+          }
           const btn = document.getElementById("btnConnectLive");
           if (btn) {
             btn.setAttribute("aria-pressed", String(connected));
@@ -3730,6 +4179,14 @@
               if (connected) badge.classList.add("online");
               else badge.classList.remove("online");
             }
+          }
+          const btnPurge = document.getElementById("btnPurgeOffline");
+          if (btnPurge) {
+            const offlineCrafts = crafts.filter((c) => c.isStale || String(c.liveStatus || "").toUpperCase() === "OFFLINE").length;
+            const offlineFacs = WorldStore.getFacilities().filter((f) => f.liveAuto && (f.isStale || String(f.status || "").toUpperCase() === "OFFLINE")).length;
+            const totalOffline = offlineCrafts + offlineFacs;
+            btnPurge.textContent = totalOffline > 0 ? `Purge Offline (${totalOffline})` : "Purge Offline";
+            btnPurge.disabled = totalOffline === 0;
           }
           const craftSel = document.getElementById("pushCraftSelect");
           if (craftSel) {
@@ -3946,11 +4403,12 @@
       })();
       const LiveBridge = (() => {
         const DEFAULT_URL = "ws://127.0.0.1:8765";
-        const LOCAL_WS_RE = /^ws:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?(\/.*)?$/i;
+        const URL_STORAGE_KEY = "amm_mission_editor_live_ws_url_v1";
+        const LIVE_NODE_TTL_MS = 60000;
+        const MDNS_LOCAL_HOST_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.local$/i;
         const MAX_TRAIL_POINTS = 60;
         let ws = null;
         let connected = false;
-        let activeUrl = DEFAULT_URL;
         let fleetCrafts = new Map();
         let trails = new Map();
         let lastWorldSync = null;
@@ -3959,33 +4417,134 @@
         const pendingRequests = new Map();
         const outboundHistory = [];
 
-        const isAllowedLocalUrl = (url) => LOCAL_WS_RE.test(String(url || "").trim());
+        const isRfc1918Ipv4 = (host) => {
+          const parts = String(host || "").split(".");
+          if (parts.length !== 4) return false;
+          const octets = [];
+          for (const p of parts) {
+            if (!/^\d{1,3}$/.test(p)) return false;
+            const n = Number(p);
+            if (!Number.isInteger(n) || n < 0 || n > 255) return false;
+            octets.push(n);
+          }
+          if (octets[0] === 10) return true;
+          if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+          if (octets[0] === 192 && octets[1] === 168) return true;
+          return false;
+        };
 
-        const mapBeaconFacility = (fac) => {
+        const isAllowedLocalUrl = (url) => {
+          const raw = String(url || "").trim();
+          const m = raw.match(/^ws:\/\/([^/:?#]+)(?::(\d+))?(\/.*)?$/i);
+          if (!m) return false;
+          const host = m[1];
+          if (m[2] !== undefined) {
+            const port = Number(m[2]);
+            if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
+          }
+          if (host === "127.0.0.1" || host.toLowerCase() === "localhost") return true;
+          if (isRfc1918Ipv4(host)) return true;
+          if (MDNS_LOCAL_HOST_RE.test(host)) return true;
+          return false;
+        };
+
+        let activeUrl = (() => {
+          try {
+            if (typeof localStorage !== "undefined") {
+              const saved = localStorage.getItem(URL_STORAGE_KEY);
+              if (saved && isAllowedLocalUrl(saved)) return saved.trim();
+            }
+          } catch (_) {}
+          return DEFAULT_URL;
+        })();
+
+        const setUrl = (url) => {
+          const trimmed = String(url || "").trim();
+          if (!isAllowedLocalUrl(trimmed)) {
+            return { ok: false, error: "NON_LOCAL_BRIDGE_URL" };
+          }
+          activeUrl = trimmed;
+          try {
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem(URL_STORAGE_KEY, activeUrl);
+            }
+          } catch (_) {}
+          InspectorUI.renderAll();
+          return { ok: true, url: activeUrl };
+        };
+
+        const setFollowCraft = (craftId) => {
+          const next = craftId ? String(craftId).trim() : null;
+          Store.setUi({ followCraftId: next || null });
+          return next || null;
+        };
+
+        const mapBeaconFacility = (fac, nowMs) => {
           if (!fac || typeof fac !== "object" || !fac.facilityId) return null;
           const pos = (fac.position && typeof fac.position === "object") ? fac.position : fac;
-          return {
+          const rawType = fac.facilityType || fac.type;
+          const ftype = SchemaConstants.FACILITY_TYPES.includes(rawType) ? rawType : "LANDING_PAD";
+          const st = typeof fac.status === "string" && fac.status.trim() ? fac.status.trim() : "FREE";
+          const seen = typeof fac.lastSeenMs === "number" ? fac.lastSeenMs : (typeof nowMs === "number" ? nowMs : Date.now());
+          const stale = Boolean(fac.isStale || st.toUpperCase() === "OFFLINE");
+          const out = {
             facilityId: String(fac.facilityId),
             label: String(fac.label || fac.facilityId),
-            type: ["LANDING_PAD", "RUNWAY", "DOCKING_ARM", "WAYPOINT"].includes(fac.facilityType || fac.type)
-              ? (fac.facilityType || fac.type)
-              : "LANDING_PAD",
+            type: ftype,
+            facilityType: ftype,
+            status: st,
             x: isFiniteNum(Number(pos.x)) ? Number(pos.x) : 0,
             z: isFiniteNum(Number(pos.z)) ? Number(pos.z) : 0,
             y: isFiniteNum(Number(pos.y)) ? Number(pos.y) : undefined,
-            headingDeg: isFiniteNum(Number(fac.heading)) ? Number(fac.heading) : 0,
-            notes: `GCS Live (${String(fac.status || "FREE")})`,
+            headingDeg: isFiniteNum(Number(fac.headingDeg !== undefined ? fac.headingDeg : fac.heading))
+              ? Number(fac.headingDeg !== undefined ? fac.headingDeg : fac.heading)
+              : 0,
+            liveAuto: fac.liveAuto !== false,
+            lastSeenMs: seen,
+            isStale: stale,
+            notes: fac.notes || `GCS Live (${st})`,
           };
+          if (fac.sectorId !== undefined && fac.sectorId !== null) out.sectorId = fac.sectorId;
+          if (typeof fac.gacChannel === "number") out.gacChannel = fac.gacChannel;
+          if (typeof fac.computerId === "number") out.computerId = fac.computerId;
+          if (typeof fac.uptime === "number") out.uptime = fac.uptime;
+          if (typeof fac.reportsSent === "number") out.reportsSent = fac.reportsSent;
+          return out;
         };
 
         const handleWorldSync = (msg) => {
+          const nowMs = Date.now();
           const rawList = Array.isArray(msg.facilities) ? msg.facilities : [];
-          const mapped = rawList.map(mapBeaconFacility).filter(Boolean);
+          const mapped = rawList.map((f) => mapBeaconFacility(f, nowMs)).filter(Boolean);
           const secId = msg.sectorId != null ? String(msg.sectorId) : "0";
           const worldId = `LIVE_SECTOR_${secId}`;
           const worldName = typeof msg.sectorName === "string" && msg.sectorName.trim()
             ? msg.sectorName.trim()
             : `Live Sector ${secId}`;
+          if (msg.gacNode && typeof msg.gacNode === "object") {
+            const gacMapped = mapBeaconFacility({
+              ...msg.gacNode,
+              facilityId: msg.gacNode.facilityId || `GAC_${secId}`,
+              facilityType: "GAC",
+              status: msg.gacNode.status || msg.status || "OPERATIONAL",
+              sectorId: msg.gacNode.sectorId !== undefined ? msg.gacNode.sectorId : msg.sectorId,
+            }, nowMs);
+            if (gacMapped && !mapped.some((f) => f.facilityId === gacMapped.facilityId)) {
+              mapped.push(gacMapped);
+            }
+          } else if (msg.position && isFiniteNum(Number(msg.position.x)) && isFiniteNum(Number(msg.position.z))) {
+            const gacSynth = mapBeaconFacility({
+              facilityId: `GAC_${secId}`,
+              facilityType: "GAC",
+              status: msg.status || "OPERATIONAL",
+              position: msg.position,
+              sectorId: msg.sectorId,
+              gacChannel: msg.gacChannel,
+            }, nowMs);
+            if (gacSynth && !mapped.some((f) => f.facilityId === gacSynth.facilityId)) {
+              mapped.push(gacSynth);
+            }
+          }
           WorldStore.importWorldsJson({
             schemaVersion: "1.0.0",
             activeWorldId: worldId,
@@ -3998,13 +4557,42 @@
           return { handled: true, type: "WORLD_PRESET_SYNC", worldId, facilitiesCount: mapped.length };
         };
 
+        const handleGpsNodesSync = (msg) => {
+          const nowMs = Date.now();
+          const nodes = Array.isArray(msg.nodes) ? msg.nodes : [];
+          const activeW = WorldStore.getActiveWorld();
+          const wid = (activeW && activeW.worldId) || "WORLD_DEFAULT";
+          let count = 0;
+          for (const rawNode of nodes) {
+            if (!rawNode || typeof rawNode !== "object" || !rawNode.facilityId) continue;
+            const mapped = mapBeaconFacility({
+              ...rawNode,
+              facilityType: "GPS",
+              status: rawNode.status || (rawNode.isStale ? "OFFLINE" : "ONLINE"),
+              liveAuto: true,
+              lastSeenMs: typeof rawNode.lastSeen === "number" ? rawNode.lastSeen : nowMs,
+            }, nowMs);
+            if (mapped) {
+              WorldStore.upsertFacility(mapped, null, wid);
+              count += 1;
+            }
+          }
+          Store.revalidate();
+          InspectorUI.renderAll();
+          return { handled: true, type: "GPS_NODES_SYNC", nodeCount: count };
+        };
+
         const handleFleetSync = (msg) => {
+          const nowMs = Date.now();
           const list = Array.isArray(msg.crafts) ? msg.crafts : [];
-          const nextMap = new Map();
+          const followId = Store.getState().ui.followCraftId;
           for (const raw of list) {
             if (!raw || typeof raw.domainId !== "string" || !raw.domainId) continue;
             const craft = deepClone(raw);
-            nextMap.set(craft.domainId, craft);
+            craft.lastSeenMs = typeof raw.lastSeenMs === "number" ? raw.lastSeenMs : nowMs;
+            craft.isStale = Boolean(raw.isStale || String(raw.liveStatus || "").toUpperCase() === "OFFLINE");
+            craft.liveStatus = craft.isStale ? "OFFLINE" : (raw.liveStatus || "ONLINE");
+            fleetCrafts.set(craft.domainId, craft);
             if (craft.position && isFiniteNum(Number(craft.position.x)) && isFiniteNum(Number(craft.position.z))) {
               const px = Number(craft.position.x);
               const pz = Number(craft.position.z);
@@ -4016,11 +4604,51 @@
                 if (arr.length > MAX_TRAIL_POINTS) arr.shift();
                 trails.set(craft.domainId, arr);
               }
+              if (followId && followId === craft.domainId) {
+                CanvasRenderer.setView({ panX: px, panY: pz });
+              }
             }
           }
-          fleetCrafts = nextMap;
           InspectorUI.renderAll();
           return { handled: true, type: "FLEET_TELEMETRY_SYNC", craftCount: fleetCrafts.size };
+        };
+
+        const markExpiredNodes = (nowMs) => {
+          const t = typeof nowMs === "number" && Number.isFinite(nowMs) ? nowMs : Date.now();
+          const facilitiesMarked = WorldStore.markExpiredLiveFacilities(null, t, LIVE_NODE_TTL_MS);
+          let craftsMarked = 0;
+          for (const craft of fleetCrafts.values()) {
+            if (typeof craft.lastSeenMs === "number" && (t - craft.lastSeenMs) > LIVE_NODE_TTL_MS) {
+              if (!craft.isStale || craft.liveStatus !== "OFFLINE") craftsMarked += 1;
+              craft.isStale = true;
+              craft.liveStatus = "OFFLINE";
+            }
+          }
+          InspectorUI.renderAll();
+          return { facilitiesMarked, craftsMarked };
+        };
+
+        const purgeOfflineNodes = (nowMs) => {
+          markExpiredNodes(nowMs);
+          const removedFacilities = WorldStore.purgeOfflineLiveFacilities(null);
+          let removedCrafts = 0;
+          const st = Store.getState();
+          for (const [id, craft] of Array.from(fleetCrafts.entries())) {
+            if (craft.isStale || String(craft.liveStatus || "").toUpperCase() === "OFFLINE") {
+              fleetCrafts.delete(id);
+              trails.delete(id);
+              removedCrafts += 1;
+              if (st.ui.followCraftId === id) Store.setUi({ followCraftId: null });
+              if (st.ui.inspectedEntity && st.ui.inspectedEntity.kind === "CRAFT" && st.ui.inspectedEntity.id === id) {
+                Store.setInspectedEntity(null);
+              }
+            }
+          }
+          if (st.ui.inspectedEntity && st.ui.inspectedEntity.kind === "FACILITY" && !WorldStore.getFacility(st.ui.inspectedEntity.id)) {
+            Store.setInspectedEntity(null);
+          }
+          InspectorUI.renderAll();
+          return { removedFacilities, removedCrafts };
         };
 
         const handlePushAck = (msg) => {
@@ -4043,6 +4671,7 @@
             return { handled: false, error: "INVALID_MESSAGE" };
           }
           if (msg.type === "WORLD_PRESET_SYNC") return handleWorldSync(msg);
+          if (msg.type === "GPS_NODES_SYNC") return handleGpsNodesSync(msg);
           if (msg.type === "FLEET_TELEMETRY_SYNC") return handleFleetSync(msg);
           if (msg.type === "MISSION_PUSH_ACK") return handlePushAck(msg);
           return { handled: false, error: "UNKNOWN_TYPE" };
@@ -4058,10 +4687,11 @@
         };
 
         const connect = (url) => {
-          const target = String(url || DEFAULT_URL).trim();
+          const target = url !== undefined ? String(url).trim() : activeUrl;
           if (!isAllowedLocalUrl(target)) {
             return { ok: false, error: "NON_LOCAL_BRIDGE_URL" };
           }
+          activeUrl = target;
           const WsCtor = typeof WebSocket === "function" ? WebSocket : (typeof globalThis !== "undefined" ? globalThis.WebSocket : null);
           if (typeof WsCtor !== "function") {
             return { ok: false, error: "WEBSOCKET_UNSUPPORTED" };
@@ -4127,12 +4757,20 @@
 
         return {
           DEFAULT_URL,
+          URL_STORAGE_KEY,
+          LIVE_NODE_TTL_MS,
           isAllowedLocalUrl,
+          setUrl,
+          setFollowCraft,
+          getFollowCraft: () => Store.getState().ui.followCraftId || null,
           connect,
           disconnect,
           isConnected: () => connected,
           getUrl: () => activeUrl,
           handleMessage,
+          handleGpsNodesSync,
+          markExpiredNodes,
+          purgeOfflineNodes,
           pushMission,
           getFleetCrafts: () => Array.from(fleetCrafts.values()),
           getTrails: () => {
@@ -4441,13 +5079,40 @@
               if (sel && typeof sel.focus === "function") sel.focus();
             }
           };
+          on("btnModeEdit", "click", () => Store.setEditorMode("MISSION_EDIT"));
+          on("btnModeInspection", "click", () => Store.setEditorMode("INSPECTION"));
+          on("btnFilterCrafts", "click", () => {
+            const cur = (Store.getState().ui.filters || {}).showCrafts !== false;
+            Store.setFilters({ showCrafts: !cur });
+          });
+          on("filterCraftTypeSelect", "change", (e) => Store.setFilters({ craftAirframeType: e.target.value || "ALL" }));
+          on("filterFacilityTypeSelect", "change", (e) => Store.setFilters({ facilityType: e.target.value || "ALL" }));
+          on("btnPurgeOffline", "click", () => {
+            const res = LiveBridge.purgeOfflineNodes();
+            InspectorUI.showToast(`Purged ${res.removedFacilities} facilities & ${res.removedCrafts} crafts`, "info");
+          });
+          on("liveBridgeUrlInput", "change", (e) => {
+            const res = LiveBridge.setUrl(e.target.value);
+            if (!res.ok) {
+              InspectorUI.showToast(`Blocked URL (${res.error}): local or RFC 1918 / .local ws:// only`, "error");
+              e.target.value = LiveBridge.getUrl();
+            } else {
+              InspectorUI.showToast(`Live URL set: ${res.url}`, "info");
+            }
+          });
           on("btnConnectLive", "click", () => {
             if (LiveBridge.isConnected()) {
               LiveBridge.disconnect();
               InspectorUI.showToast("Disconnected Live Bridge", "info");
             } else {
-              const res = LiveBridge.connect();
-              if (!res.ok) InspectorUI.showToast(`Live connect failed: ${res.error}`, "error");
+              const urlEl = document.getElementById("liveBridgeUrlInput");
+              const res = urlEl ? LiveBridge.setUrl(urlEl.value) : { ok: true, url: LiveBridge.getUrl() };
+              if (!res.ok) {
+                InspectorUI.showToast(`Live URL blocked: ${res.error}`, "error");
+                return;
+              }
+              const connRes = LiveBridge.connect(res.url);
+              if (!connRes.ok) InspectorUI.showToast(`Live connect failed: ${connRes.error}`, "error");
             }
           });
           on("btnPushAircraft", "click", () => setPushModalOpen(true));
@@ -4510,7 +5175,7 @@
       })();
 
       window.__AMM_EDITOR__ = {
-        version: "0.5.0",
+        version: "0.6.0",
         deepClone,
         SchemaConstants,
         MacroExpander,

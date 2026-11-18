@@ -2,10 +2,10 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI 실시간 연동·GDrive 배포·40채널 정합·공중 콜드부트 복구 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-130`(공중 콜드부트 복구·`VAS v1.24.0`·`FCP v2.4.0`·`AMM v2.5.0`; 2026-11-18), `TASK-125`(40채널 블록 개편·결함 12종 해소·6종 승격; 2026-11-16), `TASK-501`(GDrive 135파일 동기화; 2026-11-16), `TASK-404`(WebSocket Live Bridge·에디터 `v0.5.0`; 2026-11-16), `TASK-103`(`Runway v1.12.0`; 2026-11-16). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI LAN Live/Inspection 관제·GDrive 배포·40채널 정합·공중 콜드부트 복구 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
+- **직전 완료**: `TASK-405`·`406`(LAN Live/`--lan`·광역 줌·`CH 60003`/1분 TTL·필터·Inspection; `AMM_MISSION_EDITOR v0.6.0`·`GCS v1.4.0`·`GAC v1.7.0`; 2026-11-18), `TASK-130`(공중 콜드부트 복구; 2026-11-18), `TASK-125`(40채널 블록 개편; 2026-11-16), `TASK-501`(GDrive 135파일 동기화; 2026-11-16), `TASK-404`(Live Bridge; 2026-11-16). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
-  1. `TASK-405` / `TASK-406` / `TASK-302` / `TASK-128` (1순위): 에디터 LAN Live·광역 줌/자동등록 · Pocket PDA 원격 관제 · GPS 헬스/DR 가드.
+  1. `TASK-302` / `TASK-128` (1순위): Pocket PDA 원격 관제 · GPS 헬스/DR 가드.
   2. `TASK-131` / `TASK-136` / `TASK-140` / `TASK-015` (2순위): PBIT·블록화 재조립 인터록·저고도 착륙 감쇠·전 계층 플레이북.
   3. `TASK-135` / `TASK-214` / `TASK-105`↔`210` / `TASK-132` / `TASK-129` (3순위): AMM 샌드박스·허브 대기 스택·ASA 본 구현·비상 활공·적응형 트림.
 
@@ -18,7 +18,7 @@
 - `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `config/protocol_contracts.json`: 활성 사양서·코드베이스·E2E 패킷 교차 검증용 기계 판독형 SSOT 와이어 프로토콜 계약 명세.
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
-- `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_boot_smoke.py`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_mutation_tests.py`, `analyze_flight_log.py`, `gcs_live_bridge.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.5.0 Implemented`).
+- `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_boot_smoke.py`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_mutation_tests.py`, `analyze_flight_log.py`, `gcs_live_bridge.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.6.0 Implemented`).
 - `config/gdrive_mapping.json` & `dist_gdrive/` & `tools/sync_gdrive.py`: GDrive 배포 매핑 SSOT(135파일 전수 매핑), 격리 스테이징, 동기화 CLI (가이드 `docs/guides/GDRIVE_DEPLOYMENT_GUIDE.md`).
 - `reports/`: 분석·리팩토링 검토 보고서 (`underReview/`, `reviewCompleted/`).
 - `.worktrees/` & `.runtime/`: Git Worktree 격리 영역 및 CraftOS 임시 세션 디렉토리 (`.gitignore` 등록).
@@ -29,13 +29,13 @@
 - **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·145 코드/설정 린트, 0 errors).
 - **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (13 활성 서브시스템 0 violations, 4 예외).
 - **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (13개 활성 `main.lua` 13/13 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 613/613 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 617/617 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 21/21 PASS, 555패킷 계약 0 violations).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (139/139 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (141/141 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py --strict-gdrive-packages` (0 Errors, 0 Warnings; 135 GDrive 엔트리), `python tools/verify_all_specs.py --check-readmes` (17대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (140 파일), `python tools/verify_spec_status.py` (18종 14 Implemented, 4 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (24/24 PASS).
-- **GDrive 배포 & Live Bridge**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행), `python tools/gcs_live_bridge.py --port 8765`.
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py --strict-gdrive-packages` (0 Errors, 0 Warnings; 135 GDrive 엔트리), `python tools/verify_all_specs.py --check-readmes` (17대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (140 파일), `python tools/verify_spec_status.py` (18종 14 Implemented, 4 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (30/30 PASS).
+- **GDrive 배포 & Live Bridge**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행), `python tools/gcs_live_bridge.py --port 8765 [--lan]`.
 
 ## 4. Gotchas & Invariants
 - **멀티 코드베이스 독립 완결성**: `src/<layer>/<name>/` 간 공용 모듈 직접 참조 금지 (개별 CC 컴퓨터 루트 마운트 단위 캡슐화, 기본 진입점 `main.lua`). 예외는 인스톨러가 `/lib/`에 주입하는 `/lib/avionics_sensors.lua`와 `/lib/ota_agent.lua` 2종.

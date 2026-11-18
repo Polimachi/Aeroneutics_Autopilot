@@ -30,6 +30,7 @@ local function load_config(path)
             bootstrapChannel = 50000,
             facilityBeaconChannel = 50003,
             missionAckChannel = 50004,
+            gpsHeartbeatChannel = 60003,
             bandwidth = 40,
             baseChannelMin = 10000,
             baseChannelMax = 49960,
@@ -70,6 +71,18 @@ local function get_time_ms()
     return math.floor(os.time() * 1000)
 end
 
+local GPS_NODE_TTL_MS = 60000
+
+local function mark_stale_gps_nodes(gps_nodes, now_ms)
+    if type(gps_nodes) ~= "table" then return end
+    for _, entry in pairs(gps_nodes) do
+        if type(entry) == "table" and entry.lastSeen and (now_ms - entry.lastSeen) > GPS_NODE_TTL_MS then
+            entry.status = "OFFLINE"
+            entry.isStale = true
+        end
+    end
+end
+
 function main.create_app(cfg, modem, registry_path, http_api)
     local app = {
         config = cfg or load_config(),
@@ -85,6 +98,7 @@ function main.create_app(cfg, modem, registry_path, http_api)
         running = true,
         pending_push_req = {},
         latest_world_beacon = nil,
+        gps_nodes = {},
     }
 
     app.channel_mgr = channel_manager.init(app.config, app.registry_path)
@@ -171,6 +185,28 @@ function main:process_modem_message(channel, replyChannel, raw_msg)
         return true
     end
 
+    local gps_hb_ch = (self.config.channels and self.config.channels.gpsHeartbeatChannel) or 60003
+    if channel == gps_hb_ch and msg.type == "MSG_GPS_NODE_HEARTBEAT" then
+        local p = msg.payload or {}
+        local node_id = p.nodeId or msg.domainId or ("GPS_" .. tostring(p.computerId or "UNKNOWN"))
+        local pos = p.pos or p.position or {}
+        local now_ms = get_time_ms()
+        self.gps_nodes[node_id] = {
+            facilityId = node_id,
+            facilityType = "GPS",
+            status = p.status or "ONLINE",
+            isStale = false,
+            lastSeen = now_ms,
+            computerId = p.computerId,
+            uptime = p.uptime or 0,
+            reportsSent = p.reportsSent or 0,
+            position = { x = pos.x or 0.0, y = pos.y or 0.0, z = pos.z or 0.0 },
+        }
+        mark_stale_gps_nodes(self.gps_nodes, now_ms)
+        live_bridge_client.send_gps_nodes(self.bridge, self.gps_nodes)
+        return true
+    end
+
     if msg.type == "MSG_MFD_STATE" and is_craft_telemetry_channel(self, channel) then
         fleet_tracker.update_telemetry(self.fleet, msg.domainId, msg.payload, get_time_ms())
         return true
@@ -220,10 +256,34 @@ function main:process_websocket_message(_ws_url, raw_json)
     return ok
 end
 
+function main:purge_offline_gps_nodes()
+    local removed = 0
+    local to_delete = {}
+    for k, entry in pairs(self.gps_nodes or {}) do
+        if type(entry) == "table" and (entry.isStale == true or entry.status == "OFFLINE") then
+            table.insert(to_delete, k)
+        end
+    end
+    for _, k in ipairs(to_delete) do
+        self.gps_nodes[k] = nil
+        removed = removed + 1
+    end
+    if removed > 0 and self.bridge and self.bridge.connected then
+        live_bridge_client.send_gps_nodes(self.bridge, self.gps_nodes)
+    end
+    return removed
+end
+
 function main:sync_bridge_telemetry()
     if not self.bridge or not self.bridge.connected then return false end
-    fleet_tracker.prune_stale(self.fleet, get_time_ms())
-    return live_bridge_client.send_fleet_telemetry(self.bridge, self.fleet)
+    local now_ms = get_time_ms()
+    fleet_tracker.prune_stale(self.fleet, now_ms)
+    mark_stale_gps_nodes(self.gps_nodes, now_ms)
+    local ok = live_bridge_client.send_fleet_telemetry(self.bridge, self.fleet)
+    if next(self.gps_nodes) ~= nil then
+        live_bridge_client.send_gps_nodes(self.bridge, self.gps_nodes)
+    end
+    return ok
 end
 
 local function handle_c2_key(app, active, lower_char)
