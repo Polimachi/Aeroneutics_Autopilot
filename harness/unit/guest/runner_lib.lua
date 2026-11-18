@@ -107,6 +107,14 @@ function R.profile_execution(fn, budget_limit, forbid_event_swallow)
 
     local function count_hook()
         insn_count = insn_count + step_quantum
+        local prof = _G.__AUDIT_PROFILE
+        if prof and prof.enabled and prof.stack and #prof.stack > 0 then
+            local active = prof.stack[#prof.stack]
+            local nrec = prof.nodes and prof.nodes[active]
+            if nrec then
+                nrec.insns = (nrec.insns or 0) + step_quantum
+            end
+        end
         if insn_count > R.max_insns_observed then
             R.max_insns_observed = insn_count
         end
@@ -371,6 +379,15 @@ function R.install_dsl()
 
         ok, err, insns = R.profile_execution(runner, R.instruction_budget, true)
         local dt = (os.epoch and os.epoch("utc") or 0) - t0
+        local prof = _G.__AUDIT_PROFILE
+        if type(prof) == "table" and prof.enabled then
+            prof.stack = {}
+            if type(prof.nodes) == "table" then
+                for _, nrec in pairs(prof.nodes) do
+                    nrec._depth = 0
+                end
+            end
+        end
 
         -- Unwind registered undo actions in reverse
         for idx = #undo_stack, 1, -1 do

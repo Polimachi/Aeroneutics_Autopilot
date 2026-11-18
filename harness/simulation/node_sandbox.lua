@@ -176,6 +176,126 @@ function M.create_node(bus, node_id, base_dir, options)
     }
     env.peripheral = custom_peripheral
 
+    local TICK_METHODS = {
+        step = true,
+        step_tick = true,
+        tick = true,
+        update = true,
+        process_modem_message = true,
+        run_step = true,
+        handle_message = true,
+        on_message = true,
+    }
+    local CONSTRUCTOR_METHODS = {
+        create_app = true,
+        create_context = true,
+        init = true,
+        new = true,
+    }
+    local wrapped_fns = setmetatable({}, { __mode = "k" })
+    local wrapped_tbls = setmetatable({}, { __mode = "k" })
+
+    local function prof_enabled()
+        local p = _G.__AUDIT_PROFILE
+        return type(p) == "table" and p.enabled == true
+    end
+
+    local function ensure_node_prof()
+        local p = _G.__AUDIT_PROFILE
+        p.nodes = p.nodes or {}
+        p.stack = p.stack or {}
+        local rec = p.nodes[nid]
+        if not rec then
+            rec = {
+                base_dir = bdir,
+                require_calls = 0,
+                require_ms = 0,
+                require_insns = 0,
+                calls = 0,
+                tick_calls = 0,
+                cpu_ms = 0,
+                insns = 0,
+                _depth = 0,
+            }
+            p.nodes[nid] = rec
+        end
+        return p, rec
+    end
+
+    local orig_epoch = os and os.epoch
+    local function now_ms()
+        if type(orig_epoch) == "function" then
+            return orig_epoch("utc")
+        end
+        return 0
+    end
+
+    local wrap_table_methods
+
+    local function finish_call(p, rec, sp, t0, is_outer, is_ctor, ...)
+        p.stack[sp] = nil
+        rec._depth = rec._depth - 1
+        if is_outer then
+            local dt = now_ms() - t0
+            if dt > 0 then
+                rec.cpu_ms = rec.cpu_ms + dt
+            end
+        end
+        if is_ctor and type((...)) == "table" then
+            wrap_table_methods((...), 1)
+        end
+        return ...
+    end
+
+    local function wrap_callable(fn, method_name)
+        if type(fn) ~= "function" or wrapped_fns[fn] then
+            return fn
+        end
+        local is_tick = method_name ~= nil and TICK_METHODS[method_name] == true
+        local is_ctor = method_name ~= nil and CONSTRUCTOR_METHODS[method_name] == true
+        local wrapper = function(...)
+            local p = _G.__AUDIT_PROFILE
+            if type(p) ~= "table" or p.enabled ~= true then
+                return fn(...)
+            end
+            local rec = p.nodes[nid]
+            if not rec then
+                p, rec = ensure_node_prof()
+            end
+            rec.calls = rec.calls + 1
+            if is_tick then
+                rec.tick_calls = rec.tick_calls + 1
+            end
+            local is_outer = (rec._depth == 0)
+            rec._depth = rec._depth + 1
+            local stack = p.stack
+            local sp = #stack + 1
+            stack[sp] = nid
+            local t0 = is_outer and now_ms() or 0
+            return finish_call(p, rec, sp, t0, is_outer, is_ctor, fn(...))
+        end
+        wrapped_fns[fn] = wrapper
+        wrapped_fns[wrapper] = wrapper
+        return wrapper
+    end
+
+    wrap_table_methods = function(tbl, depth)
+        if type(tbl) ~= "table" or wrapped_tbls[tbl] or (depth or 0) > 1 then
+            return tbl
+        end
+        wrapped_tbls[tbl] = true
+        for k, v in pairs(tbl) do
+            if type(v) == "function" then
+                tbl[k] = wrap_callable(v, type(k) == "string" and k or nil)
+            end
+        end
+        local mt = getmetatable(tbl)
+        if type(mt) == "table" and type(mt.__index) == "table" and not wrapped_tbls[mt.__index] then
+            wrap_table_methods(mt.__index, (depth or 0) + 1)
+        end
+        return tbl
+    end
+
     -- Node require loader
     function env.require(modname)
         local norm_name = tostring(modname or "")
@@ -223,7 +343,29 @@ function M.create_node(bus, node_id, base_dir, options)
             if not fn then
                 error("Error loading module '" .. norm_name .. "': " .. tostring(err), 2)
             end
-            local res = fn(norm_name, found_path)
+            local res
+            if prof_enabled() then
+                local p, rec = ensure_node_prof()
+                rec.require_calls = rec.require_calls + 1
+                local insns0 = rec.insns
+                local t0 = now_ms()
+                local stack = p.stack
+                local sp = #stack + 1
+                stack[sp] = nid
+                local ok, r = pcall(fn, norm_name, found_path)
+                stack[sp] = nil
+                local dt = now_ms() - t0
+                if dt > 0 then
+                    rec.require_ms = rec.require_ms + dt
+                end
+                rec.require_insns = rec.require_insns + (rec.insns - insns0)
+                if not ok then
+                    error(r, 0)
+                end
+                res = r
+            else
+                res = fn(norm_name, found_path)
+            end
             loaded[norm_name] = (res ~= nil) and res or true
             return loaded[norm_name]
         end
@@ -241,18 +383,27 @@ function M.create_node(bus, node_id, base_dir, options)
     end
 
     function node:require(modname)
-        return env.require(modname)
+        local res = env.require(modname)
+        if prof_enabled() then
+            if type(res) == "table" then
+                wrap_table_methods(res, 0)
+            elseif type(res) == "function" then
+                res = wrap_callable(res, nil)
+            end
+        end
+        return res
     end
 
     function node:call(fn_or_name, ...)
-        if type(fn_or_name) == "function" then
-            return fn_or_name(...)
-        elseif type(fn_or_name) == "string" then
-            local fn = env[fn_or_name]
-            if type(fn) == "function" then
-                return fn(...)
+        local fn = fn_or_name
+        if type(fn_or_name) == "string" then
+            fn = env[fn_or_name]
+            if type(fn) ~= "function" then
+                error("No such function '" .. fn_or_name .. "' in node '" .. nid .. "'", 2)
             end
-            error("No such function '" .. fn_or_name .. "' in node '" .. nid .. "'", 2)
+        end
+        if type(fn) == "function" then
+            return wrap_callable(fn, type(fn_or_name) == "string" and fn_or_name or nil)(...)
         end
     end
 
@@ -261,6 +412,29 @@ function M.create_node(bus, node_id, base_dir, options)
     end
 
     function node:step_tick(dt)
+        local p = _G.__AUDIT_PROFILE
+        if type(p) ~= "table" or p.enabled ~= true then
+            local incoming = self.modem:drain()
+            for _, msg in ipairs(incoming) do
+                local h = self.handlers[msg.channel]
+                if h then
+                    h(msg)
+                end
+            end
+            return #incoming
+        end
+        local rec = p.nodes[nid]
+        if not rec then
+            p, rec = ensure_node_prof()
+        end
+        rec.calls = rec.calls + 1
+        rec.tick_calls = rec.tick_calls + 1
+        local is_outer = (rec._depth == 0)
+        rec._depth = rec._depth + 1
+        local stack = p.stack
+        local sp = #stack + 1
+        stack[sp] = nid
+        local t0 = is_outer and now_ms() or 0
         local incoming = self.modem:drain()
         for _, msg in ipairs(incoming) do
             local h = self.handlers[msg.channel]
@@ -268,7 +442,7 @@ function M.create_node(bus, node_id, base_dir, options)
                 h(msg)
             end
         end
-        return #incoming
+        return finish_call(p, rec, sp, t0, is_outer, false, #incoming)
     end
 
     node.env = env

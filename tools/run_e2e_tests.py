@@ -56,6 +56,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=30.0,
         help="Global timeout in seconds for E2E simulation execution.",
     )
+    parser.add_argument(
+        "--profile",
+        type=str,
+        default=None,
+        help="Write node/channel execution profile JSON to the given path.",
+    )
     return parser
 
 
@@ -148,7 +154,8 @@ def run_e2e_cli(
         runner_cfg = {
             "test_files": rel_test_files,
             "filter_substr": "",
-            "instruction_budget": 500000,
+            "instruction_budget": 650000 if args.profile else 500000,
+            "enable_profile": bool(args.profile),
         }
         (harness_dest / "config.json").write_text(
             json.dumps(runner_cfg, indent=2), encoding="utf-8"
@@ -179,6 +186,17 @@ local main_ok, main_err = xpcall(function()
     end
 
     _G.__VIRTUAL_BUS_PACKET_LOG = {}
+    if cfg.enable_profile then
+        _G.__AUDIT_PROFILE = {
+            enabled = true,
+            skip_lua_bytes = true,
+            nodes = {},
+            bus = { channels = {}, edges = {} },
+            stack = {},
+        }
+    else
+        _G.__AUDIT_PROFILE = nil
+    end
 
     for _, tf in ipairs(cfg.test_files) do
         _G.__ACTIVE_E2E_SUITE = tf
@@ -220,6 +238,7 @@ local main_ok, main_err = xpcall(function()
         logs = R.logs or {},
         errors = R.errors or {},
         captured_packets = _G.__VIRTUAL_BUS_PACKET_LOG,
+        audit_profile = _G.__AUDIT_PROFILE,
     })
 end, debug.traceback)
 
@@ -275,6 +294,89 @@ os.shutdown()
         "suites": suites,
         "logs": guest_data.get("logs", []),
     }
+
+    if args.profile:
+        raw_prof = guest_data.get("audit_profile") or {}
+        raw_nodes = raw_prof.get("nodes") or {}
+        raw_bus = raw_prof.get("bus") or {}
+        raw_channels = raw_bus.get("channels") or {}
+        raw_edges = raw_bus.get("edges") or {}
+
+        formatted_nodes: dict[str, Any] = {}
+        total_insns = 0
+        total_cpu_ms = 0
+        for nid, nrec in sorted(raw_nodes.items()):
+            insns = int(nrec.get("insns") or 0)
+            calls = int(nrec.get("calls") or 0)
+            cpu_ms = int(nrec.get("cpu_ms") or 0)
+            total_insns += insns
+            total_cpu_ms += cpu_ms
+            formatted_nodes[nid] = {
+                "base_dir": nrec.get("base_dir", ""),
+                "require_calls": int(nrec.get("require_calls") or 0),
+                "require_ms": int(nrec.get("require_ms") or 0),
+                "require_insns": int(nrec.get("require_insns") or 0),
+                "calls": calls,
+                "tick_calls": int(nrec.get("tick_calls") or 0),
+                "cpu_ms": cpu_ms,
+                "insns": insns,
+                "insns_per_call": round(insns / calls, 2) if calls > 0 else 0.0,
+            }
+
+        # Compute exact serialized JSON byte sizes, senders, and edges from captured_packets
+        pkt_bytes_by_ch: dict[str, list[int]] = {}
+        senders_by_ch: dict[str, dict[str, int]] = {}
+        edges_map: dict[tuple[str, Any, str], dict[str, Any]] = {}
+        for pkt in captured_packets:
+            ch = pkt.get("channel")
+            ch_str = str(ch)
+            payload = pkt.get("payload")
+            nbytes = len(json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+            pkt_bytes_by_ch.setdefault(ch_str, []).append(nbytes)
+            frm = str(pkt.get("from", ""))
+            ch_senders = senders_by_ch.setdefault(ch_str, {})
+            ch_senders[frm] = ch_senders.get(frm, 0) + 1
+            ptype = str(payload.get("type", "<unknown>")) if isinstance(payload, dict) else "<non-table>"
+            ek = (frm, ch, ptype)
+            erec = edges_map.get(ek)
+            if erec is None:
+                erec = {"from": frm, "channel": ch, "packet_type": ptype, "count": 0, "total_bytes": 0}
+                edges_map[ek] = erec
+            erec["count"] += 1
+            erec["total_bytes"] += nbytes
+
+        formatted_channels: dict[str, Any] = {}
+        for ch_key, crec in sorted(raw_channels.items(), key=lambda kv: int(kv[0]) if str(kv[0]).isdigit() else 0):
+            pkts = int(crec.get("packets") or 0)
+            ch_sizes = pkt_bytes_by_ch.get(str(ch_key), [])
+            tot_b = sum(ch_sizes) if ch_sizes else int(crec.get("total_bytes") or 0)
+            max_b = max(ch_sizes) if ch_sizes else int(crec.get("max_bytes") or 0)
+            formatted_channels[str(ch_key)] = {
+                "channel": crec.get("channel"),
+                "packets": pkts,
+                "total_bytes": tot_b,
+                "avg_bytes": round(tot_b / pkts, 2) if pkts > 0 else 0.0,
+                "max_bytes": max_b,
+                "unreceived_packets": int(crec.get("unreceived_packets") or 0),
+                "senders": senders_by_ch.get(str(ch_key)) or (crec.get("senders") or {}),
+            }
+
+        edges_list = sorted(
+            edges_map.values() if edges_map else raw_edges.values(),
+            key=lambda e: (-int(e.get("count") or 0), str(e.get("from", "")), int(e.get("channel") or 0)),
+        )
+        profile_summary = {
+            "duration_ms": total_dur_ms,
+            "total_insns": total_insns,
+            "total_cpu_ms": total_cpu_ms,
+            "nodes": formatted_nodes,
+            "channels": formatted_channels,
+            "node_channel_edges": edges_list,
+        }
+        prof_path = Path(args.profile)
+        prof_path.parent.mkdir(parents=True, exist_ok=True)
+        prof_path.write_text(json.dumps(profile_summary, indent=2), encoding="utf-8")
+        report_payload["profile"] = profile_summary
 
     if not args.json:
         if session_res.timed_out:

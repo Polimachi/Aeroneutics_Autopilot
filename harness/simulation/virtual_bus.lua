@@ -2,6 +2,28 @@
 -- Virtual RF network bus router for CC:Tweaked multi-node simulation
 local M = {}
 
+local function estimate_bytes(v, depth)
+    local t = type(v)
+    if t == "string" then
+        return #v + 2
+    elseif t == "number" or t == "boolean" then
+        return #tostring(v)
+    elseif t == "table" then
+        if (depth or 0) > 6 then
+            return 2
+        end
+        local total = 2
+        local first = true
+        for k, val in pairs(v) do
+            if not first then total = total + 1 end
+            first = false
+            total = total + #tostring(k) + 3 + estimate_bytes(val, (depth or 0) + 1)
+        end
+        return total
+    end
+    return 4
+end
+
 local function strip_self(self_tbl, a1, ...)
     if a1 == self_tbl then
         return ...
@@ -157,11 +179,13 @@ function M.create_bus(opts)
                 })
             end
 
+            local delivered_count = 0
             local listeners = self.channels[msg.channel]
             if listeners then
                 for lid, target_modem in pairs(listeners) do
                     -- Deliver to all listening nodes (except sender unless loopback explicitly allowed)
                     if lid ~= msg.from then
+                        delivered_count = delivered_count + 1
                         local entry = {
                             side = target_modem.side,
                             channel = msg.channel,
@@ -177,6 +201,55 @@ function M.create_bus(opts)
                             end
                         end
                     end
+                end
+            end
+
+            local prof = _G.__AUDIT_PROFILE
+            if type(prof) == "table" and prof.enabled then
+                prof.bus = prof.bus or { channels = {}, edges = {} }
+                local channels_map = prof.bus.channels
+                local ch_key = tostring(msg.channel)
+                local crec = channels_map[ch_key]
+                if not crec then
+                    crec = {
+                        channel = msg.channel,
+                        packets = 0,
+                        total_bytes = 0,
+                        max_bytes = 0,
+                        unreceived_packets = 0,
+                        senders = {},
+                    }
+                    channels_map[ch_key] = crec
+                end
+                crec.packets = crec.packets + 1
+                if delivered_count == 0 then
+                    crec.unreceived_packets = crec.unreceived_packets + 1
+                end
+
+                if not prof.skip_lua_bytes then
+                    local nbytes = estimate_bytes(msg.payload, 0)
+                    crec.total_bytes = crec.total_bytes + nbytes
+                    if nbytes > crec.max_bytes then
+                        crec.max_bytes = nbytes
+                    end
+                    crec.senders[msg.from] = (crec.senders[msg.from] or 0) + 1
+
+                    local edges_map = prof.bus.edges
+                    local pkt_type = (type(msg.payload) == "table" and tostring(msg.payload.type or "<unknown>")) or "<non-table>"
+                    local ekey = tostring(msg.from) .. "|" .. ch_key .. "|" .. pkt_type
+                    local erec = edges_map[ekey]
+                    if not erec then
+                        erec = {
+                            from = msg.from,
+                            channel = msg.channel,
+                            packet_type = pkt_type,
+                            count = 0,
+                            total_bytes = 0,
+                        }
+                        edges_map[ekey] = erec
+                    end
+                    erec.count = erec.count + 1
+                    erec.total_bytes = erec.total_bytes + nbytes
                 end
             end
         end
