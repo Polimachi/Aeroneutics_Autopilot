@@ -118,26 +118,29 @@ local function step_boot(state, ctx, events)
     end
 end
 
-local function step_idle_armed(state, sp, now_ms, events)
-    if sp.arm == true and sp.flightActive == true then
-        if do_transition(state, "ACTIVE_TRACKING") then
-            state.flightActive = true
-            state.arm = true
-            state.prevFlightMode = sp.flightMode
-            events.resetIntegrators = true
-        end
-    else
-        state.flightActive = false
-        if sp.arm ~= nil then state.arm = sp.arm end
-    end
-end
-
 local function trigger_bumpless(state, now_ms, events, newMode)
     events.triggerBumpless = true
     events.resetIntegrators = true
     state.bumplessTriggered = true
     state.rampStartMs = now_ms
     if newMode then state.prevFlightMode = newMode end
+end
+
+local function step_idle_armed(state, sp, telem, now_ms, events)
+    if sp.arm == true and sp.flightActive == true then
+        if do_transition(state, "ACTIVE_TRACKING") then
+            state.flightActive = true
+            state.arm = true
+            state.prevFlightMode = sp.flightMode
+            events.resetIntegrators = true
+            if telem and telem.controlState == "AIRBORNE_RECOVERY_HOLD" then
+                trigger_bumpless(state, now_ms, events, sp.flightMode)
+            end
+        end
+    else
+        state.flightActive = false
+        if sp.arm ~= nil then state.arm = sp.arm end
+    end
 end
 
 local function step_active_tracking(state, ctx, sp, telem, now_ms, events)
@@ -259,7 +262,7 @@ function flight_fsm.step(state, ctx, now_ms)
     if curr == "BOOT" then
         step_boot(s, c, events)
     elseif curr == "IDLE_ARMED" then
-        step_idle_armed(s, sp, now, events)
+        step_idle_armed(s, sp, telem, now, events)
     elseif curr == "ACTIVE_TRACKING" then
         step_active_tracking(s, c, sp, telem, now, events)
     elseif curr == "PASSIVE_TRACKING" then

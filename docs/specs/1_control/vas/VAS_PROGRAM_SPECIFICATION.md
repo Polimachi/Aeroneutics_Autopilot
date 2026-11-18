@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.23.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v1.24.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.24.0` | `2026-11-18` | **`TASK-130` 공중 콜드부트 복구(`AIRBORNE_RECOVERY_HOLD`) 및 `/.flight_state.json` 영속화 규격 신설 (`Implemented` — 2026-11-18 승격)**: ① 10번째 FSM 상태 **`AIRBORNE_RECOVERY_HOLD`** 추가(`isFlight = true`, `QUATERNION_RATE` 수평 자세·수직 속도 0 홀드 / 고정익 $18^\circ$ 협조 선회, 미동기화 `FCP` 조기 `arm=false` 무시 인터록, `Base+3` 5Hz 폴백 HUD, `recoveryMaxHoldSec = 10.0s` 초과 시 `EMERGENCY_LAND` 에스컬레이션), ② 비휘발성 스냅샷 `/.flight_state.json` 원자적 쓰기(`.tmp` + `fs.move`) 및 `schemaVersion = 1` Zero-Fallback 규격화, ③ 부팅 시점 공중 감지(`isAirborneAtBoot`: 고도/속도 노름 `GROUND_SAFE` 임계 초과 OR `armedState == "AIRBORNE_ACTIVE"`) 및 `bootTimeoutMs = 500ms` 목표 비차단 20Hz 루프 즉시 기동 규격 추가, ④ `config/system.json` `bootRecovery` 블록 신설 및 연관 문서 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `AMM v2.5.0`, `FCP v2.4.0`) 동기화 | `TASK-130-2`·`TASK-130-4` (`src/1_control/vas/` 및 단위·E2E 검증 완료) |
 | `v1.23.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 채널 분리 규격 개정 (`Implemented` $\to$ `Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `MSG_CALIBRATION_INIT` 전용 수신) 신설 및 런타임 `Base+0` (`CH_OPERATOR_C2`) 미개방 원칙 확립, ② `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE` `E_STOP` 수신 & `MSG_EMERGENCY_ALERT` 송신) 신설 및 `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리, ③ `Base+3` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 배타적 우선권 및 `acroTimeoutMs = 250ms` 규약 추가, ④ `ZONE_OFFSETS`/`system.json` `subchannels`에서 `formationLink = 30` 제거(`calibrationInit = 8`, `emergencyCore = 9` 추가) 및 연관 문서(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`) 동기화 | `TASK-125` 40채널 블록 경합·보안 분리 결함 해소 (`src/1_control/vas/` 반영 후 `Implemented` 재승격 예정) |
 | `v1.22.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `Base_hangar + 4` (`CH_OTA_CMD`, 기본 Bay 1 = `105` 및 선택 `ota.bayIds`) 수신 개방 및 `Base_hangar + 5` (`CH_OTA_ACK`, `106`) 응답, ② `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true` 안전 게이트, ③ 20Hz 메인 루프 `tick_boot_commit()` (`20` 정상 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/1_control/vas/` 반영 후 `Implemented` 재승격 예정) |
 | `v1.21.0` | 2026-11-14 | **FDR `telemetryDiag` Opt-In 진단 확장 (`Implemented` $\to$ `Approved`)**: ① `config/system.json`에 `telemetryDiag: false` 기본 Opt-In 플래그 신설, ② `telemetryDiag == true`일 때만 `Base+2` `MSG_FLIGHT_TELEMETRY.payload`에 선택 진단 서브테이블(`satFlags`, `diag = { integrators, integralLimits, saturationFreeze, lastDemands }`) 첨부 (`Zero-Fallback` 및 기본 `false` 무오버헤드 유지), ③ `AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (`v1.31.0`) 및 `FDR_PROGRAM_SPECIFICATION.md` (`v0.3.0`) 상호 참조 동기화 | `TASK-120` 지상 실환경 비행 식별기(FDR)의 PID 적분항·포화 프리즈 정밀 계측 연동 (`src/1_control/vas/` 반영 후 `Implemented` 승격 예정) |
@@ -30,11 +31,11 @@
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.36.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.4.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.3.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.5.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.4.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.8.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.13.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.8.0)
@@ -285,7 +286,7 @@ sequenceDiagram
 | :--- | :--- | :--- | :---: |
 | **센서 획득** | `sensor_pipeline` | 4종 센서(자세/고도/속도/연료) `pcall` 일괄 읽기 및 유효성 검사 | $\le 0.8 \text{ ms}$ |
 | **기하/쿼터니언** | `sensor_pipeline`<br>`vec3` / `quat` | 3D 레버암 좌표 변환, EMA 각속도 필터, $SO(3)$ 쿼터니언 합성, 헬스맵 갱신 | $\le 0.7 \text{ ms}$ |
-| **FSM/선점 중재** | `state_machine` | 듀얼 워치독 만료 판정, 9-State 전이, `Base+1` 선점 중재(`E_STOP > MFD_ACRO > FCP`) | $\le 0.3 \text{ ms}$ |
+| **FSM/선점 중재** | `state_machine` | 듀얼 워치독 만료 판정, 10-State 전이, `Base+1` 선점 중재(`E_STOP > MFD_ACRO > FCP`) | $\le 0.3 \text{ ms}$ |
 | **Layer 2A: Pre-Filter** | `vehicle_policy` | `QUATERNION_RATE`/`RATE_COMMAND` 해석, Stall Guard($\le 10\text{ m/s}$), Flap $V_{fe}$ 가드, 틸트 클램프 | $\le 0.4 \text{ ms}$ |
 | **Layer 1: Core** | `flight_dynamics_core` | 단위 쿼터니언-각속도 오차 토크, `collectiveThrust` 정규화 매핑, 이중 구동계 포화 안티와인드업 | $\le 0.5 \text{ ms}$ |
 | **Layer 2B: Post-Mixer** | `vehicle_policy` | 피치 트림 및 반토크 피드포워드 주입, `WINGED_VTOL` 천이 블렌딩 | $\le 0.2 \text{ ms}$ |
@@ -293,6 +294,13 @@ sequenceDiagram
 | **Layer 3: ASA Adapter** | `actuator_adapter_asa` | $V^2$ 동적압 역비례 스케일링, 조종면 타각 할당, `satAsa` 역피드백 | $\le 0.4 \text{ ms}$ |
 | **출력/안전/통신** | `core_daemon`<br>`network_manager`<br>`telemetry_feeder` | 출력 마스킹, `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])), `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])), `MSG_FLIGHT_TELEMETRY` (`Base+2`), ACRO MFD (`Base+3`) | $\le 1.8 \text{ ms}$ |
 | **총 연산 시간** | **전체 파이프라인** | **전체 50ms 주기 중 실제 CPU 점유 시간** | **$\le 5.6 \text{ ms}$ (여유율 $> 88\%$)** |
+
+### 4.2 공중 콜드부트 즉시 복구 시퀀스 (`bootTimeoutMs = 500ms` 목표)
+서버 재시작 또는 청크 언로드 후 재로딩으로 온보드 컴퓨터가 부팅될 때, `core_daemon`은 지상 `DISARMED` 대기 및 블로킹 `sleep()` 없이 다음 4단계 비차단 부팅 시퀀스를 통해 설계 목표인 **`bootTimeoutMs` (`500ms`) 이내**에 첫 20Hz 안정화 틱을 개시합니다:
+1. **단일 초기 계측 & 스냅샷 로드**: `sensor_pipeline` 초기 1회 `pcall` 폴링과 로컬 `/.flight_state.json`(`schemaVersion == 1`) 로드를 `os.clock()` 기준 비차단으로 수행합니다.
+2. **부팅 시 공중 판정 (`isAirborneAtBoot`)**: `(isAltitudeValid and altitudeY > bootRecovery.groundSafeAltitudeThresholdM)` 또는 `(isVelocityValid and \|v\| > bootRecovery.groundSafeSpeedThresholdMps)` 또는 `(flightState.armedState == "AIRBORNE_ACTIVE")` 중 하나라도 참이면 `isAirborneAtBoot = true`로 판정합니다.
+3. **우회 전이 및 비동기 디스커버리**: `isAirborneAtBoot == true`이면 `DISARMED` $\to$ `ARMING` 대기를 우회하여 즉시 **`AIRBORNE_RECOVERY_HOLD`**(`isFlight = true`, `isAirborne = true`, `arm = true`)로 진입하며, TCA/ASA 디스커버리 핑(`MSG_ACTUATOR_DISCOVER_REQ` / `MSG_SURFACE_DISCOVER_REQ`)을 비동기로 송출함과 동시에 첫 번째 50ms 제어 틱을 실행해 수평 자세 및 하강 억제 추력을 즉시 인가합니다.
+4. **상위 계층 동기화 대기**: 이후 `FCP` 및 `AMM`이 각각 부팅·복구를 마치고 유효한 `QUATERNION_RATE`(`arm=true, flightActive=true`) 또는 조종사 `MFD_ACRO` 지령을 송출할 때까지 `AIRBORNE_RECOVERY_HOLD`를 유지(최대 `recoveryMaxHoldSec = 10.0s`, 초과 시 `EMERGENCY_LAND` 에스컬레이션)하며 미동기화 `FCP`의 조기 `arm=false` 지령은 무시합니다.
 
 ---
 
@@ -304,7 +312,7 @@ VAS의 소프트웨어는 관심사 분리(SoC), 단일 책임 원칙(SRP) 및 V
 flowchart TD
     DAEMON["1. core_daemon (50ms CC:Tweaked 타이머 오케스트레이터)"]
     SENS["2. sensor_pipeline (0-tick pcall 계측 & 3D 레버암)"]
-    FSM["3. state_machine (9-State FSM / 워치독 / 선점 중재 / 페일세이프 합성)"]
+    FSM["3. state_machine (10-State FSM / 워치독 / 콜드부트 복구 / 페일세이프 합성)"]
     VEC["4. vec3 (3D 벡터 기하 연산 코어)"]
     QUAT["5. quat (단위 쿼터니언 SO(3) 키네마틱스 코어)"]
     CORE["6. flight_dynamics_core [Layer 1] (쿼터니언-각속도 자세 제어 & collectiveThrust 매핑)"]
@@ -452,11 +460,12 @@ flowchart TD
   function sensor_pipeline.reconnect_faulty(state, healthMap) -> count
   ```
 
-### 5.3 모듈 3: `state_machine` (9-State 유한 상태 기계, 2단계 시동 및 C2 선점 중재기)
-- **역할**: 기체의 9대 제어 상태를 관리하고, 2단계 시동 시퀀스(`DISARMED` $\to$ `ARMING` $\to$ `IDLE_ARMED` $\to$ `NORMAL`), `Base+1` C2 선점 중재(`E_STOP` > `MFD_ACRO` > `FCP`), 듀얼 워치독(FCP 1,500ms, 교정 120s, Failsafe 10s) 감시, 센서 두절 15틱(750ms) 디바운스, **`FAILSAFE_HOLD` / `EMERGENCY_LAND` 시 고도·수직 속도 홀드/강하 비상 유도 합성** 및 TCA/ASA 출력 안전 마스킹(공중 E_STOP 쿠션 추력 포함)을 집행합니다.
+### 5.3 모듈 3: `state_machine` (10-State 유한 상태 기계, 2단계 시동 및 공중 콜드부트 복구 중재기)
+- **역할**: 기체의 10대 제어 상태를 관리하고, 2단계 시동 시퀀스(`DISARMED` $\to$ `ARMING` $\to$ `IDLE_ARMED` $\to$ `NORMAL`), 부팅 시 공중 콜드부트 판정(`isAirborneAtBoot` $\to$ `AIRBORNE_RECOVERY_HOLD`), `/.flight_state.json` 상태 전이 영속화, `Base+1` C2 선점 중재(`E_STOP` > `MFD_ACRO` > `FCP`), 듀얼 워치독(FCP 1,500ms, 교정 120s, Failsafe/Recovery 10s) 감시, 센서 두절 15틱(750ms) 디바운스, **`AIRBORNE_RECOVERY_HOLD` / `FAILSAFE_HOLD` / `EMERGENCY_LAND` 시 고도·수직 속도 홀드/강하 비상 유도 합성** 및 TCA/ASA 출력 안전 마스킹(공중 E_STOP 쿠션 추력 포함)을 집행합니다.
 - **핵심 시그니처**:
   ```lua
   function state_machine.init(systemConfig, isCalibrated) -> fsmState
+  function state_machine.detect_airborne_at_boot(systemConfig, comState, healthMap, flightStateSnapshot) -> boolean
   function state_machine.transition_to(state, nextState, reason) -> boolean
   function state_machine.update_watchdogs(state, nowMs, comState, healthMap, sensorOk) -> nil
   function state_machine.arbitrate_c2_preemption(state, fcpCmd, acroCmd, eStopCmd) -> effectiveCmd, activeSource
@@ -705,11 +714,11 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 
 ## 7. 유한 상태 기계(FSM) 및 상태 전이 매트릭스 (Finite State Machine)
 
-### 7.1 9대 제어 상태 정의
+### 7.1 10대 제어 상태 정의
 > [!IMPORTANT]
 > **전 상태 20Hz `MSG_THRUST_CMD` 및 `MSG_AERO_CMD` 상시 브로드캐스트 및 출력 마스킹 규칙**  
-> VAS는 아래 9개 전 상태에서 매 50ms마다 `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])) 및 `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])) 패킷을 중단 없이 송출합니다.
-> - **비행 가능 상태 (`isFlight = true`)**: `NORMAL`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `AIRBORNE_EMERGENCY`에서는 계산된 제어 출력이 인가됩니다.
+> VAS는 아래 10개 전 상태에서 매 50ms마다 `MSG_THRUST_CMD` (`Base+10` (구 `Base+6` [DEPRECATED])) 및 `MSG_AERO_CMD` (`Base+11` (구 `Base+7` [DEPRECATED])) 패킷을 중단 없이 송출합니다.
+> - **비행 가능 상태 (`isFlight = true`)**: `NORMAL`, `AIRBORNE_RECOVERY_HOLD`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `AIRBORNE_EMERGENCY`에서는 계산된 제어 출력이 인가됩니다.
 > - **비비행 안전 차단 상태**: `DISARMED`, `ARMING`, `IDLE_ARMED`, `CALIBRATION`에서는 모든 액추에이터 출력이 `0`으로 강제 마스킹됩니다.
 > - **비상 정지 (`E_STOP`) 쿠션 스로틀**: 기체가 공중(`isAirborne == true`)에 있을 때 `E_STOP`이 발동되면, 자유낙하 추락 충격을 완화하기 위해 바닥 접지 전까지 쿠션 스로틀($\lfloor \text{hoverBaseThrottle} \times 0.6 + 0.5 \rfloor$, 기본값 $5$)을 인가한 뒤 접지 시 0으로 차단합니다.
 
@@ -719,9 +728,10 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 | **`ARMING`** | 시동 점검 (1단계) | `arm = true, flightActive = false` 수신 시 진입. TCA/ASA 온라인 탐색 및 액추에이터 헬스 검증, 출력 0 유지. |
 | **`IDLE_ARMED`** | 대기 (시동 완료) | 액추에이터 준비 완료 후 비행 대기 상태. 스로틀 0, 출력 0 유지, 적분기 0 리셋 동결. |
 | **`NORMAL`** | 정상 비행 (2단계) | `arm = true, flightActive = true` 활성화 및 20Hz 폐루프 PID/이중 할당 활성화. FCP 명령 또는 MFD ACRO 추종. |
+| **`AIRBORNE_RECOVERY_HOLD`** | 공중 콜드부트 복구 홀드 | 서버 재시작·청크 언로드 직후 부팅 시 `isAirborneAtBoot == true`(센서 `GROUND_SAFE` 임계 초과 또는 `/.flight_state.json` `armedState == "AIRBORNE_ACTIVE"`) 판정 시 `DISARMED` 대기를 우회해 `bootTimeoutMs`(`500ms`) 목표 내 20Hz 루프로 즉시 진입. Pitch/Roll $0^\circ$ 수평 자세·`targetAngularRates = 0`·수직 속도 $0.0\text{ m/s}$ 홀드(고정익은 $18^\circ$ 뱅크 선회 체공 $V_{air} \ge 13.0\text{ m/s}$)로 강하 억제. 미동기화 `FCP`의 조기 `arm=false`를 무시하며 `Base+3` 5Hz 폴백 HUD 송출. 유효 `FCP` `QUATERNION_RATE`(`arm=true, flightActive=true`) 또는 `MFD_ACRO` 수신 시 `NORMAL` 전이, `recoveryMaxHoldSec`($10.0\text{ s}$) 초과 시 `EMERGENCY_LAND` 에스컬레이션. |
 | **`CALIBRATION`** | 지상 동역학 식별 | Alignment 지상 교정 모드. 비행 제어 출력 0 고정, 120초 타임아웃 감시. |
-| **`FAILSAFE_HOLD`** | 1차 페일세이프 (호버/선회) | `FCP_TIMEOUT` 명령 두절(1,500ms) 또는 15틱(750ms) 이상 센서 두절. Pitch/Roll $0^\circ$ 수평 호버(고정익은 $18^\circ$ 뱅크 선회 체공 $V_{air} \ge 13.0\text{ m/s}$) + 10초 카운트다운. *(수직 속도 홀드는 본 페일세이프 내부에서만 가동)* |
-| **`EMERGENCY_LAND`** | 2차 비상 착륙 | `FAILSAFE_HOLD` 10초 초과 또는 구동계 치명 상실. 회전익/VTOL 수직 강하($V_y = -1.5\text{ m/s}$), 고정익 활공 강하($V_y = -1.0\text{ m/s}$). |
+| **`FAILSAFE_HOLD`** | 1차 페일세이프 (호버/선회) | `FCP_TIMEOUT` 명령 두절(1,500ms) 또는 15틱(750ms) 이상 센서 두절. Pitch/Roll $0^\circ$ 수평 호버(고정익은 $18^\circ$ 뱅크 선회 체공 $V_{air} \ge 13.0\text{ m/s}$) + 10초 카운트다운. *(수직 속도 홀드는 본 페일세이프 및 `AIRBORNE_RECOVERY_HOLD` 내부에서만 가동)* |
+| **`EMERGENCY_LAND`** | 2차 비상 착륙 | `FAILSAFE_HOLD` / `AIRBORNE_RECOVERY_HOLD` 10초 초과 또는 구동계 치명 상실. 회전익/VTOL 수직 강하($V_y = -1.5\text{ m/s}$), 고정익 활공 강하($V_y = -1.0\text{ m/s}$). |
 | **`AIRBORNE_EMERGENCY`** | 공중 비상 개입 | 런타임 패닉 또는 비상 유도 시 진입. 완경사 강하 후 접지 시 `E_STOP` 전이. |
 | **`E_STOP`** | 비상 정지 | 비행 종료 및 치명적 비상 킬스위치. 공중 시 쿠션 스로틀 인가, 지상 안착 시 전 구동계 0 차단 (하드 래치). |
 
@@ -730,7 +740,7 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
    - **우선순위 1 (`E_STOP` / `EMERGENCY_DIRECT` — 별도 `Base + 9` `CH_EMERGENCY_CORE` 직결)**: `MSG_EMERGENCY_OVERRIDE` (`action == "E_STOP"`, `authKey == "ESTOP_CONFIRM_KEY"`). `Base + 1` 유도 채널과 물리·논리적으로 분리된 최상위 하드웨어 비상 채널 **`Base + 9` (`CH_EMERGENCY_CORE`)**로 수신되며(구 `Base + 1` 직결 `[DEPRECATED]`), 발신처(`AMM`, 조종석 `MFD`, 지상 `GCS`) 불문 최우선 선점하여 즉시 `controlState = "E_STOP"` 전이 및 물리 구동계 차단을 집행합니다.
    - **우선순위 2 (`MFD_ACRO` / `RATE_COMMAND` — `Base + 1`)**: 조종석 `MFD`가 `Base + 1`로 발신한 `MSG_ATTITUDE_CMD` (`commandType == "RATE_COMMAND"`, `acroActive == true`). `Base + 1` 내 `FCP` 명령을 선점 차단하고 20Hz 각속도 직접 조종을 인계합니다. 동시에 `Base+2` `MSG_FLIGHT_TELEMETRY.activeSource = "MFD_ACRO"`를 송출하여 **`FCP`를 `PASSIVE_TRACKING` 상태로 전환시키고 `AMM`의 `Base+3` 5Hz 송출을 양보(Mute)시킨 뒤**, `VAS`가 `Base+3` 20Hz 직접 HUD 송출로 전환합니다.
    - **우선순위 3 (`FCP` / `QUATERNION_RATE` — `Base + 1`)**: `source == "FCP"`, `commandType == "QUATERNION_RATE"` 자율 외루프 지령 추종 (`activeSource = "FCP"`).
-   - **공중 복구 정책**: `FAILSAFE_HOLD` 및 `EMERGENCY_LAND` 상태에서도 조종사의 `MFD_ACRO` 개입 또는 `FCP` `QUATERNION_RATE` 명령 정상 복구(`flightActive == true`) 시 `NORMAL`로 복귀 허용(`activeSource = "FCP"` 통보 시 `FCP` 2.0s 범프리스 복귀 및 `AMM` `Base+3` 5Hz 재개). 단, `E_STOP`은 시스템 리셋 전까지 해제 불가(Hard-Latched).
+   - **공중 복구 정책**: `AIRBORNE_RECOVERY_HOLD`, `FAILSAFE_HOLD` 및 `EMERGENCY_LAND` 상태에서도 조종사의 `MFD_ACRO` 개입 또는 `FCP` `QUATERNION_RATE` 명령 정상 복구(`arm == true and flightActive == true`) 시 `NORMAL`로 복귀 허용(`activeSource = "FCP"` 통보 시 `FCP` 2.0s 범프리스 복귀 및 `AMM` `Base+3` 5Hz 재개). 단, `AIRBORNE_RECOVERY_HOLD` 중 미동기화 `FCP`가 송출할 수 있는 조기 `arm == false` / `flightActive == false` 프레임은 무시하여 공중 우발 시동해제를 방지하며, `E_STOP`은 시스템 리셋 전까지 해제 불가(Hard-Latched).
 2. **2단계 시동 프로토콜 (2-Stage Arming Protocol)**:
    - **1단계 (Arming)**: `MSG_ATTITUDE_CMD` (`arm = true`, `flightActive = false`) 수신 $\to$ `ARMING` 전이 $\to$ TCA/ASA 디스커버리 완료 시 `IDLE_ARMED` 대기 (출력 0 마스킹).
    - **2단계 (Flight Active)**: `MSG_ATTITUDE_CMD` (`arm = true`, `flightActive = true`) 수신 $\to$ `NORMAL` 전이 $\to$ 폐루프 제어 출력 즉시 인가.
@@ -739,8 +749,9 @@ $$\delta_{surf, j} = \text{clamp}\left(0, \; 15, \; \left\lfloor \eta_q \cdot (\
 ### 7.3 FSM 상태 전이 다이어그램
 ```mermaid
 stateDiagram-v2
-    [*] --> DISARMED: 미교정 부팅
-    [*] --> IDLE_ARMED: 교정 완료 부팅
+    [*] --> DISARMED: 미교정 지상 부팅
+    [*] --> IDLE_ARMED: 교정 완료 지상 부팅
+    [*] --> AIRBORNE_RECOVERY_HOLD: isAirborneAtBoot == true (<=500ms 공중 콜드부트)
 
     DISARMED --> ARMING: FCP/MFD 시동 지령 (arm=true, flightActive=false)
     ARMING --> IDLE_ARMED: TCA & ASA 구동계 준비 완료 (ACK 수신)
@@ -751,6 +762,10 @@ stateDiagram-v2
     IDLE_ARMED --> DISARMED: 시동 해제 (arm=false)
 
     CALIBRATION --> IDLE_ARMED: 프로파일 반영 완료 (MSG_PROFILE_SYNC) 또는 타임아웃/ABORT
+
+    AIRBORNE_RECOVERY_HOLD --> NORMAL: FCP 유효 명령 (arm=true, flightActive=true) OR MFD_ACRO 선점
+    AIRBORNE_RECOVERY_HOLD --> EMERGENCY_LAND: recoveryMaxHoldSec(10초) 만료
+    AIRBORNE_RECOVERY_HOLD --> E_STOP: 하드 킬스위치 수신
 
     NORMAL --> FAILSAFE_HOLD: FCP_TIMEOUT(1500ms) OR 센서 15틱(750ms) 두절 (ACRO 비활성 시)
     NORMAL --> EMERGENCY_LAND: 주 구동계 완전 상실 (API_TOTAL_LOSS)
@@ -781,6 +796,10 @@ stateDiagram-v2
 | `IDLE_ARMED` | `MSG_ATTITUDE_CMD` | `arm == true, flightActive == true` | 20Hz 폐루프 PID/이중 할당 가동 | `NORMAL` | 정상 제어 출력 |
 | `IDLE_ARMED` | `MSG_ATTITUDE_CMD` | `arm == false` | 시동 해제 | `DISARMED` | 출력 0 고정 |
 | `IDLE_ARMED` | `MSG_CALIB_START` | `action != "ABORT"` | 120s 타이머 가동, 출력 차단 | `CALIBRATION` | 출력 0 고정 |
+| `BOOT` | `AIRBORNE_COLD_BOOT` | `isAirborneAtBoot == true` (센서 임계 초과 OR `armedState == "AIRBORNE_ACTIVE"`) | `DISARMED` 우회, 비동기 디스커버리 + 수평 자세 홀드 즉시 개시 (`<= 500ms` 목표) | `AIRBORNE_RECOVERY_HOLD` | 자체 홀드 합성 |
+| `AIRBORNE_RECOVERY_HOLD` | `MSG_ATTITUDE_CMD` | `arm == true, flightActive == true` OR `acroActive == true` | PID 적분기 동기화 후 정상 비행 인계 | `NORMAL` | 정상 제어 출력 |
+| `AIRBORNE_RECOVERY_HOLD` | `PREMATURE_DISARM_IGNORED` | 미동기화 `FCP` `arm == false` 수신 | 조기 시동 해제 무시, 홀드 유지 | `AIRBORNE_RECOVERY_HOLD` | 자체 홀드 합성 |
+| `AIRBORNE_RECOVERY_HOLD` | `RECOVERY_HOLD_TIMEOUT` | `recoveryMaxHoldSec` (10s) 초과 미복구 | 정속 비상 강하 유도 개시 | `EMERGENCY_LAND` | 회전 $-1.5$ / 고정익 $-1.0\text{ m/s}$ |
 | `CALIBRATION` | `MSG_PROFILE_SYNC` | 유효 계수 수신 | `save_json` 영구저장, `MSG_CALIB_ACK` 송출 | `IDLE_ARMED` | 출력 0 고정 |
 | `CALIBRATION` | `CALIB_TIMEOUT` | 120s 초과 또는 `ABORT` | 베이 채널 닫기, 타이머 리셋 | `IDLE_ARMED` | 출력 0 고정 |
 | `NORMAL` | `FCP_TIMEOUT` | 최신 명령 > 1,500ms & ACRO 미가동 | 자체 호버(고정익 18° 선회) 홀드, 10s 타이머 시작 | `FAILSAFE_HOLD` | 자체 홀드 합성 |
@@ -795,6 +814,25 @@ stateDiagram-v2
 | `EMERGENCY_LAND`| `TOUCHDOWN` | 접지 (`isAirborne == false`) | 비상 정지 및 출력 차단 | `E_STOP` | 출력 0 차단 |
 | `AIRBORNE_EMERGENCY` | `TOUCHDOWN` | 접지 (`isAirborne == false`) | 비상 정지 및 출력 차단 | `E_STOP` | 출력 0 차단 |
 | 전 상태 | `CORE_SHUTDOWN` | 공중 시 비상 경보 송출 | `MSG_EMERGENCY_ALERT` 전송 | `E_STOP` | 공중: 쿠션, 지상: 0 |
+
+### 7.5 비휘발성 비행 상태 스냅샷 (`/.flight_state.json`) 영속화 규격 (`Zero-Fallback`)
+서버 재시작이나 청크 언로드 시 센서 일시 무효(`nil`) 또는 미응답 구간에서도 공중 상태를 복원할 수 있도록, `VAS`는 로컬 루트 `/.flight_state.json`에 표준 JSON 스냅샷을 상태 전이 시마다 **임시 파일(`/.flight_state.json.tmp`) 작성 후 `fs.move` 원자적 교체** 방식으로 기록합니다:
+- **기록 트리거**:
+  1. 비행 가능 상태 진입(`NORMAL`, `AIRBORNE_RECOVERY_HOLD`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`): `armedState = "AIRBORNE_ACTIVE"` 저장 (이전 저장 상태와 다를 때 즉시 기록).
+  2. 지상 안전 상태 복귀(`DISARMED`, `IDLE_ARMED` 착륙 완료, `E_STOP` 지상 정지): `armedState = "GROUND_SAFE"` 갱신.
+- **표준 스키마 (`schemaVersion = 1`, `Zero-Fallback`)**:
+  ```json
+  {
+    "schemaVersion": 1,
+    "armedState": "AIRBORNE_ACTIVE",
+    "missionId": "",
+    "currentCpIdx": 0,
+    "homePadId": "",
+    "homePos": { "x": 0.0, "y": 0.0, "z": 0.0 },
+    "savedAtEpoch": 1729845120000
+  }
+  ```
+  - `schemaVersion ~= 1` 또는 파싱 실패 손상 파일은 `Zero-Fallback` 원칙에 따라 무시(폐기)하고 센서 임계치 기반으로만 부팅 판정합니다. (`VAS` 단독 컴퓨터는 `missionId`/`currentCpIdx`/`homePadId`/`homePos`를 기본 공란/0으로 유지하며, 임무/체크포인트/홈 패드 상세값은 `AMM` 노드 로컬 `/.flight_state.json`이 소유합니다.)
 
 ---
 
@@ -836,7 +874,7 @@ stateDiagram-v2
         },
         fuel = 0.85,               -- 잔여 연료/에너지 게이지 비율 (최상위 평탄화)
         dynamicLoad = 0.42,        -- 전체 추력기 총 구동 부하율 (0.0~1.0, 최상위 평탄화)
-        controlState = "NORMAL",   -- 9-State FSM 상태 코드 (최상위 평탄화)
+        controlState = "NORMAL",   -- 10-State FSM 상태 코드 ("AIRBORNE_RECOVERY_HOLD" 포함, 최상위 평탄화)
         activeSource = "FCP",      -- 현재 제어권 점유 주체 ("FCP", "MFD_ACRO", "EMERGENCY_DIRECT")
         sensorOk = true,           -- 4종 센서(자세/고도/속도/연료) 통합 정상 여부
         sensorHealth = {           -- 개별 센서 상세 헬스 맵
@@ -1257,7 +1295,7 @@ stateDiagram-v2
 - **다운링크 인계 규칙 (`acroTimeoutMs = 250ms` 규약)**:
   - **일반 비행 모드 (`activeSource == "FCP"`)**: **`AMM (Node 03)`이 `Base+3` 5Hz 통합 비행/항법 패킷 송출을 전담**하며, `VAS`는 `Base+3` 송출을 유예(Yield/Silence)합니다. (`AMM` 측은 `"FCP"` 연속 `acroRecoveryHoldMs = 300ms` 유지 후 5Hz 재개)
   - **수동 급기동 모드 (`activeSource == "MFD_ACRO"`, `acroTimeoutMs = 250ms`)**: 조종석 MFD가 `acroActive = true` (`RATE_COMMAND`)를 선점 인가하는 즉시 `VAS`가 `Base+2` `MSG_FLIGHT_TELEMETRY.activeSource = "MFD_ACRO"`를 송출하여 **`AMM`의 `Base+3` 송출을 중단(Yield)시키고 `FCP`를 `PASSIVE_TRACKING`으로 전환시킨 뒤**, `VAS`가 `Base+3`을 배타적으로 인계하여 20Hz 고속 저지연 HUD 프레임을 직접 송출합니다. `RATE_COMMAND`가 **`acroTimeoutMs = 250ms`** 이상 수신되지 않으면 `activeSource = "FCP"`로 복귀합니다.
-  - **자체 페일세이프 (`FAILSAFE_HOLD` / `EMERGENCY_LAND`)**: 비행 중 `FCP_TIMEOUT`(1,500ms) 또는 구동계 상실로 `FAILSAFE_HOLD`/`EMERGENCY_LAND`에 진입하면 `VAS`가 `Base+3`을 배타적으로 우선 점유하여 5Hz 폴백 HUD를 송출하며, `AMM`은 즉시 양보합니다.
+  - **자체 페일세이프 (`FAILSAFE_HOLD` / `EMERGENCY_LAND`) 및 공중 복구(`AIRBORNE_RECOVERY_HOLD`)**: 비행 중 `FCP_TIMEOUT`(1,500ms)·구동계 상실로 `FAILSAFE_HOLD`/`EMERGENCY_LAND`에 진입하거나 콜드부트 복구 중 `AIRBORNE_RECOVERY_HOLD`에 진입하면 `VAS`가 `Base+3`을 배타적으로 우선 점유하여 5Hz 폴백 HUD를 송출하며, `AMM`은 `NORMAL` 복귀 시까지 양보합니다.
 
 ```lua
 {
@@ -1542,6 +1580,14 @@ stateDiagram-v2
     "tapHeartbeatTimeoutMs": 300,
     "reconnectIntervalSec": 1.0
   },
+  "bootRecovery": {
+    "enabled": true,
+    "stateFilePath": "/.flight_state.json",
+    "bootTimeoutMs": 500,
+    "recoveryMaxHoldSec": 10.0,
+    "groundSafeAltitudeThresholdM": 2.5,
+    "groundSafeSpeedThresholdMps": 1.0
+  },
   "physicalPorts": {
     "wirelessModemSide": "top",
     "wiredSensorBusSide": "bottom"
@@ -1594,7 +1640,7 @@ src/1_control/vas/
 │   ├── modules/
 │   │   ├── core_daemon.lua            # 20Hz CC:Tweaked 타이머 및 pcall 4단계 수명주기
 │   │   ├── sensor_pipeline.lua        # 0-tick 센서 수집, 3D 레버암, 쿼터니언 합성, 헬스맵
-│   │   ├── state_machine.lua          # 9-State FSM, 2단계 시동, 선점 중재 및 페일세이프 합성
+│   │   ├── state_machine.lua          # 10-State FSM(AIRBORNE_RECOVERY_HOLD 포함), /.flight_state.json, 선점 중재 및 페일세이프 합성
 │   │   ├── vec3.lua                   # 3D 불변 벡터 산술 및 기하 연산 코어
 │   │   ├── quat.lua                   # 단위 쿼터니언 SO(3) 키네마틱스 & 최단 오차 연산
 │   │   ├── flight_dynamics_core.lua   # Layer 1: 쿼터니언-각속도 자세 제어 & collectiveThrust 매핑
@@ -1708,4 +1754,4 @@ src/1_control/vas/
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 핵심 비행 컴퓨터(VAS)의 센서 및 제어 소프트웨어 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.33.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.17.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.2.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) v1.13.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.3.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.8.0) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3)와 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 핵심 비행 컴퓨터(VAS)의 센서 및 제어 소프트웨어 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.36.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.20.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.5.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) v1.13.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.4.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.8.0) 및 GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3)와 정합성을 유지합니다.*

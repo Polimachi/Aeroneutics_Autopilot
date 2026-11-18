@@ -122,6 +122,21 @@ local function resolve_thruster_config(cfg)
     return thrusterCfg
 end
 
+local function run_cold_boot_recovery(cfg, daemonState)
+    local sensors = daemonState.sensors
+    local fsm = daemonState.fsm
+    local raw = sensor_pipeline.sample_all(sensors)
+    local comState, healthMap = sensor_pipeline.process_kinematics(sensors, raw, 0.05)
+    local br = fsm.bootRecovery or {}
+    local snapshot = state_machine.load_flight_state(br.stateFilePath, br.fsApi)
+    local isAirborneBoot, bootReason = state_machine.detect_airborne_at_boot(cfg.system, comState, healthMap, snapshot)
+    if isAirborneBoot then
+        fsm.isAirborne = true
+        state_machine.transition_to(fsm, "AIRBORNE_RECOVERY_HOLD", bootReason or "AIRBORNE_COLD_BOOT")
+        core_daemon.tick(daemonState)
+    end
+end
+
 function core_daemon.init(configDirOrTable)
     local cfg
     local dir = "config"
@@ -136,6 +151,7 @@ function core_daemon.init(configDirOrTable)
     cfg.system.configPath = cfg.system.configPath or (dir .. "/system.json")
     resolve_debug_flag(cfg)
 
+    local bootStartMs = (os.epoch and os.epoch("utc")) or 0
     local sensors = sensor_pipeline.init(cfg.sensors)
     local fsm = state_machine.init(cfg.system)
     local net = network_manager.init(cfg.system)
@@ -158,13 +174,16 @@ function core_daemon.init(configDirOrTable)
     if network_manager.broadcast_discovery then network_manager.broadcast_discovery(net) end
     local otaAgent = init_ota_agent(cfg, net, fsm)
 
-    return {
+    local daemonState = {
         cfg = cfg, sensors = sensors, fsm = fsm, net = net, fdCore = fdCore,
         policy = policy, adapter = adapter, adapterAsa = adapterAsa,
         controller = fdCore, mixer = adapter, feeder = feeder, otaAgent = otaAgent,
         lastTapOutputs = nil, lastAsaOutputs = nil,
-        running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil
+        running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil, bootElapsedMs = 0
     }
+    run_cold_boot_recovery(cfg, daemonState)
+    daemonState.bootElapsedMs = ((os.epoch and os.epoch("utc")) or bootStartMs) - bootStartMs
+    return daemonState
 end
 
 local function build_telemetry_diag(state, sensorOk, healthMap, tapOk, asaOk, combSat)

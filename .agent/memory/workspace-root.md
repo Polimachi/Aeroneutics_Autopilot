@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-18 — 서버 재시작·청크 언로드 공중 콜드부트 복구 구현 및 사양 승격 (TASK-130)
+
+- **배경 및 결정**: 멀티플레이어 서버 재시작 또는 청크 언로드 후 재로딩 시 공중에 부양한 기체가 `startup.lua` 콜드 부팅 직후 지상 `DISARMED` 전제로 추력 0 초기화되는 추락 결함을 제거하기 위해, Zero-Fallback 단일 스키마(`schemaVersion = 1`) 기반 비휘발성 상태 영속화(`/.flight_state.json`)와 `VAS` 선점 안정화·`FCP` 무충격 전환·`AMM` 정책 복구(`RESUME`/`RTB`)를 기존 모듈 경계 내에서 구현함 (`src/` 신규 `.lua` 파일 무추가로 GDrive 135엔트리 유지).
+- **구현 내용**:
+  - `VAS` (`TASK-130-2`, `src/1_control/vas/`): `state_machine.lua`에 `load_flight_state`/`save_flight_state`(`.tmp` + `fs.move` 원자적 저장), `detect_airborne_at_boot`, 10번째 FSM 상태 `AIRBORNE_RECOVERY_HOLD`(10초 타임아웃 → `EMERGENCY_LAND`, 조기 `arm=false` 무시) 추가; `vehicle_policy.lua`/`telemetry_feeder.lua`/`core_daemon.lua`에 페일세이프 패스스루, `Base+3` 5Hz 백업 HUD, `run_cold_boot_recovery` 부팅 복구 선점 루틴 반영.
+  - `FCP` (`src/2_guidance/fcp/`): `main.lua`의 `AIRBORNE_TELEM_STATES`/`RESTRICTIVE_TELEM_STATES`에 `AIRBORNE_RECOVERY_HOLD` 편입 및 VAS 복구 중 `Base+1` `MSG_ATTITUDE_CMD` 침묵 처리; `flight_fsm.lua` `step_idle_armed`에서 `AIRBORNE_RECOVERY_HOLD` 탈출 시 2.0초 `trigger_bumpless` 핸드오프 적용.
+  - `AMM` (`TASK-130-3`, `src/3_planning/amm/`): `amm_config.json` `recovery` 블록(`RESUME`/`RTB`), `mission_engine.lua` `persist_flight_state`/`set_home`/이륙·체크포인트 `AIRBORNE_ACTIVE` 저장 및 종료·착륙 `GROUND_SAFE` 전이, `c2_arbiter.lua`/`main.lua` `Base+3` 양보·`apply_cold_boot_resume`/`apply_cold_boot_rtb`/`recover_from_cold_boot` 구현.
+  - **테스트·사양 승격 (`TASK-130-4`)**: `test_vas_core.lua`(+3), `test_fcp_main_v2.lua`(+1), `test_main_loop.lua`(+1), `test_e2e_3node_se3_closed_loop.lua` 시나리오 8 강제 리부트 E2E(+1 스위트 6단언) 추가; `VAS v1.24.0`, `FCP v2.4.0`, `AMM v2.5.0` `Implemented` 승격 (`verify_spec_status.py` `14 Implemented, 4 Approved`).
+
 ## 2026-11-16 — 40채널 블록 개편·프로토콜·경합·검증 결함 12종 해소 및 E2E/사양 승격 (TASK-125)
 
 - **결정 배경**: 기존 40채널 블록(`BW=40`)의 `Base+1` 유도/`E_STOP` 혼재, `Base+0` C2/교정 바인딩 혼재, 동시 부팅 및 꺼진 점유자(Sleeping Occupant) 프로브 누락, `Base+3` 이중 송신자 경합, `Base+30..39` Zone 3 vs 편대 혼재, `reqBW` 가변 필드 vs `stride 40` 불일치, `REASSIGNED` 상태값 불일치, `Base+20~39` 침범 감시 누락, `Rule 3` 중복 및 구조도 `checkCollision` 인자 불일치 등 12종 결함(`TASK-125-1..13`)을 Spec-First로 해소함 (`docs/superpowers/plans/2026-11-16-task-125-40ch-remediation.md`).

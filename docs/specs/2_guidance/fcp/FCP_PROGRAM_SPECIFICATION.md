@@ -6,17 +6,17 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.3.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v2.4.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 순수 온보드 SE(3) 외루프 유도 제어기 (FCP / Node 04) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.36.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.4.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.5.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.8.0)
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.13.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.8.0)
@@ -32,6 +32,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.4.0` | `2026-11-18` | **`TASK-130` 공중 콜드부트 복구 중 `VAS AIRBORNE_RECOVERY_HOLD` 비간섭·안전 게이트 정합 (`Implemented` — 2026-11-18 승격)**: ① `VAS Base+2` `controlState == "AIRBORNE_RECOVERY_HOLD"` 수신 중 `IDLE_ARMED` 상태에서 조기 `arm = false / flightActive = false` `Base+1` 지령 송출을 억제(Silence)해 `VAS` 자체 안정화 루프 간섭을 방지하고 `AMM Base+4`(`arm=true, flightActive=true`) 동기화 시 **2.0초 범프리스 램핑**으로 `ACTIVE_TRACKING` 진입, ② `[I-13]` 무선 OTA `getStatusFn` `isAirborne` 판정 집합에 `"AIRBORNE_RECOVERY_HOLD"` 추가(`NOT_DISARMED` 차단), ③ 연관 문서 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `AMM v2.5.0`, `VAS v1.24.0`) 동기화 | `TASK-130` (`src/2_guidance/fcp/` 및 단위·E2E 검증 완료) |
 | `v2.3.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 비상 코어 구독 분리 (`Implemented` $\to$ `Approved`)**: ① `Base+1` (`CH_FLIGHT_GUIDANCE`) 순수 20Hz `MSG_ATTITUDE_CMD` 송신 및 `MSG_CHANNEL_REBIND` 중계 전용화, ② `Base+9` (`CH_EMERGENCY_CORE`) `MSG_EMERGENCY_ALERT` 구독 추가 및 비상 경보 수신 시 `EMERGENCY_HOLD` 안전 전이 명세, ③ 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`, `VAS v1.23.0`, `Alignment v2.8.0`, `GCS v1.2.0`) 동기화 | `TASK-125` 유도/비상 버스 분리 및 FCP 비상 안전 전이 확립 (`src/2_guidance/fcp/` 반영 후 `Implemented` 승격 예정) |
 | `v2.2.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `network_manager`에 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 회신 추가(비행 채널 격리 원칙 유지), ② `ctx.fsm.currentState` 및 `lastTelemPayload` 기반 안전 게이트 연동, ③ `step_tick` 정상 루프 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/2_guidance/fcp/` 반영 후 `Implemented` 재승격 예정) |
 | `v2.1.0` | `2026-11-14` | **Wave 1 `[I-9]` 채널 재바인딩 ACK 표준화 및 교차참조 동기화 (`Implemented` $\to$ `Approved`)**: ① §1·§2·§8.3.3·§10.1의 `MSG_REBIND_ACK`를 `MSG_CHANNEL_REBIND_ACK` (`MSG_REBIND_ACK [DEPRECATED]`)로 단일화하고 ACK 페이로드 스키마(`transactionId`, `nodeId`, `action`, `status = "READY" \| "COMMITTED" \| "ROLLED_BACK" \| "FAILED"`, `oldBaseChannel`, `newBaseChannel`, `subNodesReady?`) 명시, ② 연관 문서 버전 배지(`ICD v1.30.0`, `VAS v1.20.0`, `AMM v2.0.1` 등) 동기화 및 메타데이터 일자(`2026-11-14`) 정합 | Q1 Option A 사용자 확정 결정 반영 (`src/2_guidance/fcp/` Wave 2 반영 후 `Implemented` 재승격 예정) |
@@ -486,6 +487,10 @@ stateDiagram-v2
    - 조종사가 MFD에서 ACRO 모드를 활성화하면 MFD가 `Base+1`로 `RATE_COMMAND`를 직결 주입하고, `VAS`가 `Base+2`의 `activeSource`를 `"MFD_ACRO"`로 보고합니다 (`Base+3` 20Hz HUD는 `AMM`의 양보로 `VAS`가 직접 인계).
    - FCP는 `activeSource == "MFD_ACRO"` 감지 즉시 `PASSIVE_TRACKING`으로 전이하여 `Base+1` 송출을 전면 침묵(Silence)하고 외루프 적분기를 동결합니다(백그라운드 `state_propagator`는 지속).
    - 조종사가 ACRO를 해제해 `activeSource`가 `"FCP"`로 복원되면, FCP는 `ACTIVE_TRACKING`으로 복귀하며 **2.0초 범프리스 선형 램핑**을 수행합니다.
+
+3. **공중 콜드부트 복구 연동 (`VAS AIRBORNE_RECOVERY_HOLD` 비간섭 규약)**:
+   - 서버 재시작·청크 언로드 직후 `FCP`가 `IDLE_ARMED`(`AMM Base+4` 미동기화 상태)로 부팅되었으나 `VAS Base+2`가 `controlState == "AIRBORNE_RECOVERY_HOLD"`를 보고하면, `FCP`는 `AMM`이 `Base+4` (`arm = true, flightActive = true`)를 인가하기 전까지 `Base+1` `MSG_ATTITUDE_CMD` (`arm = false, flightActive = false`) 송출을 **침묵(Silence)**하여 `VAS`의 `<= 500ms` 자체 수평 자세 홀드 루프를 방해하지 않습니다.
+   - 이후 `AMM`이 `/.flight_state.json` 복원을 완료해 `Base+4` `arm = true, flightActive = true`를 송출하면, `FCP`는 즉시 `ACTIVE_TRACKING`으로 전이함과 동시에 **`trigger_bumpless_transition()` (2.0초 선형 램핑)**을 발동해 `VAS`의 `AIRBORNE_RECOVERY_HOLD`에서 `FCP` `SE(3)` 외루프 추종으로 무충격 인계합니다.
 
 ### 7.5 범프리스(Bumpless) 램핑 및 적분기 리셋 규격
 `PASSIVE_TRACKING` 이탈, `AMM_TIMEOUT_HOLD` 복구, 또는 `AMM Base+4`의 `flightMode`가 이산 전환될 때(`trigger_bumpless_transition`) 급격한 자세/추력 점프를 방지하기 위한 규약입니다:
@@ -1215,7 +1220,7 @@ end
 1. **온보드 비행 채널 격리 및 ICD 엔벨로프 검증 (`network_manager`)**:
    - 단일 `top` 모뎀에서 비행용 4채널(`Base+4`, `Base+2`, `Base+1` 순수 `MSG_ATTITUDE_CMD` 전용, `Base+9` `MSG_EMERGENCY_ALERT` 구독 전용) 외에 `[I-13]` 격납고 OTA 채널(`Base_hangar + 4`, 기본 Bay 1 = `105` 및 선택 `ota.bayIds`)만 개방되며, `CH 50000~50004`, `60001/60002`, `Base+0`, `Base+3`, `Base+5`는 열리지 않고 `Base+9` 수신 시 `EMERGENCY_HOLD`로 안전 전이되는지 검증.
    - 송출 패킷이 `ver = "1.9.5"`, `seq`, `domainId`, `type`, `time`, `payload` 필드를 정확히 포함하고, `[DEPRECATED]` 구 필드(`angleTargets`, `targetThrottle`, `targetClimbRate`, `translationBias.heave`)를 송출하지 않는지 검증.
-   - `[I-13]` 무선 OTA 연동(`ota_agent.new({ moduleId = "fcp", ... })`): `getStatusFn`은 `controlState = ctx.fsm.currentState` 및 `isAirborne = (ctx.lastTelemPayload and ctx.lastTelemPayload.isAirborne == true) or (ctx.lastTelemPayload and (ctx.lastTelemPayload.controlState == "NORMAL" or ctx.lastTelemPayload.controlState == "FAILSAFE_HOLD" or ctx.lastTelemPayload.controlState == "EMERGENCY_LAND" or ctx.lastTelemPayload.controlState == "AIRBORNE_EMERGENCY")) or false`를 반환하여 `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true` 외 상태에서 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 `MSG_OTA_NACK` (`NOT_DISARMED`)로 거부하고, `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK`, `step_tick` `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 정상 처리하는지 검증.
+   - `[I-13]` 무선 OTA 연동(`ota_agent.new({ moduleId = "fcp", ... })`): `getStatusFn`은 `controlState = ctx.fsm.currentState` 및 `isAirborne = (ctx.lastTelemPayload and ctx.lastTelemPayload.isAirborne == true) or (ctx.lastTelemPayload and (ctx.lastTelemPayload.controlState == "NORMAL" or ctx.lastTelemPayload.controlState == "AIRBORNE_RECOVERY_HOLD" or ctx.lastTelemPayload.controlState == "FAILSAFE_HOLD" or ctx.lastTelemPayload.controlState == "EMERGENCY_LAND" or ctx.lastTelemPayload.controlState == "AIRBORNE_EMERGENCY")) or false`를 반환하여 `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true` 외 상태에서 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 `MSG_OTA_NACK` (`NOT_DISARMED`)로 거부하고, `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK`, `step_tick` `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 정상 처리하는지 검증.
 2. **로컬 속도 전파 및 `posEpoch` 병합 검증 (`state_propagator`)**:
    - `AMM` `posEpoch` 갱신 사이 틱에서 `VAS Base+2` 속도 적분이 $\Delta t \le 0.1\text{ s}$ 가드를 준수해 위치를 연속 전파하는지 검증.
    - `posEpoch` 정체 또는 `navValid == false`가 `500ms` 초과 시 `navStale = true`가 `MSG_OUTER_LOOP_STATUS`로 보고되는지 검증.
@@ -1224,7 +1229,7 @@ end
    - `VECTORED_VTOL` / `ADVANCED_VTOL`에서 `STRICT_LEVEL` ($\theta=\phi=0^\circ$, `translationBias {surge, sway}`)과 `TILT_ASSISTED` ($\pm 10^\circ$, $15.0^\circ/\text{s}$ 슬루율) 전환, 그리고 `actuatorHealth.tap == false` 시 틸트 폴백이 동작하는지 검증.
    - `WINGED_VTOL` $V \in [8.0, 18.0]\text{ m/s}$ 연속 천이 블렌딩 및 `FIXED_WING` BTT 뱅크/요 피드포워드(`targetAngularRates.yawRate`) 정합 검증.
 4. **7-State 외루프 FSM 및 2.0초 범프리스 램핑 검증 (`flight_fsm`)**:
-   - `BOOT` $\to$ `IDLE_ARMED` $\to$ `ACTIVE_TRACKING` 전이, `Base+9` `MSG_EMERGENCY_ALERT` 수신 시 `EMERGENCY_HOLD` 안전 전이 및 `flightMode` 이산 전환 시 적분기 리셋·2.0초 선형 램핑($\lambda \in [0, 1]$)이 실행되는지 검증.
+   - `BOOT` $\to$ `IDLE_ARMED` $\to$ `ACTIVE_TRACKING` 전이, `VAS Base+2 controlState == "AIRBORNE_RECOVERY_HOLD"` 수신 시 `IDLE_ARMED`의 조기 `Base+1` `arm=false` 송출 억제 및 `AMM Base+4` 복구 시 `2.0초` 범프리스 램핑(`ACTIVE_TRACKING`) 전이, `Base+9` `MSG_EMERGENCY_ALERT` 수신 시 `EMERGENCY_HOLD` 안전 전이 및 `flightMode` 이산 전환 시 적분기 리셋·2.0초 선형 램핑($\lambda \in [0, 1]$)이 실행되는지 검증.
 
 ### 12.2 결함 주입 및 멀티노드 E2E 시뮬레이션 기준 (`TASK-208` 대상)
 1. **`AMM_TIMEOUT` 500ms $\to$ 10.0초 `EMERGENCY_LAND` 에스컬레이션 시험**:
@@ -1288,4 +1293,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack 내 순수 온보드 `SE(3)` 외루프 유도 제어기(`FCP`)의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.30.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.15.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.1), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.20.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.12.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.7.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.5.0), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3), RUNWAY 규격서([RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) v1.11.0), LANDING_PAD 규격서([LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) v2.5.0), DOCKING_ARM 규격서([DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) v1.12.0) 및 GCS 규격서([GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) v1.1.0)와 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack 내 순수 온보드 `SE(3)` 외루프 유도 제어기(`FCP`)의 구현, 인터페이스 제어 및 단위 테스트(TDD)의 단일 진실 공급원(SSOT)으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.36.0), 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.20.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.5.0), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) v1.24.0), TCA 규격서([TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) v1.13.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.8.0), GAC 규격서([GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) v1.6.0), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3), RUNWAY 규격서([RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) v1.12.0), LANDING_PAD 규격서([LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) v2.5.0), DOCKING_ARM 규격서([DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) v1.12.0) 및 GCS 규격서([GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) v1.3.0)와 정합성을 유지합니다.*

@@ -94,5 +94,11 @@
       "arrivalSettleTicks": 4,
       "arrivalReengageMarginM": 2.0
     }
+  },
+  "recovery": {
+    "enabled": true,
+    "stateFilePath": "/.flight_state.json",
+    "coldBootPolicy": "RESUME",
+    "syncTimeoutMs": 5000
   }
 }

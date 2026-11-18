@@ -59,6 +59,7 @@ end
 
 local AIRBORNE_TELEM_STATES = {
     NORMAL = true,
+    AIRBORNE_RECOVERY_HOLD = true,
     FAILSAFE_HOLD = true,
     EMERGENCY_LAND = true,
     AIRBORNE_EMERGENCY = true,
@@ -67,6 +68,7 @@ local AIRBORNE_TELEM_STATES = {
 local RESTRICTIVE_TELEM_STATES = {
     ARMING = true,
     NORMAL = true,
+    AIRBORNE_RECOVERY_HOLD = true,
     CALIBRATION = true,
     FAILSAFE_HOLD = true,
     EMERGENCY_LAND = true,
@@ -196,18 +198,21 @@ local function build_fsm_ctx(ctx, inbound)
 end
 
 local function dispatch_idle_armed(ctx, posErr, velErr, sp)
-    local att_cmd = {
-        source = "FCP",
-        arm = ctx.fsm.arm or false,
-        flightActive = false,
-        flightMode = "IDLE_ARMED",
-        commandType = "QUATERNION_RATE",
-        targetQuaternion = { w = 1.0, x = 0.0, y = 0.0, z = 0.0 },
-        targetAngularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
-        collectiveThrust = 0.0,
-        acroActive = false,
-    }
-    network_manager.send_attitude_cmd(ctx.net, att_cmd)
+    local vasRecovering = (ctx.lastTelemPayload and ctx.lastTelemPayload.controlState == "AIRBORNE_RECOVERY_HOLD")
+    if not vasRecovering then
+        local att_cmd = {
+            source = "FCP",
+            arm = ctx.fsm.arm or false,
+            flightActive = false,
+            flightMode = "IDLE_ARMED",
+            commandType = "QUATERNION_RATE",
+            targetQuaternion = { w = 1.0, x = 0.0, y = 0.0, z = 0.0 },
+            targetAngularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            collectiveThrust = 0.0,
+            acroActive = false,
+        }
+        network_manager.send_attitude_cmd(ctx.net, att_cmd)
+    end
     outer_loop_controller.reset_integrators(ctx.ctrl)
 
     local status_payload = {

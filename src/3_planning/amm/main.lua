@@ -830,6 +830,66 @@ local function bind_app_modems(net, modems, base_ch, cfg)
     end
 end
 
+local function apply_cold_boot_resume(app, snap, now_ms)
+    local rec = (app.config and app.config.recovery) or {}
+    local mid = snap and snap.missionId
+    if type(mid) ~= "string" or mid == "" then return false end
+    if app.engine:count() == 0 or app.engine.missionId ~= mid then
+        local resolved = mission_engine.resolve_path(mid, rec.fsApi)
+        if resolved then app.engine:load(resolved) end
+    end
+    if app.engine:count() == 0 then return false end
+    local idx = math.max(1, math.min(app.engine:count(), tonumber(snap.currentCpIdx) or 1))
+    local act = app.engine.checkpoints[idx] and app.engine.checkpoints[idx].action
+    if (act == "ACT_TKL_TAKEOFF_VERT" or act == "ACT_MOB_MOVING_TKOFF") and idx < app.engine:count() then
+        idx = idx + 1
+    end
+    if app.engine:goto_index(idx, now_ms) then
+        app.arbiter.emergencyGoal = nil
+        app.arbiter.lastBanner = "COLD BOOT RESUME: CP " .. tostring(idx)
+        return true
+    end
+    return false
+end
+
+local function apply_cold_boot_rtb(app, snap)
+    if app.engine then app.engine.state = "SUSPENDED" end
+    local hpos = (snap and type(snap.homePos) == "table" and snap.homePos.x and snap.homePos.z) and snap.homePos or nil
+    local hpad = (snap and type(snap.homePadId) == "string" and snap.homePadId ~= "") and snap.homePadId or nil
+    if hpos or hpad then
+        app.arbiter.emergencyGoal = {
+            flightMode = "FAILSAFE_RTH", arm = true, flightActive = true,
+            targetPos = hpos, targetAlt = (hpos and hpos.y) or (app.config and app.config.defaultAlt),
+            designatedFacilityId = hpad, _coldBootRtb = true,
+        }
+        app.arbiter.lastBanner = "COLD BOOT RTB: " .. tostring(hpad or "HOME_POS")
+        return true, "RTB"
+    end
+    app.arbiter.emergencyGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true, _coldBootHold = true }
+    app.arbiter.lastBanner = "COLD BOOT HOLD"
+    return true, "HOVER_HOLD"
+end
+
+local function recover_from_cold_boot(app, now_ms)
+    if not app or not app.arbiter or not app.engine then return false, "INVALID_APP" end
+    local rec = (app.config and app.config.recovery) or {}
+    if rec.enabled == false then return false, "DISABLED" end
+    local snap = mission_engine.load_flight_state(rec.stateFilePath or "/.flight_state.json", rec.fsApi)
+    local vas_rec = app.arbiter.latest_telem and app.arbiter.latest_telem.controlState == "AIRBORNE_RECOVERY_HOLD"
+    if not (snap and snap.armedState == "AIRBORNE_ACTIVE") and not vas_rec then
+        return false, "GROUND_SAFE"
+    end
+    app.arbiter.coldBootHandled = true
+    app.arbiter.armed = true
+    if snap and type(snap.homePadId) == "string" and snap.homePadId ~= "" then app.engine.homePadId = snap.homePadId end
+    if snap and type(snap.homePos) == "table" then app.engine.homePos = snap.homePos end
+    local policy = string.upper(tostring(rec.coldBootPolicy or "RESUME"))
+    if policy == "RESUME" and apply_cold_boot_resume(app, snap, now_ms) then
+        return true, "RESUMED"
+    end
+    return apply_cold_boot_rtb(app, snap)
+end
+
 local function create_app(config, modems)
     local cfg = (type(config) == "string") and load_config(config) or config or load_config()
     local sentinel = setmetatable(channel_sentinel.init(cfg, cfg.clock_ms, cfg.leasePath), { __index = channel_sentinel })
@@ -878,6 +938,7 @@ local function create_app(config, modems)
     }
     if arbiter then
         arbiter.clockFn = function() return get_now_ms(app) end
+        arbiter.onColdBootRecovery = function(t_ms) return recover_from_cold_boot(app, t_ms) end
     end
     local okOta, ota_agent = pcall(require, "ota_agent")
     if okOta and type(ota_agent) == "table" and type(ota_agent.new) == "function" then
@@ -893,15 +954,20 @@ local function create_app(config, modems)
             onRebootFn = otaCfg.onRebootFn,
             modemApi = net.infraModem or net.modem,
             getStatusFn = function()
+                local t = app.arbiter and app.arbiter.latest_telem
+                local air = (t and (t.isAirborne == true or t.controlState == "AIRBORNE_RECOVERY_HOLD")) or false
                 return {
                     controlState = (app.arbiter and app.arbiter.fsmState) or "DISARMED",
-                    isAirborne = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.isAirborne == true) or false,
+                    isAirborne = air,
                 }
             end,
         })
         if net.open_channels then
             net:open_channels(app.otaAgent)
         end
+    end
+    if type(cfg.recovery) == "table" and cfg.recovery.enabled ~= false then
+        recover_from_cold_boot(app, get_now_ms(app))
     end
     return app
 end
@@ -1192,6 +1258,7 @@ return {
     handle_modem_message = handle_modem_message,
     render_ui_frame = render_ui_frame,
     handle_timer_event = handle_timer_event,
+    recover_from_cold_boot = recover_from_cold_boot,
     make_coroutine_a = make_coroutine_a,
     make_coroutine_b = make_coroutine_b,
 }

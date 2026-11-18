@@ -1237,4 +1237,126 @@ describe("AMM Main Event Pump and Command Processing", function()
 
         if fs.exists(lease_path) then fs.delete(lease_path) end
     end)
+
+    it("persists /.flight_state.json across takeoff/CP/homePad/stop and recovers via RESUME or RTB policy", function()
+        local main_mod = require("main")
+        local mission_engine = require("mission_engine")
+        local snap_path = sdk.temp_path("amm_cold_boot_state.json")
+        local mission_path = "missions/test_cold_boot_sortie.json"
+        if fs.exists(snap_path) then fs.delete(snap_path) end
+        if not fs.exists("missions") then fs.makeDir("missions") end
+
+        local mission_tbl = {
+            version = "2.0.0",
+            missionId = "test_cold_boot_sortie",
+            executionMode = "SINGLE",
+            checkpoints = {
+                { checkpointId = "CP_1_TKOFF", action = "ACT_TKL_TAKEOFF_VERT", params = { targetAlt = 140, facilityId = "PAD_ALPHA" } },
+                { checkpointId = "CP_2_WP", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 100, z = 50 }, targetAlt = 140 } },
+                { checkpointId = "CP_3_WP", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 250, z = 50 }, targetAlt = 140 } },
+            },
+        }
+        local mh = fs.open(mission_path, "w")
+        mh.write(textutils.serializeJSON(mission_tbl))
+        mh.close()
+
+        local net1 = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        local eng1 = mission_engine.new({
+            net = net1,
+            config = {
+                baseChannel = 10000,
+                recovery = { enabled = true, persist = true, stateFilePath = snap_path, coldBootPolicy = "RESUME" },
+            },
+        })
+        assert_true(eng1:load_table(mission_tbl))
+        assert_true(eng1:start("SINGLE", 1000))
+        eng1:set_home("PAD_HOME_01", { x = 10, y = 64, z = -15 }, 1100)
+        assert_true(eng1:goto_index(2, 1200))
+
+        local saved = mission_engine.load_flight_state(snap_path)
+        assert_not_nil(saved)
+        assert_eq(saved.schemaVersion, 1)
+        assert_eq(saved.armedState, "AIRBORNE_ACTIVE")
+        assert_eq(saved.missionId, "test_cold_boot_sortie")
+        assert_eq(saved.currentCpIdx, 2)
+        assert_eq(saved.homePadId, "PAD_HOME_01")
+        assert_eq(saved.homePos.x, 10)
+        assert_false(fs.exists(snap_path .. ".tmp"))
+
+        -- Cold-boot app with RESUME policy restores missionId at currentCpIdx=2
+        local m1 = mock.modem({ wireless = true })
+        local lease1 = sdk.temp_path("amm_cb_lease1.json")
+        local app_resume = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 2000,
+            leasePath = lease1,
+            recovery = { enabled = true, persist = true, stateFilePath = snap_path, coldBootPolicy = "RESUME" },
+        }, m1)
+        assert_eq(app_resume.engine.state, "EN_ROUTE")
+        assert_eq(app_resume.engine.active_index, 2)
+        assert_true(app_resume.arbiter.armed)
+
+        -- Takeoff index 1 skips automatically to CP 2 when recovering airborne
+        assert_true(mission_engine.save_flight_state(snap_path, {
+            schemaVersion = 1,
+            armedState = "AIRBORNE_ACTIVE",
+            missionId = "test_cold_boot_sortie",
+            currentCpIdx = 1,
+            homePadId = "PAD_HOME_01",
+            homePos = { x = 10, y = 64, z = -15 },
+            savedAtEpoch = 2100,
+        }))
+        local m2 = mock.modem({ wireless = true })
+        local lease2 = sdk.temp_path("amm_cb_lease2.json")
+        local app_skip_tk = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 2200,
+            leasePath = lease2,
+            recovery = { enabled = true, persist = true, stateFilePath = snap_path, coldBootPolicy = "RESUME" },
+        }, m2)
+        assert_eq(app_skip_tk.engine.active_index, 2)
+
+        -- Cold-boot app with RTB policy sets FAILSAFE_RTH to homePadId/homePos
+        local m3 = mock.modem({ wireless = true })
+        local lease3 = sdk.temp_path("amm_cb_lease3.json")
+        local app_rtb = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = true,
+            clock_ms = 2500,
+            leasePath = lease3,
+            recovery = { enabled = true, persist = true, stateFilePath = snap_path, coldBootPolicy = "RTB" },
+        }, m3)
+        local rtb_goal = app_rtb.arbiter:get_effective_goal()
+        assert_eq(rtb_goal.flightMode, "FAILSAFE_RTH")
+        assert_true(rtb_goal.arm)
+        assert_true(rtb_goal.flightActive)
+        assert_eq(rtb_goal.designatedFacilityId, "PAD_HOME_01")
+        assert_eq(rtb_goal.targetPos.x, 10)
+
+        -- Yield Base+3 while VAS reports AIRBORNE_RECOVERY_HOLD
+        app_rtb.arbiter:handle_flight_telemetry({
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, time = 2600,
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { controlState = "AIRBORNE_RECOVERY_HOLD", activeSource = "FCP", fuel = 0.8 },
+        }, 2600)
+        local can_tx, yield_reason = app_rtb.arbiter:can_transmit_mfd(2600)
+        assert_false(can_tx)
+        assert_eq(yield_reason, "ACRO_RECOVERY_HOLD")
+
+        -- Stopping mission persists GROUND_SAFE
+        eng1:stop(3000)
+        local grounded = mission_engine.load_flight_state(snap_path)
+        assert_eq(grounded.armedState, "GROUND_SAFE")
+
+        if fs.exists(snap_path) then fs.delete(snap_path) end
+        if fs.exists(mission_path) then fs.delete(mission_path) end
+        if fs.exists(lease1) then fs.delete(lease1) end
+        if fs.exists(lease2) then fs.delete(lease2) end
+        if fs.exists(lease3) then fs.delete(lease3) end
+    end)
 end)

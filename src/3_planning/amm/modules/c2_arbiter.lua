@@ -49,6 +49,8 @@ function c2_arbiter.new(queue, net, config, engine, guard)
         vasMfdPriorityUntilMs = 0,
         emergencyGoal = nil,
         activeGoal = nil,
+        coldBootHandled = false,
+        onColdBootRecovery = cfg.onColdBootRecovery,
     }, c2_arbiter)
     if type(net) == "table" then
         if net.set_arbiter then
@@ -395,7 +397,8 @@ end
 function c2_arbiter:update_acro_yield_window(state_val, active_source, source_tag, now_ms)
     local now = resolve_now_ms(self, now_ms)
     local is_acro = (active_source == "MFD_ACRO") or (source_tag == "CORE_ACRO_TAKEOVER")
-    local is_vas_failsafe = (state_val == "FAILSAFE_HOLD") or (state_val == "EMERGENCY_LAND") or (source_tag == "CORE_FAILSAFE")
+    local is_vas_failsafe = (state_val == "FAILSAFE_HOLD") or (state_val == "EMERGENCY_LAND")
+        or (state_val == "AIRBORNE_RECOVERY_HOLD") or (source_tag == "CORE_FAILSAFE")
     if is_acro or is_vas_failsafe then
         self.lastVasPriorityMs = now
         self.vasMfdPriorityUntilMs = now + (self.acroRecoveryHoldMs or 300)
@@ -410,7 +413,8 @@ function c2_arbiter:can_transmit_mfd(now_ms)
     if self.lastVasPriorityMs ~= nil and now < (self.vasMfdPriorityUntilMs or 0) then
         return false, "ACRO_RECOVERY_HOLD"
     end
-    if self.fsmState == "FAILSAFE_HOLD" or self.fsmState == "EMERGENCY_LAND" then
+    if self.fsmState == "FAILSAFE_HOLD" or self.fsmState == "EMERGENCY_LAND"
+        or self.fsmState == "AIRBORNE_RECOVERY_HOLD" then
         return false, "YIELDED_TO_VAS_FAILSAFE"
     end
     return true
@@ -544,6 +548,22 @@ function c2_arbiter:handle_outer_loop_status(packet, now_ms)
     if p.trackingStatus then self.fcpTrackingStatus = p.trackingStatus end
 end
 
+local function handle_vas_cold_boot_telem(self, p, t_ms)
+    if p.controlState == "AIRBORNE_RECOVERY_HOLD" and not self.coldBootHandled then
+        if type(self.onColdBootRecovery) == "function" then
+            self.onColdBootRecovery(t_ms, p)
+        end
+        self.coldBootHandled = true
+        if not self.armed then
+            self.armed = true
+            self.emergencyGoal = { flightMode = "HOVER_HOLD", arm = true, flightActive = true, _coldBootHold = true }
+        end
+    elseif p.controlState == "DISARMED" and self.armed == false
+        and self.engine and self.engine.persist_flight_state and self.engine.state ~= "EN_ROUTE" then
+        self.engine:persist_flight_state("GROUND_SAFE", t_ms)
+    end
+end
+
 function c2_arbiter:handle_flight_telemetry(packet, now_ms)
     if not packet or type(packet.payload) ~= "table" then return end
     local p = packet.payload
@@ -551,6 +571,7 @@ function c2_arbiter:handle_flight_telemetry(packet, now_ms)
     self.latest_telem = p
     self.lastTelemMs = t_ms
     sync_state_and_step(self, p, p.controlState, p.activeSource, t_ms, true)
+    handle_vas_cold_boot_telem(self, p, t_ms)
     local fuel = p.fuel
     if type(fuel) == "number" then
         local latches = chattering_guard.update_fuel_latches(self.guard, fuel, self.config, not self.armed)

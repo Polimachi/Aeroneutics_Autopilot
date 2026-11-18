@@ -6,10 +6,10 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 40채널 블록 개편·경합·검증 결함 12종 해소(`TASK-125`), GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge·실시간 전술 지도·원클릭 미션 푸시(`TASK-404`, `GCS v1.3.0`·`AMM v2.4.0`·`에디터 v0.5.0`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset·`ACT_TKL_LAND_NEAREST`(`TASK-403`), 무선 OTA 배포·롤백 가드(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-302`(Pocket PDA 원격 관제 단말) 및 `TASK-015`(전 계층 통합 플레이북 체계)입니다 (이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 공중 콜드부트 복구(`TASK-130`, `VAS v1.24.0`·`FCP v2.4.0`·`AMM v2.5.0`), 40채널 블록 개편·경합·검증 결함 12종 해소(`TASK-125`, `GCS v1.3.0`·`AMM v2.4.0`), GDrive 전수 135파일 동기화(`TASK-501`), GCS WebSocket Live Bridge·실시간 전술 지도·원클릭 미션 푸시(`TASK-404`, `에디터 v0.5.0`), `Runway` 활주로 제어기(`TASK-103`, `v1.12.0 Implemented`), 에디터 World Preset·`ACT_TKL_LAND_NEAREST`(`TASK-403`), 무선 OTA 배포·롤백 가드(`TASK-117`), 전수 감사 3대 가드레일(`TASK-014`), 지상 FDR(`TASK-120`), WebUI 에디터(`TASK-402`) 완료. 다음 1순위는 `TASK-405`·`TASK-406`·`TASK-302`(Pocket PDA 원격 관제 단말)·`TASK-128`(GPS 헬스·DR 가드)입니다 (`TASK-015`는 2순위; 이전 이력은 `.agent/memory/workspace-root.md`, 최신 검증 수치는 [GEMINI.md](GEMINI.md) §3 참조).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
-  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
+  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `FDR`(`TASK-120`), 무선 `OTA`(`TASK-117`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
   - **Phase 2 (고등 항법 및 편대 임무)**: 3차원 경로 계획(`3_planning/`) 및 다중 기체 편대 미션 오케스트레이터(`4_mission/`) 구축
   - **Phase 3 (물리 하드웨어 및 수동 급기동)**: Create/Avionics 아날로그 스틱 및 물리 컨트롤러 연동, `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 ACRO 수동 조종(`TASK-301`)
 - **실시간 작업 진행 현황 및 상세 백로그 (SSOT)**: [TASK.md](TASK.md)
@@ -130,7 +130,7 @@ Create_Aeroneutics/
 | `50001 ~ 59999` | 광역 ATC · 섹터 GAC · 스마트 시설물 | Sector 0(`50001~50200`), Sector $S$($Base_{\text{sec}} = 50001 + S \times 200$) |
 | `60001 ~ 60020` | 고정밀 GPS 측위 인프라 | 측위 핑(`60001`), 서비스(`60002`), 스웜 노드 보고(`60003`) |
 
-### 비행체 전용 40채널 수식 및 4대 기능 Zone
+### 비행체 전용 40채널 수식 및 3대 기능 Zone
 
 $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, } 1 \le N \le 1000)$$
 
@@ -164,7 +164,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(20개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(21개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```
@@ -242,7 +242,7 @@ CC:Tweaked 컴퓨터에서 아래 3가지 경로 중 하나로 통합 인스톨�
 ## 📐 핵심 설계 원칙 (Engineering Principles)
 
 1. **독립 멀티 코드베이스 원칙 (Self-Contained Multi-Codebase)**:
-   - 각 하위 코드베이스(`src/<layer>/<subsystem>/`)는 개별 CC:Tweaked 컴퓨터 루트에 독립 마운트되어 동작하므로 코드베이스 간 직접 참조를 두지 않고 내부에서 자체 완결합니다 (기본 진입점 `main.lua`, 유일한 예외는 인스톨러가 `/lib/avionics_sensors.lua`로 자동 주입하는 공용 센서 라이브러리).
+   - 각 하위 코드베이스(`src/<layer>/<subsystem>/`)는 개별 CC:Tweaked 컴퓨터 루트에 독립 마운트되어 동작하므로 코드베이스 간 직접 참조를 두지 않고 내부에서 자체 완결합니다 (기본 진입점 `main.lua`, 예외는 인스톨러가 `/lib/`에 자동 주입하는 공용 센서 라이브러리 `/lib/avionics_sensors.lua` 및 OTA 에이전트 `/lib/ota_agent.lua`).
 2. **영구 단일 경로 불변 원칙 (Permanent Single Path)**:
    - 사양서 파일은 상태 변화(`Draft` / `Approved` / `Implemented` / `Deprecated`)에 따라 디렉토리를 이동하지 않고 `docs/specs/<domain>/<subsystem>/` 위치를 영구 유지합니다.
    - 생명주기는 각 문서 상단 메타데이터 요약 표 및 `Revision History` 테이블로 관리합니다.

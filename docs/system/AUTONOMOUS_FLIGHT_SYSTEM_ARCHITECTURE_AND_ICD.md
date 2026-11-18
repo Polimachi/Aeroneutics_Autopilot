@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.35.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v1.36.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.36.0` | `2026-11-17` | **`TASK-130` 공중 콜드부트 복구 및 비휘발성 `/.flight_state.json` 영속 계약 반영 (`Approved`)**: ① `VAS` (`v1.24.0 Approved`) 10번째 FSM 상태 **`"AIRBORNE_RECOVERY_HOLD"`** 신설(`bootTimeoutMs = 500ms` 목표 비차단 20Hz 수평/선회 홀드, `Base+3` 양보, `[I-1]`/`[I-3]`/`[I-10]` `controlState` 및 `[I-13]` OTA `NOT_DISARMED` 거부 상태 추가, 조기 `arm=false` 무시), ② `FCP` (`v2.4.0 Approved`) 콜드부트 중 `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `IDLE_ARMED` 조기 `Base+1` disarm 송출 침묵 및 `AMM` 동기화 후 2.0s 범프리스 추종 규약 추가, ③ `AMM` (`v2.5.0 Approved`) 로컬 `/.flight_state.json` (`schemaVersion = 1`, `.tmp`+`fs.move` 원자적 저장) 및 `coldBootPolicy` (`"RESUME"` \| `"RTB"`) 복구 규약 신설, ④ §4 안전 워치독 매트릭스 및 §5.1 (`AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`, `Diagram v2.20.0`) 동기화 | `TASK-130` 서버 재시작·청크 언로드 공중 콜드부트 생존성 규격 확정 |
 | `v1.35.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로토콜·경합·검증 결함 12종 해소 (`Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `Alignment -> VAS` `MSG_CALIBRATION_INIT` 전용, 구 `Base+0` 직결 바인딩 `[DEPRECATED]`) 및 `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE`/`MSG_EMERGENCY_ALERT` 전용 비상 버스, `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리) 신설, ② `Base+3` `CH_MFD_STATE` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 시 `VAS` 배타적 우선 및 `acroTimeoutMs = 250ms`, `acroRecoveryHoldMs = 300ms` 복귀 히스테리시스 규약 명세, ③ `Base+20~39` Zone 3 탑재체·특수 임무 통합(`Base+30~39` `CH_PAYLOAD_EXT_30~39`, Zone 4 편대 링크 `TBD` 광역 데이터링크 이관), ④ `[I-8]`/`[I-9]` `BW=40` 고정 계약(`requestedBandwidth ~= 40` 시 `"DENIED"`), `"ASSIGNED"`/`"REASSIGNED"`/`"DENIED"`/`"FAILED"` 상태 통일, 랜덤 지터(`0~100ms`)·다회 프로브(`probeRetryCount=2`)·재할당 회피(`maxReassignAttempts=3`)·영속 리스(`channel_registry.json` / `config/channel_lease.json`)·`Base+0` 부팅 즉시 상시 개방·`Base+0..39` 전수 침범 감시(`30,000ms`) 반영, ⑤ `Diagram v2.19.0`, `AMM v2.4.0`, `GCS v1.3.0`, `VAS v1.23.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`, `GAC v1.6.0`, `Runway v1.12.0`, `Editor v0.5.0` 동기화 | `TASK-125` 40채널 스펙트럼 충돌·경합·검증 규칙 결함 12종 일괄 해소 및 `TASK-403`/`404` 통합 |
 | `v1.34.0` | `2026-11-16` | **`TASK-404` `[I-6]` `MSG_MISSION_CMD` `"LOAD"` 확장 및 `GCS` WebSocket Live Bridge 연동 동기화**: ① `[I-6]` `MSG_MISSION_CMD.action`에 `"LOAD"` 및 선택 필드 `missionData`, `saveToDisk` 추가, ② `GCS` (`v1.2.0`) 다중 기체 동시 구독(`Base+3`/`Base+0`), `CH 50003`/`50004` 청취 및 로컬 브리지(`ws://127.0.0.1:8765`, `tools/gcs_live_bridge.py`) 연계 규격 §5.1 반영, ③ 교차 참조(`AMM v2.3.0`, `GCS v1.2.0`, `Editor v0.5.0`, `Diagram v2.18.0`) 동기화 | `TASK-404` 실시간 전술 지도·월드 프리셋 자동 생성 및 원클릭 무선 미션 푸시 지원 |
 | `v1.33.0` | `2026-11-16` | **`TASK-403` `[I-5]` `MSG_FACILITY_BEACON.facilities[]` 확장 및 `AMM` `ACT_TKL_LAND_NEAREST` (`37`종) 동기화**: ① `[I-5]` `GAC` 1Hz 비콘(`CH 50003` / `Base_sec+2`)에 선택적 `facilities[]` 스냅샷 배열(`facilityId`, `facilityType`, `status`, `position`, `heading`, `endPoint`, `tacticalChannel`, `dedicated`) 추가, ② §5.1 및 교차 참조(`AMM v2.2.0`, `GAC v1.6.0`, `Diagram v2.17.0`) 동기화 | 가용 착륙 시설 동적 탐색(`ACT_TKL_LAND_NEAREST`) 및 월드 프리셋 시설 연동 기반 확립 |
@@ -218,7 +219,7 @@ flowchart TD
 | `payload.dynamics.velocity` | table | `{vx, vy, vz}` m/s | 필수 | 3차원 월드 속도 벡터 (FCP `state_propagator` 및 AMM `nav_engine` 추측항법 적분용) |
 | `payload.fuel` | float | $0.0 \sim 1.0$ | 필수 | 잔여 연료/에너지 게이지 비율 (최상위 평탄화) |
 | `payload.dynamicLoad` | float | $0.0 \sim 1.0$ | 필수 | 6-DoF 추력기 총 구동 부하율 (최상위 평탄화) |
-| `payload.controlState` | string | FSM 상태 | 필수 | 현재 비행 제어 상태 (`"NORMAL"`, `"FAILSAFE_HOLD"` 등) |
+| `payload.controlState` | string | FSM 상태 | 필수 | 현재 비행 제어 상태 (`"NORMAL"`, `"AIRBORNE_RECOVERY_HOLD"`, `"FAILSAFE_HOLD"` 등) |
 | `payload.activeSource` | string | 소스 식별자 | 필수 | 현재 Base+1 제어권을 선점 중인 능동 소스 (`"FCP"`, `"MFD_ACRO"`, `"EMERGENCY_DIRECT"`) |
 | `payload.sensorOk` | boolean| true/false | 필수 | 4종 센서(자세/고도/속도/연료) 통합 정상 여부 |
 | `payload.sensorHealth` | table | `{ [role] = bool }` | 필수 | 개별 센서 롤별(gimbal, altitude, velocity, fuel) 상세 헬스 맵 |
@@ -474,7 +475,7 @@ flowchart TD
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
 | `payload.watchdogSeq` | uint16 | $0 \sim 65535$ | 필수 | 틱마다 1씩 증가하는 워치독 시퀀스 번호 |
-| `payload.controlState` | string | 상태 코드 | 필수 | `"DISARMED"`, `"ARMING"`, `"IDLE_ARMED"`, `"NORMAL"`, `"CALIBRATION"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"E_STOP"` |
+| `payload.controlState` | string | 상태 코드 | 필수 | `"DISARMED"`, `"ARMING"`, `"IDLE_ARMED"`, `"NORMAL"`, `"AIRBORNE_RECOVERY_HOLD"`, `"CALIBRATION"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"AIRBORNE_EMERGENCY"`, `"E_STOP"` |
 | `payload.outputs` | table | `{ [groupId] = number \| { thrust: number, gimbalX: number, gimbalY: number } }` | 필수 | 추진기 그룹 ID별 구동 지령 (다형성 지원). 고정 추진기: $0 \sim 15$ 정수 추력. 벡터 추진기(2D 짐벌): `{ thrust = 0~15, gimbalX = -1.0~1.0, gimbalY = -1.0~1.0 }` 테이블 |
 
 ```lua
@@ -1103,7 +1104,7 @@ flowchart TD
 #### 2. MFD 계기판 화면 갱신 패킷 (`MSG_MFD_STATE`, Base+3)
 - **전송 주체 및 주파수 정책 (`acroTimeoutMs = 250ms`, `acroRecoveryHoldMs = 300ms`)**:
   - **평시 (Normal Flight)**: **`AMM (Node 03)` 단독 송출 (5Hz 다운샘플링, 매 4틱마다 1회)**. `AMM`이 `VAS`의 `Base + 2` 텔레메트리와 `FCP`의 `Base + 4` 외루프 상태(`MSG_OUTER_LOOP_STATUS`) 및 자체 항법 데이터를 통합하여 `Base + 3`으로 송출하며, `VAS`는 `Base + 3`에서 완전 침묵(Silence)합니다.
-  - **급기동 (`MFD_ACRO`) / 자체 페일세이프(`FAILSAFE_HOLD`, `EMERGENCY_LAND`) 진입 시**: `VAS`가 `Base + 2` 텔레메트리의 `activeSource == "MFD_ACRO"` 또는 페일세이프 상태를 보고하면 **`AMM`은 `Base + 3` 송출을 즉각 일시 중단(Yield)**하고, **`VAS`가 20Hz 고속 초저지연 HUD 스트림(`MFD_ACRO`) 또는 5Hz 폴백 HUD(`FAILSAFE_HOLD`/`EMERGENCY_LAND`)를 배타적으로 송출**합니다. (`VAS` 측 `acroTimeoutMs = 250ms` 이내 `RATE_COMMAND` 무수신 시 `FCP`로 복귀)
+  - **급기동 (`MFD_ACRO`) / 자체 페일세이프(`FAILSAFE_HOLD`, `EMERGENCY_LAND`) / 공중 복구(`AIRBORNE_RECOVERY_HOLD`) 진입 시**: `VAS`가 `Base + 2` 텔레메트리의 `activeSource == "MFD_ACRO"` 또는 해당 페일세이프/복구 상태를 보고하면 **`AMM`은 `Base + 3` 송출을 즉각 일시 중단(Yield)**하고, **`VAS`가 20Hz 고속 초저지연 HUD 스트림(`MFD_ACRO`) 또는 5Hz 폴백 HUD(`FAILSAFE_HOLD`/`EMERGENCY_LAND`/`AIRBORNE_RECOVERY_HOLD`)를 배타적으로 송출**합니다. (`VAS` 측 `acroTimeoutMs = 250ms` 이내 `RATE_COMMAND` 무수신 시 `FCP`로 복귀)
   - **복귀 히스테리시스 (`acroRecoveryHoldMs = 300ms`)**: `activeSource`가 `"FCP"`로 복귀하더라도 `AMM`은 즉시 송출을 재개하지 않고 **`acroRecoveryHoldMs = 300ms`** 이상 연속 `"FCP"` 상태가 유지된 뒤에만 `Base + 3` 5Hz 송출을 재개하여, ACRO 경계 전환 시 `Base + 3` 충돌/깜빡임을 방지합니다.
   - **외루프 두절 페일세이프**: 비행 중 `FCP`가 1,500ms 이상 통신 두절(`FCP_TIMEOUT`)되면 `VAS`가 임시 5Hz 폴백 HUD를 송출하여 MFD 계기판 블랙아웃을 방지합니다.
 
@@ -1393,7 +1394,7 @@ flowchart TD
 | 필드 경로 | 타입 | 단위/범위 | 필수 여부 | 설명 |
 | :--- | :---: | :---: | :---: | :--- |
 | `payload.watchdogSeq` | uint16 | $0 \sim 65535$ | 필수 | 틱마다 1씩 증가하는 워치독 시퀀스 번호 |
-| `payload.controlState` | string | 상태 코드 | 필수 | `"DISARMED"`, `"ARMING"`, `"IDLE_ARMED"`, `"NORMAL"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"E_STOP"` |
+| `payload.controlState` | string | 상태 코드 | 필수 | `"DISARMED"`, `"ARMING"`, `"IDLE_ARMED"`, `"NORMAL"`, `"AIRBORNE_RECOVERY_HOLD"`, `"CALIBRATION"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"AIRBORNE_EMERGENCY"`, `"E_STOP"` |
 | `payload.surfaces` | table | `{ [surfaceId] = deflection }` | 필수 | 정규화 실수 타각 (AIL/ELEV/RUDD: $-1.0 \sim +1.0$, FLAP: $0.0 \sim 1.0$) |
 | `payload.dynamicPressureFactor` | float | $0.1 \sim 1.0$ | 선택 | 대기속도 동압 스케줄링 계수 ($\text{clamp}(V_{ref}^2 / V^2, 0.1, 1.0)$) |
 
@@ -1603,7 +1604,7 @@ flowchart TD
 - **통신 채널**: $Base_{\text{hangar}} = 101 + (\text{BayID} - 1) \times 10$ ($\text{BayID} = 1 \sim 10$, `0..100` 배제).
   - `CH_OTA_CMD` ($Base_{\text{hangar}} + 4$, Bay 1 = `105`): `OTA Server` $\rightarrow$ 온보드 노드(`VAS`, `TCA`, `FCP`, `AMM`; `ASA`는 동결 제외).
   - `CH_OTA_ACK` ($Base_{\text{hangar}} + 5$, Bay 1 = `106`): 온보드 노드 $\rightarrow$ `OTA Server`.
-- **슬레이브 안전 게이트**: `controlState` $\in \{\text{"DISARMED"}, \text{"BOOT"}, \text{"IDLE\_ARMED"}\}$ **AND** `isAirborne ~= true`일 때만 `MSG_OTA_BEGIN` / `MSG_OTA_CHUNK` / `MSG_OTA_COMMIT` / `MSG_OTA_REBOOT`를 수락하며, 그 외(`ARMING`, `NORMAL`, `CALIBRATION`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `AIRBORNE_EMERGENCY`, `E_STOP`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD` 또는 `isAirborne == true`)는 즉시 `MSG_OTA_NACK` (`reason = "NOT_DISARMED"`)를 반환합니다.
+- **슬레이브 안전 게이트**: `controlState` $\in \{\text{"DISARMED"}, \text{"BOOT"}, \text{"IDLE\_ARMED"}\}$ **AND** `isAirborne ~= true`일 때만 `MSG_OTA_BEGIN` / `MSG_OTA_CHUNK` / `MSG_OTA_COMMIT` / `MSG_OTA_REBOOT`를 수락하며, 그 외(`ARMING`, `NORMAL`, `AIRBORNE_RECOVERY_HOLD`, `CALIBRATION`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `AIRBORNE_EMERGENCY`, `E_STOP`, `ACTIVE_TRACKING`, `PASSIVE_TRACKING`, `AMM_TIMEOUT_HOLD` 또는 `isAirborne == true`)는 즉시 `MSG_OTA_NACK` (`reason = "NOT_DISARMED"`)를 반환합니다.
 - **원자적 롤백 및 2단계 부팅 워치독**: `/ota_staging/<txId>/`에서 청크 및 전체 IEEE 802.3 CRC32를 검증한 후, 기존 `config/*.json`(`overwriteConfig == true` 제외)과 비대상 `/lib/` 파일을 보존하고, 모듈 전용 고아 `.lua` 및 대상 파일을 `/ota_backup/<txId>/` + `/.version.json.bak`에 백업하며 `/.ota_pending.json` (`maxBootAttempts = 1`)을 생성합니다. 재부팅 시 `startup_generator.lua`의 자가 복구 후크가 로드/런타임 오류 또는 크래시 루프를 감지하면 백업을 복원하고 `/.ota_rollback.json`을 기록하며, 정상 부팅 `20`틱(약 1초) 유지 시 `tick_boot_commit()`으로 커밋합니다.
 - **패킷 타입 목록 (`ver = "1.9.5"`, Zero-Fallback)**:
   - `MSG_OTA_DISCOVER_REQ`: `{ targetModuleId, targetDomainId }`
@@ -1632,7 +1633,8 @@ flowchart TD
 | **I-5: 동적 시설물 유도 (Base_sec+10+Idx)** | **300ms** | `AMM (Node 03)` | **동적 갑판 복행/Abort**: `MSG_FACILITY_DYNAMIC_GUIDE` 300ms 무통신 시 `AMM`이 즉시 비상 복행(`GO_AROUND`/Wave-off) 또는 도킹 역추진 Abort(`surge = -0.8`) 궤적 발동 |
 | **I-5: 시설물 접근 핑/접지** | **120,000ms**| `Facility Node` | **고스트 락 방지**: 예약 자동 회수 및 `FREE` 상태 복귀 |
 | **I-7: GPS 측위 응답 (Base+5)** | **5,000ms** | `AMM (Node 03)` | **추측항법 전환**: `AMM` `nav_engine` 텔레메트리 속도/방위 기반 DR 전환 및 `trajectory_generator` 반경 30m 체공(`LOITER`) 또는 `HOVER_HOLD` 지령 하달 |
-| **I-8 / I-9: GCS 부트스트랩·프로브·침범 감시** | **2,000ms / 200ms×2 / 30,000ms** | `AMM (Node 03)` | 지터(`0~100ms`)+2회 프로브 후 최대 `3`회 재할당(`CONFLICT_DETECTED`), `3`회 초과 시 `LOCKED_CONFLICT`; `2,000ms` GCS 무응답 시 로컬 `channel_lease.json` 유무에 따라 `[NO_GCS_LEASE]` 또는 `LOCKED_NO_GCS`; `Base+0..39` 침범 30초 지속 시 `HOVER_HOLD`/`RTH` |
+| **I-8 / I-9: GCS 부트스트랩·프로브·침범 감시** | **2,000ms / 200ms×2 / 30,000ms** | `AMM (Node 03)` | 지터(`0~100ms`)+2회 프로브 후 최대 `3`회 재할당(`CONFLICT_DETECTED`), `3`회 초과 시 `LOCKED_CONFLICT`; `2,000ms` GCS 무응답 시 로컬 리스+프로브 통과 기체는 `[NO_GCS_LEASE]` 경고로 허용, 미보유 시 `LOCKED_NO_GCS`; `Base+0..39` 침범 30초 지속 시 `HOVER_HOLD`/`RTH` |
+| **로컬 영속 스냅샷 (`/.flight_state.json`)** | **<= 500ms 부팅 목표 / 10s 복구 한도** | `VAS (Node 01)`<br>`FCP (Node 04)`<br>`AMM (Node 03)` | `isAirborneAtBoot == true` 시 `VAS`가 `DISARMED` 우회 후 `AIRBORNE_RECOVERY_HOLD` 즉시 진입(수평/선회 홀드, `recoveryMaxHoldSec = 10s` 초과 시 `EMERGENCY_LAND`); `FCP`는 조기 `arm=false` 송출 침묵; `AMM`은 `coldBootPolicy` (`RESUME` \| `RTB`) 복원 후 `Base+4` 인계 (`FCP` 2.0s 범프리스 램핑) |
 
 ---
 
@@ -1643,9 +1645,9 @@ flowchart TD
 ### 5.1 온보드 및 인프라 프로그램 사양·구현 현황
 | 프로그램 명 | 노드 ID | 사양 버전 / 상태 | 구현 및 검증 현황 | 비고 |
 | :--- | :---: | :---: | :--- | :--- |
-| **AMM** | Node 03 | `v2.4.0` (`Implemented`) | `TASK-403`/`404` (`ACT_TKL_LAND_NEAREST` 37종·`facilities[]` 수집·`MSG_MISSION_CMD` `"LOAD"` 인라인 `/missions/<id>.json` 저장·적재) + `TASK-125` (`Base+9` E_STOP, `Base+3` `300ms` 히스테리시스, `Base+0` 부팅 상시 개방·지터·2회 프로브·`channel_lease.json`, `Base+0..39` 침범 감시, Zone 3 `20..39`) | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.5.0` (`Implemented`) |
-| **FCP** | Node 04 | `v2.3.0` (`Implemented`) | `v2.2.0` 기반 `TASK-125`: `Base+1` 순수 20Hz `MSG_ATTITUDE_CMD` 전용화 및 `Base+9` `MSG_EMERGENCY_ALERT` 구독(`EMERGENCY_HOLD` 안전 전이) | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
-| **VAS** | Node 01 | `v1.23.0` (`Implemented`) | `v1.22.0` 기반 `TASK-125`: `Base+8` `CH_CALIBRATION_INIT` 수신(`Base+0` 미개방), `Base+9` `E_STOP`·`MSG_EMERGENCY_ALERT` 분리, `acroTimeoutMs = 250ms`, `formationLink` 제거 | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
+| **AMM** | Node 03 | `v2.5.0` (`Implemented`) | `v2.4.0` 기반 `TASK-130`: `/.flight_state.json` (`.tmp`+`fs.move`, `schemaVersion=1`), 공중 콜드부트 `RESUME`/`RTB` 복구(`recovery.coldBootPolicy`), `Base+3` `"AIRBORNE_RECOVERY_HOLD"` 양보 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.5.0` (`Implemented`) |
+| **FCP** | Node 04 | `v2.4.0` (`Implemented`) | `v2.3.0` 기반 `TASK-130`: `VAS Base+2` `"AIRBORNE_RECOVERY_HOLD"` 중 조기 `arm=false` 송출 침묵 및 `AMM` 동기화 후 2.0s 범프리스 추종, OTA `getStatusFn` 정합 | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
+| **VAS** | Node 01 | `v1.24.0` (`Implemented`) | `v1.23.0` 기반 `TASK-130`: `/.flight_state.json` 영속화, `isAirborneAtBoot` (`<=500ms` 목표), 10번째 상태 `AIRBORNE_RECOVERY_HOLD` 및 조기 `arm=false` 무시 | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
 | **TCA 클러스터** | Node 02-xx | `v1.13.0` (`Implemented`) | `v1.12.0` 기반 `[I-13]` `/lib/ota_agent.lua` 안전 게이트(`DISARMED`/`BOOT`/`IDLE_ARMED`) 및 `tick_boot_commit()` 연동 추가 | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독, $Base_{\text{hangar}}+4/+5$ |
 | **ASA 클러스터** | Node 06-xx | `v1.8.0` (`Approved`) | `MSG_AERO_CMD`/`MSG_AERO_STATUS.interactionMode`·`[I-9]` 정합 사양 확정 (`OTA` 연동 동결 제외) | `Base+11` (구 `Base+7` `[DEPRECATED]`), 300ms Safe Glide Trim |
 | **Alignment** | Node 05 | `v2.8.0` (`Implemented`) | `v2.7.1` 기반 `TASK-125`: `MSG_CALIBRATION_INIT` 송신 대상 채널을 `Base+0`에서 `Base+8` (`CH_CALIBRATION_INIT`)로 변경 | 베이 `101~200`, `Base+8` 직결 바인딩, 6-DoF OLS 프로파일 생성 |

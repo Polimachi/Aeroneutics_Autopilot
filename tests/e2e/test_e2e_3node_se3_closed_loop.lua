@@ -467,4 +467,173 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
         assert_eq(rig.vas.fsm.currentState, "EMERGENCY_LAND")
         assert_eq(rig.tca.lastControlState, "EMERGENCY_LAND")
     end)
+
+    it("recovers from mid-air cold reboot across VAS, FCP, and AMM (AIRBORNE_RECOVERY_HOLD -> RESUME & RTB)", function()
+        local vasSnap = "tmp_s8_vas_fs.json"
+        local ammSnap = "tmp_s8_amm_fs.json"
+        local ammLease = "tmp_s8_amm_lease.json"
+        local missionPath = "missions/test_e2e_cb_sortie.json"
+        local function clean_cb()
+            for _, p in ipairs({ vasSnap, ammSnap, ammLease, missionPath, "tmp_s8_fcp.json", "tmp_s8_tca.json" }) do
+                if fs.exists(p) then pcall(fs.delete, p) end
+            end
+        end
+        clean_cb()
+        if not fs.exists("missions") then fs.makeDir("missions") end
+
+        local mh = fs.open(missionPath, "w")
+        mh.write(textutils.serializeJSON({
+            version = "2.0.0",
+            missionId = "test_e2e_cb_sortie",
+            executionMode = "SINGLE",
+            checkpoints = {
+                { checkpointId = "CP_1_TK", action = "ACT_TKL_TAKEOFF_VERT", params = { targetAlt = 140, facilityId = "PAD_HOME_01" } },
+                { checkpointId = "CP_2_WP", action = "ACT_NAV_GOTO_WP", params = { targetPos = { x = 80, z = -40 }, targetAlt = 140, cruiseSpeed = 16 } },
+            },
+        }))
+        mh.close()
+
+        local seedJson = textutils.serializeJSON({
+            schemaVersion = 1,
+            armedState = "AIRBORNE_ACTIVE",
+            missionId = "test_e2e_cb_sortie",
+            currentCpIdx = 2,
+            homePadId = "PAD_HOME_01",
+            homePos = { x = 0, y = 70, z = 0 },
+            savedAtEpoch = 1000,
+        })
+        for _, spath in ipairs({ vasSnap, ammSnap }) do
+            local sh = fs.open(spath, "w")
+            sh.write(seedJson)
+            sh.close()
+        end
+
+        local bus = virtual_bus.create_bus({ clock = 2.0 })
+        sdk.patch(os, "epoch", function() return math.floor(bus.time * 1000 + 0.5) end)
+        sdk.patch(_G, "print", function() end)
+        local sensor_state = { y = 140.0, vx = 0.0, vy = -2.5, vz = 0.0 }
+
+        -- Cold-boot VAS + TCA + FCP before AMM synchronizes
+        local vas_node = node_sandbox.create_node(bus, "VAS", "src/1_control/vas")
+        local tca_node = node_sandbox.create_node(bus, "TCA", "src/1_control/tca")
+        install_vas_sensors(vas_node, sensor_state)
+        local vec_hw = install_tca_thruster(tca_node)
+
+        local tca_inst = tca_node:require("tca_daemon").init({
+            groupId = "THR_VEC_1", aircraftDomainId = "AIRCRAFT_01", aircraftIndexN = 1,
+            baseChannel = 10000, channels = { thrustActuation = 10010 }, watchdogTimeoutMs = 300,
+            nominalActuatorCount = 1, interactionMode = "API", configPath = "tmp_s8_tca.json",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = { "left" } },
+        }, tca_node.modem)
+        tca_node.modem:open(10010)
+
+        local fcp_node = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+        local fcp_main = fcp_node:require("main")
+        local fcp_cfg = fcp_main.load_config()
+        fcp_cfg.system.airframeType = "ADVANCED_VTOL"
+        fcp_cfg.system.domainId = "AIRCRAFT_01"
+        fcp_cfg.configPath = "tmp_s8_fcp.json"
+        fcp_cfg.safety = { ammSetpointTimeoutMs = 500, ammTimeoutHoldToEmgMs = 10000, bumplessRampSec = 2.0 }
+        local fcp_ctx = fcp_main.create_context(fcp_cfg, function() return fcp_node.modem end)
+        fcp_ctx.nav.pos = { x = 10.0, y = 140.0, z = -5.0 }
+
+        local vas_daemon = vas_node:require("core_daemon")
+        local vas_state = vas_daemon.init({
+            system = {
+                debug = false, domainId = "AIRCRAFT_01", aircraftDomainId = "AIRCRAFT_01",
+                baseChannel = 10000, airframeType = "ADVANCED_VTOL", vehicleType = "ADVANCED_VTOL",
+                isVectorVtol = true, pseudoInverseMatrix = B_DAGGER, controlEffectivenessMatrix = B_6X12,
+                vectorGroupOrder = { "THR_VEC_1", "THR_VEC_2", "THR_VEC_3", "THR_VEC_4" },
+                timeouts = { fcpCommandTimeoutMs = 1500 },
+                bootRecovery = { enabled = true, stateFilePath = vasSnap, bootTimeoutMs = 500, recoveryMaxHoldSec = 10.0 },
+            },
+            sensors = {
+                roles = {
+                    gimbal = { peripheralType = "gimbal_sensor", preferredSide = "left" },
+                    altitude = { peripheralType = "altitude_sensor", preferredSide = "right" },
+                    velocity = { peripheralType = "velocity_sensor", preferredSide = "back" },
+                    fuel = { required = false },
+                },
+            },
+            thrusters = {
+                airframeType = "ADVANCED_VTOL", isVectorVtol = true,
+                pseudoInverseMatrix = B_DAGGER, controlEffectivenessMatrix = B_6X12,
+                vectorGroupOrder = { "THR_VEC_1", "THR_VEC_2", "THR_VEC_3", "THR_VEC_4" },
+            },
+        })
+
+        assert_eq(vas_state.fsm.currentState, "AIRBORNE_RECOVERY_HOLD")
+        assert_true(vas_state.fsm.isAirborne)
+        assert_true((vas_state.bootElapsedMs or 0) <= 500)
+
+        local fcp_net = fcp_node:require("network_manager")
+        local gcs_node = node_sandbox.create_node(bus, "GCS", "src/0_infra/gcs")
+        gcs_node.modem:open(10003)
+
+        -- Pump VAS boot tick to TCA & FCP, then step FCP alone (AMM still offline)
+        bus:step(0.01)
+        for _, m in ipairs(tca_node.modem:drain()) do
+            tca_inst:dispatch_modem_message(m.channel, m.replyChannel, m.payload)
+        end
+        for _, m in ipairs(fcp_node.modem:drain()) do
+            fcp_net.ingest_modem_event(fcp_ctx.net, m.side, m.channel, m.replyChannel, m.payload, m.distance, 2010)
+        end
+        assert_true(vec_hw._power > 0, "VAS boot tick must actuate thrust via TCA immediately")
+
+        local seq_silence = #bus.packet_log
+        fcp_main.step_tick(fcp_ctx, 0.05, 2050)
+        assert_eq(fcp_ctx.fsm.currentState, "IDLE_ARMED")
+        assert_nil(find_latest_pkt(bus, "MSG_ATTITUDE_CMD", 10001, seq_silence), "FCP must silence Base+1 disarm during AIRBORNE_RECOVERY_HOLD")
+
+        -- Now cold-boot AMM with RESUME policy
+        local amm_node = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
+        local amm_main = amm_node:require("main")
+        local amm_app = amm_main.create_app({
+            domainId = "AIRCRAFT_01", baseChannel = 10000, airframeType = "ADVANCED_VTOL",
+            headless = true, defaultAlt = 140.0, defaultSpeed = 16.0, arrivalRadius = 15.0,
+            leasePath = ammLease, clock_ms = 2100,
+            recovery = { enabled = true, persist = true, stateFilePath = ammSnap, coldBootPolicy = "RESUME" },
+        }, amm_node.modem)
+        amm_app.sentinel.status = "ACQUIRED"
+        amm_app.sentinel.baseChannel = 10000
+        amm_app.nav.pos = { x = 10.0, y = 140.0, z = -5.0 }
+        amm_app.nav.navValid = true
+        amm_app.traj.airframeType = "ADVANCED_VTOL"
+
+        assert_eq(amm_app.engine.state, "EN_ROUTE")
+        assert_eq(amm_app.engine.active_index, 2)
+
+        local rig = {
+            bus = bus, sensor_state = sensor_state, gcs_node = gcs_node, gcs_inbox = {},
+            amm_node = amm_node, amm_main = amm_main, amm = amm_app, amm_sentinel = amm_node:require("channel_sentinel"),
+            fcp_node = fcp_node, fcp_main = fcp_main, fcp_net = fcp_net, fcp = fcp_ctx,
+            vas_node = vas_node, vas_daemon = vas_daemon, vas = vas_state,
+            tca_node = tca_node, tca = tca_inst, vec_hw = vec_hw,
+        }
+        step_all(rig, 0.05)
+        step_all(rig, 0.05)
+
+        assert_eq(fcp_ctx.fsm.currentState, "ACTIVE_TRACKING")
+        assert_not_nil(fcp_ctx.rampStartMs)
+        assert_true(fcp_ctx.rampAlpha < 0.25)
+        assert_eq(vas_state.fsm.currentState, "NORMAL")
+        assert_eq(tca_inst.lastControlState, "NORMAL")
+
+        -- Verify coldBootPolicy = RTB on cold-boot AMM restores FAILSAFE_RTH to PAD_HOME_01
+        local amm_rtb_node = node_sandbox.create_node(bus, "AMM_RTB", "src/3_planning/amm")
+        local amm_rtb_main = amm_rtb_node:require("main")
+        local amm_rtb = amm_rtb_main.create_app({
+            domainId = "AIRCRAFT_01", baseChannel = 10000, airframeType = "ADVANCED_VTOL",
+            headless = true, defaultAlt = 140.0, defaultSpeed = 16.0, arrivalRadius = 15.0,
+            leasePath = ammLease, clock_ms = 2300,
+            recovery = { enabled = true, persist = false, stateFilePath = ammSnap, coldBootPolicy = "RTB" },
+        }, amm_rtb_node.modem)
+        local rtb_goal = amm_rtb.arbiter:get_effective_goal()
+        assert_eq(rtb_goal.flightMode, "FAILSAFE_RTH")
+        assert_eq(rtb_goal.designatedFacilityId, "PAD_HOME_01")
+        assert_true(rtb_goal.arm)
+        assert_true(rtb_goal.flightActive)
+
+        clean_cb()
+    end)
 end)

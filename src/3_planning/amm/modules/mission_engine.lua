@@ -35,6 +35,63 @@ local function get_time_ms(now_ms)
     return (type(now_ms) == "number" and now_ms) or ((os.epoch and os.epoch("utc")) or (os.time() * 1000)) or 0
 end
 
+function mission_engine.load_flight_state(path, fs_api)
+    local fs_obj = fs_api or _G.fs
+    local target = path or "/.flight_state.json"
+    if not fs_obj or not fs_obj.exists or not fs_obj.open or not fs_obj.exists(target) then
+        return nil
+    end
+    local f = fs_obj.open(target, "r")
+    if not f then return nil end
+    local raw = f.readAll()
+    f.close()
+    local unjson = textutils and (textutils.unserializeJSON or textutils.unserialiseJSON)
+    if type(raw) ~= "string" or raw == "" or not unjson then return nil end
+    local ok, parsed = pcall(unjson, raw)
+    if not ok or type(parsed) ~= "table" or parsed.schemaVersion ~= 1 then return nil end
+    if parsed.armedState ~= "AIRBORNE_ACTIVE" and parsed.armedState ~= "GROUND_SAFE" then
+        return nil
+    end
+    return parsed
+end
+
+function mission_engine.save_flight_state(path, state_tbl, fs_api)
+    local fs_obj = fs_api or _G.fs
+    local target = path or "/.flight_state.json"
+    local ser = textutils and (textutils.serializeJSON or textutils.serialiseJSON)
+    if not fs_obj or not fs_obj.open or not ser or type(state_tbl) ~= "table" then return false end
+    local armed = state_tbl.armedState
+    if armed ~= "AIRBORNE_ACTIVE" and armed ~= "GROUND_SAFE" then return false end
+    local dir = fs_obj.getDir and fs_obj.getDir(target) or ""
+    if dir ~= "" and fs_obj.exists and fs_obj.makeDir and not fs_obj.exists(dir) then
+        fs_obj.makeDir(dir)
+    end
+    local payload = ser({
+        schemaVersion = 1,
+        armedState = armed,
+        missionId = state_tbl.missionId or "",
+        currentCpIdx = state_tbl.currentCpIdx or 0,
+        homePadId = state_tbl.homePadId or "",
+        homePos = state_tbl.homePos or { x = 0.0, y = 0.0, z = 0.0 },
+        savedAtEpoch = state_tbl.savedAtEpoch or get_time_ms(),
+    })
+    if fs_obj.move and fs_obj.delete and fs_obj.exists then
+        local tmp = target .. ".tmp"
+        local f = fs_obj.open(tmp, "w")
+        if not f then return false end
+        f.write(payload)
+        f.close()
+        if fs_obj.exists(target) then fs_obj.delete(target) end
+        fs_obj.move(tmp, target)
+        return true
+    end
+    local f = fs_obj.open(target, "w")
+    if not f then return false end
+    f.write(payload)
+    f.close()
+    return true
+end
+
 local function extract_target_pos(p)
     if type(p) ~= "table" then return nil end
     if is_pos_xz(p.targetPos) then return p.targetPos end
@@ -460,6 +517,7 @@ end
 function mission_engine.new(opts)
     local o = opts or {}
     local cfg = o.config or {}
+    local rec = type(cfg.recovery) == "table" and cfg.recovery or {}
     local base_ch = cfg.baseChannel or (o.net and o.net.baseChannel) or 10000
     local runner = o.hook_runner or hook_runner.new({
         net = o.net, redstone = o.redstone, colors = o.colors, on_notify = o.on_notify,
@@ -495,7 +553,45 @@ function mission_engine.new(opts)
         activeRoi = nil,
         currentGoal = nil,
         fallbackGoal = nil,
+        homePadId = cfg.homePadId or "",
+        homePos = cfg.homePos or nil,
+        lastPersistedKey = nil,
+        recovery = {
+            enabled = (rec.enabled ~= false),
+            persist = (type(cfg.recovery) == "table" and rec.enabled ~= false and rec.persist ~= false),
+            stateFilePath = rec.stateFilePath or "/.flight_state.json",
+            coldBootPolicy = rec.coldBootPolicy or "RESUME",
+            syncTimeoutMs = tonumber(rec.syncTimeoutMs) or 5000,
+            fsApi = rec.fsApi,
+        },
     }, mission_engine)
+end
+
+function mission_engine:persist_flight_state(armed_state, now_ms, force_write)
+    if not (self.recovery and self.recovery.persist) then return false end
+    local key = tostring(armed_state) .. ":" .. tostring(self.missionId or "") .. ":"
+        .. tostring(self.active_index or 1) .. ":" .. tostring(self.homePadId or "")
+    if not force_write and self.lastPersistedKey == key then
+        return true
+    end
+    local ok = mission_engine.save_flight_state(self.recovery.stateFilePath, {
+        schemaVersion = 1,
+        armedState = armed_state,
+        missionId = self.missionId or "",
+        currentCpIdx = self.active_index or 1,
+        homePadId = self.homePadId or "",
+        homePos = self.homePos or { x = 0.0, y = 0.0, z = 0.0 },
+        savedAtEpoch = get_time_ms(now_ms),
+    }, self.recovery.fsApi)
+    if ok then self.lastPersistedKey = key end
+    return ok
+end
+
+function mission_engine:set_home(pad_id, pos, now_ms)
+    if type(pad_id) == "string" and pad_id ~= "" then self.homePadId = pad_id end
+    if type(pos) == "table" then self.homePos = pos end
+    local armed = (self.state == "EN_ROUTE") and "AIRBORNE_ACTIVE" or "GROUND_SAFE"
+    return self:persist_flight_state(armed, now_ms, true)
 end
 
 function mission_engine:load_table(tbl)
@@ -590,6 +686,10 @@ local function set_takeoff_goal(self, cp)
     local p = cp.params or {}
     local alt = p.targetAlt or self.defaults.targetAlt
     local fac = p.facilityId or p.designatedFacilityId
+    if fac and (self.homePadId == nil or self.homePadId == "") then self.homePadId = fac end
+    if p.targetPos and not self.homePos then
+        self.homePos = { x = p.targetPos.x, y = alt or 64.0, z = p.targetPos.z }
+    end
     self.currentGoal = { flightMode = "TAKEOFF", arm = true, flightActive = true, targetAlt = alt, facilityId = fac }
     return true
 end
@@ -665,25 +765,27 @@ local FCP_DISPATCHERS = {
         self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
         return true
     end,
-    ACT_SYS_SET_HOME = function(self, cp)
+    ACT_SYS_SET_HOME = function(self, cp, t_ms)
         local p = cp.params or {}
         local nav_pos = self.lastMfd and self.lastMfd.navigation and self.lastMfd.navigation.currentPos
-        self.homePos = p.targetPos or nav_pos
+        self:set_home(p.facilityId or p.homePadId, p.targetPos or nav_pos, t_ms)
         return true
     end,
     ACT_SYS_ARM = function(self)
         self.currentGoal = { flightMode = "IDLE_ARMED", arm = true, flightActive = false }
         return true
     end,
-    ACT_SYS_DISARM = function(self)
+    ACT_SYS_DISARM = function(self, _cp, t_ms)
         self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
+        self:persist_flight_state("GROUND_SAFE", t_ms, true)
         return true
     end,
-    ACT_SYS_TERMINATE = function(self)
+    ACT_SYS_TERMINATE = function(self, _cp, t_ms)
         self.currentGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
         if self.net and self.net.send_emergency_override then
             self.net:send_emergency_override("E_STOP", "MISSION_TERMINATE", "ESTOP_CONFIRM_KEY", "AMM")
         end
+        self:persist_flight_state("GROUND_SAFE", t_ms, true)
         return true
     end,
     ACT_TKL_TAKEOFF_VERT = set_takeoff_goal,
@@ -887,9 +989,19 @@ local function dispatch_checkpoint(self, cp, t_ms)
     return true
 end
 
+local GROUND_SETUP_ACTIONS = {
+    ACT_SYS_LOAD = true, ACT_SYS_PREFLIGHT = true, ACT_SYS_ARM = true,
+    ACT_SYS_DISARM = true, ACT_SYS_TERMINATE = true,
+}
+
 local function finish_dispatch(self, cp)
     local ok, err = dispatch_checkpoint(self, cp, self.enteredAtMs)
-    if ok then return true, nil end
+    if ok then
+        if self.state == "EN_ROUTE" and not GROUND_SETUP_ACTIONS[cp.action] then
+            self:persist_flight_state("AIRBORNE_ACTIVE", self.enteredAtMs)
+        end
+        return true, nil
+    end
     if find_decorator(cp, "DEC_RETRY_N") then
         cp._noNearestFacility = err or "NO_FACILITY_AVAILABLE"
         self.currentGoal = build_loiter_fallback(self, cp)
@@ -975,6 +1087,7 @@ function mission_engine:advance(now_ms)
         return "LOOPED"
     end
     self.state = "COMPLETED"
+    self:persist_flight_state("GROUND_SAFE", get_time_ms(now_ms), true)
     return "COMPLETED"
 end
 
@@ -1070,6 +1183,7 @@ function mission_engine:stop(now_ms)
     else
         self.fallbackGoal = { flightMode = "IDLE_ARMED", arm = false, flightActive = false }
     end
+    self:persist_flight_state("GROUND_SAFE", get_time_ms(now_ms), true)
     return true
 end
 
@@ -1104,6 +1218,7 @@ function mission_engine:skip_next(now_ms)
         return true, "ADVANCED"
     end
     self.state = "COMPLETED"
+    self:persist_flight_state("GROUND_SAFE", get_time_ms(now_ms), true)
     return true, "COMPLETED"
 end
 

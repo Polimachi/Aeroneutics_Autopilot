@@ -2,12 +2,12 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI 실시간 연동·GDrive 배포·40채널 정합 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-125`(40채널 블록 개편·경합·검증 결함 12종 해소·사양 승격; 2026-11-16), `TASK-501`(GDrive 135파일 전수 업로드·`--strict-gdrive-packages`; 2026-11-16), `TASK-404`(WebSocket Live Bridge·`GCS v1.3.0`·`AMM v2.4.0`·에디터 `v0.5.0`; 2026-11-16), `TASK-103`(`Runway v1.12.0`; 2026-11-16), `TASK-403`(World Preset·`ACT_TKL_LAND_NEAREST`; 2026-11-16). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI 실시간 연동·GDrive 배포·40채널 정합·공중 콜드부트 복구 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
+- **직전 완료**: `TASK-130`(공중 콜드부트 복구·`VAS v1.24.0`·`FCP v2.4.0`·`AMM v2.5.0`; 2026-11-18), `TASK-125`(40채널 블록 개편·결함 12종 해소·6종 승격; 2026-11-16), `TASK-501`(GDrive 135파일 동기화; 2026-11-16), `TASK-404`(WebSocket Live Bridge·에디터 `v0.5.0`; 2026-11-16), `TASK-103`(`Runway v1.12.0`; 2026-11-16). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
-  1. `TASK-302` (1순위): Pocket PDA 원격 관제·`Alignment`/`FDR` 링크·비상 `E_STOP` 단말 (`TASK-015` 전 계층 통합 플레이북과 동순위).
-  2. `TASK-128` / `TASK-132` (2순위): GPS 위성군 헬스 감시·청크 경계 DR 가드 / 추력 상실 비상 활공.
-  3. `TASK-129` / `TASK-105`↔`210` (3순위): 적응형 트림 보정 / ASA 본 구현 및 실노드 연동 연계.
+  1. `TASK-405` / `TASK-406` / `TASK-302` / `TASK-128` (1순위): 에디터 LAN Live·광역 줌/자동등록 · Pocket PDA 원격 관제 · GPS 헬스/DR 가드.
+  2. `TASK-131` / `TASK-136` / `TASK-140` / `TASK-015` (2순위): PBIT·블록화 재조립 인터록·저고도 착륙 감쇠·전 계층 플레이북.
+  3. `TASK-135` / `TASK-214` / `TASK-105`↔`210` / `TASK-132` / `TASK-129` (3순위): AMM 샌드박스·허브 대기 스택·ASA 본 구현·비상 활공·적응형 트림.
 
 ## 2. Confirmed Architecture & Paths
 - `TASK.md`: 장기 작업 추적 및 백로그 SSOT.
@@ -29,8 +29,8 @@
 - **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·145 코드/설정 린트, 0 errors).
 - **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (13 활성 서브시스템 0 violations, 4 예외).
 - **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (13개 활성 `main.lua` 13/13 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 608/608 PASS).
-- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 20/20 PASS, 534패킷 계약 0 violations).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 613/613 PASS).
+- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 21/21 PASS, 555패킷 계약 0 violations).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (139/139 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
@@ -38,7 +38,7 @@
 - **GDrive 배포 & Live Bridge**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행), `python tools/gcs_live_bridge.py --port 8765`.
 
 ## 4. Gotchas & Invariants
-- **멀티 코드베이스 독립 완결성**: `src/<layer>/<name>/` 간 공용 모듈 직접 참조 금지 (개별 CC 컴퓨터 루트 마운트 단위 캡슐화, 기본 진입점 `main.lua`). 유일한 예외는 인스톨러가 주입하는 `/lib/avionics_sensors.lua`.
+- **멀티 코드베이스 독립 완결성**: `src/<layer>/<name>/` 간 공용 모듈 직접 참조 금지 (개별 CC 컴퓨터 루트 마운트 단위 캡슐화, 기본 진입점 `main.lua`). 예외는 인스톨러가 `/lib/`에 주입하는 `/lib/avionics_sensors.lua`와 `/lib/ota_agent.lua` 2종.
 - **CC:Avionics 센서 공용 라이브러리**: `/lib/avionics_sensors.lua`로 자동 주입되며 `require("avionics_sensors")`로 로드 (`velocity_sensor`, `altitude_sensor`, `gimbal_sensor`, `physics_assembler` 4종 SSOT).
 - **통합 인스톨러 배포 삼총사**: 화면 직접 업로드 `/installer.lua`, 플로피 `/disk/installer.lua`, 원격 `wget run <url>`. GitHub raw / Google Drive 이중 다운로드 지원.
 - **CraftOS-PC 런타임 의존성**: `tools/run_unit_tests.py` 및 `tools/run_e2e_tests.py`는 `CraftOS-PC_console.exe` 설치 필요 (`CRAFTOS_PC_EXE` 환경변수 지정 가능).

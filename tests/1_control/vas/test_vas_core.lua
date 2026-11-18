@@ -1340,3 +1340,143 @@ describe("vas wave 2 safety & actuator regression guards", function()
         assert_true(foundCushion, "Airborne E_STOP shutdown must output cushion thrust to thruster groups")
     end)
 end)
+
+describe("vas TASK-130 airborne cold-boot recovery and /.flight_state.json persistence", function()
+    local state_machine = require("state_machine")
+    local core_daemon = require("core_daemon")
+    local network_manager = require("network_manager")
+
+    it("atomically saves/loads /.flight_state.json v1 and rejects corrupted or legacy schema", function()
+        local snapPath = sdk.temp_path("vas_flight_state.json")
+        if fs.exists(snapPath) then fs.delete(snapPath) end
+
+        assert_true(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE", {
+            missionId = "SORTIE_09",
+            currentCpIdx = 4,
+            homePadId = "PAD_ALPHA",
+            homePos = { x = 10, y = 65, z = -20 },
+            savedAtEpoch = 1729845120000,
+        }))
+        assert_false(fs.exists(snapPath .. ".tmp"), "Atomic rename must not leave .tmp file")
+
+        local loaded = state_machine.load_flight_state(snapPath)
+        assert_not_nil(loaded)
+        assert_eq(loaded.schemaVersion, 1)
+        assert_eq(loaded.armedState, "AIRBORNE_ACTIVE")
+        assert_eq(loaded.missionId, "SORTIE_09")
+        assert_eq(loaded.currentCpIdx, 4)
+        assert_eq(loaded.homePadId, "PAD_ALPHA")
+
+        -- Zero-Fallback: wrong schemaVersion must be rejected
+        local h = fs.open(snapPath, "w")
+        h.write(textutils.serializeJSON({ schemaVersion = 0, armedState = "AIRBORNE_ACTIVE" }))
+        h.close()
+        assert_nil(state_machine.load_flight_state(snapPath))
+
+        -- Malformed JSON must be rejected
+        local hBad = fs.open(snapPath, "w")
+        hBad.write("{bad json!!!")
+        hBad.close()
+        assert_nil(state_machine.load_flight_state(snapPath))
+
+        if fs.exists(snapPath) then fs.delete(snapPath) end
+    end)
+
+    it("boots immediately into AIRBORNE_RECOVERY_HOLD <= 500ms from snapshot or airborne sensors and stabilizes", function()
+        local snapPath = sdk.temp_path("vas_coldboot_snap.json")
+        if fs.exists(snapPath) then fs.delete(snapPath) end
+        assert_true(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE", { savedAtEpoch = 1000 }))
+
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({
+            top = { type = "modem", dev = wirelessModem },
+            left = { type = "gimbal_sensor", dev = mock.cc_gimbal_sensor({ pitch = 8.0, roll = -5.0, yaw = 45.0 }) },
+            bottom = { type = "altitude_sensor", dev = mock.cc_altitude_sensor({ height = 120.0, verticalSpeed = -3.0 }) },
+            back = { type = "velocity_sensor", dev = mock.cc_velocity_sensor({ velocity = 4.0, axis = "y" }) },
+        })
+
+        local daemonState = core_daemon.init({
+            system = {
+                vehicleType = "VTOL",
+                aircraftDomainId = "AIRCRAFT_01",
+                baseChannel = 10000,
+                debug = false,
+                bootRecovery = {
+                    enabled = true,
+                    stateFilePath = snapPath,
+                    bootTimeoutMs = 500,
+                    recoveryMaxHoldSec = 10.0,
+                    groundSafeAltitudeThresholdM = 2.5,
+                    groundSafeSpeedThresholdMps = 1.0,
+                },
+            },
+            sensors = {
+                roles = {
+                    gimbal = { peripheralType = "gimbal_sensor", preferredSide = "left" },
+                    altitude = { peripheralType = "altitude_sensor", preferredSide = "bottom" },
+                    velocity = { peripheralType = "velocity_sensor", preferredSide = "back" },
+                    fuel = { required = false },
+                },
+            },
+            thrusters = { THR_LIFT = { heave = 1.0, pitch = 0.2, roll = 0.2, deadband = 1.0, maxThrust = 15 } },
+            surfaces = {},
+            pid = {},
+        })
+
+        assert_eq(daemonState.fsm.currentState, "AIRBORNE_RECOVERY_HOLD")
+        assert_true(daemonState.fsm.isAirborne)
+        assert_true((daemonState.bootElapsedMs or 0) <= 500, "Boot recovery init must complete within 500ms budget")
+        assert_not_nil(daemonState.lastTapOutputs)
+        assert_true((daemonState.lastTapOutputs.THR_LIFT or 0) > 0, "Immediate tick must output stabilizing thrust")
+
+        -- Drive 3 more ticks (tick 4 total) to verify Base+2 telemetry and Base+3 5Hz fallback HUD
+        for _ = 1, 3 do
+            core_daemon.tick(daemonState)
+        end
+        local foundTelem, foundMfd = false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10002 and tx.pkt.type == "MSG_FLIGHT_TELEMETRY" and tx.pkt.payload.controlState == "AIRBORNE_RECOVERY_HOLD" then
+                foundTelem = true
+            elseif tx.tx == 10003 and tx.pkt.type == "MSG_MFD_STATE" and tx.pkt.payload.controlState == "AIRBORNE_RECOVERY_HOLD" then
+                foundMfd = true
+            end
+        end
+        assert_true(foundTelem, "Must emit MSG_FLIGHT_TELEMETRY with AIRBORNE_RECOVERY_HOLD on Base+2")
+        assert_true(foundMfd, "Must emit 5Hz fallback MSG_MFD_STATE on Base+3 during AIRBORNE_RECOVERY_HOLD")
+
+        -- Transitioning to IDLE_ARMED persists GROUND_SAFE
+        state_machine.transition_to(daemonState.fsm, "IDLE_ARMED", "TOUCHDOWN")
+        local persisted = state_machine.load_flight_state(snapPath)
+        assert_not_nil(persisted)
+        assert_eq(persisted.armedState, "GROUND_SAFE")
+        if fs.exists(snapPath) then fs.delete(snapPath) end
+    end)
+
+    it("ignores premature FCP disarm during AIRBORNE_RECOVERY_HOLD, recovers to NORMAL, and escalates on 10s timeout", function()
+        local nowMs = 1000
+        sdk.patch(os, "epoch", function() return nowMs end)
+
+        local fsm = state_machine.init({
+            bootRecovery = { enabled = true, recoveryMaxHoldSec = 10.0 },
+        }, true)
+        assert_true(state_machine.transition_to(fsm, "AIRBORNE_RECOVERY_HOLD", "AIRBORNE_COLD_BOOT"))
+
+        -- Unsynced FCP sending arm=false must be ignored
+        state_machine.handle_arm_command(fsm, { arm = false, flightActive = false })
+        assert_eq(fsm.currentState, "AIRBORNE_RECOVERY_HOLD")
+
+        -- Valid FCP QUATERNION_RATE with arm=true, flightActive=true recovers to NORMAL
+        state_machine.handle_arm_command(fsm, { arm = true, flightActive = true })
+        assert_eq(fsm.currentState, "NORMAL")
+
+        -- Check 10s timeout escalation to EMERGENCY_LAND
+        local fsmTimeout = state_machine.init({
+            bootRecovery = { enabled = true, recoveryMaxHoldSec = 10.0 },
+        }, true)
+        state_machine.transition_to(fsmTimeout, "AIRBORNE_RECOVERY_HOLD", "AIRBORNE_COLD_BOOT")
+        nowMs = 11500
+        state_machine.update_watchdogs(fsmTimeout, nowMs, { dynamics = { altitudeY = 120.0 } }, nil, true, true)
+        assert_eq(fsmTimeout.currentState, "EMERGENCY_LAND")
+        assert_eq(fsmTimeout.transitionReason, "RECOVERY_HOLD_TIMEOUT_10S")
+    end)
+end)

@@ -6,17 +6,17 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v2.5.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획, 외부 인프라 게이트웨이, 항법·궤적 생성 및 조종석 통합 단말 (AMM / Node 03) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.36.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.3.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.4.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사 v1.6.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS v2.3.3)
 > - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.3.0)
@@ -30,6 +30,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.5.0` | `2026-11-18` | **`TASK-130` 비휘발성 비행 상태 스냅샷(`/.flight_state.json`) 영속화 및 공중 콜드부트 미션 복구(`RESUME`/`RTB`) 규격 반영 (`Implemented` — 2026-11-18 승격)**: ① 이륙 완료·체크포인트 전환(`currentCpIdx`)·홈 패드 변경(`homePadId`/`homePos`)·착지/무장 해제 시 `/.flight_state.json`(`schemaVersion = 1`, Zero-Fallback)을 `.tmp` + `fs.move` 원자적 교체로 갱신, ② 부팅 시 `/.flight_state.json` `armedState == "AIRBORNE_ACTIVE"` 및/또는 `VAS Base+2` `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `amm_config.json` `recovery.coldBootPolicy` (`"RESUME"` \| `"RTB"`)에 따라 체크포인트 재개 또는 홈 패드 자동 귀환 및 `Base+4` (`arm = true, flightActive = true`) 동기화, ③ `Base+3` 양보 대상에 `"AIRBORNE_RECOVERY_HOLD"` 추가, ④ 연관 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `FCP v2.4.0`, `VAS v1.24.0`, `AMM_MISSION_EDITOR v0.5.0`) 동기화 | `TASK-130-3`·`TASK-130-4` (`src/3_planning/amm/` 및 단위·E2E 검증 완료) |
 | `v2.4.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로브·리스·히스테리시스 규격 반영 (`Implemented`)**: ① `Base+9` (`CH_EMERGENCY_CORE`) `E_STOP` (`MSG_EMERGENCY_OVERRIDE`) 송신 및 `MSG_EMERGENCY_ALERT` 수신 분리(`Base+1` 미사용), ② `Base+3` `acroRecoveryHoldMs = 300ms` 복귀 히스테리시스 및 `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 즉시 양보, ③ `Base+0` 부팅 즉시 상시 개방·자기 UUID 무시·랜덤 지터(`0~100ms`)·`2`회 재프로브(`200ms`/회)·GCS `conflictBase` 재할당 회피(`maxReassignAttempts = 3` $\to$ `LOCKED_CONFLICT`), ④ `config/channel_lease.json` 영속 리스 캐시 및 GCS `preferredBase` 재검증(`gcsBootstrapTimeoutMs = 2000ms`, 무응답 시 `[NO_GCS_LEASE]` / `LOCKED_NO_GCS`), ⑤ `Base+0..39` 전 블록 침범 감시(`30,000ms`) 및 Zone 3 확장(`Base+20~39`, 편대 `TBD` 이관), ⑥ 연관 배지(`ICD v1.35.0`, `Diagram v2.19.0`, `FCP v2.3.0`, `VAS v1.23.0`, `GCS v1.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`) 동기화 | `TASK-125` 40채널 스펙트럼 충돌·경합·검증 결함 해소 및 `TASK-403`/`404` 통합 반영 |
 | `v2.3.0` | `2026-11-16` | **`TASK-404` `MSG_MISSION_CMD` 원격 인라인 적재·저장(`action = "LOAD"`) 확장 (`Implemented` $\to$ `Approved`)**: ① `Base+0` (`CH_OPERATOR_C2`) `MSG_MISSION_CMD`에 `"LOAD"` 액션 및 선택 필드 `missionData` (테이블), `saveToDisk` (불리언, 기본 `true`) 추가, ② 수신 시 `EN_ROUTE` 충돌 검사(`BUSY_REJECTED`)·스키마 검증(`SCHEMA_INVALID`)·`/missions/<missionId>.json` 원자적 저장·`mission_engine:load_table` 적재 후 `MSG_MISSION_ACK` (`ACCEPTED`) 회신 규격화, ③ `GCS v1.2.0` / `AMM_MISSION_EDITOR v0.5.0` / `ICD v1.34.0` / `Diagram v2.18.0` 동기화 | WebUI Live Mode `'Push to Aircraft'` 원클릭 무선 미션 전송 및 즉시 적재 지원 |
 | `v2.2.0` | `2026-11-16` | **`TASK-403` `ACT_TKL_LAND_NEAREST` (`37`종) 신설 및 `MSG_FACILITY_BEACON.facilities[]` 수집 연동 (`Implemented` $\to$ `Approved`)**: ① `action_registry.lua` `ACT_TKL_*`에 `ACT_TKL_LAND_NEAREST` 추가(활성 `ACT_*` `36종` $\to$ `37종`), 파라미터 `facilityTypeFilter` (`"ANY"`\|`"LANDING_PAD"`\|`"RUNWAY"`), 선택 `maxRangeM > 0`, 선택 `targetPos`, 기본 완료 조건 `FACILITY_TOUCHDOWN`, ② `facility_client.update_beacons()`에서 GAC 비콘 `facilities[]` 일괄 수집 및 `find_nearest_free_landing_facility()`에서 `dedicated == true` 제외·`facilityTypeFilter`/`maxRangeM` 필터링, ③ `mission_engine` 실행 시점 최근접 무료 착륙 시설 동적 배정 및 가용 시설 부재 시 Abort 폴백(`DEC_RETRY_N` 재시도 루프 방지 가드 포함), ④ `AMM_MISSION_EDITOR_SPECIFICATION.md v0.4.0` 및 `GAC v1.6.0`/`ICD v1.33.0`/`Diagram v2.17.0` 동기화 | `TASK-403` 동적 최근접 착륙 행동 및 월드 프리셋 시설 연동 |
@@ -377,12 +378,12 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
    - `payload.dynamics`: `{ altitudeY, verticalSpeed, velocity = { vx, vy, vz } }` (`altitudeY`는 GPS 핑 주입용, `velocity`는 DR 적분용)
    - `payload.fuel`: 잔여 연료/에너지 비율 ($0.0 \sim 1.0$, `< 0.20` RTH / `< 0.10` 비상착륙 및 `FUEL_LEVEL_BELOW` 조건)
    - `payload.dynamicLoad`: 6-DoF 추력기 구동 부하율 ($0.0 \sim 1.0$)
-   - `payload.controlState`: VAS 내부 제어 상태 (`"NORMAL"`, `"IDLE_ARMED"`, `"DISARMED"`, `"FAILSAFE_HOLD"` 등)
+   - `payload.controlState`: VAS 내부 제어 상태 (`"NORMAL"`, `"IDLE_ARMED"`, `"DISARMED"`, `"AIRBORNE_RECOVERY_HOLD"`, `"FAILSAFE_HOLD"` 등)
    - `payload.activeSource`: 현재 `Base+1` 제어권 선점 소스 (`"FCP"`, `"MFD_ACRO"`, `"EMERGENCY_DIRECT"`)
    - `payload.sensorOk`, `payload.sensorHealth`, `payload.actuatorHealth` (`{ tap, asa, allOk }`)
 2. **`Base + 3` (`MSG_MFD_STATE`, AMM $\to$ Cockpit MFD / GCS, 평시 5Hz 단독 송출)**:
    - **평시 (Normal Flight)**: `AMM`이 `VAS Base+2` 텔레메트리, `FCP Base+4` 외루프 상태(`MSG_OUTER_LOOP_STATUS`), 그리고 `AMM` 자체 항법/미션 상태를 통합하여 매 4틱마다(5Hz, 200ms) `Base+3`으로 송출합니다(`source = "AMM_INTEGRATED"`).
-   - **`MFD_ACRO` / `FAILSAFE` 진입 시 즉시 양보(Yield) 및 `300ms` 복귀 히스테리시스**: `VAS Base+2`의 `activeSource == "MFD_ACRO"` 또는 `controlState`가 `"FAILSAFE_HOLD"` / `"EMERGENCY_LAND"`로 감지되면 `AMM`은 즉시 `Base+3` 송출을 일시 중단하여 `VAS`가 20Hz 고속 HUD(`source = "CORE_ACRO_TAKEOVER"`) 또는 폴백 HUD를 단독 송출하도록 양보합니다. 이후 `activeSource == "FCP"`가 **`acroRecoveryHoldMs = 300ms`** 이상 연속 유지된 뒤에만 5Hz `Base+3` 송출을 재개합니다.
+   - **`MFD_ACRO` / `FAILSAFE` / `AIRBORNE_RECOVERY_HOLD` 진입 시 즉시 양보(Yield) 및 `300ms` 복귀 히스테리시스**: `VAS Base+2`의 `activeSource == "MFD_ACRO"` 또는 `controlState`가 `"FAILSAFE_HOLD"` / `"EMERGENCY_LAND"` / `"AIRBORNE_RECOVERY_HOLD"`로 감지되면 `AMM`은 즉시 `Base+3` 송출을 일시 중단하여 `VAS`가 20Hz 고속 HUD(`source = "CORE_ACRO_TAKEOVER"`) 또는 폴백 HUD를 단독 송출하도록 양보합니다. 이후 `activeSource == "FCP"` 및 정상 비행 상태가 **`acroRecoveryHoldMs = 300ms`** 이상 연속 유지된 뒤에만 5Hz `Base+3` 송출을 재개합니다.
 
 ```lua
 -- AMM -> Cockpit MFD / GCS: 평시 5Hz 계층 통합 HUD 패킷 (MSG_MFD_STATE, Base + 3)
@@ -710,6 +711,19 @@ flowchart TD
   - 정적 `preconditions`(`allowedAirframes`/`disallowedAirframes`, 정적 지오펜스 범위) 위반 시 `"SCHEMA_INVALID"` 반환, 유효 `MAC_*` 매크로는 검증 직후 선형 체크포인트로 전개.
 - **3대 외부 파일 구동 채널**: CLI `run`/`load`/`files`, 셸 부팅 인자(`main.lua <spec> [loop]`), CC 창 드래그 앤 드롭 `file_transfer` 유지.
 
+### 6.7 비휘발성 비행 상태 스냅샷 (`/.flight_state.json`) 및 공중 콜드부트 복구 (`RESUME` / `RTB`)
+서버 재시작·청크 언로드 이후에도 임무 진행 상태와 귀환 목적지를 복구할 수 있도록 `AMM`은 로컬 루트 `/.flight_state.json` 영속 저장과 부팅 시 공중 임무 복구 시퀀스를 집행합니다:
+1. **원자적 저장 트리거 (`.tmp` + `fs.move`)**:
+   - **이륙 완료 시**: 이륙 단계(`ACT_TKL_TAKEOFF_*`, `ACT_MOB_MOVING_TKOFF` 또는 `EN_ROUTE` 공중 전이) 완료 즉시 `armedState = "AIRBORNE_ACTIVE"`, `missionId`, `currentCpIdx`, `homePadId`, `homePos`, `savedAtEpoch`를 기록합니다.
+   - **체크포인트 전환 시**: `mission_engine`이 다음 체크포인트 인덱스(`currentCpIdx`)로 전진할 때마다 즉시 원자적으로 갱신합니다.
+   - **홈 패드 변경 시**: `homePadId` 또는 `homePos`(`{ x, y, z }`) 갱신 시 즉시 기록합니다.
+   - **착지·시동 해제·임무 종료 시**: 정상 착륙(`COMPLETED`), `DISARM` 또는 `E_STOP` 시 `armedState = "GROUND_SAFE"`로 갱신합니다.
+   - **표준 스키마 (`schemaVersion = 1`, `Zero-Fallback`)**: `{ schemaVersion = 1, armedState = "AIRBORNE_ACTIVE"|"GROUND_SAFE", missionId = string, currentCpIdx = integer, homePadId = string, homePos = { x, y, z }, savedAtEpoch = number }`. `schemaVersion ~= 1` 또는 손상 JSON은 폐기합니다.
+2. **부팅 시 공중 복구 시퀀스 (`recovery.coldBootPolicy = "RESUME" | "RTB"`)**:
+   - 부팅 시 로컬 `/.flight_state.json`의 `armedState == "AIRBORNE_ACTIVE"`이거나 `VAS Base+2` 텔레메트리가 `controlState == "AIRBORNE_RECOVERY_HOLD"`를 보고하면 **공중 콜드부트 복구 모드**에 진입합니다(지상 이륙 `ACT_TKL_TAKEOFF_*` 스텝 재실행 금지).
+   - **`coldBootPolicy == "RESUME"`** (및 유효한 `missionId`/`missions/<missionId>.json` 존재): 해당 미션을 로드한 뒤 저장된 `currentCpIdx`로 즉시 점프하여 `EN_ROUTE` 재개, `Base+4` (`MSG_TRAJECTORY_SETPOINT`, `arm = true, flightActive = true`)를 `FCP`로 송출해 `VAS` `AIRBORNE_RECOVERY_HOLD` $\to$ `NORMAL` 인계를 완료합니다.
+   - **`coldBootPolicy == "RTB"`** (또는 미션 파일 유실/무효): 저장된 `homePadId`/`homePos`를 목표로 `FAILSAFE_RTH` / `ACT_TKL_LAND_PREC` 복귀 궤적을 즉시 개시하고 `Base+4` (`arm = true, flightActive = true`)를 인가합니다(`homePos`까지 부재 시 현 위치 `HOVER_HOLD`).
+
 ---
 
 ## 7. 사용자 인터랙션 규격 (Hotkeys & CLI Commands)
@@ -946,6 +960,12 @@ src/3_planning/amm/
       "arrivalSettleTicks": 4,
       "arrivalReengageMarginM": 2.0
     }
+  },
+  "recovery": {
+    "enabled": true,
+    "stateFilePath": "/.flight_state.json",
+    "coldBootPolicy": "RESUME",
+    "syncTimeoutMs": 5000
   }
 }
 ```
@@ -969,6 +989,7 @@ src/3_planning/amm/
 | **VAS 비행 텔레메트리 (`Base+2`, `[I-1]`)** | **500ms** (`vasTelemetryTimeoutMs`) | `nav_engine` / `network_manager` | DR 적분 정지(`navValid = false`), TUI/GCS `VAS_TELEMETRY_TIMEOUT` 경보 표출 및 미션 시퀀서 `SUSPENDED` |
 | **GCS 부트스트랩 (`50000`) & 충돌 프로브 (`Base+0`)** | **2,000ms** / **200ms × 2회** | `channel_sentinel` | `CH 50000` `preferredBase` 재검증 및 `config/channel_lease.json` 저장; `2,000ms` 무응답 시 로컬 리스+프로브 통과 기체는 `[NO_GCS_LEASE]` 경고로 허용, 미보유 시 `LOCKED_NO_GCS`; 프로브 충돌(`Base+0`) 시 `conflictBase` 재할당(`maxReassignAttempts = 3`) 후 `3`회 초과 시 `LOCKED_CONFLICT` (`Base+4` `arm = false` 고정) |
 | **비행 중 블록 침범 감시 (`Base+0..39`)** | **30,000ms** (`intrusionAlertWindowMs`) | `channel_sentinel` / `network_manager` | Zone 1~3 전 블록(`Base+0..39`)에서 미등록 타 기체 `domainId` 유입 시 즉시 드롭·GCS 경고 및 30초 지속 시 `HOVER_HOLD` 또는 `RTH` 트리거 |
+| **공중 콜드부트 복구 (`/.flight_state.json`)** | 부팅 즉시 / **5,000ms** (`syncTimeoutMs`) | `main.lua` / `mission_engine` / `c2_arbiter` | `armedState == "AIRBORNE_ACTIVE"` 또는 `VAS` `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `recovery.coldBootPolicy`에 따라 `RESUME`(`currentCpIdx` 재개) 또는 `RTB`(`homePadId`/`homePos` 귀환) 개시 및 `Base+4` `arm=true, flightActive=true` 인계 |
 
 ### 11.2 구현 및 검증 기준 (Verification Criteria)
 
@@ -988,4 +1009,4 @@ src/3_planning/amm/
 
 ### 11.3 `[I-13]` 무선 OTA 슬레이브 연동 및 안전 게이트 (`OTA_PROGRAM_SPECIFICATION.md`)
 - **채널 개방 및 라우팅**: `network_manager.open_channels`에서 설정된 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds`를 개방하고, `handle_modem_message`에서 수신 프레임을 `app.otaAgent:handle_packet(...)`으로 전달하며 `Base_hangar + 5` (`106`)로 응답합니다(비행·외부 채널 우선순위 유지).
-- **안전 게이트 (`getStatusFn`)**: `status = { controlState = (app.arbiter and app.arbiter.fsmState) or "DISARMED", isAirborne = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.isAirborne == true) or false }`를 기준으로 `DISARMED`, `BOOT`, `IDLE_ARMED` 및 `isAirborne ~= true`일 때만 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 허용하고 그 외에는 `MSG_OTA_NACK` (`NOT_DISARMED`)를 반환합니다. `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK` 및 메인 루프 틱 `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 처리합니다.
+- **안전 게이트 (`getStatusFn`)**: `status = { controlState = (app.arbiter and app.arbiter.fsmState) or "DISARMED", isAirborne = (app.arbiter and app.arbiter.latest_telem and (app.arbiter.latest_telem.isAirborne == true or app.arbiter.latest_telem.controlState == "AIRBORNE_RECOVERY_HOLD")) or false }`를 기준으로 `DISARMED`, `BOOT`, `IDLE_ARMED` 및 `isAirborne ~= true`일 때만 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 허용하고 그 외(`AIRBORNE_RECOVERY_HOLD` 포함)에는 `MSG_OTA_NACK` (`NOT_DISARMED`)를 반환합니다. `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK` 및 메인 루프 틱 `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 처리합니다.

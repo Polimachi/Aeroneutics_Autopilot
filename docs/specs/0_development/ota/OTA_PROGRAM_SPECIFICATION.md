@@ -162,15 +162,15 @@ sequenceDiagram
 | 조건 항목 | 허용 값 | 거부 값 (즉시 `MSG_OTA_NACK`, `reason = "NOT_DISARMED"`) |
 | :--- | :--- | :--- |
 | **`status.isAirborne`** | `false` 또는 `nil` (`~= true`) | `true` |
-| **`status.controlState`** | `"DISARMED"`, `"BOOT"`, `"IDLE_ARMED"` | `"ARMING"`, `"NORMAL"`, `"CALIBRATION"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"AIRBORNE_EMERGENCY"`, `"E_STOP"`, `"ACTIVE_TRACKING"`, `"PASSIVE_TRACKING"`, `"AMM_TIMEOUT_HOLD"`, 기타 미지 문자열 |
+| **`status.controlState`** | `"DISARMED"`, `"BOOT"`, `"IDLE_ARMED"` | `"ARMING"`, `"NORMAL"`, `"AIRBORNE_RECOVERY_HOLD"`, `"CALIBRATION"`, `"FAILSAFE_HOLD"`, `"EMERGENCY_LAND"`, `"AIRBORNE_EMERGENCY"`, `"E_STOP"`, `"ACTIVE_TRACKING"`, `"PASSIVE_TRACKING"`, `"AMM_TIMEOUT_HOLD"`, 기타 미지 문자열 |
 
 ### 4.1 서브시스템별 상태 매핑 (`getStatusFn`)
 | 노드 | `moduleId` | `controlState` 출처 | `isAirborne` 판정 기준 |
 | :--- | :---: | :--- | :--- |
 | **VAS** | `"vas"` | `state.fsm.currentState` | `state.fsm.isAirborne == true` |
 | **TCA** | `"tca"` | `inst.lastControlState or "DISARMED"` | `(inst.adapterState and inst.adapterState.lastSignal or 0) > 0` |
-| **FCP** | `"fcp"` | `ctx.fsm.currentState` | `ctx.lastTelemPayload.isAirborne == true` 또는 `lastTelemPayload.controlState` $\in \{\text{"NORMAL"}, \text{"FAILSAFE\_HOLD"}, \text{"EMERGENCY\_LAND"}, \text{"AIRBORNE\_EMERGENCY"}\}$ |
-| **AMM** | `"amm"` | `(app.arbiter and app.arbiter.fsmState) or "DISARMED"` | `app.arbiter.latest_telem.isAirborne == true` |
+| **FCP** | `"fcp"` | `ctx.fsm.currentState` | `ctx.lastTelemPayload.isAirborne == true` 또는 `lastTelemPayload.controlState` $\in \{\text{"NORMAL"}, \text{"AIRBORNE\_RECOVERY\_HOLD"}, \text{"FAILSAFE\_HOLD"}, \text{"EMERGENCY\_LAND"}, \text{"AIRBORNE\_EMERGENCY"}\}$ |
+| **AMM** | `"amm"` | `(app.arbiter and app.arbiter.fsmState) or "DISARMED"` | `app.arbiter.latest_telem.isAirborne == true` 또는 `latest_telem.controlState == "AIRBORNE_RECOVERY_HOLD"` |
 
 ---
 

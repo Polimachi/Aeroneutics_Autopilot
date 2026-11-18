@@ -81,7 +81,9 @@ function telemetry_feeder.tick(state, netState, comState, fsmState, mixerState, 
     end
 
     local isAcro = (fsmState and fsmState.activeSource == "MFD_ACRO")
-    local isFailsafe = (fsmState and (fsmState.currentState == "FAILSAFE_HOLD" or fsmState.currentState == "EMERGENCY_LAND"))
+    local isFailsafe = (fsmState and (fsmState.currentState == "FAILSAFE_HOLD"
+        or fsmState.currentState == "EMERGENCY_LAND"
+        or fsmState.currentState == "AIRBORNE_RECOVERY_HOLD"))
 
     if isAcro or (isFailsafe and (state.tickCounter % 4 == 0)) then
         local mfdPayload = build_mfd_payload(comState, fsmState, mixerState, diagState, isAcro)

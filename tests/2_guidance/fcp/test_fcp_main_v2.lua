@@ -307,6 +307,109 @@ describe("test_fcp_main_v2: step_tick control loop and packet dispatch", functio
         assert_not_nil(status_pkt, "Base+4 MSG_OUTER_LOOP_STATUS must be emitted in EMERGENCY_HOLD")
         assert_eq(status_pkt.payload.fsmState, "EMERGENCY_HOLD")
     end)
+
+    it("silences Base+1 during IDLE_ARMED when VAS is in AIRBORNE_RECOVERY_HOLD, blocks OTA, and triggers bumpless ramp on AMM recovery", function()
+        local network_manager = require("network_manager")
+        local mock_modem = create_mock_modem()
+        local rootDir = sdk.temp_path("fcp_cold_boot_ota")
+        if fs.exists(rootDir) then fs.delete(rootDir) end
+        fs.makeDir(rootDir)
+
+        local cfg = fcp_main.load_config("config/fcp_config.json")
+        cfg.ota = { bayId = 1, rootDir = rootDir, onRebootFn = function() end }
+        local ctx = fcp_main.create_context(cfg, function() return mock_modem end)
+        ctx.fsm.currentState = "IDLE_ARMED"
+
+        ctx.net.inbound.telemetry = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "VAS-01",
+            seq = 1,
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = {
+                dynamics = { velocity = { vx = 0, vy = -2.0, vz = 0 } },
+                attitude = { pitch = 0, roll = 0, yaw = 0 },
+                angularRates = { pitchRate = 0, rollRate = 0, yawRate = 0 },
+                activeSource = "FCP",
+                controlState = "AIRBORNE_RECOVERY_HOLD",
+                actuatorHealth = { tap = true, asa = true, allOk = true },
+                sensorOk = true,
+            },
+        }
+        ctx.net.inbound.trajectory = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            seq = 1,
+            type = "MSG_TRAJECTORY_SETPOINT",
+            payload = { arm = false, flightActive = false, flightMode = "IDLE_ARMED", lastRxMs = 1000 },
+        }
+
+        mock_modem.transmitted = {}
+        fcp_main.step_tick(ctx, 0.05, 1000)
+
+        assert_eq(ctx.fsm.currentState, "IDLE_ARMED")
+        local attCount = 0
+        for _, tx in ipairs(mock_modem.transmitted) do
+            if tx.channel == 10001 and tx.payload.type == "MSG_ATTITUDE_CMD" then
+                attCount = attCount + 1
+            end
+        end
+        assert_eq(attCount, 0, "FCP must silence Base+1 arm=false emission while VAS is in AIRBORNE_RECOVERY_HOLD")
+
+        -- OTA must reject with NOT_DISARMED while VAS reports AIRBORNE_RECOVERY_HOLD
+        local ota_agent = require("ota_agent")
+        local crc = ota_agent.crc32("return true")
+        network_manager.ingest_modem_event(ctx.net, "top", 105, 106, {
+            ver = "1.9.5",
+            domainId = "HANGAR",
+            seq = 10,
+            time = 1000,
+            type = "MSG_OTA_BEGIN",
+            payload = {
+                txId = "tx-cb",
+                targetModuleId = "fcp",
+                targetDomainId = "AIRCRAFT_01",
+                targetVersion = "2.4.0",
+                totalBytes = 11,
+                totalCrc32 = crc,
+                files = { { path = "/main.lua", size = 11, crc32 = crc, chunkCount = 1 } },
+            },
+        }, 1, 1000)
+        local nackReason = nil
+        for _, tx in ipairs(mock_modem.transmitted) do
+            if tx.channel == 106 and tx.payload.type == "MSG_OTA_NACK" then
+                nackReason = tx.payload.payload.reason
+            end
+        end
+        assert_eq(nackReason, "NOT_DISARMED")
+
+        -- AMM completes cold-boot sync and sends arm=true, flightActive=true -> bumpless ACTIVE_TRACKING
+        ctx.net.inbound.trajectory = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            senderId = "AMM-03",
+            seq = 2,
+            type = "MSG_TRAJECTORY_SETPOINT",
+            payload = {
+                arm = true,
+                flightActive = true,
+                flightMode = "CRUISE",
+                targetPos = { x = 50, y = 120, z = 0 },
+                targetVel = { vx = 10, vy = 0, vz = 0 },
+                currentPos = { x = 0, y = 120, z = 0 },
+                navValid = true,
+                posEpoch = 1100,
+                lastRxMs = 1100,
+            },
+        }
+        mock_modem.transmitted = {}
+        fcp_main.step_tick(ctx, 0.05, 1100)
+        assert_eq(ctx.fsm.currentState, "ACTIVE_TRACKING")
+        assert_not_nil(ctx.rampStartMs, "Transitioning out of AIRBORNE_RECOVERY_HOLD must trigger bumpless ramp")
+        assert_eq(ctx.rampAlpha, 0.0)
+        if fs.exists(rootDir) then fs.delete(rootDir) end
+    end)
 end)
 
 describe("test_fcp_main_v2: ui_renderer 51x19 character HUD matrix", function()

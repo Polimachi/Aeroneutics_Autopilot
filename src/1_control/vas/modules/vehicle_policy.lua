@@ -142,7 +142,8 @@ function vehicle_policy.pre_process_guidance(policy, telem, rawCmd, fsmState)
         }
     }
 
-    if fsmState == "FAILSAFE_HOLD" or fsmState == "EMERGENCY_LAND" or fsmState == "AIRBORNE_EMERGENCY" then
+    if fsmState == "AIRBORNE_RECOVERY_HOLD" or fsmState == "FAILSAFE_HOLD"
+        or fsmState == "EMERGENCY_LAND" or fsmState == "AIRBORNE_EMERGENCY" then
         conditioned.targetQuaternion = raw.targetQuaternion or quat.identity()
         conditioned.translationBias = { surge = 0.0, sway = 0.0 }
         conditioned.targetAngularRates = raw.targetAngularRates or { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 }
