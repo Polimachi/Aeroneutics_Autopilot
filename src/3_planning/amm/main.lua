@@ -460,6 +460,14 @@ local CLI_HANDLERS = {
             app.arbiter.lastBanner = "RAD SET: " .. tostring(app.queue.arrivalRadius)
         end
     end,
+    pbit = function(app, _a, _now_ms)
+        if app.net and app.net.send_pbit_req then
+            local ok = app.net:send_pbit_req({ source = "AMM", runWiggle = true })
+            if app.arbiter then
+                app.arbiter.lastBanner = ok and "PBIT REQUEST SENT" or "PBIT SEND FAILED"
+            end
+        end
+    end,
 }
 
 local function execute_cli_command(app, cmd, now_ms)
@@ -630,6 +638,7 @@ local BASE_PLUS_5_INFRA_RESPONSES = {
     MSG_DOCK_CAPTURE_STAGE = true,
     MSG_UMBILICAL_STATUS = true,
     MSG_TOUCHDOWN_COMPLETE = true,
+    MSG_NAV_QUALITY = true,
 }
 
 local function is_allowed_cross_domain_on_block(chan, pkt, base, sentinel, own_domain)
@@ -711,12 +720,24 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
     elseif chan == base + 3 and app.arbiter and app.arbiter.handle_mfd_state then
         app.arbiter:handle_mfd_state(pkt, t_ms)
     elseif chan == base + 2 then
-        if app.arbiter and app.arbiter.handle_flight_telemetry then
-            app.arbiter:handle_flight_telemetry(pkt, t_ms)
+        if pkt.type == "MSG_PBIT_REPORT" then
+            if app.engine and app.engine.set_pbit_report then
+                app.engine:set_pbit_report(pkt.payload)
+            end
+            app.lastPbitReport = pkt.payload
+        else
+            if app.arbiter and app.arbiter.handle_flight_telemetry then
+                app.arbiter:handle_flight_telemetry(pkt, t_ms)
+            end
+            if app.nav and nav_engine.integrate_dr then
+                nav_engine.integrate_dr(app.nav, pkt.payload, 0.05, t_ms)
+            end
         end
-        if app.nav and nav_engine.integrate_dr then
-            nav_engine.integrate_dr(app.nav, pkt.payload, 0.05, t_ms)
+    elseif chan == base + 8 and pkt.type == "MSG_PBIT_REPORT" then
+        if app.engine and app.engine.set_pbit_report then
+            app.engine:set_pbit_report(pkt.payload)
         end
+        app.lastPbitReport = pkt.payload
     elseif chan == base + 4 then
         if pkt.type == "MSG_OUTER_LOOP_STATUS" and app.arbiter and app.arbiter.handle_outer_loop_status then
             app.arbiter:handle_outer_loop_status(pkt, t_ms)
@@ -724,7 +745,11 @@ local function handle_modem_message(app, chan, raw_msg, now_ms)
             channel_sentinel.on_rebind_ack(app.sentinel, pkt, t_ms)
         end
     elseif chan == base + 5 then
-        handle_base5_rx(app, pkt, t_ms)
+        if pkt.type == "MSG_NAV_QUALITY" and app.nav and nav_engine.on_nav_quality then
+            nav_engine.on_nav_quality(app.nav, pkt.payload, t_ms)
+        else
+            handle_base5_rx(app, pkt, t_ms)
+        end
     elseif chan == base + 0 and app.arbiter and app.arbiter.handle_gcs_packet then
         app.arbiter:handle_gcs_packet(pkt, t_ms)
     elseif handle_facility_rx(app, chan, pkt, t_ms) then

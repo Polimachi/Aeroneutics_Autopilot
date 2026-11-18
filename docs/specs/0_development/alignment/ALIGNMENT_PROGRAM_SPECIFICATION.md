@@ -6,26 +6,27 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.8.0` |
-| **최종 수정일 (Date)** | `2026-11-16` |
+| **문서 버전 (Version)** | `v2.9.0` |
+| **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.35.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.19.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 서버 v0.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.23.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.3.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.13.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.25.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.5.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.14.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.4.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.9.0` | `2026-11-18` | **`TASK-136` 기체 토폴로지 매니페스트(`peripheralManifest` / `peripheral_manifest.json`) 계약 신설 (`Implemented` $\to$ `Approved`)**: ① 교정 완료 시 추력기 수·그룹·건조질량·조종면·센서 역할 지문을 해시화한 `peripheralManifest` 생성 및 로컬 `/alignment/peripheral_manifest.json` 저장·`MSG_PROFILE_SYNC` 내 선택 필드 첨부 명세, ② 재조립 시 추력기 개수 일치 및 건조질량 편차 `<= 5%` 조건에서 동적 리바인딩 허용 / 불일치 시 `recalibrationRequired = true` 강제 규약 추가, ③ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `VAS v1.25.0`, `TCA v1.14.0`) 동기화 | `TASK-136` 블록화 재조립 기체 물리 변화 검출 및 재교정 인터록 지원 (`src/0_development/alignment/` 반영 후 `Implemented` 승격 예정) |
 | `v2.8.0` | `2026-11-16` | **`TASK-125` `MSG_CALIBRATION_INIT` 송신 채널 `Base+8` (`CH_CALIBRATION_INIT`) 이관 (`Implemented` $\to$ `Approved`)**: ① `MSG_CALIBRATION_INIT` 송신 대상 채널을 `Base+0` (`CH_OPERATOR_C2`)에서 **`Base+8` (`CH_CALIBRATION_INIT`)**로 변경(`AMM` 프로브/C2 채널과의 경합 분리, 구 `Base+0` `[DEPRECATED]`), ② §1/§2/§3/§5/§10 다이어그램·매핑·의사코드 및 연관 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `VAS v1.23.0`, `FCP v2.3.0`) 동기화 | `TASK-125` C2/교정 채널 경합 분리 (`src/0_development/alignment/` 반영 후 `Implemented` 승격 예정) |
 | `v2.7.1` | 2026-11-15 | `[I-13]` 격납고 무선 OTA 배포 서버(`OTA_PROGRAM_SPECIFICATION.md` v0.1.0)·마스터 ICD(`v1.32.0`)·전체 구조도(`v2.16.0`) 및 온보드 규격서(`VAS v1.22.0`, `FCP v2.2.0`, `TCA v1.13.0`) 상호 참조 배지 동기화 (`Implemented` 유지, Alignment 코드 변경 없음) | `TASK-117-1` 격납고 베이 10채널 대역(`Base_hangar + 4/+5` OTA 할당) 참조 정합성 유지 |
 | `v2.7.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `[I-4]` `MSG_CALIBRATION_INIT`(`timeoutSec`, `targetThruster`)·`INIT_ACK`(`baseChannel`)·`MSG_CALIBRATION_CLOSE`(`saveProfile`)·`CLOSE_ACK`(`currentFsmState`)·`MSG_ACTUATOR_DISCOVER_REQ`(`replyChannel = 104` / `Base_hangar+3`) 및 `mode [DEPRECATED]` Zero-Fallback 정렬, §11.1 실제 구현 파일명(`ols_regression_engine.lua`, `multi_pulse_sequencer.lua`, `hud_renderer.lua`, `main.lua`) 반영 및 연관 문서 버전(`ICD v1.30.0`, `Diagram v2.15.0`, `VAS v1.20.0`, `FCP v2.1.0`, `TCA v1.12.0`, `ASA v1.8.0`, `GPS v2.3.3`) 동기화 | 마스터 ICD v1.30.0 및 `[I-4]` 구현 코드 정합성 확립 |
@@ -761,10 +762,29 @@ function hudObject:render_regression_curve(signals, impulses, k, b) -> void
             ["RUDD"]   = { podId = "ASA_T", type = "control_surface", boundPort = "right", interactionMode = "API", maxDeflectionDeg = 30.0 },
             ["FLAP_L"] = { podId = "ASA_L", type = "flap", boundPort = "right", interactionMode = "API", maxDeflectionDeg = 40.0 },
             ["FLAP_R"] = { podId = "ASA_R", type = "flap", boundPort = "right", interactionMode = "API", maxDeflectionDeg = 40.0 }
+        },
+        peripheralManifest = {
+            schemaVersion = 1,
+            domainId = "AIRCRAFT_01",
+            topologyHash = "h_8a9f0c12",
+            totalDryMass = 12500.0,
+            thrusterCount = 4,
+            thrusters = {
+                { groupId = "THR_MAIN_L", peripheralCount = 1, vectorCapable = false },
+                { groupId = "THR_MAIN_R", peripheralCount = 1, vectorCapable = false },
+                { groupId = "THR_VTOL_F", peripheralCount = 1, vectorCapable = false },
+                { groupId = "THR_VTOL_R", peripheralCount = 1, vectorCapable = false }
+            },
+            surfaces = { "AIL_L", "AIL_R", "ELEV", "RUDD", "FLAP_L", "FLAP_R" },
+            sensorRoles = { "gimbal", "altitude", "velocity", "assembler" }
         }
     }
 }
 ```
+
+#### 10.5.1 `peripheralManifest` 및 `peripheral_manifest.json` 검증 규칙 (`TASK-136`)
+- **로컬 영속화**: Alignment는 프로파일 확정 시 `peripheral_manifest.json`을 로컬에 저장하고 `MSG_PROFILE_SYNC.payload.peripheralManifest`로 `VAS`에 동기화합니다.
+- **재조립 무결성 기준**: 재조립된 기체의 추진기 총수 불일치 또는 건조질량(`totalDryMass`) 편차가 `> 5%`일 경우 `recalibrationRequired = true`를 래치해 시동을 차단합니다. 반대로 유선 페리페럴 이름만 변경(`thruster_2` $\to$ `thruster_5`)되고 수량 및 질량 오차가 `<= 5%` 이내인 경우에는 동적 리바인딩으로 운용을 허용합니다.
 
 ### 10.6 프로파일 반영 확인 회신 (`MSG_CALIB_ACK`, CH: Base_hangar+1, VAS $\rightarrow$ Alignment, 구버전 1001, Base+4 [DEPRECATED])
 VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)에 영구 반영을 완결한 직후 회신하는 패킷입니다.

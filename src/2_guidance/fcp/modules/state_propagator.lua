@@ -37,6 +37,15 @@ function state_propagator.init(cfg)
         gpsTimedOut = false,
         hdop = 1.0,
         navStale = false,
+        navQuality = "GOOD",
+        drHoldoverMaxMs = tonumber(ol.drHoldoverMaxMs or safe.drHoldoverMaxMs) or 1500,
+        chunkBlendTicks = tonumber(ol.chunkBlendTicks or safe.chunkBlendTicks) or 10,
+        lastValidNavMs = nil,
+        gpsBlackoutMs = 0,
+        drHoldoverActive = false,
+        holdLevelActive = false,
+        blendTicksRemaining = 0,
+        blendTarget = nil,
         dtPropMaxSec = tonumber(ol.dtPropMaxSec) or 0.1,
         posMergeMaxStepM = tonumber(ol.posMergeMaxStepM) or 2.0,
         navStaleTimeoutMs = tonumber(safe.navStaleTimeoutMs) or 500,
@@ -118,20 +127,40 @@ end
 
 function state_propagator.on_setpoint_epoch(state, setpointPayload, now_ms)
     if not state or type(setpointPayload) ~= "table" then return end
+    local now = now_ms or (os.epoch and os.epoch("utc") or 0)
+    local wasBlackout = state.drHoldoverActive == true or state.holdLevelActive == true
     if setpointPayload.navValid ~= nil then state.navValid = setpointPayload.navValid end
     if setpointPayload.gpsTimedOut ~= nil then state.gpsTimedOut = setpointPayload.gpsTimedOut end
     if setpointPayload.hdop ~= nil then state.hdop = setpointPayload.hdop end
+    if setpointPayload.navQuality ~= nil then state.navQuality = setpointPayload.navQuality end
 
+    local gpsLost = (state.gpsTimedOut == true) or (state.navValid == false) or (state.navQuality == "LOST")
     local epoch = tonumber(setpointPayload.posEpoch)
     local curPos = setpointPayload.currentPos
     if epoch and epoch > state.lastSyncedEpoch then
         if type(curPos) == "table" then
-            local maxStep = state.posMergeMaxStepM or 2.0
-            merge_current_pos(state, curPos, maxStep)
+            local cx = tonumber(curPos.x) or state.pos.x
+            local cy = tonumber(curPos.y) or state.pos.y
+            local cz = tonumber(curPos.z) or state.pos.z
+            local dx, dy, dz = cx - state.pos.x, cy - state.pos.y, cz - state.pos.z
+            local dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if (not gpsLost) and (wasBlackout or setpointPayload.chunkBorderRecovery == true) then
+                state.blendTarget = { x = cx, y = cy, z = cz }
+                state.blendTicksRemaining = math.max(1, tonumber(state.chunkBlendTicks) or 10)
+            else
+                local maxStep = state.posMergeMaxStepM or 2.0
+                merge_current_pos(state, curPos, maxStep)
+            end
         end
         state.posEpoch = epoch
         state.lastSyncedEpoch = epoch
-        state.lastSetpointMs = now_ms or (os.epoch and os.epoch("utc") or 0)
+        state.lastSetpointMs = now
+    end
+    if not gpsLost then
+        state.lastValidNavMs = now
+        state.gpsBlackoutMs = 0
+        state.drHoldoverActive = false
+        state.holdLevelActive = false
     end
 end
 
@@ -144,6 +173,34 @@ function state_propagator.propagate(state, now_ms)
     state.pos.x = state.pos.x + state.vel.vx * dt
     state.pos.y = state.pos.y + state.vel.vy * dt
     state.pos.z = state.pos.z + state.vel.vz * dt
+
+    if (state.blendTicksRemaining or 0) > 0 and state.blendTarget then
+        local rem = state.blendTicksRemaining
+        state.pos.x = state.pos.x + (state.blendTarget.x - state.pos.x) / rem
+        state.pos.y = state.pos.y + (state.blendTarget.y - state.pos.y) / rem
+        state.pos.z = state.pos.z + (state.blendTarget.z - state.pos.z) / rem
+        state.blendTicksRemaining = rem - 1
+        if state.blendTicksRemaining <= 0 then
+            state.blendTarget = nil
+        end
+    end
+
+    local gpsLost = (state.gpsTimedOut == true) or (state.navValid == false) or (state.navQuality == "LOST")
+    if gpsLost and state.lastValidNavMs ~= nil then
+        local blackout = math.max(0, now - state.lastValidNavMs)
+        state.gpsBlackoutMs = blackout
+        if blackout > (state.drHoldoverMaxMs or 1500) then
+            state.drHoldoverActive = false
+            state.holdLevelActive = true
+        else
+            state.drHoldoverActive = true
+            state.holdLevelActive = false
+        end
+    elseif not gpsLost then
+        state.gpsBlackoutMs = 0
+        state.drHoldoverActive = false
+        state.holdLevelActive = false
+    end
 
     local timeoutMs = state.navStaleTimeoutMs or 500
     local telemStale = (state.lastTelemMs > 0) and ((now - state.lastTelemMs) > timeoutMs)
@@ -160,6 +217,10 @@ function state_propagator.propagate(state, now_ms)
         posEpoch = state.posEpoch,
         lastTelemMs = state.lastTelemMs,
         navStale = state.navStale,
+        navQuality = state.navQuality,
+        drHoldoverActive = state.drHoldoverActive,
+        holdLevelActive = state.holdLevelActive,
+        gpsBlackoutMs = state.gpsBlackoutMs,
         actuatorHealth = state.actuatorHealth,
         activeSource = state.activeSource,
     }

@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.24.0` |
+| **문서 버전 (Version)** | `v1.25.0` |
 | **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.25.0` | `2026-11-18` | **`TASK-136` 컨트랩션 조립 인터록·`TASK-131` 5단계 PBIT·`TASK-128` GPS DR 홀드오버 가드 반영 (`Implemented` $\to$ `Approved`)**: ① `TASK-136`: `CONTRAPTION_STATE` (`"ASSEMBLED"` \| `"DISASSEMBLED"`), 공중 해제 시 `E_STOP` (`"CONTRAPTION_DISASSEMBLED_IN_FLIGHT"`), 지상 해제/미교정 시 시동 거부(`ERR_CONTRAPTION_DISASSEMBLED` / `ERR_RECALIBRATION_REQUIRED`) 및 `peripheralManifest` 수량·질량(`<= 5%`) 대조 인터록 신설, ② `TASK-131`: 5단계 비행 전 자가진단(`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`) 및 `MSG_PBIT_REQ`(`Base+8`/`Base+1`) $\to$ `MSG_CALIB_PULSE` (`pbitWiggle = true`, `pulseRatio <= 0.04`) $\to$ `MSG_PBIT_REPORT`(`Base+2`/`Base+8`) 파이프라인 추가, ③ `TASK-128`: `MSG_NAV_QUALITY` 연동, 1,500ms 이내 속도 적분 DR 홀드오버 및 초과 두절 시 `HOLD_LEVEL` 수평 자세·고도 유지 강제, 청크 경계 스파이크 완화 반영, ④ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `Alignment v2.9.0`, `TCA v1.14.0`, `AMM v2.6.0`, `GPS v2.4.0`, `FCP v2.5.0`) 동기화 | `TASK-136`·`TASK-131`·`TASK-128` 비행 안전 인터록 및 항법 무결성 가드 규격화 (`src/1_control/vas/` 반영 후 `Implemented` 승격 예정) |
 | `v1.24.0` | `2026-11-18` | **`TASK-130` 공중 콜드부트 복구(`AIRBORNE_RECOVERY_HOLD`) 및 `/.flight_state.json` 영속화 규격 신설 (`Implemented` — 2026-11-18 승격)**: ① 10번째 FSM 상태 **`AIRBORNE_RECOVERY_HOLD`** 추가(`isFlight = true`, `QUATERNION_RATE` 수평 자세·수직 속도 0 홀드 / 고정익 $18^\circ$ 협조 선회, 미동기화 `FCP` 조기 `arm=false` 무시 인터록, `Base+3` 5Hz 폴백 HUD, `recoveryMaxHoldSec = 10.0s` 초과 시 `EMERGENCY_LAND` 에스컬레이션), ② 비휘발성 스냅샷 `/.flight_state.json` 원자적 쓰기(`.tmp` + `fs.move`) 및 `schemaVersion = 1` Zero-Fallback 규격화, ③ 부팅 시점 공중 감지(`isAirborneAtBoot`: 고도/속도 노름 `GROUND_SAFE` 임계 초과 OR `armedState == "AIRBORNE_ACTIVE"`) 및 `bootTimeoutMs = 500ms` 목표 비차단 20Hz 루프 즉시 기동 규격 추가, ④ `config/system.json` `bootRecovery` 블록 신설 및 연관 문서 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `AMM v2.5.0`, `FCP v2.4.0`) 동기화 | `TASK-130-2`·`TASK-130-4` (`src/1_control/vas/` 및 단위·E2E 검증 완료) |
 | `v1.23.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 채널 분리 규격 개정 (`Implemented` $\to$ `Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `MSG_CALIBRATION_INIT` 전용 수신) 신설 및 런타임 `Base+0` (`CH_OPERATOR_C2`) 미개방 원칙 확립, ② `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE` `E_STOP` 수신 & `MSG_EMERGENCY_ALERT` 송신) 신설 및 `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리, ③ `Base+3` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 배타적 우선권 및 `acroTimeoutMs = 250ms` 규약 추가, ④ `ZONE_OFFSETS`/`system.json` `subchannels`에서 `formationLink = 30` 제거(`calibrationInit = 8`, `emergencyCore = 9` 추가) 및 연관 문서(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`) 동기화 | `TASK-125` 40채널 블록 경합·보안 분리 결함 해소 (`src/1_control/vas/` 반영 후 `Implemented` 재승격 예정) |
 | `v1.22.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `Base_hangar + 4` (`CH_OTA_CMD`, 기본 Bay 1 = `105` 및 선택 `ota.bayIds`) 수신 개방 및 `Base_hangar + 5` (`CH_OTA_ACK`, `106`) 응답, ② `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true` 안전 게이트, ③ 20Hz 메인 루프 `tick_boot_commit()` (`20` 정상 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/1_control/vas/` 반영 후 `Implemented` 재승격 예정) |
@@ -31,8 +32,8 @@
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.36.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
 > - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.5.0)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.4.0)
@@ -1155,6 +1156,14 @@ stateDiagram-v2
             ["FLAP_L"] = { podId = "ASA_L", type = "flap",     boundPort = "front", interactionMode = "API", maxDeflectionDeg = 40.0 },
             ["FLAP_R"] = { podId = "ASA_R", type = "flap",     boundPort = "front", interactionMode = "API", maxDeflectionDeg = 40.0 }
         },
+        peripheralManifest = {
+            schemaVersion = 1,
+            domainId = "AIRCRAFT_01",
+            topologyHash = "h_8a9f0c12",
+            totalDryMass = 12500.0,
+            thrusterCount = 4,
+            thrusters = {}
+        },
         thrusterCoefficients = {
             ["THR_MAIN_L"] = {
                 surge = 1.0, sway = 0.0, heave = 0.0,
@@ -1695,6 +1704,25 @@ src/1_control/vas/
 ### 11.2 `[I-13]` 무선 OTA 슬레이브 연동 및 안전 게이트 (`OTA_PROGRAM_SPECIFICATION.md`)
 - **채널 개방**: `core_daemon` 초기화 시 `ota_agent.new({ moduleId = "vas", ... })`를 생성하여 설정의 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 채널을 개방하고 `Base_hangar + 5` (`106`)로 응답합니다(비행 채널 우선순위 유지).
 - **안전 게이트 (`getStatusFn`)**: `status = { controlState = state.fsm.currentState, isAirborne = state.fsm.isAirborne }`를 제공하여 `DISARMED`, `BOOT`, `IDLE_ARMED` 및 `isAirborne ~= true` 상태에서만 `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_REBOOT`를 허용하고 그 외에는 `MSG_OTA_NACK` (`NOT_DISARMED`)를 반환합니다. `MSG_OTA_DISCOVER_REQ`/`MSG_OTA_DISCOVER_ACK`, `MSG_OTA_ABORT`, `MSG_OTA_ACK` 및 부팅 후 `tick_boot_commit()` (`20` 틱 커밋) 기반 `MSG_OTA_BOOT_STATUS`를 처리합니다.
+
+### 11.3 컨트랩션 조립 인터록 (`TASK-136`), PBIT 시퀀서 (`TASK-131`), GPS DR 가드 (`TASK-128`)
+
+1. **컨트랩션 조립/해제 인터록 및 토폴로지 리바인딩 (`TASK-136`)**:
+   - **상태 감지**: `physics_assembler` (`assembler.is_assembled`, `assembler.get_mass`)를 주기 검증하여 `contraptionState` (`"ASSEMBLED"` | `"DISASSEMBLED"`)를 추적합니다.
+   - **공중 vs 지상 해제 분기**: 비행 중(`isAirborne == true`) `"DISASSEMBLED"` 감지 시 즉시 `E_STOP` (`"CONTRAPTION_DISASSEMBLED_IN_FLIGHT"`)을 래치합니다. 지상 해제 시 `DISARMED`로 복귀하며, `arm = true` 요청을 `"ERR_CONTRAPTION_DISASSEMBLED"`로 거부합니다.
+   - **재조립 토폴로지 대조**: 저장된 `peripheral_manifest.json`(`MSG_PROFILE_SYNC.peripheralManifest`)과 실측 추진기 수·질량을 대조하여, 수량 불일치 또는 건조질량 편차 `> 5%` 시 `recalibrationRequired = true`를 래치하고 시동을 거부(`"ERR_RECALIBRATION_REQUIRED"`)합니다. 신규 `MSG_PROFILE_SYNC` 수신 시 래치를 해제합니다.
+
+2. **비행 전 5단계 PBIT 자가진단 (`TASK-131`, `[I-4]` `MSG_PBIT_REQ` / `MSG_PBIT_REPORT`)**:
+   - `Base+8` 또는 `Base+1`로 `MSG_PBIT_REQ` 수신 시 5개 항목을 평가하여 `MSG_PBIT_REPORT` (`overallStatus = "PASS" | "WARN" | "FAIL"`, `takeoffPermitted`, `checks`)를 `Base+2` 및 `Base+8`로 회신합니다:
+     1) `busRtt`: 내부 통신 왕복 지연 평가 (`> 200ms` 실패)
+     2) `inertiaProfile`: `contraptionState == "ASSEMBLED"` 및 `recalibrationRequired == false` 확인
+     3) `actuatorWiggle`: `Base+10`으로 `MSG_CALIB_PULSE` (`pbitWiggle = true`, `pulseRatio <= 0.04` `< 5%`) 미소 펄스 인가 및 즉시 차단
+     4) `energyFuel`: 연료·에너지 임계 확인
+     5) `channelConflict`: 채널 충돌·침범 상태 점검
+
+3. **GPS DR 홀드오버 및 `HOLD_LEVEL` 가드 (`TASK-128`, `[I-7]` `MSG_NAV_QUALITY`)**:
+   - `MSG_NAV_QUALITY` (`navQuality = "GOOD" | "DEGRADED" | "POOR" | "LOST"`) 및 GPS 두절 경과 시간을 추적합니다.
+   - 두절 `<= 1,500ms` 동안은 속도 적분 DR 홀드오버로 급격한 자세 변동을 억제하며, 두절 `> 1,500ms` 지속 시 `HOLD_LEVEL` (`navHoldLevel = true`) 수평 자세·고도 유지 모드로 자동 전환합니다. 청크 경계 GPS 스파이크는 스냅 없이 완만히 보간합니다.
 
 ---
 

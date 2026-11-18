@@ -6,19 +6,19 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.5.0` |
+| **문서 버전 (Version)** | `v2.6.0` |
 | **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획, 외부 인프라 게이트웨이, 항법·궤적 생성 및 조종석 통합 단말 (AMM / Node 03) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.1)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.4.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 제어기 v2.5.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.25.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사 v1.7.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS v2.3.3)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS v2.4.0)
 > - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 v1.4.0)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
@@ -30,6 +30,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.6.0` | `2026-11-18` | **`TASK-131` 비행 전 PBIT 게이트 및 `TASK-128` GPS 품질(`MSG_NAV_QUALITY`) 연동 반영 (`Implemented` $\to$ `Approved`)**: ① `[I-4]` `Base+8` `MSG_PBIT_REQ` 송출·`Base+2`/`Base+8` `MSG_PBIT_REPORT` 수신 및 `pbit` CLI 명령 추가, ② `ACT_TKL_*` 이륙 프리미티브에 `requirePbit` / `takeoffPermitted == false` 기반 `PBIT_TAKEOFF_INTERLOCK` 게이트 적용, ③ `[I-7]` `MSG_GPS_RESPONSE` 선택 필드(`navQuality`, `consecutiveFailures`) 및 `MSG_NAV_QUALITY` 수신 연동으로 `nav_engine` DR 두절 판정 정합화, ④ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `VAS v1.25.0`, `FCP v2.5.0`, `GPS v2.4.0`) 동기화 | `TASK-131` 이륙 전 자가진단 안전 게이트 및 `TASK-128` GPS 성상 품질 추적 규격화 (`src/3_planning/amm/` 반영 후 `Implemented` 승격 예정) |
 | `v2.5.0` | `2026-11-18` | **`TASK-130` 비휘발성 비행 상태 스냅샷(`/.flight_state.json`) 영속화 및 공중 콜드부트 미션 복구(`RESUME`/`RTB`) 규격 반영 (`Implemented` — 2026-11-18 승격)**: ① 이륙 완료·체크포인트 전환(`currentCpIdx`)·홈 패드 변경(`homePadId`/`homePos`)·착지/무장 해제 시 `/.flight_state.json`(`schemaVersion = 1`, Zero-Fallback)을 `.tmp` + `fs.move` 원자적 교체로 갱신, ② 부팅 시 `/.flight_state.json` `armedState == "AIRBORNE_ACTIVE"` 및/또는 `VAS Base+2` `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `amm_config.json` `recovery.coldBootPolicy` (`"RESUME"` \| `"RTB"`)에 따라 체크포인트 재개 또는 홈 패드 자동 귀환 및 `Base+4` (`arm = true, flightActive = true`) 동기화, ③ `Base+3` 양보 대상에 `"AIRBORNE_RECOVERY_HOLD"` 추가, ④ 연관 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `FCP v2.4.0`, `VAS v1.24.0`, `AMM_MISSION_EDITOR v0.5.0`) 동기화 | `TASK-130-3`·`TASK-130-4` (`src/3_planning/amm/` 및 단위·E2E 검증 완료) |
 | `v2.4.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로브·리스·히스테리시스 규격 반영 (`Implemented`)**: ① `Base+9` (`CH_EMERGENCY_CORE`) `E_STOP` (`MSG_EMERGENCY_OVERRIDE`) 송신 및 `MSG_EMERGENCY_ALERT` 수신 분리(`Base+1` 미사용), ② `Base+3` `acroRecoveryHoldMs = 300ms` 복귀 히스테리시스 및 `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 즉시 양보, ③ `Base+0` 부팅 즉시 상시 개방·자기 UUID 무시·랜덤 지터(`0~100ms`)·`2`회 재프로브(`200ms`/회)·GCS `conflictBase` 재할당 회피(`maxReassignAttempts = 3` $\to$ `LOCKED_CONFLICT`), ④ `config/channel_lease.json` 영속 리스 캐시 및 GCS `preferredBase` 재검증(`gcsBootstrapTimeoutMs = 2000ms`, 무응답 시 `[NO_GCS_LEASE]` / `LOCKED_NO_GCS`), ⑤ `Base+0..39` 전 블록 침범 감시(`30,000ms`) 및 Zone 3 확장(`Base+20~39`, 편대 `TBD` 이관), ⑥ 연관 배지(`ICD v1.35.0`, `Diagram v2.19.0`, `FCP v2.3.0`, `VAS v1.23.0`, `GCS v1.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`) 동기화 | `TASK-125` 40채널 스펙트럼 충돌·경합·검증 결함 해소 및 `TASK-403`/`404` 통합 반영 |
 | `v2.3.0` | `2026-11-16` | **`TASK-404` `MSG_MISSION_CMD` 원격 인라인 적재·저장(`action = "LOAD"`) 확장 (`Implemented` $\to$ `Approved`)**: ① `Base+0` (`CH_OPERATOR_C2`) `MSG_MISSION_CMD`에 `"LOAD"` 액션 및 선택 필드 `missionData` (테이블), `saveToDisk` (불리언, 기본 `true`) 추가, ② 수신 시 `EN_ROUTE` 충돌 검사(`BUSY_REJECTED`)·스키마 검증(`SCHEMA_INVALID`)·`/missions/<missionId>.json` 원자적 저장·`mission_engine:load_table` 적재 후 `MSG_MISSION_ACK` (`ACCEPTED`) 회신 규격화, ③ `GCS v1.2.0` / `AMM_MISSION_EDITOR v0.5.0` / `ICD v1.34.0` / `Diagram v2.18.0` 동기화 | WebUI Live Mode `'Push to Aircraft'` 원클릭 무선 미션 전송 및 즉시 적재 지원 |
@@ -484,7 +485,10 @@ GCS 또는 외부 자동화 노드가 온보드 AMM의 미션 시퀀서를 원�
    - **충돌 회피 재할당 및 3회 초과 잠금**: `MSG_CHANNEL_PROBE_ACK` (`status = "CONFLICT_DETECTED"`) 수신 시 즉시 영구 잠금하지 않고 GCS에 `conflictBase`를 보고해 `"REASSIGNED"` 블록을 받아 재프로브하며, **`maxReassignAttempts = 3`회 연속 충돌 시에만 `LOCKED_CONFLICT`** 시동 잠금(`Base+4` `arm = false` 고정 및 MFD 경보)을 발동합니다.
    - **동적 채널 재바인딩**: `baseChannel` 변경 필요 시 `AMM`은 `Base_old + 4`로 `MSG_CHANNEL_REBIND` (`transactionId`, `action = "PREPARE" | "COMMIT" | "ROLLBACK"`, `oldBaseChannel`, `newBaseChannel`, `bandwidth = 40`)를 하달하여 `AMM -> FCP (Base+4) -> VAS (Base+1) -> TCA/ASA (Base+10/11, 구 Base+6/7 [DEPRECATED])` 4계층(및 `AMM` 소관 `Base_old + 0/+2/+3/+5/+9`, `Base_old + 20~39`)을 통해 새 채널을 사전 개방한 뒤 `MSG_CHANNEL_REBIND_ACK` *(구 `MSG_REBIND_ACK [DEPRECATED]`)* (`status = "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"`) 취합 완료 즉시 `"COMMIT"`(500ms 내 미응답·실패 시 `"ROLLBACK"`)을 전파합니다.
 3. **고정밀 GPS 비동기 파이프라인 (`[I-7]`, `CH 60001/60002`, `Base + 5`)**:
-   - `nav_engine`은 5~10Hz 간격으로 `VAS Base+2`의 실측 `altitudeY`를 주입한 `MSG_GPS_REQUEST` (`replyChannel = Base + 5`, 구 `10045` `[DEPRECATED]`)를 `CH 60001`로 송출하고, `Base + 5`에 도착한 `MSG_GPS_RESPONSE`를 `gpsClient.handleMessage()`로 직접 주입하여 이벤트 큐 오염 없이 2D 위치 `{ x, z }`, `accuracy`, `hdop`를 획득합니다(`CH 60002` `MSG_GPS_STATUS_REQ`/`RESP` 진단 조회 지원).
+   - `nav_engine`은 5~10Hz 간격으로 `VAS Base+2`의 실측 `altitudeY`를 주입한 `MSG_GPS_REQUEST` (`replyChannel = Base + 5`, 구 `10045` `[DEPRECATED]`)를 `CH 60001`로 송출하고, `Base + 5`에 도착한 `MSG_GPS_RESPONSE` (`navQuality`, `consecutiveFailures` 포함) 및 `MSG_NAV_QUALITY`를 `gpsClient`와 `nav_engine`에 반영해 성상 품질(`GOOD`/`DEGRADED`/`POOR`/`LOST`)과 DR 두절 카운터를 추적합니다(`CH 60002` `MSG_GPS_STATUS_REQ`/`RESP` 진단 조회 지원).
+4. **비행 전 5단계 PBIT 연동 및 이륙 인터록 (`[I-4]`, `Base + 8`, `Base + 2`)**:
+   - `AMM`은 `Base+8` (`CH_CALIBRATION_INIT`)로 `MSG_PBIT_REQ` (`requestId`, `source = "AMM"`)를 송출하고 `Base+2` / `Base+8`에서 `MSG_PBIT_REPORT` (`overallStatus`, `takeoffPermitted`, `checks`)를 수신합니다.
+   - `mission_engine`에 `requirePbit = true` 또는 `takeoffPermitted == false`인 최신 PBIT 리포트가 존재할 경우, 모든 `ACT_TKL_*` 이륙 프리미티브 진입을 **`PBIT_TAKEOFF_INTERLOCK`** 사유로 차단합니다.
 4. **3-Tier 시설물 관제 및 전술 유도 (`[I-5]`, `CH 50001~50004`, $Base_{\text{sec}} + 0/+10+\text{Idx}$, `Base + 5`)**:
    - `facility_client`는 `CH 50003` (`1Hz` GAC 집약 `MSG_FACILITY_BEACON`: `sectorId`, `facilitiesSummary`, 선택 `facilities[]` 스냅샷) 및 `CH 50004` (`MSG_GAC_DISPATCH`)를 상시 수집해 가용 시설물 인벤토리(`dedicated ~= true` 필터링)를 유지합니다.
    - 착륙/도킹/이륙 절차 시 `CH 50001` (`MSG_ATC_APPROACH_REQ` $\to$ `MSG_ATC_HANDOFF_CLEARANCE`) $\to$ $Base_{\text{sec}} + 0$ (`MSG_GAC_CHECKIN_REQ` $\to$ `MSG_GAC_APPROACH_CLEARANCE`) $\to$ $Base_{\text{sec}} + 10 + \text{Idx}$ (`MSG_FACILITY_STATIC_GUIDE` 1Hz / `MSG_FACILITY_DYNAMIC_GUIDE` 20Hz — 공통 `touchdownPoint`, `attitude`, `approachDirection`, `deckStatus`, `landingPermitted`, `abortAlert` / `MSG_ABORT_APPROACH` / `MSG_TOUCHDOWN_COMPLETE`) $\to$ `Base + 5` (`MSG_DOCK_CAPTURE_STAGE`, `MSG_UMBILICAL_STATUS`) 순으로 교신하며, 도킹 `stage == "HARD_LOCKED"` 수신 즉시 `Base+4`로 `arm = false, flightActive = false`를 하달하여 추진기를 안전 차단합니다.
@@ -772,6 +776,7 @@ flowchart TD
 | **`alt`**  | `<altitude>` | 전역 기본 순항 고도 변경 ($m$) | `alt 180` |
 | **`spd`**  | `<speed>` | 전역 기본 순항 속도 변경 ($m/s$) | `spd 20` |
 | **`rad`**  | `<radius>` | 기본 도달 판정 반경 변경 ($m$) | `rad 20` |
+| **`pbit`** | 없음 | `Base+8`로 `MSG_PBIT_REQ`를 송출해 `VAS` 5단계 자가진단(`MSG_PBIT_REPORT`) 수행 | `pbit` |
 
 ---
 

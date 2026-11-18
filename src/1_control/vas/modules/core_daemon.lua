@@ -165,22 +165,55 @@ function core_daemon.init(configDirOrTable)
     local nowMs = (os.epoch and os.epoch("utc")) or 0
 
     net.adapterAsa = adapterAsa
-    net.on_profile_sync = function(payload)
-        save_json(dir .. "/thrusters.json", payload)
-        if adapter and adapter.reload_coefficients then
-            adapter.reload_coefficients(adapter, payload, false)
-        end
-    end
     if network_manager.broadcast_discovery then network_manager.broadcast_discovery(net) end
     local otaAgent = init_ota_agent(cfg, net, fsm)
+
+    local manifest = cfg.peripheralManifest
+    if not manifest and fs and fs.exists then
+        local candPath = fs.exists(dir .. "/peripheral_manifest.json") and (dir .. "/peripheral_manifest.json")
+            or (fs.exists("/alignment/peripheral_manifest.json") and "/alignment/peripheral_manifest.json" or nil)
+        if candPath then
+            local h = fs.open(candPath, "r")
+            if h then
+                local rawTxt = h.readAll()
+                h.close()
+                if textutils and textutils.unserializeJSON then
+                    local okJ, parsed = pcall(textutils.unserializeJSON, rawTxt)
+                    if okJ and type(parsed) == "table" then manifest = parsed end
+                end
+            end
+        end
+    end
 
     local daemonState = {
         cfg = cfg, sensors = sensors, fsm = fsm, net = net, fdCore = fdCore,
         policy = policy, adapter = adapter, adapterAsa = adapterAsa,
         controller = fdCore, mixer = adapter, feeder = feeder, otaAgent = otaAgent,
+        peripheralManifest = manifest,
         lastTapOutputs = nil, lastAsaOutputs = nil,
         running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil, bootElapsedMs = 0
     }
+    net.on_profile_sync = function(payload)
+        save_json(dir .. "/thrusters.json", payload)
+        if type(payload) == "table" and type(payload.peripheralManifest) == "table" then
+            daemonState.peripheralManifest = payload.peripheralManifest
+            save_json(dir .. "/peripheral_manifest.json", payload.peripheralManifest)
+        end
+        state_machine.update_contraption_interlock(fsm, "ASSEMBLED", false, "PROFILE_SYNC")
+        if adapter and adapter.reload_coefficients then
+            adapter.reload_coefficients(adapter, payload, false)
+        end
+    end
+    net.on_pbit_req = function(reqPayload)
+        return core_daemon.run_pbit(daemonState, reqPayload)
+    end
+    local bootCState, bootMass = sensor_pipeline.detect_contraption_state(sensors)
+    if bootCState == "DISASSEMBLED" then
+        state_machine.update_contraption_interlock(fsm, "DISASSEMBLED", nil, "BOOT_DISASSEMBLED")
+    elseif type(manifest) == "table" and bootMass ~= nil then
+        local topo = sensor_pipeline.verify_and_rebind_topology(sensors, manifest, nil, bootMass)
+        state_machine.update_contraption_interlock(fsm, "ASSEMBLED", topo.recalibrationRequired, topo.reason)
+    end
     run_cold_boot_recovery(cfg, daemonState)
     daemonState.bootElapsedMs = ((os.epoch and os.epoch("utc")) or bootStartMs) - bootStartMs
     return daemonState
@@ -207,9 +240,55 @@ local function build_telemetry_diag(state, sensorOk, healthMap, tapOk, asaOk, co
     return telemDiag
 end
 
+--- Run 5-stage PBIT sequence, send <5% TCA wiggle pulse on Base+10, and emit MSG_PBIT_REPORT on Base+2 & Base+8.
+function core_daemon.run_pbit(state, reqPayload)
+    local req = type(reqPayload) == "table" and reqPayload or {}
+    local net = state and state.net
+    local fsm = state and state.fsm
+    if net and req.runWiggle ~= false and network_manager.send_pbit_pulse then
+        network_manager.send_pbit_pulse(net, {
+            targetThrusterId = req.targetThrusterId or "ALL",
+            stepIndex = 1,
+            pulseLevel = 0,
+            pulseDurationMs = 50,
+            safetyMaxTiltDeg = 12.0,
+            pbitWiggle = true,
+            pulseRatio = 0.04,
+        })
+    end
+    local fuel = req.energyFuel
+    if fuel == nil and state and state.sensors and state.sensors.lastCom then
+        fuel = state.sensors.lastCom.fuel
+    end
+    local wiggleOk = req.actuatorWiggleOk
+    if wiggleOk == nil and state and state.adapter then
+        wiggleOk = (state.adapter.tcaConnected ~= false)
+    end
+    local report = state_machine.evaluate_pbit(fsm, {
+        requestId = req.requestId,
+        busRttMs = req.busRttMs,
+        actuatorWiggleOk = wiggleOk,
+        energyFuel = fuel,
+        channelConflict = req.channelConflict,
+    })
+    if net and network_manager.send_pbit_report then
+        network_manager.send_pbit_report(net, report)
+    end
+    return report
+end
+
 local function step_kinematics(state, dt, nowMs)
     local raw = sensor_pipeline.sample_all(state.sensors)
     local comState, healthMap, sensorOk = sensor_pipeline.process_kinematics(state.sensors, raw, dt)
+    local prevCState = state.fsm and state.fsm.contraptionState or "ASSEMBLED"
+    local cState, liveMass = sensor_pipeline.detect_contraption_state(state.sensors)
+    if cState == "DISASSEMBLED" then
+        state_machine.update_contraption_interlock(state.fsm, "DISASSEMBLED", nil,
+            (state.fsm and state.fsm.isAirborne) and "CONTRAPTION_DISASSEMBLED_IN_FLIGHT" or "ERR_CONTRAPTION_DISASSEMBLED")
+    elseif prevCState == "DISASSEMBLED" and cState == "ASSEMBLED" then
+        local topo = sensor_pipeline.verify_and_rebind_topology(state.sensors, state.peripheralManifest, nil, liveMass)
+        state_machine.update_contraption_interlock(state.fsm, "ASSEMBLED", topo.recalibrationRequired, topo.reason)
+    end
     local rTicks = (state.cfg and state.cfg.sensors and state.cfg.sensors.reconnectTicks) or 20
     if state.tickCount % rTicks == 0 then
         sensor_pipeline.reconnect_faulty(state.sensors, healthMap)
@@ -220,6 +299,12 @@ local function step_kinematics(state, dt, nowMs)
     local isAero = vehicle_policy.is_aerodynamic(state.policy)
     local asaReady = (not isAero) or (state.adapterAsa and state.adapterAsa.discoveredPods and next(state.adapterAsa.discoveredPods) ~= nil)
     local actuatorsReady = (state.adapter and state.adapter.tcaConnected == true) and asaReady
+    if state.latestNavSample ~= nil and sensor_pipeline.step_gps_dr then
+        local drOut = sensor_pipeline.step_gps_dr(state.sensors, state.latestNavSample, comState, dt, nowMs)
+        if state.fsm and drOut then
+            state.fsm.navHoldLevel = (drOut.holdLevelActive == true)
+        end
+    end
     state_machine.update_watchdogs(state.fsm, nowMs, comState, healthMap, sensorOk, actuatorsReady)
     if network_manager.step_rebind_watchdog then
         network_manager.step_rebind_watchdog(state.net, nowMs)

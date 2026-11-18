@@ -6,6 +6,7 @@ local protocol = {
     CRAFT_MAX_INDEX = 1000, CH_REPLY_OFFSET = 5, DEFAULT_REPLY_CHANNEL = 10005,
     MSG_REQUEST = "MSG_GPS_REQUEST", MSG_NODE_REPORT = "MSG_GPS_NODE_REPORT",
     MSG_RESPONSE = "MSG_GPS_RESPONSE", MSG_NODE_HEARTBEAT = "MSG_GPS_NODE_HEARTBEAT",
+    MSG_NAV_QUALITY = "MSG_NAV_QUALITY",
     MSG_STATUS_REQ = "MSG_GPS_STATUS_REQ", MSG_STATUS_RESP = "MSG_GPS_STATUS_RESP",
     MSG_DIAG_TRIGGER = "MSG_GPS_DIAG_TRIGGER", MSG_DIAG_PING = "MSG_GPS_DIAG_PING",
     MSG_DIAG_REPORT = "MSG_GPS_DIAG_REPORT", MSG_NODE_HELLO = "MSG_GPS_NODE_HELLO",
@@ -64,12 +65,35 @@ function protocol.buildNodeReport(nodeId, seq, repFields, nowMs)
     return protocol.buildEnvelope(nodeId, seq, protocol.MSG_NODE_REPORT, payload, nowMs)
 end
 
+function protocol.classifyNavQuality(hdop, satelliteCount, consecutiveFailures)
+    local fails = tonumber(consecutiveFailures) or 0
+    local sats = tonumber(satelliteCount)
+    local h = tonumber(hdop)
+    if fails >= 3 or (sats ~= nil and sats < 3) then
+        return "LOST"
+    elseif fails >= 2 or (h ~= nil and h > 5.0) then
+        return "POOR"
+    elseif fails == 1 or (sats ~= nil and sats == 3) or (h ~= nil and h > 2.0) then
+        return "DEGRADED"
+    end
+    return "GOOD"
+end
+
 function protocol.buildResponse(serverDomainId, seq, respFields, nowMs)
     if type(respFields) ~= "table" then error("respFields must be a table", 2) end
+    local status = tostring(respFields.status or "FAIL_INSUFFICIENT")
+    local nodeCount = tonumber(respFields.nodeCount) or 0
+    local fails = tonumber(respFields.consecutiveFailures)
+    if fails == nil then
+        fails = (status == "FIX_OK" or status == "FIX_DEGRADED") and 0 or 1
+    end
+    local hdopVal = respFields.hdop ~= nil and tonumber(respFields.hdop) or (respFields.position and 99.9 or nil)
+    local navQuality = respFields.navQuality or protocol.classifyNavQuality(hdopVal, nodeCount, fails)
     local payload = {
         targetClient = tostring(respFields.targetClient or ""), clientSeq = tonumber(respFields.clientSeq) or 0,
-        status = tostring(respFields.status or "FAIL_INSUFFICIENT"),
-        nodeCount = tonumber(respFields.nodeCount) or 0, selectedNodes = respFields.selectedNodes or {}
+        status = status,
+        nodeCount = nodeCount, selectedNodes = respFields.selectedNodes or {},
+        navQuality = navQuality, consecutiveFailures = fails,
     }
     if respFields.position then
         payload.position = { x = tonumber(respFields.position.x) or 0, z = tonumber(respFields.position.z) or 0 }
@@ -77,6 +101,25 @@ function protocol.buildResponse(serverDomainId, seq, respFields, nowMs)
         payload.hdop = tonumber(respFields.hdop) or 99.9
     end
     return protocol.buildEnvelope(serverDomainId, seq, protocol.MSG_RESPONSE, payload, nowMs)
+end
+
+function protocol.buildNavQuality(domainId, seq, fields, nowMs)
+    local f = type(fields) == "table" and fields or {}
+    local sats = tonumber(f.satelliteCount) or 0
+    local fails = tonumber(f.consecutiveFailures) or 0
+    local nq = f.navQuality or protocol.classifyNavQuality(f.hdop, sats, fails)
+    local payload = {
+        targetClient = tostring(f.targetClient or ""),
+        navQuality = tostring(nq),
+        satelliteCount = sats,
+        consecutiveFailures = fails,
+        hdop = f.hdop ~= nil and tonumber(f.hdop) or nil,
+        status = f.status,
+        drHoldoverActive = f.drHoldoverActive,
+        holdLevelActive = f.holdLevelActive,
+        blackoutMs = f.blackoutMs,
+    }
+    return protocol.buildEnvelope(domainId, seq, protocol.MSG_NAV_QUALITY, payload, nowMs)
 end
 
 function protocol.buildHeartbeat(nodeId, seq, fields, nowMs)

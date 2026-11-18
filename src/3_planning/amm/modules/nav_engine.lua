@@ -63,6 +63,8 @@ function nav_engine.init(config)
         lastGpsSeqSeen = 0,
         spikeStreak = 0,
         validStreak = 0,
+        navQuality = "GOOD",
+        consecutiveFailures = 0,
     }
 end
 
@@ -220,6 +222,8 @@ local function apply_streak_snap(state, gx, gz, fix_payload, now_ms, cSeq)
     state.navValid = true
     state.spikeStreak = 0
     state.validStreak = 1
+    state.consecutiveFailures = 0
+    state.navQuality = fix_payload.navQuality or (fix_payload.status == "FIX_DEGRADED" and "DEGRADED" or "GOOD")
 end
 
 local function apply_fix_fusion(state, gx, gz, fix_payload, now_ms, cSeq)
@@ -241,9 +245,50 @@ local function apply_fix_fusion(state, gx, gz, fix_payload, now_ms, cSeq)
     state.navValid = true
     state.validStreak = (state.validStreak or 0) + 1
     state.spikeStreak = 0
+    state.consecutiveFailures = 0
+    state.navQuality = fix_payload.navQuality or ((fix_payload.status == "FIX_DEGRADED" or lowAcc) and "DEGRADED" or "GOOD")
+end
+
+local function classify_nav_quality_local(hdop, nodeCount, failures)
+    local fails = tonumber(failures) or 0
+    local sats = tonumber(nodeCount)
+    local h = tonumber(hdop)
+    if fails >= 3 or (sats ~= nil and sats < 3) then return "LOST" end
+    if fails >= 2 or (h ~= nil and h > 5.0) then return "POOR" end
+    if fails == 1 or (sats ~= nil and sats == 3) or (h ~= nil and h > 2.0) then return "DEGRADED" end
+    return "GOOD"
+end
+
+function nav_engine.on_nav_quality(state, payload, _now_ms)
+    if not state or type(payload) ~= "table" then return false end
+    if payload.targetClient and state.domainId and payload.targetClient ~= state.domainId then
+        return false
+    end
+    if payload.consecutiveFailures ~= nil then
+        state.consecutiveFailures = tonumber(payload.consecutiveFailures) or state.consecutiveFailures
+    end
+    if payload.hdop ~= nil and is_finite_number(payload.hdop) then
+        state.hdop = payload.hdop
+    end
+    if type(payload.navQuality) == "string" then
+        state.navQuality = payload.navQuality
+    else
+        state.navQuality = classify_nav_quality_local(state.hdop, payload.satelliteCount, state.consecutiveFailures)
+    end
+    if state.navQuality == "LOST" then
+        state.gpsStale = true
+    end
+    return true
 end
 
 function nav_engine.filter_gps(state, fix_payload, dt, now_ms, expectedSeq)
+    if state and type(fix_payload) == "table" and (not fix_payload.targetClient or not state.domainId or fix_payload.targetClient == state.domainId) then
+        if fix_payload.status == "NO_FIX" or fix_payload.status == "FAIL_GEOMETRY" or fix_payload.status == "FAIL_INSUFFICIENT" then
+            state.consecutiveFailures = (state.consecutiveFailures or 0) + 1
+            state.navQuality = fix_payload.navQuality or classify_nav_quality_local(fix_payload.hdop, fix_payload.nodeCount, state.consecutiveFailures)
+            return false
+        end
+    end
     local valid, cSeq, gx, gz = validate_gps_payload(state, fix_payload, expectedSeq)
     if not valid then return false end
     if now_ms ~= nil and not is_finite_number(now_ms) then return false end
@@ -282,6 +327,8 @@ function nav_engine.update(state, dt, now_ms)
         hdop = state.hdop,
         navValid = state.navValid,
         posEpoch = state.posEpoch,
+        navQuality = state.navQuality,
+        consecutiveFailures = state.consecutiveFailures,
     }
 end
 

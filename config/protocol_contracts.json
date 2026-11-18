@@ -207,6 +207,32 @@
               "EMERGENCY_DIRECT"
             ]
           }
+        },
+        "MSG_PBIT_REPORT": {
+          "diagramRequired": false,
+          "requiredKeys": [
+            "requestId",
+            "overallStatus",
+            "takeoffPermitted",
+            "checks"
+          ],
+          "optionalKeys": [
+            "contraptionState",
+            "recalibrationRequired",
+            "summaryReason",
+            "timestampMs"
+          ],
+          "enums": {
+            "overallStatus": [
+              "PASS",
+              "WARN",
+              "FAIL"
+            ]
+          },
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -417,6 +443,45 @@
               "API"
             ]
           }
+        },
+        "MSG_CALIB_PULSE": {
+          "diagramRequired": false,
+          "requiredKeys": [
+            "targetThrusterId",
+            "stepIndex",
+            "pulseLevel",
+            "pulseDurationMs",
+            "safetyMaxTiltDeg"
+          ],
+          "optionalKeys": [
+            "pbitWiggle",
+            "pulseRatio"
+          ],
+          "enums": {
+            "stepIndex": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "pulseLevel": [
+              0,
+              1,
+              4,
+              5,
+              8,
+              12
+            ]
+          },
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -552,7 +617,10 @@
             "pulseDurationMs",
             "safetyMaxTiltDeg"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "pbitWiggle",
+            "pulseRatio"
+          ],
           "enums": {
             "stepIndex": [
               1,
@@ -566,6 +634,8 @@
               9
             ],
             "pulseLevel": [
+              0,
+              1,
               4,
               5,
               8,
@@ -586,11 +656,56 @@
             "calibratedBy",
             "totalDryMass",
             "discoveredSurfaces",
-            "thrusterCoefficients"
+            "thrusterCoefficients",
+            "peripheralManifest"
           ],
           "specs": [
             "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
             "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_PBIT_REQ": {
+          "requiredKeys": [
+            "requestId",
+            "source"
+          ],
+          "optionalKeys": [
+            "runWiggle",
+            "busRttMs",
+            "energyFuel",
+            "channelConflict",
+            "targetThrusterId"
+          ],
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_PBIT_REPORT": {
+          "requiredKeys": [
+            "requestId",
+            "overallStatus",
+            "takeoffPermitted",
+            "checks"
+          ],
+          "optionalKeys": [
+            "contraptionState",
+            "recalibrationRequired",
+            "summaryReason",
+            "timestampMs"
+          ],
+          "enums": {
+            "overallStatus": [
+              "PASS",
+              "WARN",
+              "FAIL"
+            ]
+          },
+          "specs": [
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
           ]
         },
         "MSG_CALIB_ACK": {
@@ -1135,6 +1250,10 @@
         },
         {
           "kind": "aircraft_offset",
+          "offset": 2
+        },
+        {
+          "kind": "aircraft_offset",
           "offset": 5
         },
         {
@@ -1168,7 +1287,9 @@
             "accuracy",
             "hdop",
             "nodeCount",
-            "selectedNodes"
+            "selectedNodes",
+            "navQuality",
+            "consecutiveFailures"
           ],
           "enums": {
             "status": [
@@ -1178,6 +1299,35 @@
               "FAIL_GEOMETRY"
             ]
           }
+        },
+        "MSG_NAV_QUALITY": {
+          "requiredKeys": [
+            "targetClient",
+            "navQuality",
+            "satelliteCount",
+            "consecutiveFailures"
+          ],
+          "optionalKeys": [
+            "hdop",
+            "status",
+            "drHoldoverActive",
+            "holdLevelActive",
+            "blackoutMs"
+          ],
+          "enums": {
+            "navQuality": [
+              "GOOD",
+              "DEGRADED",
+              "POOR",
+              "LOST"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
         }
       },
       "timeoutsMs": {

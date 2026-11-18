@@ -295,12 +295,19 @@ function fcp_main.step_tick(ctx, dt, now_ms)
         state_propagator.on_setpoint_epoch(ctx.nav, p, now)
     end
 
-    state_propagator.propagate(ctx.nav, now)
+    local navOut = state_propagator.propagate(ctx.nav, now)
+    local wasHoldLevel = (ctx.prevHoldLevel == true)
+    local nowHoldLevel = (navOut and navOut.holdLevelActive == true) or (ctx.nav and ctx.nav.holdLevelActive == true)
+    ctx.prevHoldLevel = nowHoldLevel
 
     local fsm_ctx = build_fsm_ctx(ctx, inbound)
     local new_fsm, events = flight_fsm.step(ctx.fsm, fsm_ctx, now)
     ctx.fsm = new_fsm
 
+    if wasHoldLevel and not nowHoldLevel then
+        events = events or {}
+        events.triggerBumpless = true
+    end
     if events and events.resetIntegrators then
         outer_loop_controller.reset_integrators(ctx.ctrl)
     end

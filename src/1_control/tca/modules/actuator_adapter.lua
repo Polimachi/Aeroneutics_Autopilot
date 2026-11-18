@@ -5,7 +5,7 @@ local actuator_adapter = {
     ALL_SIDES = {"top", "bottom", "left", "right", "front", "back"},
     DEFAULT_REDSTONE_SIDE = "bottom",
     DEFAULT_API_SIDES = {"left", "right", "front", "back"},
-    SUPPORTED_METHODS = {"setPower", "setThrust", "setAnalogOutput", "setOutput", "setSpeed", "setTargetSpeed"},
+    SUPPORTED_METHODS = {"setPower", "setThrust", "setOutputThrustRatio", "setAnalogOutput", "setOutput", "setSpeed", "setTargetSpeed"},
     VECTOR_THRUSTER_TYPES = {"vector_thruster", "liquid_vector_thruster", "creative_vector_thruster"},
     IGNORED_TYPES = { modem = true, monitor = true, computer = true, drive = true, speaker = true, printer = true }
 }
@@ -28,8 +28,11 @@ function actuator_adapter.load_interaction_mode(path)
     return (content == "API" or content == "REDSTONE") and content or nil
 end
 
-local function is_side_allowed(name, modemSide, whitelist)
+local function is_side_allowed(name, modemSide, whitelist, explicitWhitelist)
     if name == modemSide then return false end
+    if not explicitWhitelist and type(name) == "string" and string.find(name, "_", 1, true) then
+        return true
+    end
     if whitelist and type(whitelist) == "table" then
         for _, w in ipairs(whitelist) do if w == name then return true end end
         return false
@@ -68,14 +71,18 @@ end
 
 function actuator_adapter.scan_api_peripherals(state)
     local results, ports = {}, state and state.ports
+    local papi = (state and state.peripheralApi) or peripheral
     local modemSide = (ports and ports.modemSide) or "top"
+    local explicitWhitelist = (ports and ports.apiSides) ~= nil
     local whitelist = (ports and ports.apiSides) or actuator_adapter.DEFAULT_API_SIDES
     local hasVector = false
-    if peripheral and peripheral.getNames then
-        for _, name in ipairs(peripheral.getNames()) do
-            local pType = peripheral.isPresent(name) and peripheral.getType(name)
-            if pType and not actuator_adapter.IGNORED_TYPES[pType] and is_side_allowed(name, modemSide, whitelist) then
-                local wrapped = peripheral.wrap(name)
+    local bindingMap = {}
+    if papi and papi.getNames then
+        for _, name in ipairs(papi.getNames()) do
+            local present = (not papi.isPresent) or papi.isPresent(name)
+            local pType = present and papi.getType and papi.getType(name)
+            if pType and not actuator_adapter.IGNORED_TYPES[pType] and is_side_allowed(name, modemSide, whitelist, explicitWhitelist) then
+                local wrapped = papi.wrap(name)
                 if type(wrapped) == "table" then
                     local isVec = is_vector_type(pType) or (type(wrapped.setVector) == "function")
                     if isVec then
@@ -93,6 +100,7 @@ function actuator_adapter.scan_api_peripherals(state)
                                 isVectorCapable = isVec,
                                 type = pType
                             })
+                            bindingMap[#results] = name
                             break
                         end
                     end
@@ -102,11 +110,12 @@ function actuator_adapter.scan_api_peripherals(state)
     end
     if state then
         state.peripherals = results
+        state.logicalBindingMap = bindingMap
         state.isVectorCapable = hasVector
         if state.lastGimbal == nil then state.lastGimbal = { x = 0.0, y = 0.0 } end
         if state.isGimbalSaturated == nil then state.isGimbalSaturated = false end
     end
-    return results
+    return results, #results, #results
 end
 
 function actuator_adapter.detect_api_peripherals(state)
@@ -114,13 +123,17 @@ function actuator_adapter.detect_api_peripherals(state)
 end
 
 function actuator_adapter.init(defaultInteractionMode, configPath, ports)
-    local tableMode = (type(configPath) == "table" and configPath.interactionMode) or nil
-    local tablePorts = (type(configPath) == "table" and configPath.ports) or ports
+    local tableCfg = (type(defaultInteractionMode) == "table" and defaultInteractionMode)
+        or (type(configPath) == "table" and configPath)
+        or nil
+    local tableMode = tableCfg and tableCfg.interactionMode or nil
+    local tablePorts = (tableCfg and tableCfg.ports) or ports
     local loaded = (type(configPath) == "string") and actuator_adapter.load_interaction_mode(configPath) or tableMode
     local chosen = loaded or (type(defaultInteractionMode) == "string" and defaultInteractionMode) or "REDSTONE"
     local state = {
         interactionMode = chosen, configPath = (type(configPath) == "string") and configPath or nil,
         ports = tablePorts, lastSignal = 0, lastRatio = 0.0, peripherals = {}, dispatchedCount = 0,
+        logicalBindingMap = {}, peripheralApi = tableCfg and tableCfg.peripheralApi or nil,
         isVectorCapable = false, lastGimbal = { x = 0.0, y = 0.0 }, isGimbalSaturated = false
     }
     actuator_adapter.scan_api_peripherals(state)

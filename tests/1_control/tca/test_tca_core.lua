@@ -670,4 +670,95 @@ describe("tca mutation hardening invariants", function()
         })
         assert_eq(daemon.otaAgent.domainId, "AIRCRAFT_09")
     end)
+
+    it("dynamically rebinds logicalBindingMap when wired thruster IDs are renumbered after re-assembly (TASK-136)", function()
+        local actuator_adapter = require("actuator_adapter")
+        local currentNames = { "thruster_1", "thruster_2" }
+        local calls = {}
+        local fakePeriph = {
+            getNames = function() return currentNames end,
+            getType = function(name) return "thruster" end,
+            wrap = function(name)
+                return {
+                    setOutputThrustRatio = function(r) calls[name] = r end,
+                    stop = function() calls[name] = 0 end,
+                }
+            end,
+        }
+
+        local st = actuator_adapter.init({
+            groupId = "THR_MAIN_L",
+            interactionMode = "API",
+            apiMethod = "setOutputThrustRatio",
+            peripheralApi = fakePeriph,
+        })
+        assert_eq(st.logicalBindingMap[1], "thruster_1")
+        assert_eq(st.logicalBindingMap[2], "thruster_2")
+
+        -- Re-assemble: thruster_2 -> thruster_5
+        currentNames = { "thruster_1", "thruster_5" }
+        local res, active, total = actuator_adapter.scan_api_peripherals(st)
+        assert_eq(#res, 2)
+        assert_eq(active, 2)
+        assert_eq(total, 2)
+        assert_eq(st.logicalBindingMap[1], "thruster_1")
+        assert_eq(st.logicalBindingMap[2], "thruster_5")
+
+        actuator_adapter.apply_thrust(st, 7.5, 2, 2)
+        assert_true((calls["thruster_5"] or 0) > 0, "Rebound peripheral thruster_5 must receive thrust command")
+    end)
+
+    it("executes <5% pbitWiggle in DISARMED/IDLE_ARMED, immediately cuts thrust, and rejects wiggle in NORMAL flight (TASK-131)", function()
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 }
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.lastControlState = "DISARMED"
+
+        -- Send pbitWiggle with oversized 0.09 ratio; TCA must clamp <= 0.04, then cut thrust back to 0 and emit status
+        local okWiggle = tca_daemon.handle_calib_pulse(daemon, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 10,
+            type = "MSG_CALIB_PULSE",
+            time = 1000,
+            payload = {
+                targetThrusterId = "ALL",
+                stepIndex = 1,
+                pulseLevel = 0,
+                pulseDurationMs = 50,
+                safetyMaxTiltDeg = 12.0,
+                pbitWiggle = true,
+                pulseRatio = 0.09,
+            },
+        })
+        assert_true(okWiggle)
+        assert_eq(daemon.adapterState.lastSignal, 0, "Thrust must be immediately cut back to 0 after pbitWiggle")
+        assert_near(daemon.adapterState.lastRatio or 0, 0.0, 1e-6)
+        assert_near(daemon.lastPbitWiggleRatio or 0, 0.04, 1e-6, "pbitWiggle ratio must be strictly clamped <= 0.04 (<5%)")
+
+        local foundStatus = false
+        for _, tx in ipairs(mockModem._transmitted) do
+            if tx.pkt and tx.pkt.type == "MSG_ACTUATOR_STATUS" then
+                foundStatus = true
+            end
+        end
+        assert_true(foundStatus, "TCA must reply with MSG_ACTUATOR_STATUS after PBIT wiggle")
+
+        -- Flight state NORMAL must reject pbitWiggle
+        daemon.lastControlState = "NORMAL"
+        local rejWiggle, rejReason = tca_daemon.handle_calib_pulse(daemon, {
+            payload = {
+                targetThrusterId = "ALL",
+                pbitWiggle = true,
+                pulseRatio = 0.03,
+            },
+        })
+        assert_false(rejWiggle)
+        assert_eq(rejReason, "PBIT_REJECTED_IN_FLIGHT")
+    end)
 end)

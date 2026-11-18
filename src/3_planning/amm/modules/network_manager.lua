@@ -368,4 +368,26 @@ function network_manager:send_mission_ack(ack_payload)
     return ok, err
 end
 
+function network_manager:send_pbit_req(req_payload)
+    local m = self.onboardModem or self.modem
+    if not m then
+        return false, "MODEM_UNBOUND"
+    end
+    local p = type(req_payload) == "table" and req_payload or {}
+    local pkt = self:encode_envelope("MSG_PBIT_REQ", {
+        requestId = tostring(p.requestId or ("PBIT-" .. tostring((os.epoch and os.epoch("utc")) or 0))),
+        source = p.source or "AMM",
+        runWiggle = (p.runWiggle ~= false),
+        busRttMs = p.busRttMs,
+        energyFuel = p.energyFuel,
+        channelConflict = p.channelConflict,
+        targetThrusterId = p.targetThrusterId,
+    })
+    local ch = self.baseChannel + 8
+    local ok, err = pcall(function()
+        m.transmit(ch, ch, pkt)
+    end)
+    return ok, err
+end
+
 return network_manager

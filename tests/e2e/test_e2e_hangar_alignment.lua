@@ -289,4 +289,55 @@ describe("Scenario 4: Hangar Alignment Calibration Session", function()
         assert_false(vas.modem:isOpen(101))
         assert_false(vas.modem:isOpen(104))
     end)
+
+    it("syncs peripheralManifest in MSG_PROFILE_SYNC across Alignment->VAS and detects >5% mass shift on re-assembly (TASK-136)", function()
+        local bus = virtual_bus.create_bus({ clock = 2.0 })
+        sdk.patch(os, "epoch", function() return math.floor(bus.time * 1000 + 0.5) end)
+        local align = node_sandbox.create_node(bus, "ALIGN", "src/0_development/alignment")
+        local vas = node_sandbox.create_node(bus, "VAS", "src/1_control/vas")
+        local align_master = align:require("align_master")
+        local vas_net = vas:require("network_manager")
+        local vas_sp = vas:require("sensor_pipeline")
+        local vas_fsm_mod = vas:require("state_machine")
+
+        vas.modem:open(101)
+        vas.modem:open(10008)
+        local vas_fsm = vas_fsm_mod.init({}, true)
+        local vas_state = vas_net.init({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
+        vas_state.wirelessModem = vas.modem
+        local capturedManifest = nil
+        vas_state.on_profile_sync = function(p)
+            capturedManifest = p.peripheralManifest
+            vas_fsm_mod.update_contraption_interlock(vas_fsm, "ASSEMBLED", false, "PROFILE_SYNC")
+        end
+
+        local master = align_master.init_bay_session({
+            station = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101 },
+            safety = { tiltAbortDeg = 12.0, tiltWarnDeg = 8.0, watchdogTimeoutMs = 5000 },
+        }, "AIRCRAFT_01", 10000, align.modem, 2000)
+        master.total_dry_mass = 12000.0
+        local payload = align_master.build_profile_payload(master, { status = "FULL_6DOF_PASS" }, {})
+        assert_not_nil(payload.peripheralManifest)
+
+        align.modem:transmit(101, 102, {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            seq = 1,
+            type = "MSG_PROFILE_SYNC",
+            time = 2010,
+            payload = payload,
+        })
+        bus:step(0.05)
+
+        for _, m in ipairs(vas.modem:drain()) do
+            if m.channel == 101 then
+                vas_net.dispatch(vas_state, vas_fsm, nil, nil, 101, m.replyChannel, m.payload)
+            end
+        end
+        assert_not_nil(capturedManifest)
+        assert_eq(capturedManifest.totalDryMass, 12000.0)
+
+        local recheck = vas_sp.verify_and_rebind_topology({}, capturedManifest, {}, 13000.0)
+        assert_true(recheck.recalibrationRequired)
+    end)
 end)

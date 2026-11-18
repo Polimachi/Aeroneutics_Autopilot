@@ -1480,3 +1480,219 @@ describe("vas TASK-130 airborne cold-boot recovery and /.flight_state.json persi
         assert_eq(fsmTimeout.transitionReason, "RECOVERY_HOLD_TIMEOUT_10S")
     end)
 end)
+
+describe("VAS Contraption Disassembly Interlock & Topology Rebinding (TASK-136)", function()
+    it("detects DISASSEMBLED contraption, blocks ground arming, and triggers E_STOP when disassembled in flight", function()
+        local okSp, sensor_pipeline = pcall(require, "sensor_pipeline")
+        if not okSp then sensor_pipeline = require("modules.sensor_pipeline") end
+
+        local fakePeriph = {
+            getNames = function() return { "physics_assembler_0" } end,
+            getType = function(n) return "physics_assembler" end,
+            wrap = function(n)
+                return {
+                    isAssembled = function() return false end,
+                    getMass = function() return 12500.0 end,
+                }
+            end,
+        }
+        local cState, mass = sensor_pipeline.detect_contraption_state({}, fakePeriph)
+        assert_eq(cState, "DISASSEMBLED")
+        assert_near(mass, 12500.0, 0.1)
+
+        -- Ground disassembly forces DISARMED and blocks arming
+        local fsm = state_machine.init({}, false)
+        state_machine.transition_to(fsm, "IDLE_ARMED", "READY")
+        local okGround, codeGround = state_machine.update_contraption_interlock(fsm, "DISASSEMBLED", false, "BLOCK_DISASSEMBLED")
+        assert_false(okGround)
+        assert_eq(fsm.currentState, "DISARMED")
+        local armOk, armErr = state_machine.handle_arm_command(fsm, { arm = true })
+        assert_false(armOk)
+        assert_eq(armErr, "ERR_CONTRAPTION_DISASSEMBLED")
+
+        -- In-flight disassembly latches E_STOP immediately
+        local fsmAir = state_machine.init({}, true)
+        state_machine.transition_to(fsmAir, "NORMAL", "TAKEOFF")
+        fsmAir.isAirborne = true
+        assert_true(fsmAir.isAirborne)
+        local okAir, codeAir = state_machine.update_contraption_interlock(fsmAir, "DISASSEMBLED", false, "CONTRAPTION_DISASSEMBLED_IN_FLIGHT")
+        assert_false(okAir)
+        assert_eq(fsmAir.currentState, "E_STOP")
+        assert_eq(fsmAir.transitionReason, "CONTRAPTION_DISASSEMBLED_IN_FLIGHT")
+    end)
+
+    it("latches recalibrationRequired on thruster count mismatch or >5% mass delta, while rebinding unchanged counts within 5%", function()
+        local okSp, sensor_pipeline = pcall(require, "sensor_pipeline")
+        if not okSp then sensor_pipeline = require("modules.sensor_pipeline") end
+
+        local manifest = {
+            schemaVersion = 1,
+            domainId = "AIRCRAFT_01",
+            topologyHash = "h_base",
+            totalDryMass = 10000.0,
+            thrusterCount = 2,
+            thrusters = {
+                { groupId = "THR_MAIN_L", peripheralCount = 1 },
+                { groupId = "THR_MAIN_R", peripheralCount = 1 },
+            },
+        }
+
+        -- Case 1: Re-numbered wired IDs with 2 thrusters and 2% mass drift -> REBOUND cleanly
+        local resOk = sensor_pipeline.verify_and_rebind_topology({}, manifest, { "thruster_5", "thruster_9" }, 10200.0)
+        assert_true(resOk.ok)
+        assert_false(resOk.recalibrationRequired)
+        assert_eq(resOk.topologyStatus, "REBOUND")
+
+        -- Case 2: Thruster count mismatch (3 vs 2) -> recalibrationRequired = true
+        local resCountFail = sensor_pipeline.verify_and_rebind_topology({}, manifest, { "thruster_1", "thruster_2", "thruster_3" }, 10000.0)
+        assert_false(resCountFail.ok)
+        assert_true(resCountFail.recalibrationRequired)
+        assert_eq(resCountFail.reason, "THRUSTER_COUNT_MISMATCH")
+
+        -- Case 3: Dry mass delta > 5% (10800 vs 10000 = +8%) -> recalibrationRequired = true
+        local resMassFail = sensor_pipeline.verify_and_rebind_topology({}, manifest, { "thruster_1", "thruster_2" }, 10800.0)
+        assert_false(resMassFail.ok)
+        assert_true(resMassFail.recalibrationRequired)
+        assert_eq(resMassFail.reason, "MASS_DELTA_EXCEEDED")
+
+        -- Latch in state_machine blocks arming until MSG_PROFILE_SYNC clears it
+        local fsm = state_machine.init({}, false)
+        state_machine.update_contraption_interlock(fsm, "ASSEMBLED", true, "MASS_DELTA_EXCEEDED")
+        local armOk, armErr = state_machine.handle_arm_command(fsm, { arm = true })
+        assert_false(armOk)
+        assert_eq(armErr, "ERR_RECALIBRATION_REQUIRED")
+    end)
+end)
+
+describe("VAS Pre-Flight 5-Stage PBIT & MSG_PBIT_REPORT (TASK-131)", function()
+    it("evaluates 5-stage PBIT PASS, WARN, and FAIL gates", function()
+        local fsm = state_machine.init({}, true)
+        local rPass = state_machine.evaluate_pbit(fsm, {
+            busRttMs = 18,
+            actuatorWiggleOk = true,
+            energyFuel = 0.85,
+            channelConflict = false,
+        })
+        assert_eq(rPass.overallStatus, "PASS")
+        assert_true(rPass.takeoffPermitted)
+        assert_eq(rPass.checks.busRtt.status, "PASS")
+        assert_eq(rPass.checks.inertiaProfile.status, "PASS")
+        assert_eq(rPass.checks.actuatorWiggle.status, "PASS")
+        assert_eq(rPass.checks.energyFuel.status, "PASS")
+        assert_eq(rPass.checks.channelConflict.status, "PASS")
+
+        local rWarn = state_machine.evaluate_pbit(fsm, {
+            busRttMs = 95,
+            actuatorWiggleOk = true,
+            energyFuel = 0.16,
+            channelConflict = false,
+        })
+        assert_eq(rWarn.overallStatus, "WARN")
+        assert_true(rWarn.takeoffPermitted)
+
+        state_machine.update_contraption_interlock(fsm, "ASSEMBLED", true, "MASS_DELTA_EXCEEDED")
+        local rFail = state_machine.evaluate_pbit(fsm, {
+            busRttMs = 250,
+            actuatorWiggleOk = false,
+            energyFuel = 0.05,
+            channelConflict = true,
+        })
+        assert_eq(rFail.overallStatus, "FAIL")
+        assert_false(rFail.takeoffPermitted)
+        assert_eq(rFail.checks.inertiaProfile.status, "FAIL")
+        assert_eq(rFail.checks.busRtt.status, "FAIL")
+        assert_eq(rFail.checks.actuatorWiggle.status, "FAIL")
+        assert_eq(rFail.checks.energyFuel.status, "FAIL")
+        assert_eq(rFail.checks.channelConflict.status, "FAIL")
+    end)
+
+    it("executes core_daemon.run_pbit dispatching <5% wiggle on Base+10 and MSG_PBIT_REPORT on Base+2 & Base+8", function()
+        local okCd, core_daemon = pcall(require, "core_daemon")
+        if not okCd then core_daemon = require("modules.core_daemon") end
+        local wirelessModem = mock.modem()
+        local fsm = state_machine.init({}, true)
+        local fakeDaemon = {
+            cfg = { system = { domainId = "AIRCRAFT_01", baseChannel = 10000 } },
+            fsm = fsm,
+            net = {
+                modem = wirelessModem,
+                domainId = "AIRCRAFT_01",
+                baseChannel = 10000,
+                channels = { telemetry = 10002, calibration = 10008, actuation = 10010, guidance = 10001 },
+                seq = 0,
+            },
+            sensors = {
+                devices = { fuel = { read = function() return 0.90 end } },
+                lastCom = { fuel = 0.90 },
+            },
+            adapter = { tcaConnected = true, activeGroupCount = 1 },
+        }
+
+        local report = core_daemon.run_pbit(fakeDaemon, {
+            requestId = "PBIT-REQ-01",
+            source = "AMM",
+            runWiggle = true,
+            busRttMs = 15,
+        })
+        assert_not_nil(report)
+        assert_eq(report.overallStatus, "PASS")
+        assert_true(report.takeoffPermitted)
+
+        local sawWiggle, sawRep2, sawRep8 = false, false, false
+        for _, tx in ipairs(wirelessModem._transmitted) do
+            if tx.tx == 10010 and tx.pkt and tx.pkt.type == "MSG_CALIB_PULSE" then
+                sawWiggle = true
+                assert_true(tx.pkt.payload.pbitWiggle)
+                assert_true((tx.pkt.payload.pulseRatio or 0) <= 0.04)
+            elseif tx.pkt and tx.pkt.type == "MSG_PBIT_REPORT" then
+                if tx.tx == 10002 then sawRep2 = true end
+                if tx.tx == 10008 then sawRep8 = true end
+                assert_eq(tx.pkt.payload.requestId, "PBIT-REQ-01")
+            end
+        end
+        assert_true(sawWiggle, "run_pbit must emit <5% pbitWiggle MSG_CALIB_PULSE on Base+10")
+        assert_true(sawRep2, "run_pbit must emit MSG_PBIT_REPORT on Base+2")
+        assert_true(sawRep8, "run_pbit must emit MSG_PBIT_REPORT on Base+8")
+    end)
+end)
+
+describe("VAS GPS DR Hold-over, Chunk-Border Blending & HOLD_LEVEL (TASK-128)", function()
+    it("holds velocity DR for <=1500ms, transitions to HOLD_LEVEL >1500ms, and blends chunk-border spikes smoothly", function()
+        local okSp, sensor_pipeline = pcall(require, "sensor_pipeline")
+        if not okSp then sensor_pipeline = require("modules.sensor_pipeline") end
+
+        local sensors = sensor_pipeline.init({})
+        local comVel = { dynamics = { altitudeY = 120.0, velocity = { vx = 10.0, vy = 0.0, vz = 0.0 } } }
+
+        -- Valid fix at t=1000ms establishes baseline (100, 200)
+        local s0 = sensor_pipeline.step_gps_dr(sensors, { navQuality = "GOOD", status = "FIX_OK", position = { x = 100.0, z = 200.0 } }, comVel, 0.05, 1000)
+        assert_false(s0.drHoldoverActive)
+        assert_false(s0.holdLevelActive)
+        assert_near(s0.pos.x, 100.0, 0.01)
+
+        -- Dropout at t=1500ms (blackout=500ms <= 1500ms): integrates velocity vx=10 * 0.5 = +5m, drHoldoverActive = true
+        local s1 = sensor_pipeline.step_gps_dr(sensors, { navQuality = "LOST", status = "NO_FIX" }, comVel, 0.5, 1500)
+        assert_true(s1.drHoldoverActive)
+        assert_false(s1.holdLevelActive)
+        assert_near(s1.pos.x, 105.0, 0.5)
+
+        -- Prolonged blackout at t=2600ms (blackout=1600ms > 1500ms): holdLevelActive = true
+        local s2 = sensor_pipeline.step_gps_dr(sensors, { navQuality = "LOST", status = "NO_FIX" }, comVel, 0.1, 2600)
+        assert_true(s2.holdLevelActive)
+
+        -- state_machine HOLD_LEVEL override zeroes angular rates and commands hover level when navHoldLevel = true
+        local fsm = state_machine.init({}, true)
+        state_machine.transition_to(fsm, "NORMAL", "TAKEOFF")
+        fsm.navHoldLevel = true
+        local eff = state_machine.get_effective_command(fsm, comVel)
+        assert_eq(eff.commandType, "QUATERNION_RATE")
+        assert_near(eff.targetAngularRates.pitchRate, 0.0, 1e-6)
+        assert_near(eff.targetAngularRates.rollRate, 0.0, 1e-6)
+
+        -- Recovery with a 20m chunk-border spike blends smoothly rather than jumping full +20m in 1 tick
+        local preRecX = s2.pos.x
+        local s3 = sensor_pipeline.step_gps_dr(sensors, { navQuality = "GOOD", status = "FIX_OK", position = { x = preRecX + 20.0, z = 200.0 } }, comVel, 0.05, 2650)
+        assert_false(s3.holdLevelActive)
+        assert_true(math.abs(s3.pos.x - preRecX) < 10.0, "Recovery from chunk-border spike must blend rather than snap")
+    end)
+end)

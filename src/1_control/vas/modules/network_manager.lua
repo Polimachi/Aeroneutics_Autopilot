@@ -440,6 +440,46 @@ function network_manager.open_ota_channels(state, otaAgent)
     return true
 end
 
+function network_manager.send_pbit_pulse(state, pulsePayload)
+    local m = state and (state.wirelessModem or state.modem)
+    if not m or type(m.transmit) ~= "function" then return false end
+    state.seq = (state.seq or 0) + 1
+    local ch = (state.channels and state.channels.actuation) or ((state.baseChannel or 10000) + 10)
+    local now = (os.epoch and os.epoch("utc")) or 0
+    local pkt = {
+        ver = "1.9.5",
+        domainId = state.aircraftDomainId or state.domainId or "AIRCRAFT_01",
+        seq = state.seq,
+        type = "MSG_CALIB_PULSE",
+        time = now,
+        payload = pulsePayload,
+    }
+    m.transmit(ch, ch, pkt)
+    return true
+end
+
+function network_manager.send_pbit_report(state, reportPayload)
+    local m = state and (state.wirelessModem or state.modem)
+    if not m or type(m.transmit) ~= "function" then return false end
+    state.seq = (state.seq or 0) + 1
+    local chTelem = (state.channels and state.channels.telemetry) or ((state.baseChannel or 10000) + 2)
+    local chCalib = (state.channels and state.channels.calibration) or ((state.baseChannel or 10000) + 8)
+    local now = (os.epoch and os.epoch("utc")) or 0
+    local pkt = {
+        ver = "1.9.5",
+        domainId = state.aircraftDomainId or state.domainId or "AIRCRAFT_01",
+        seq = state.seq,
+        type = "MSG_PBIT_REPORT",
+        time = now,
+        payload = reportPayload,
+    }
+    m.transmit(chTelem, chTelem, pkt)
+    if chCalib ~= chTelem then
+        m.transmit(chCalib, chCalib, pkt)
+    end
+    return true
+end
+
 function network_manager.dispatch(state, fsm, controller, mixer, channel, replyChannel, rawPacket)
     local ok, _ = network_manager.verify_envelope(rawPacket, state.aircraftDomainId)
     if not ok then return false end
@@ -453,6 +493,15 @@ function network_manager.dispatch(state, fsm, controller, mixer, channel, replyC
     elseif msgType == "MSG_CALIBRATION_INIT" then
         if channel ~= state.channels.calibration then return false, "WRONG_CHANNEL" end
         return handle_calibration_init(state, fsm, rawPacket.payload)
+    elseif msgType == "MSG_PBIT_REQ" then
+        local chs = state.channels or {}
+        if channel ~= chs.calibration and channel ~= chs.guidance then
+            return false, "WRONG_CHANNEL"
+        end
+        if type(state.on_pbit_req) == "function" then
+            state.on_pbit_req(rawPacket.payload)
+        end
+        return true
     elseif msgType == "MSG_CHANNEL_REBIND" then
         return handle_channel_rebind(state, rawPacket)
     elseif msgType == "MSG_CHANNEL_REBIND_ACK" then

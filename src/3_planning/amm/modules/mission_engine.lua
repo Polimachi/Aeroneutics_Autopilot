@@ -556,6 +556,8 @@ function mission_engine.new(opts)
         homePadId = cfg.homePadId or "",
         homePos = cfg.homePos or nil,
         lastPersistedKey = nil,
+        requirePbit = cfg.requirePbit == true,
+        lastPbitReport = cfg.pbitReport or nil,
         recovery = {
             enabled = (rec.enabled ~= false),
             persist = (type(cfg.recovery) == "table" and rec.enabled ~= false and rec.persist ~= false),
@@ -661,6 +663,11 @@ end
 
 function mission_engine:get_active() return self.checkpoints[self.active_index] end
 function mission_engine:count() return #self.checkpoints end
+function mission_engine:set_pbit_report(report)
+    if type(report) == "table" then
+        self.lastPbitReport = report
+    end
+end
 
 local function set_cruise_goal(self, cp)
     local p = cp.params or {}
@@ -1023,6 +1030,15 @@ function mission_engine:enter_checkpoint(index, now_ms, is_retry)
     if not ok_dec then
         self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
         return false, err_dec
+    end
+    if type(cp.action) == "string" and string.sub(cp.action, 1, 15) == "ACT_TKL_TAKEOFF" then
+        local rep = self.lastPbitReport
+        local blockedByReport = (type(rep) == "table" and rep.takeoffPermitted == false)
+        local blockedMissingRequired = (self.requirePbit == true and (type(rep) ~= "table" or rep.takeoffPermitted ~= true))
+        if blockedByReport or blockedMissingRequired then
+            self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
+            return false, "PBIT_TAKEOFF_INTERLOCK"
+        end
     end
     local pre_ctx = build_precond_ctx(self)
     local ok_dyn, err_dyn = action_registry.check_dynamic_preconditions(cp, pre_ctx)

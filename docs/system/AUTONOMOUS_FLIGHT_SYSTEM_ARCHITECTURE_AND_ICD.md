@@ -6,7 +6,7 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.37.0` |
+| **문서 버전 (Version)** | `v1.38.0` |
 | **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 전역 비행체 및 지상 관제 시스템 총괄 (Master ICD) |
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.38.0` | `2026-11-18` | **`TASK-136`·`TASK-131`·`TASK-128` (`I-4`·`I-7`) 안전 인터록·PBIT·항법 품질 계약 동기화 (`Approved`)**: ① `[I-4]` `MSG_CALIB_PULSE` 선택 필드(`pbitWiggle`, `pulseRatio`), `MSG_PROFILE_SYNC` 선택 필드(`peripheralManifest`), 및 신규 패킷 **`MSG_PBIT_REQ`** (`Base+8`/`Base+1`) / **`MSG_PBIT_REPORT`** (`Base+2`/`Base+8`) 추가, ② `[I-7]` `MSG_GPS_RESPONSE` 선택 필드(`navQuality`, `consecutiveFailures`) 및 신규 패킷 **`MSG_NAV_QUALITY`** (`Base+5`/`Base+2`/`60002`, `1,500ms` DR 홀드오버·`HOLD_LEVEL`) 추가, ③ §5.1 (`Alignment v2.9.0`, `VAS v1.25.0`, `TCA v1.14.0`, `AMM v2.6.0`, `GPS v2.4.0`, `FCP v2.5.0` `Approved`) 및 `Diagram v2.21.0` 배지 동기화 | `TASK-136` 재조립 인터록, `TASK-131` 5단계 PBIT 게이트, `TASK-128` GPS DR 홀드오버 가드 통합 계약 확정 |
 | `v1.37.0` | `2026-11-18` | **`[I-5]` `GAC` (`v1.7.0 Approved`) 본체 좌표(`position`) 명시화 및 `MSG_FACILITY_BEACON` 동기화**: ① `[I-5]` `MSG_FACILITY_BEACON`(`CH 50003` / `Base_sec+2`) 선택 필드에 GAC 관제소 본체 3D 좌표 `position = { x, y, z }`(`/gac/config.json` 명시값 우선, 미지정 시 예하 `facilities[]` 무게중심 폴백) 추가, ② §1, §3 `I-5`, §5.1 `GAC` 행(`v1.7.0 Approved`) 및 `Diagram v2.20.1` 배지 동기화 | `TASK-406` 연계 GAC 관제소 본체 위치 명시화 및 전술 지도 자동 표시 지원 |
 | `v1.36.0` | `2026-11-17` | **`TASK-130` 공중 콜드부트 복구 및 비휘발성 `/.flight_state.json` 영속 계약 반영 (`Approved`)**: ① `VAS` (`v1.24.0 Approved`) 10번째 FSM 상태 **`"AIRBORNE_RECOVERY_HOLD"`** 신설(`bootTimeoutMs = 500ms` 목표 비차단 20Hz 수평/선회 홀드, `Base+3` 양보, `[I-1]`/`[I-3]`/`[I-10]` `controlState` 및 `[I-13]` OTA `NOT_DISARMED` 거부 상태 추가, 조기 `arm=false` 무시), ② `FCP` (`v2.4.0 Approved`) 콜드부트 중 `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `IDLE_ARMED` 조기 `Base+1` disarm 송출 침묵 및 `AMM` 동기화 후 2.0s 범프리스 추종 규약 추가, ③ `AMM` (`v2.5.0 Approved`) 로컬 `/.flight_state.json` (`schemaVersion = 1`, `.tmp`+`fs.move` 원자적 저장) 및 `coldBootPolicy` (`"RESUME"` \| `"RTB"`) 복구 규약 신설, ④ §4 안전 워치독 매트릭스 및 §5.1 (`AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`, `Diagram v2.20.0`) 동기화 | `TASK-130` 서버 재시작·청크 언로드 공중 콜드부트 생존성 규격 확정 |
 | `v1.35.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 프로토콜·경합·검증 결함 12종 해소 (`Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `Alignment -> VAS` `MSG_CALIBRATION_INIT` 전용, 구 `Base+0` 직결 바인딩 `[DEPRECATED]`) 및 `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE`/`MSG_EMERGENCY_ALERT` 전용 비상 버스, `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리) 신설, ② `Base+3` `CH_MFD_STATE` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 시 `VAS` 배타적 우선 및 `acroTimeoutMs = 250ms`, `acroRecoveryHoldMs = 300ms` 복귀 히스테리시스 규약 명세, ③ `Base+20~39` Zone 3 탑재체·특수 임무 통합(`Base+30~39` `CH_PAYLOAD_EXT_30~39`, Zone 4 편대 링크 `TBD` 광역 데이터링크 이관), ④ `[I-8]`/`[I-9]` `BW=40` 고정 계약(`requestedBandwidth ~= 40` 시 `"DENIED"`), `"ASSIGNED"`/`"REASSIGNED"`/`"DENIED"`/`"FAILED"` 상태 통일, 랜덤 지터(`0~100ms`)·다회 프로브(`probeRetryCount=2`)·재할당 회피(`maxReassignAttempts=3`)·영속 리스(`channel_registry.json` / `config/channel_lease.json`)·`Base+0` 부팅 즉시 상시 개방·`Base+0..39` 전수 침범 감시(`30,000ms`) 반영, ⑤ `Diagram v2.19.0`, `AMM v2.4.0`, `GCS v1.3.0`, `VAS v1.23.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`, `GAC v1.6.0`, `Runway v1.12.0`, `Editor v0.5.0` 동기화 | `TASK-125` 40채널 스펙트럼 충돌·경합·검증 규칙 결함 12종 일괄 해소 및 `TASK-403`/`404` 통합 |
@@ -833,6 +834,9 @@ flowchart TD
 | :--- | :---: | :---: | :--- |
 | `MSG_CALIBRATION_CLOSE` | Alignment $\rightarrow$ VAS | $Base_{\text{hangar}} + 0$ | `bayId`, `action` (`"CLOSE_SESSION"`), `reason` (`"COMPLETE"` / `"MANUAL"`), `saveProfile` *(선택, bool)* |
 | `MSG_CALIBRATION_CLOSE_ACK` | VAS $\rightarrow$ Alignment | $Base_{\text{hangar}} + 1$ | `bayId`, `status` (`"CLOSED"`), `currentFsmState` *(선택, `"IDLE_ARMED"`)* |
+| `MSG_PBIT_REQ` | AMM / GCS $\rightarrow$ VAS | `Base+8` / `Base+1` | `requestId`, `source`, 선택: `runWiggle`, `busRttMs`, `energyFuel`, `channelConflict`, `targetThrusterId` (`MSG_CALIB_PULSE` `pbitWiggle` / `pulseRatio <= 0.04` 연계) |
+| `MSG_PBIT_REPORT` | VAS $\rightarrow$ AMM / MFD | `Base+2` / `Base+8` | `requestId`, `overallStatus` (`"PASS"`\|`"WARN"`\|`"FAIL"`), `takeoffPermitted`, `checks` (`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`), 선택: `contraptionState`, `recalibrationRequired`, `summaryReason`, `timestampMs` |
+| `MSG_PROFILE_SYNC` *(확장)* | Alignment $\rightarrow$ VAS | $Base_{\text{hangar}} + 0$ | `peripheralManifest` *(선택: `schemaVersion`, `topologyHash`, `totalDryMass`, `thrusterCount`, `thrusters`, `surfaces`, `sensorRoles`)* |
 
 ```lua
 -- 세션 종료 지령 및 확인 패킷 예시
@@ -1218,7 +1222,29 @@ flowchart TD
         accuracy = 0.12,                   -- 1-sigma 오차 반경 (m)
         hdop = 1.08,                       -- 수평 기하 정밀도 저하율
         nodeCount = 4,                     -- 선별된 유효 노드 수
-        selectedNodes = { "NODE_01", "NODE_04", "NODE_07", "NODE_09" }
+        selectedNodes = { "NODE_01", "NODE_04", "NODE_07", "NODE_09" },
+        navQuality = "GOOD",               -- 선택: GOOD | DEGRADED | POOR | LOST
+        consecutiveFailures = 0            -- 선택: 연속 실패 횟수
+    }
+}
+
+-- 3. 항법 품질 상태 보고 (MSG_NAV_QUALITY, CH Base+5 / Base+2 / 60002)
+{
+    ver = "1.9.5",
+    domainId = "GPS_BASE_NET",
+    seq = 90215,
+    type = "MSG_NAV_QUALITY",
+    time = 1729845000080,
+    payload = {
+        targetClient = "AIRCRAFT_01",
+        navQuality = "GOOD",               -- GOOD | DEGRADED | POOR | LOST
+        satelliteCount = 4,
+        consecutiveFailures = 0,
+        hdop = 1.08,
+        status = "FIX_OK",
+        drHoldoverActive = false,          -- <= 1,500ms DR 홀드오버 활성 여부
+        holdLevelActive = false,           -- > 1,500ms HOLD_LEVEL 전환 여부
+        blackoutMs = 0
     }
 }
 ```
@@ -1646,12 +1672,12 @@ flowchart TD
 ### 5.1 온보드 및 인프라 프로그램 사양·구현 현황
 | 프로그램 명 | 노드 ID | 사양 버전 / 상태 | 구현 및 검증 현황 | 비고 |
 | :--- | :---: | :---: | :--- | :--- |
-| **AMM** | Node 03 | `v2.5.0` (`Implemented`) | `v2.4.0` 기반 `TASK-130`: `/.flight_state.json` (`.tmp`+`fs.move`, `schemaVersion=1`), 공중 콜드부트 `RESUME`/`RTB` 복구(`recovery.coldBootPolicy`), `Base+3` `"AIRBORNE_RECOVERY_HOLD"` 양보 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.6.0` (`Implemented`) |
-| **FCP** | Node 04 | `v2.4.0` (`Implemented`) | `v2.3.0` 기반 `TASK-130`: `VAS Base+2` `"AIRBORNE_RECOVERY_HOLD"` 중 조기 `arm=false` 송출 침묵 및 `AMM` 동기화 후 2.0s 범프리스 추종, OTA `getStatusFn` 정합 | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
-| **VAS** | Node 01 | `v1.24.0` (`Implemented`) | `v1.23.0` 기반 `TASK-130`: `/.flight_state.json` 영속화, `isAirborneAtBoot` (`<=500ms` 목표), 10번째 상태 `AIRBORNE_RECOVERY_HOLD` 및 조기 `arm=false` 무시 | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
-| **TCA 클러스터** | Node 02-xx | `v1.13.0` (`Implemented`) | `v1.12.0` 기반 `[I-13]` `/lib/ota_agent.lua` 안전 게이트(`DISARMED`/`BOOT`/`IDLE_ARMED`) 및 `tick_boot_commit()` 연동 추가 | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독, $Base_{\text{hangar}}+4/+5$ |
+| **AMM** | Node 03 | `v2.6.0` (`Implemented`) | `v2.5.0` 기반 `TASK-131`·`128`: `Base+8` `MSG_PBIT_REQ`/`MSG_PBIT_REPORT` 이륙 인터록(`PBIT_TAKEOFF_INTERLOCK`), `MSG_NAV_QUALITY` 연동 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+8/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.6.0` (`Implemented`) |
+| **FCP** | Node 04 | `v2.5.0` (`Implemented`) | `v2.4.0` 기반 `TASK-128`: `state_propagator` 1.5s DR 홀드오버, `>1.5s` `HOLD_LEVEL`, 10틱 청크 경계 보간, `2.0s` 범프리스 복귀 | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
+| **VAS** | Node 01 | `v1.25.0` (`Implemented`) | `v1.24.0` 기반 `TASK-136`·`131`·`128`: `CONTRAPTION_STATE` / `peripheralManifest` 인터록, 5단계 PBIT(`MSG_PBIT_REQ`/`_REPORT`), 1.5s DR / `HOLD_LEVEL` | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
+| **TCA 클러스터** | Node 02-xx | `v1.14.0` (`Implemented`) | `v1.13.0` 기반 `TASK-136`·`131`: `logicalBindingMap` 동적 페리페럴 리바인딩 및 `<5%` PBIT `pbitWiggle` 시험 펄스 | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독, $Base_{\text{hangar}}+4/+5$ |
 | **ASA 클러스터** | Node 06-xx | `v1.8.0` (`Approved`) | `MSG_AERO_CMD`/`MSG_AERO_STATUS.interactionMode`·`[I-9]` 정합 사양 확정 (`OTA` 연동 동결 제외) | `Base+11` (구 `Base+7` `[DEPRECATED]`), 300ms Safe Glide Trim |
-| **Alignment** | Node 05 | `v2.8.0` (`Implemented`) | `v2.7.1` 기반 `TASK-125`: `MSG_CALIBRATION_INIT` 송신 대상 채널을 `Base+0`에서 `Base+8` (`CH_CALIBRATION_INIT`)로 변경 | 베이 `101~200`, `Base+8` 직결 바인딩, 6-DoF OLS 프로파일 생성 |
+| **Alignment** | Node 05 | `v2.9.0` (`Implemented`) | `v2.8.0` 기반 `TASK-136`: `peripheral_manifest.json` 및 `MSG_PROFILE_SYNC.peripheralManifest` 토폴로지 해시 생성 | 베이 `101~200`, `Base+8` 직결 바인딩, 6-DoF OLS 프로파일 생성 |
 | **Installer** | Ground / Dev | `v1.2.0` (`Implemented`) | [INSTALLER_PROGRAM_SPECIFICATION.md](../specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md) `startup_generator.lua` 2단계 OTA 부팅 커밋 워치독 및 자가 복구 후크 사양 추가 | 3종 실행 모드, `/startup/00_<id>.lua`, `/.ota_pending.json` 롤백 가드 |
 | **OTA** | Ground / Lib | `v0.1.0` (`Implemented`) | [OTA_PROGRAM_SPECIFICATION.md](../specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md) `[I-13]` 무선 OTA 배포 서버 및 `/lib/ota_agent.lua` 규격 신설 | $Base_{\text{hangar}}+4/+5$, CRC32 스테이징, `/ota_packages/` 원격 동기화, 51x19 TUI/CLI |
 | **FDR** | Ground / Dev | `v0.4.0` (`Implemented`) | [FDR_PROGRAM_SPECIFICATION.md](../specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) `TASK-125`: 패시브 감청 채널에 `Base+9` (`CH_EMERGENCY_CORE`) 추가 및 `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리 | `Base+1/+2/+9/+10`(+선택 `+11/+4`) 수신 전용 패시브 감청 (`modem.transmit` 0회) |
@@ -1660,7 +1686,7 @@ flowchart TD
 | **RUNWAY** | Infra | `v1.12.0` (`Implemented`) | `v1.11.0` 기반 `Landing Pad` 준거 `Base_sec+1`/`+5` 연동, 시단·종단 오프셋 변환, 유선 등화/클러치 우아한 성능 저하 규격 개정 | 가상 ILS, 유선 PAPI/RWSL 조명, `src/0_infra/runway/` |
 | **DOCKING_ARM** | Infra | `v1.12.0` (`Approved`) | `v1.11.2` 기반 GAC `CH 50003` 중앙 집중화·3-시설 대칭형 `[I-5]` 가이드·`MSG_DOCKING_ARM_CMD [DEPRECATED]` 사양 개정 | 2축 갠트리 포획, `AMM` 주도 4단계 랑데부 및 엄빌리컬 보급 |
 | **GCS** | Infra | `v1.4.0` (`Implemented`) | `TASK-405`/`406` (`--lan` 브리지 바인딩, `CH 60003` GPS 하트비트, `gacNode` 무게중심, `60s` `OFFLINE` TTL) + `TASK-404`/`125` (`OFFSET_ESTOP = 9`, `BW=40`, `"REASSIGNED"`) | `CH 50000` 부트스트랩 채널 관리자, `CH 50003`/`50004`/`60003` 청취 및 원격 C2 콘솔 |
-| **GPS** | Infra | `v2.3.3` (`Implemented`) | `v2.3.2` 구현 기반 `60001 ~ 60004` 활성 및 `60005 ~ 60020` 예비 범위 명문화 사양 개정 | `CH 60001/60002` 측위 서버 군, 구형 세션 축출·HWM·단조 응답 가드·위상 분산 |
+| **GPS** | Infra | `v2.4.0` (`Implemented`) | `v2.3.3` 기반 `TASK-128`: `MSG_GPS_RESPONSE` 품질 필드(`navQuality`, `consecutiveFailures`) 및 `MSG_NAV_QUALITY` 브로드캐스트 | `CH 60001/60002` 측위 서버 군, 구형 세션 축출·HWM·단조 응답 가드·위상 분산 |
 
 ### 5.2 VAS & TCA 폐루프 클러스터 통합 시험 결과 (`VAS_TCA_Integration` (구 `VAC_TAP_Integration`))
 - **수행 환경**: CraftOS-PC 네이티브 가상머신 3-노드 클러스터 (Node 0: VAS, Node 1: TCA REDSTONE, Node 2: TCA API)

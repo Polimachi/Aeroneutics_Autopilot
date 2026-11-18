@@ -128,6 +128,10 @@ function state_machine.init(systemConfig, isCalibrated)
         emergencyKp = cfg.emergencyKp or (2.0 / 15.0),
         emergencyKi = cfg.emergencyKi or (0.1 / 15.0),
         isAirborne = false,
+        contraptionState = "ASSEMBLED",
+        recalibrationRequired = false,
+        topologyStatus = "NOMINAL",
+        navHoldLevel = false,
         activeSource = "FCP",
         sensorLossTicks = 0,
         sensorLossDebounceTicks = timeouts.sensorLossDebounceTicks or 15,
@@ -230,6 +234,120 @@ function state_machine.on_actuators_ready(state)
     return false
 end
 
+local AIRBORNE_DISASSEMBLY_STATES = {
+    NORMAL = true, FAILSAFE_HOLD = true, EMERGENCY_LAND = true, AIRBORNE_RECOVERY_HOLD = true,
+}
+
+--- Enforce contraption assembly & re-assembly recalibration safety interlocks.
+function state_machine.update_contraption_interlock(state, contraptionState, recalibrationRequired, reason)
+    if contraptionState ~= nil then
+        state.contraptionState = contraptionState
+    end
+    if recalibrationRequired ~= nil then
+        state.recalibrationRequired = (recalibrationRequired == true)
+        state.topologyStatus = state.recalibrationRequired and "RECALIBRATION_REQUIRED" or "NOMINAL"
+    end
+
+    if state.contraptionState == "DISASSEMBLED" then
+        if state.isAirborne == true or AIRBORNE_DISASSEMBLY_STATES[state.currentState] then
+            state_machine.transition_to(state, "E_STOP", reason or "CONTRAPTION_DISASSEMBLED_IN_FLIGHT")
+            return false, "CONTRAPTION_DISASSEMBLED_IN_FLIGHT"
+        end
+        if state.currentState ~= "DISARMED" and state.currentState ~= "E_STOP" then
+            state_machine.transition_to(state, "DISARMED", reason or "ERR_CONTRAPTION_DISASSEMBLED")
+        end
+        return false, "ERR_CONTRAPTION_DISASSEMBLED"
+    end
+
+    if state.recalibrationRequired == true then
+        if state.isAirborne ~= true and state.currentState ~= "DISARMED" and state.currentState ~= "CALIBRATION" and state.currentState ~= "E_STOP" then
+            state_machine.transition_to(state, "DISARMED", reason or "ERR_RECALIBRATION_REQUIRED")
+        end
+        return false, "ERR_RECALIBRATION_REQUIRED"
+    end
+
+    return true, "OK"
+end
+
+--- Evaluate 5-stage Pre-Flight PBIT checks (busRtt, inertiaProfile, actuatorWiggle, energyFuel, channelConflict).
+function state_machine.evaluate_pbit(state, pbitCtx)
+    local ctx = type(pbitCtx) == "table" and pbitCtx or {}
+    local checks = {}
+    local hasFail = false
+    local hasWarn = false
+    local summaryReason = nil
+
+    local function record_check(key, status, reason, value)
+        checks[key] = { status = status, reason = reason, value = value }
+        if status == "FAIL" then
+            hasFail = true
+            if not summaryReason then summaryReason = reason end
+        elseif status == "WARN" then
+            hasWarn = true
+            if not summaryReason then summaryReason = reason end
+        end
+    end
+
+    -- 1. Bus & Node RTT
+    local rtt = tonumber(ctx.busRttMs)
+    if rtt == nil then
+        record_check("busRtt", "PASS", "LOCAL_BUS_OK", nil)
+    elseif rtt > 200 then
+        record_check("busRtt", "FAIL", "BUS_RTT_EXCEEDED", rtt)
+    elseif rtt > 50 then
+        record_check("busRtt", "WARN", "BUS_RTT_ELEVATED", rtt)
+    else
+        record_check("busRtt", "PASS", "NOMINAL", rtt)
+    end
+
+    -- 2. Inertia & Contraption Topology Profile
+    if state.contraptionState == "DISASSEMBLED" then
+        record_check("inertiaProfile", "FAIL", "CONTRAPTION_DISASSEMBLED", state.contraptionState)
+    elseif state.recalibrationRequired == true then
+        record_check("inertiaProfile", "FAIL", "RECALIBRATION_REQUIRED", state.topologyStatus)
+    else
+        record_check("inertiaProfile", "PASS", "NOMINAL", state.topologyStatus)
+    end
+
+    -- 3. Actuator Wiggle (<5% pulse)
+    if ctx.actuatorWiggleOk == false then
+        record_check("actuatorWiggle", "FAIL", "ACTUATOR_WIGGLE_FAILED", false)
+    else
+        record_check("actuatorWiggle", "PASS", "NOMINAL", true)
+    end
+
+    -- 4. Energy / Fuel Reserve
+    local fuel = tonumber(ctx.energyFuel)
+    if fuel ~= nil and fuel < 0.10 then
+        record_check("energyFuel", "FAIL", "LOW_FUEL_CRITICAL", fuel)
+    elseif fuel ~= nil and fuel <= 0.20 then
+        record_check("energyFuel", "WARN", "LOW_FUEL_WARN", fuel)
+    else
+        record_check("energyFuel", "PASS", "NOMINAL", fuel)
+    end
+
+    -- 5. Channel Conflict Check
+    if ctx.channelConflict == true then
+        record_check("channelConflict", "FAIL", "CHANNEL_CONFLICT", true)
+    else
+        record_check("channelConflict", "PASS", "NOMINAL", false)
+    end
+
+    local overallStatus = hasFail and "FAIL" or (hasWarn and "WARN" or "PASS")
+    local report = {
+        requestId = tostring(ctx.requestId or ("PBIT-" .. tostring(resolve_epoch_ms()))),
+        overallStatus = overallStatus,
+        takeoffPermitted = (not hasFail),
+        contraptionState = state.contraptionState,
+        recalibrationRequired = (state.recalibrationRequired == true),
+        summaryReason = summaryReason or "ALL_CHECKS_PASS",
+        checks = checks,
+        timestampMs = resolve_epoch_ms(),
+    }
+    state.lastPbitReport = report
+    return report
+end
+
 function state_machine.handle_arm_command(state, cmd)
     if not cmd or cmd.arm == nil then return end
     local curr = state.currentState
@@ -238,6 +356,12 @@ function state_machine.handle_arm_command(state, cmd)
             state_machine.transition_to(state, "DISARMED", "PILOT_DISARM")
         end
     elseif cmd.arm == true then
+        if state.contraptionState == "DISASSEMBLED" then
+            return false, "ERR_CONTRAPTION_DISASSEMBLED"
+        end
+        if state.recalibrationRequired == true then
+            return false, "ERR_RECALIBRATION_REQUIRED"
+        end
         if cmd.flightActive == true then
             if curr == "DISARMED" or curr == "ARMING" or curr == "IDLE_ARMED"
                 or curr == "FAILSAFE_HOLD" or curr == "AIRBORNE_RECOVERY_HOLD" then
@@ -249,6 +373,7 @@ function state_machine.handle_arm_command(state, cmd)
             end
         end
     end
+    return true, "OK"
 end
 
 function state_machine.update_watchdogs(state, nowMs, comState, _healthMap, sensorOk, actuatorsReady)
@@ -300,7 +425,18 @@ function state_machine.get_effective_command(state, comState)
     local yaw = (comState and comState.attitude and comState.attitude.yaw) or 0.0
     local curr = state.currentState
 
-    if curr == "NORMAL" and state.activeSource == "MFD_ACRO" and state.lastAcroCmd then
+    if curr == "NORMAL" and state.navHoldLevel == true then
+        local coll = state_machine.compute_emergency_collective(state, 0.0, vy)
+        return {
+            flightMode = "HOLD_LEVEL",
+            commandType = "QUATERNION_RATE",
+            targetQuaternion = quat.from_euler(0.0, 0.0, yaw),
+            targetAngularRates = { pitchRate = 0.0, rollRate = 0.0, yawRate = 0.0 },
+            collectiveThrust = coll,
+            flapTarget = 0.0,
+            translationBias = { surge = 0.0, sway = 0.0 }
+        }
+    elseif curr == "NORMAL" and state.activeSource == "MFD_ACRO" and state.lastAcroCmd then
         return state.lastAcroCmd
     elseif curr == "NORMAL" and state.lastFcpCmd then
         return state.lastFcpCmd

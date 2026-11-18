@@ -323,4 +323,57 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         }, tMs + 50)
         assert_eq(master.state, "STANDBY")
     end)
+
+    it("builds deterministic peripheralManifest with topologyHash, saves manifest, and attaches it to profile payload (TASK-136)", function()
+        local okExp, profile_exporter = pcall(require, "profile_exporter")
+        if not okExp then profile_exporter = require("modules.profile_exporter") end
+
+        local m1 = profile_exporter.build_peripheral_manifest(
+            "AIRCRAFT_01",
+            {
+                THR_MAIN_L = { peripheralCount = 1, vectorCapable = false },
+                THR_MAIN_R = { peripheralCount = 1, vectorCapable = false },
+            },
+            { AIL_L = {}, AIL_R = {} },
+            { "gimbal", "altitude", "velocity", "assembler" },
+            12500.0
+        )
+        assert_not_nil(m1)
+        assert_eq(m1.schemaVersion, 1)
+        assert_eq(m1.domainId, "AIRCRAFT_01")
+        assert_eq(m1.thrusterCount, 2)
+        assert_eq(m1.totalDryMass, 12500.0)
+        assert_not_nil(m1.topologyHash)
+
+        local m2 = profile_exporter.build_peripheral_manifest(
+            "AIRCRAFT_01",
+            {
+                THR_MAIN_R = { peripheralCount = 1, vectorCapable = false },
+                THR_MAIN_L = { peripheralCount = 1, vectorCapable = false },
+            },
+            { AIL_R = {}, AIL_L = {} },
+            { "assembler", "velocity", "altitude", "gimbal" },
+            12500.0
+        )
+        assert_eq(m1.topologyHash, m2.topologyHash, "topologyHash must be deterministic regardless of table iteration order")
+
+        local savedPath = "/_test_align_manifest.json"
+        if fs.exists(savedPath) then fs.delete(savedPath) end
+        local savedOk, savedErr = profile_exporter.save_peripheral_manifest(m1, "/", fs, "alignment/peripheral_manifest.json")
+        -- clean up custom path
+        local okWrite, errWrite = profile_exporter.save_peripheral_manifest(m1, "/_test_manifest_dir", fs)
+        assert_true(okWrite, tostring(errWrite))
+        assert_true(fs.exists("/_test_manifest_dir/peripheral_manifest.json"))
+        fs.delete("/_test_manifest_dir/peripheral_manifest.json")
+        if fs.exists("/alignment/peripheral_manifest.json") then fs.delete("/alignment/peripheral_manifest.json") end
+
+        local master = align_master.init_bay_session({
+            station = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101 },
+            safety = { tiltAbortDeg = 12.0, tiltWarnDeg = 8.0, watchdogTimeoutMs = 5000 }
+        }, "AIRCRAFT_01", 10000, mock.modem(), 1000)
+        master.totalDryMass = 12500.0
+        local payload = align_master.build_profile_payload(master, {}, {})
+        assert_not_nil(payload.peripheralManifest)
+        assert_eq(payload.peripheralManifest.domainId, "AIRCRAFT_01")
+    end)
 end)

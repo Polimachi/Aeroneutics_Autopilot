@@ -302,4 +302,217 @@ function sensor_pipeline.reconnect_faulty(state, healthMap)
     return count
 end
 
+--- Inspect physics_assembler peripheral to determine ASSEMBLED vs DISASSEMBLED state and mass.
+function sensor_pipeline.detect_contraption_state(state, periphApi)
+    local papi = periphApi or peripheral
+    local assembler = state and state.devices and state.devices.assembler or nil
+    if not assembler and papi and type(papi.getNames) == "function" and type(papi.getType) == "function" then
+        for _, name in ipairs(papi.getNames()) do
+            if papi.getType(name) == "physics_assembler" then
+                assembler = papi.wrap(name)
+                if state and state.devices then state.devices.assembler = assembler end
+                break
+            end
+        end
+    end
+
+    if not assembler then
+        if state and state.requireAssembler == true then
+            return "DISASSEMBLED", 0
+        end
+        return "ASSEMBLED", nil
+    end
+
+    local assembled = true
+    local mass = nil
+    if type(assembler.isAssembled) == "function" then
+        local okA, resA = pcall(assembler.isAssembled)
+        if okA and resA ~= nil then assembled = (resA == true) end
+    elseif type(assembler.is_assembled) == "function" then
+        local okA, resA = pcall(assembler.is_assembled)
+        if okA and resA ~= nil then assembled = (resA == true) end
+    end
+    if type(assembler.getMass) == "function" then
+        local okM, resM = pcall(assembler.getMass)
+        if okM and tonumber(resM) then mass = tonumber(resM) end
+    elseif type(assembler.get_mass) == "function" then
+        local okM, resM = pcall(assembler.get_mass)
+        if okM and tonumber(resM) then mass = tonumber(resM) end
+    end
+
+    return assembled and "ASSEMBLED" or "DISASSEMBLED", mass
+end
+
+--- Verify re-assembled thruster count and dry mass (<= 5%) against manifest, updating logical bindings.
+function sensor_pipeline.verify_and_rebind_topology(state, manifest, liveActuatorNodes, liveMass, periphApi)
+    if type(manifest) ~= "table" then
+        return { ok = true, recalibrationRequired = false, topologyStatus = "NO_MANIFEST", reason = "NO_MANIFEST" }
+    end
+
+    local papi = periphApi or peripheral
+    local nodeNames = {}
+    if type(liveActuatorNodes) == "table" then
+        if #liveActuatorNodes > 0 then
+            for i, name in ipairs(liveActuatorNodes) do
+                nodeNames[i] = tostring(name)
+            end
+        else
+            for k, _ in pairs(liveActuatorNodes) do
+                table.insert(nodeNames, tostring(k))
+            end
+            table.sort(nodeNames)
+        end
+    elseif papi and type(papi.getNames) == "function" and type(papi.getType) == "function" then
+        for _, name in ipairs(papi.getNames()) do
+            local pType = papi.getType(name)
+            if pType == "thruster" or pType == "vector_thruster" or pType == "ion_thruster" then
+                table.insert(nodeNames, name)
+            end
+        end
+        table.sort(nodeNames)
+    end
+
+    local liveCount = #nodeNames
+    local expectedCount = tonumber(manifest.thrusterCount) or 0
+    if expectedCount > 0 and liveCount ~= expectedCount then
+        if state then
+            state.recalibrationRequired = true
+            state.topologyStatus = "RECALIBRATION_REQUIRED"
+        end
+        return {
+            ok = false,
+            recalibrationRequired = true,
+            topologyStatus = "RECALIBRATION_REQUIRED",
+            reason = "THRUSTER_COUNT_MISMATCH",
+            expectedCount = expectedCount,
+            liveCount = liveCount,
+        }
+    end
+
+    local expectedMass = tonumber(manifest.totalDryMass) or 0
+    local measuredMass = tonumber(liveMass)
+    if expectedMass > 0 and measuredMass and measuredMass > 0 then
+        local deltaRatio = math.abs(measuredMass - expectedMass) / expectedMass
+        if deltaRatio > 0.05 then
+            if state then
+                state.recalibrationRequired = true
+                state.topologyStatus = "RECALIBRATION_REQUIRED"
+            end
+            return {
+                ok = false,
+                recalibrationRequired = true,
+                topologyStatus = "RECALIBRATION_REQUIRED",
+                reason = "MASS_DELTA_EXCEEDED",
+                deltaRatio = deltaRatio,
+            }
+        end
+    end
+
+    local bindingMap = {}
+    for i, name in ipairs(nodeNames) do
+        bindingMap[i] = name
+    end
+    if state then
+        state.logicalBindingMap = bindingMap
+        state.recalibrationRequired = false
+        state.topologyStatus = "REBOUND"
+    end
+    return {
+        ok = true,
+        recalibrationRequired = false,
+        topologyStatus = "REBOUND",
+        bindingMap = bindingMap,
+        liveCount = liveCount,
+    }
+end
+
+local function ensure_dr_state(state)
+    state.drState = state.drState or {
+        pos = { x = 0.0, z = 0.0 },
+        lastValidGpsMs = nil,
+        gpsBlackoutMs = 0,
+        navQuality = "GOOD",
+        drHoldoverActive = false,
+        holdLevelActive = false,
+        blendTicksRemaining = 0,
+        blendStart = nil,
+        blendTarget = nil,
+        blendTotalTicks = 10,
+    }
+    return state.drState
+end
+
+--- Advance 1.5s Dead-Reckoning GPS hold-over, chunk-border spike blending, and HOLD_LEVEL guard.
+function sensor_pipeline.step_gps_dr(state, gpsSample, comState, dt, nowMs)
+    local dr = ensure_dr_state(state)
+    local dtSec = math.max(0.0, math.min(0.5, tonumber(dt) or 0.05))
+    local now = tonumber(nowMs) or ((os.epoch and os.epoch("utc")) or 0)
+    local vel = (comState and comState.dynamics and comState.dynamics.velocity) or {}
+    local vx = tonumber(vel.vx) or 0.0
+    local vz = tonumber(vel.vz) or 0.0
+
+    local fixPos = type(gpsSample) == "table" and (gpsSample.position or gpsSample.pos) or nil
+    local hasFix = type(fixPos) == "table"
+        and tonumber(fixPos.x) ~= nil and tonumber(fixPos.z) ~= nil
+        and gpsSample.navQuality ~= "LOST"
+        and gpsSample.status ~= "NO_FIX"
+        and gpsSample.status ~= "FAIL_GEOMETRY"
+
+    if hasFix then
+        local fx = tonumber(fixPos.x)
+        local fz = tonumber(fixPos.z)
+        local dx = fx - dr.pos.x
+        local dz = fz - dr.pos.z
+        local dist = math.sqrt(dx * dx + dz * dz)
+        if dr.lastValidGpsMs ~= nil and (dr.holdLevelActive or dr.drHoldoverActive or dist > 4.0) then
+            local totalTicks = dr.blendTotalTicks or 10
+            dr.blendStart = { x = dr.pos.x, z = dr.pos.z }
+            dr.blendTarget = { x = fx, z = fz }
+            dr.blendTicksRemaining = totalTicks
+        end
+        if dr.blendTicksRemaining > 0 and dr.blendTarget and dr.blendStart then
+            local total = dr.blendTotalTicks or 10
+            local done = (total - dr.blendTicksRemaining + 1)
+            local ratio = math.min(1.0, done / math.max(1, total))
+            dr.pos.x = dr.blendStart.x + (dr.blendTarget.x - dr.blendStart.x) * ratio
+            dr.pos.z = dr.blendStart.z + (dr.blendTarget.z - dr.blendStart.z) * ratio
+            dr.blendTicksRemaining = dr.blendTicksRemaining - 1
+            if dr.blendTicksRemaining <= 0 then
+                dr.pos.x = dr.blendTarget.x
+                dr.pos.z = dr.blendTarget.z
+            end
+        else
+            dr.pos.x = fx
+            dr.pos.z = fz
+        end
+        dr.lastValidGpsMs = now
+        dr.gpsBlackoutMs = 0
+        dr.drHoldoverActive = false
+        dr.holdLevelActive = false
+        dr.navQuality = gpsSample.navQuality or "GOOD"
+    else
+        dr.pos.x = dr.pos.x + vx * dtSec
+        dr.pos.z = dr.pos.z + vz * dtSec
+        local blackout = (dr.lastValidGpsMs and (now - dr.lastValidGpsMs)) or ((dr.gpsBlackoutMs or 0) + math.floor(dtSec * 1000))
+        if blackout < 0 then blackout = 0 end
+        dr.gpsBlackoutMs = blackout
+        dr.navQuality = (type(gpsSample) == "table" and gpsSample.navQuality) or "LOST"
+        if blackout > 1500 then
+            dr.drHoldoverActive = false
+            dr.holdLevelActive = true
+        else
+            dr.drHoldoverActive = true
+            dr.holdLevelActive = false
+        end
+    end
+
+    return {
+        pos = { x = dr.pos.x, z = dr.pos.z },
+        navQuality = dr.navQuality,
+        drHoldoverActive = dr.drHoldoverActive,
+        holdLevelActive = dr.holdLevelActive,
+        blackoutMs = dr.gpsBlackoutMs,
+    }
+end
+
 return sensor_pipeline

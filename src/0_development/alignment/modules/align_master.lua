@@ -180,21 +180,33 @@ local function start_current_thruster(self, now_ms)
     modem_transmit(self.modem, self.cmd_ch, self.telem_ch, pulse_pkt)
 end
 
-local function build_profile_payload(self)
+local function build_profile_payload(self, eval_result, regressions)
     local station = self.station or get_station_cfg(self.cfg)
-    local surfaces = self.discovery:get_discovered_surfaces()
-    local isVec = (#self.discovery:get_vector_actuators() > 0)
+    local surfaces = self.discovery and self.discovery:get_discovered_surfaces() or {}
+    local isVec = self.discovery and self.discovery.get_vector_actuators and (#self.discovery:get_vector_actuators() > 0) or false
+    local actuatorMap = (self.discovery and self.discovery.get_actuator_map and self.discovery:get_actuator_map()) or {}
+    local evalRes = eval_result or self.eval_result
+    local dryMass = self.total_dry_mass or self.totalDryMass or 0.0
+    local manifest = profile_exporter.build_peripheral_manifest(
+        self.domain_id or "AIRCRAFT_01",
+        actuatorMap,
+        surfaces,
+        { "gimbal", "altitude", "velocity", "assembler" },
+        dryMass
+    )
+    self.peripheralManifest = manifest
     return {
-        profileId = "PROF-" .. self.domain_id,
-        domainId = self.domain_id,
+        profileId = "PROF-" .. (self.domain_id or "AIRCRAFT_01"),
+        domainId = self.domain_id or "AIRCRAFT_01",
         airframeType = self.airframe_type or "VTOL",
         isVectorVtol = isVec,
         calibratedBy = station.stationId or "HANGAR_BAY_01",
-        totalDryMass = self.total_dry_mass or 0.0,
-        controllabilityStatus = (self.eval_result and self.eval_result.status) or "FAIL_INSUFFICIENT_AUTHORITY",
+        totalDryMass = dryMass,
+        controllabilityStatus = (evalRes and evalRes.status) or "FAIL_INSUFFICIENT_AUTHORITY",
         pseudoInverseMatrix = self.pseudo_inverse,
-        thrusterCoefficients = self.thruster_results,
-        discoveredSurfaces = surfaces
+        thrusterCoefficients = regressions or self.thruster_results,
+        discoveredSurfaces = surfaces,
+        peripheralManifest = manifest,
     }
 end
 
@@ -216,7 +228,11 @@ local function finalize_authority_check(self)
         bMat
     )
     self.state = "SYNC_APPROVAL"
-    profile_exporter.save_local(build_profile_payload(self))
+    local payload = build_profile_payload(self)
+    profile_exporter.save_local(payload)
+    if type(payload.peripheralManifest) == "table" then
+        profile_exporter.save_peripheral_manifest(payload.peripheralManifest, (self.cfg and self.cfg.manifestDir) or "/alignment")
+    end
 end
 
 local function accept_and_advance_thruster(self, reg, now_ms)
@@ -410,5 +426,7 @@ function align_master.step_fsm(self, event, now_ms)
         handle_approval_and_sync(inst, event)
     end
 end
+
+align_master.build_profile_payload = build_profile_payload
 
 return align_master

@@ -636,4 +636,167 @@ describe("Scenario 8: 4-Tier SE(3) Live Closed Loop (AMM -> FCP -> VAS -> TCA)",
 
         clean_cb()
     end)
+
+    it("executes multi-node PBIT handshake, peripheralManifest topology interlock, and >1.5s GPS blackout HOLD_LEVEL + recovery (TASK-136, TASK-131, TASK-128)", function()
+        local fsSnap1 = "/_e2e_t131_vas.json"
+        local fsSnap2 = "/_e2e_t131_amm.json"
+        local function cleanup_files()
+            for _, p in ipairs({ fsSnap1, fsSnap2, "tmp_e2e_pbit_tca.json", "tmp_e2e_pbit_fcp.json", "config/thrusters.json", "config/peripheral_manifest.json" }) do
+                if fs.exists(p) then fs.delete(p) end
+            end
+        end
+        cleanup_files()
+
+        local bus = virtual_bus.create_bus({ clock = 1.0 })
+        sdk.patch(os, "epoch", function() return math.floor(bus.time * 1000 + 0.5) end)
+        sdk.patch(_G, "print", function() end)
+
+        local sensor_state = { y = 64.0, vx = 0.0, vy = 0.0, vz = 0.0 }
+        local vas_node = node_sandbox.create_node(bus, "VAS", "src/1_control/vas")
+        local tca_node = node_sandbox.create_node(bus, "TCA", "src/1_control/tca")
+        local fcp_node = node_sandbox.create_node(bus, "FCP", "src/2_guidance/fcp")
+        local amm_node = node_sandbox.create_node(bus, "AMM", "src/3_planning/amm")
+        local align_node = node_sandbox.create_node(bus, "ALIGN", "src/0_development/alignment")
+        local gps_node = node_sandbox.create_node(bus, "GPS", "src/0_infra/gps")
+
+        install_vas_sensors(vas_node, sensor_state)
+        install_tca_thruster(tca_node)
+
+        local vas_daemon = vas_node:require("core_daemon")
+        local vas_net = vas_node:require("network_manager")
+        local vas_sp = vas_node:require("sensor_pipeline")
+        local vas_fsm_mod = vas_node:require("state_machine")
+
+        local vas_state = vas_daemon.init({
+            system = {
+                debug = false, domainId = "AIRCRAFT_01", aircraftDomainId = "AIRCRAFT_01",
+                baseChannel = 10000, airframeType = "ADVANCED_VTOL", vehicleType = "ADVANCED_VTOL",
+                bootRecovery = { enabled = false, stateFilePath = fsSnap1 },
+            },
+            sensors = {
+                roles = {
+                    gimbal = { peripheralType = "gimbal_sensor", preferredSide = "left" },
+                    altitude = { peripheralType = "altitude_sensor", preferredSide = "right" },
+                    velocity = { peripheralType = "velocity_sensor", preferredSide = "back" },
+                    fuel = { required = false },
+                },
+            },
+            thrusters = { THR_VEC_1 = { heave = 1.0, maxThrust = 15 } },
+        })
+        vas_node.modem:open(10008)
+        vas_node.modem:open(10010)
+
+        local tca_inst = tca_node:require("tca_daemon").init({
+            groupId = "THR_VEC_1", aircraftDomainId = "AIRCRAFT_01", aircraftIndexN = 1,
+            baseChannel = 10000, channels = { thrustActuation = 10010 }, watchdogTimeoutMs = 300,
+            nominalActuatorCount = 1, interactionMode = "API", configPath = "tmp_e2e_pbit_tca.json",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = { "left" } },
+        }, tca_node.modem)
+        tca_inst.lastControlState = "DISARMED"
+        tca_node.modem:open(10010)
+
+        local amm_main = amm_node:require("main")
+        local amm_app = amm_main.create_app({
+            domainId = "AIRCRAFT_01", baseChannel = 10000, airframeType = "ADVANCED_VTOL",
+            headless = true, defaultAlt = 140.0, defaultSpeed = 16.0, arrivalRadius = 15.0,
+            clock_ms = 1000,
+            recovery = { enabled = false, persist = false, stateFilePath = fsSnap2 },
+        }, amm_node.modem)
+        amm_node.modem:open(10002)
+        amm_node.modem:open(10005)
+        amm_node.modem:open(10008)
+
+        -- Complete initial VAS<->TCA discovery handshake so adapter.tcaConnected becomes true
+        bus:step(0.01)
+        for _, m in ipairs(tca_node.modem:drain()) do
+            tca_inst:dispatch_modem_message(m.channel, m.replyChannel, m.payload)
+        end
+        bus:step(0.01)
+        for _, m in ipairs(vas_node.modem:drain()) do
+            vas_net.dispatch(vas_state.net, vas_state.fsm, vas_state.fdCore, vas_state.adapter, m.channel, m.replyChannel, m.payload)
+        end
+        assert_true(vas_state.adapter.tcaConnected)
+
+        -- 1. TASK-131: AMM sends MSG_PBIT_REQ on Base+8 -> VAS -> TCA (<5% wiggle) & AMM (MSG_PBIT_REPORT)
+        assert_true(amm_app.net:send_pbit_req({ requestId = "E2E-PBIT-1", source = "AMM", runWiggle = true, busRttMs = 15 }))
+        bus:step(0.01)
+        for _, m in ipairs(vas_node.modem:drain()) do
+            vas_net.dispatch(vas_state.net, vas_state.fsm, vas_state.fdCore, vas_state.adapter, m.channel, m.replyChannel, m.payload)
+        end
+        bus:step(0.01)
+        for _, m in ipairs(tca_node.modem:drain()) do
+            tca_inst:dispatch_modem_message(m.channel, m.replyChannel, m.payload)
+        end
+        assert_eq(tca_inst.adapterState.lastSignal, 0)
+        assert_near(tca_inst.lastPbitWiggleRatio or 0, 0.04, 1e-6)
+        bus:step(0.01)
+        for _, m in ipairs(amm_node.modem:drain()) do
+            amm_main.handle_modem_message(amm_app, m.channel, m.payload, 1030)
+        end
+        assert_not_nil(amm_app.engine.lastPbitReport)
+        assert_eq(amm_app.engine.lastPbitReport.overallStatus, "PASS")
+        assert_true(amm_app.engine.lastPbitReport.takeoffPermitted)
+
+        local mission = {
+            missionId = "E2E_PBIT_GATE", version = "2.0.0", fallbackPolicy = "HOVER_HOLD",
+            checkpoints = { { checkpointId = "CP_TO", action = "ACT_TKL_TAKEOFF_VERT", params = { targetAlt = 120.0 } } },
+        }
+        amm_app.engine.requirePbit = true
+        assert_true(amm_app.engine:load_table(mission))
+        assert_true(amm_app.engine:start("SINGLE", 1040))
+
+        -- 2. TASK-136: Alignment peripheralManifest check detects >5% mass shift & fails PBIT inertiaProfile
+        local exporter = align_node:require("profile_exporter")
+        local manifest = exporter.build_peripheral_manifest("AIRCRAFT_01", { THR_VEC_1 = { peripheralCount = 1 } }, {}, { "gimbal" }, 10000.0)
+        vas_state.net.on_profile_sync({ profileId = "PROF-E2E", controllabilityStatus = "FULL_6DOF_PASS", peripheralManifest = manifest })
+        assert_false(vas_state.fsm.recalibrationRequired)
+        local topoBad = vas_sp.verify_and_rebind_topology(vas_state.sensors, vas_state.peripheralManifest, { "thruster_left" }, 11500.0)
+        assert_true(topoBad.recalibrationRequired)
+        vas_fsm_mod.update_contraption_interlock(vas_state.fsm, "ASSEMBLED", topoBad.recalibrationRequired, topoBad.reason)
+        local repFail = vas_fsm_mod.evaluate_pbit(vas_state.fsm, { busRttMs = 12 })
+        assert_eq(repFail.overallStatus, "FAIL")
+        assert_false(repFail.takeoffPermitted)
+
+        -- 3. TASK-128: MSG_NAV_QUALITY over virtual_bus + FCP 1.5s DR hold-over -> HOLD_LEVEL -> recovery ramp
+        local gpsProto = gps_node:require("protocol")
+        local nqPkt = gpsProto.buildNavQuality("GPS_BASE_NET", 1, {
+            targetClient = "AIRCRAFT_01", navQuality = "LOST", satelliteCount = 1,
+            consecutiveFailures = 3, hdop = 9.9, status = "NO_FIX",
+            drHoldoverActive = false, holdLevelActive = true, blackoutMs = 1700,
+        }, 1200)
+        gps_node.modem:transmit(10005, 10005, nqPkt)
+        bus:step(0.01)
+        for _, m in ipairs(amm_node.modem:drain()) do
+            amm_main.handle_modem_message(amm_app, m.channel, m.payload, 1210)
+        end
+        assert_eq(amm_app.nav.navQuality, "LOST")
+
+        local fcp_main = fcp_node:require("main")
+        local fcp_sp = fcp_node:require("state_propagator")
+        local fcp_cfg = fcp_main.load_config()
+        fcp_cfg.system.airframeType = "ADVANCED_VTOL"
+        fcp_cfg.system.domainId = "AIRCRAFT_01"
+        fcp_cfg.configPath = "tmp_e2e_pbit_fcp.json"
+        local fcp_ctx = fcp_main.create_context(fcp_cfg, function() return fcp_node.modem end)
+        fcp_sp.on_setpoint_epoch(fcp_ctx.nav, { posEpoch = 1, currentPos = { x = 100, y = 140, z = 200 }, navValid = true, gpsTimedOut = false, navQuality = "GOOD" }, 1000)
+        local snapOk = fcp_sp.propagate(fcp_ctx.nav, 1050)
+        assert_false(snapOk.holdLevelActive)
+
+        fcp_sp.on_setpoint_epoch(fcp_ctx.nav, { posEpoch = 2, currentPos = { x = 100, y = 140, z = 200 }, navValid = true, gpsTimedOut = true, navQuality = "LOST" }, 1600)
+        local snapDr = fcp_sp.propagate(fcp_ctx.nav, 1650)
+        assert_true(snapDr.drHoldoverActive)
+        assert_false(snapDr.holdLevelActive)
+
+        local snapLvl = fcp_sp.propagate(fcp_ctx.nav, 2700)
+        assert_true(snapLvl.holdLevelActive)
+
+        -- Recovery clears holdLevelActive via chunk blend & FCP step_tick triggers bumpless ramp
+        fcp_sp.on_setpoint_epoch(fcp_ctx.nav, { posEpoch = 3, currentPos = { x = 125, y = 140, z = 200 }, navValid = true, gpsTimedOut = false, navQuality = "GOOD" }, 2750)
+        fcp_ctx.prevHoldLevel = true
+        fcp_main.step_tick(fcp_ctx, 0.05, 2800)
+        assert_false(fcp_ctx.nav.holdLevelActive)
+        assert_not_nil(fcp_ctx.rampStartMs)
+
+        cleanup_files()
+    end)
 end)

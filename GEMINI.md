@@ -2,11 +2,11 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI LAN Live/Inspection 관제·GDrive 배포·40채널 정합·공중 콜드부트 복구 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-405`·`406`(LAN Live/`--lan`·광역 줌·`CH 60003`/1분 TTL·필터·Inspection; `AMM_MISSION_EDITOR v0.6.0`·`GCS v1.4.0`·`GAC v1.7.0`; 2026-11-18), `TASK-130`(공중 콜드부트 복구; 2026-11-18), `TASK-125`(40채널 블록 개편; 2026-11-16), `TASK-501`(GDrive 135파일 동기화; 2026-11-16), `TASK-404`(Live Bridge; 2026-11-16). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
+- **직전 완료**: `TASK-136`·`131`·`128`(컨트랩션 조립 인터록/`peripheralManifest`·5단계 PBIT & `<5%` wiggle·GPS `MSG_NAV_QUALITY` & `1.5s` DR/`HOLD_LEVEL`; `Alignment v2.9.0`·`VAS v1.25.0`·`TCA v1.14.0`·`AMM v2.6.0`·`GPS v2.4.0`·`FCP v2.5.0`; 2026-11-18), `TASK-405`·`406`(LAN Live·광역 줌·Inspection), `TASK-130`(공중 콜드부트 복구), `TASK-125`(40채널 블록 개편), `TASK-501`(GDrive 135파일 동기화). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
-  1. `TASK-302` / `TASK-128` (1순위): Pocket PDA 원격 관제 · GPS 헬스/DR 가드.
-  2. `TASK-131` / `TASK-136` / `TASK-140` / `TASK-015` (2순위): PBIT·블록화 재조립 인터록·저고도 착륙 감쇠·전 계층 플레이북.
+  1. `TASK-302` (1순위): Pocket PDA 원격 관제 단말.
+  2. `TASK-140` / `TASK-015` (2순위): 저고도 착륙 감쇠·전 계층 플레이북.
   3. `TASK-135` / `TASK-214` / `TASK-105`↔`210` / `TASK-132` / `TASK-129` (3순위): AMM 샌드박스·허브 대기 스택·ASA 본 구현·비상 활공·적응형 트림.
 
 ## 2. Confirmed Architecture & Paths
@@ -29,8 +29,8 @@
 - **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·145 코드/설정 린트, 0 errors).
 - **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (13 활성 서브시스템 0 violations, 4 예외).
 - **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (13개 활성 `main.lua` 13/13 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 617/617 PASS).
-- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 21/21 PASS, 555패킷 계약 0 violations).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 629/629 PASS).
+- **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans` (10개 스위트 23/23 PASS, 566패킷 계약 0 violations).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
 - **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (141/141 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).

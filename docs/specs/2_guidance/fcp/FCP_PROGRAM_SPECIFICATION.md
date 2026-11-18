@@ -6,32 +6,33 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.0` |
+| **문서 버전 (Version)** | `v2.5.0` |
 | **최종 수정일 (Date)** | `2026-11-18` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 순수 온보드 SE(3) 외루프 유도 제어기 (FCP / Node 04) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.36.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.5.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.6.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.25.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.8.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.13.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.8.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.6.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.3.3)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.14.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.9.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.7.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.4.0)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.3.0)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.4.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.5.0` | `2026-11-18` | **`TASK-128` `state_propagator` 1.5초 DR 홀드오버·`HOLD_LEVEL` 전이 및 청크 경계 스파이크 완화 반영 (`Implemented` $\to$ `Approved`)**: ① `gpsTimedOut == true` 또는 `MSG_NAV_QUALITY` (`navQuality == "LOST"`) 시 `drHoldoverMaxMs = 1,500ms` 이내에서 `drHoldoverActive = true`로 속도 적분 추종 유지, ② `> 1,500ms` 장기 두절 시 `holdLevelActive = true` 진입으로 수평 속도 지령 0 및 수평 자세(`HOLD_LEVEL`) 강제, ③ 복구 시 또는 청크 경계 대점프 시 `chunkBlendTicks = 10` 틱 완만 보간 및 `HOLD_LEVEL` 이탈 시 `2.0초` 범프리스 램핑 적용, ④ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `AMM v2.6.0`, `VAS v1.25.0`, `GPS v2.4.0`) 동기화 | `TASK-128` 청크 경계 GPS 두절 및 좌표 스파이크 안전 완화 (`src/2_guidance/fcp/` 반영 후 `Implemented` 승격 예정) |
 | `v2.4.0` | `2026-11-18` | **`TASK-130` 공중 콜드부트 복구 중 `VAS AIRBORNE_RECOVERY_HOLD` 비간섭·안전 게이트 정합 (`Implemented` — 2026-11-18 승격)**: ① `VAS Base+2` `controlState == "AIRBORNE_RECOVERY_HOLD"` 수신 중 `IDLE_ARMED` 상태에서 조기 `arm = false / flightActive = false` `Base+1` 지령 송출을 억제(Silence)해 `VAS` 자체 안정화 루프 간섭을 방지하고 `AMM Base+4`(`arm=true, flightActive=true`) 동기화 시 **2.0초 범프리스 램핑**으로 `ACTIVE_TRACKING` 진입, ② `[I-13]` 무선 OTA `getStatusFn` `isAirborne` 판정 집합에 `"AIRBORNE_RECOVERY_HOLD"` 추가(`NOT_DISARMED` 차단), ③ 연관 문서 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `AMM v2.5.0`, `VAS v1.24.0`) 동기화 | `TASK-130` (`src/2_guidance/fcp/` 및 단위·E2E 검증 완료) |
 | `v2.3.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 비상 코어 구독 분리 (`Implemented` $\to$ `Approved`)**: ① `Base+1` (`CH_FLIGHT_GUIDANCE`) 순수 20Hz `MSG_ATTITUDE_CMD` 송신 및 `MSG_CHANNEL_REBIND` 중계 전용화, ② `Base+9` (`CH_EMERGENCY_CORE`) `MSG_EMERGENCY_ALERT` 구독 추가 및 비상 경보 수신 시 `EMERGENCY_HOLD` 안전 전이 명세, ③ 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`, `VAS v1.23.0`, `Alignment v2.8.0`, `GCS v1.2.0`) 동기화 | `TASK-125` 유도/비상 버스 분리 및 FCP 비상 안전 전이 확립 (`src/2_guidance/fcp/` 반영 후 `Implemented` 승격 예정) |
 | `v2.2.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `network_manager`에 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 회신 추가(비행 채널 격리 원칙 유지), ② `ctx.fsm.currentState` 및 `lastTelemPayload` 기반 안전 게이트 연동, ③ `step_tick` 정상 루프 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/2_guidance/fcp/` 반영 후 `Implemented` 재승격 예정) |
@@ -410,6 +411,11 @@ flowchart LR
 3. **항법 정체 플래그 (`navStale`) 판정**:
    - `AMM`의 `navValid == false`가 연속 임계 시간(`navStaleEpochMs = 500ms`)을 초과하거나 `flightActive == true` 상태에서 `posEpoch`가 임계 시간 이상 갱신되지 않을 경우, `navStale = true`로 판정하고 `MSG_OUTER_LOOP_STATUS` (`Base+4`)를 통해 `AMM`에 즉시 보고합니다.
    - `gpsTimedOut == true` 시에도 `AMM`이 DR 적분 위치를 유효(`navValid = true`)하게 유지하는 동안 FCP는 추종을 지속하되, `navStale == true`가 장기화되면 적분기 와인드업을 동결합니다.
+
+4. **1.5초 DR 홀드오버, `HOLD_LEVEL` 전이 및 청크 경계 스파이크 완화 (`TASK-128`, `MSG_NAV_QUALITY`)**:
+   - `gpsTimedOut == true`, `navValid == false`, 또는 `MSG_NAV_QUALITY` `navQuality == "LOST"` 수신 시 `drHoldoverMaxMs = 1,500ms` 이내에서는 `drHoldoverActive = true`, `holdLevelActive = false`로 속도 적분 DR을 유지해 단기 두절을 흡수합니다.
+   - 두절 지속 시간이 `1,500ms`를 초과하면 `holdLevelActive = true`로 전이하고 `outer_loop_controller`가 수평 속도 목표를 0으로 억제하며 수평 자세(`HOLD_LEVEL`, 현재 고도 유지)로 강제 안정화합니다.
+   - GPS 복구 또는 청크 경계 위치 점프 발생 시 `chunkBlendTicks = 10` 동안 분할 오프셋 보간을 수행해 위치 스냅을 억제하며, `holdLevelActive` 해제(`true -> false`) 순간 `2.0s` 범프리스 램핑(`triggerBumpless`)을 재개시합니다.
 
 ---
 

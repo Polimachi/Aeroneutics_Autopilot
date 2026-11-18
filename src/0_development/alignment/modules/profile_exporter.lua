@@ -251,4 +251,112 @@ function profile_exporter.assemble_control_matrix(vectorSlopesByGroup, groupOrde
     return B
 end
 
+local function hash_string_djb2(str)
+    local h = 5381
+    for i = 1, #str do
+        h = ((h * 33) + string.byte(str, i)) % 4294967296
+    end
+    return string.format("h_%08x", h)
+end
+
+local function collect_sorted_keys(tbl)
+    local keys = {}
+    if type(tbl) ~= "table" then return keys end
+    if #tbl > 0 then
+        for _, v in ipairs(tbl) do
+            table.insert(keys, tostring(v))
+        end
+    else
+        for k, _ in pairs(tbl) do
+            table.insert(keys, tostring(k))
+        end
+    end
+    table.sort(keys)
+    return keys
+end
+
+--- Compute a deterministic topology fingerprint hash for a peripheral manifest.
+function profile_exporter.compute_topology_hash(manifest_tbl)
+    if type(manifest_tbl) ~= "table" then return "h_00000000" end
+    local parts = {
+        "d=" .. tostring(manifest_tbl.domainId or ""),
+        "m=" .. string.format("%.2f", tonumber(manifest_tbl.totalDryMass) or 0),
+        "c=" .. tostring(tonumber(manifest_tbl.thrusterCount) or 0),
+    }
+    local thrusters = {}
+    for _, t in ipairs(manifest_tbl.thrusters or {}) do
+        if type(t) == "table" then
+            table.insert(thrusters, tostring(t.groupId or "") .. ":" .. tostring(t.peripheralCount or 1) .. ":" .. tostring(t.vectorCapable == true))
+        end
+    end
+    table.sort(thrusters)
+    table.insert(parts, "t=" .. table.concat(thrusters, ","))
+    table.insert(parts, "s=" .. table.concat(collect_sorted_keys(manifest_tbl.surfaces), ","))
+    table.insert(parts, "r=" .. table.concat(collect_sorted_keys(manifest_tbl.sensorRoles), ","))
+    return hash_string_djb2(table.concat(parts, "|"))
+end
+
+--- Build peripheral_manifest structure capturing thruster groups, surfaces, sensors, and mass.
+function profile_exporter.build_peripheral_manifest(domain_id, actuator_map, surfaces_map, sensor_roles, total_dry_mass)
+    local thrusters = {}
+    local thrusterCount = 0
+    local groupKeys = {}
+    if type(actuator_map) == "table" then
+        for gid, _ in pairs(actuator_map) do
+            table.insert(groupKeys, gid)
+        end
+    end
+    table.sort(groupKeys, function(a, b) return tostring(a) < tostring(b) end)
+
+    for _, gid in ipairs(groupKeys) do
+        local info = actuator_map[gid]
+        local cnt = 1
+        local vecCapable = false
+        if type(info) == "table" then
+            cnt = tonumber(info.peripheralCount or info.totalCount or info.activeCount) or 1
+            vecCapable = info.vectorCapable == true or info.isVectorCapable == true
+        end
+        thrusterCount = thrusterCount + cnt
+        table.insert(thrusters, {
+            groupId = tostring(gid),
+            peripheralCount = cnt,
+            vectorCapable = vecCapable,
+        })
+    end
+
+    local manifest = {
+        schemaVersion = 1,
+        domainId = domain_id or "AIRCRAFT_01",
+        totalDryMass = tonumber(total_dry_mass) or 0,
+        thrusterCount = thrusterCount,
+        thrusters = thrusters,
+        surfaces = collect_sorted_keys(surfaces_map),
+        sensorRoles = collect_sorted_keys(sensor_roles),
+    }
+    manifest.topologyHash = profile_exporter.compute_topology_hash(manifest)
+    return manifest
+end
+
+--- Persist peripheral_manifest.json atomically when filesystem API is available.
+function profile_exporter.save_peripheral_manifest(manifest_data, base_dir, fs_api, filename)
+    local fapi = fs_api or fs
+    if not fapi or type(fapi.open) ~= "function" then
+        return false, "FS_API_UNAVAILABLE"
+    end
+    local dir = base_dir or "/alignment"
+    if dir ~= "" and type(fapi.exists) == "function" and type(fapi.makeDir) == "function" and not fapi.exists(dir) then
+        fapi.makeDir(dir)
+    end
+    local fname = filename or "peripheral_manifest.json"
+    local fullPath = (dir == "" or dir == "/") and ("/" .. fname) or (dir .. "/" .. fname)
+    local serialized = textutils.serializeJSON(manifest_data)
+    local handle = fapi.open(fullPath, "w")
+    if not handle then
+        return false, "OPEN_FAILED:" .. tostring(fullPath)
+    end
+    handle.write(serialized)
+    handle.close()
+    return true, fullPath
+end
+
 return profile_exporter

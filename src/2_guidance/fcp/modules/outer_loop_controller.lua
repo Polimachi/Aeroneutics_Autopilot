@@ -373,7 +373,7 @@ local function prepare_fsm_setpoint(state, nav, setpoint, fsmCtx)
     local cState = fsmCtx and fsmCtx.currentState
     local pos = (nav and nav.pos) or { x = 0, y = 64, z = 0 }
     local head = (nav and nav.attitude and (nav.attitude.yaw or nav.attitude.heading)) or 0.0
-    if cState == "AMM_TIMEOUT_HOLD" then
+    if cState == "AMM_TIMEOUT_HOLD" or (nav and nav.holdLevelActive == true) then
         if not state.holdPos then state.holdPos = { x = pos.x, y = pos.y, z = pos.z } end
         return {
             targetPos = state.holdPos,
@@ -381,7 +381,7 @@ local function prepare_fsm_setpoint(state, nav, setpoint, fsmCtx)
             feedforwardAccel = { ax = 0.0, ay = 0.0, az = 0.0 },
             targetHeading = head,
             constraintProfile = "STRICT_LEVEL",
-            flightMode = "HOVER_HOLD",
+            flightMode = (cState == "AMM_TIMEOUT_HOLD") and "HOVER_HOLD" or "HOLD_LEVEL",
             arm = true,
             flightActive = true,
         }

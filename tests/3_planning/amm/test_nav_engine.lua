@@ -142,4 +142,24 @@ describe("AMM nav_engine GPS+DR complementary filter, monotonic seq and epoch sy
         assert_true(nav_engine.filter_gps(st, { targetClient = "AIRCRAFT_01", clientSeq = s1, status = "FIX_OK", position = { x = 10.0, z = 0.0 }, hdop = 1.0, accuracy = 3.5 }, 0.05, 1100))
         assert_near(st.pos.x, 1.0, 0.01)
     end)
+
+    it("tracks navQuality and consecutiveFailures across MSG_GPS_RESPONSE and MSG_NAV_QUALITY (TASK-128)", function()
+        local st = nav_engine.init({ navigation = { gpsRequestRateHz = 10 } })
+        assert_eq(st.navQuality, "GOOD")
+        assert_eq(st.consecutiveFailures, 0)
+
+        local _, s1 = nav_engine.should_query_gps(st, 1000)
+        nav_engine.filter_gps(st, { targetClient = "AIRCRAFT_01", clientSeq = s1, status = "NO_FIX", hdop = 9.0, nodeCount = 1 }, 0.05, 1050)
+        assert_eq(st.consecutiveFailures, 1)
+        assert_true(st.navQuality == "DEGRADED" or st.navQuality == "LOST")
+
+        nav_engine.on_nav_quality(st, { targetClient = "AIRCRAFT_01", navQuality = "LOST", satelliteCount = 1, consecutiveFailures = 3 }, 1200)
+        assert_eq(st.navQuality, "LOST")
+        assert_eq(st.consecutiveFailures, 3)
+
+        local _, s2 = nav_engine.should_query_gps(st, 1300)
+        assert_true(nav_engine.filter_gps(st, { targetClient = "AIRCRAFT_01", clientSeq = s2, status = "FIX_OK", position = { x = 12.0, z = 4.0 }, hdop = 1.1, nodeCount = 4, navQuality = "GOOD" }, 0.05, 1350))
+        assert_eq(st.consecutiveFailures, 0)
+        assert_eq(st.navQuality, "GOOD")
+    end)
 end)

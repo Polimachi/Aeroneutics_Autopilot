@@ -490,4 +490,56 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_eq(err_lock, "PRECONDITION_FAILED")
         assert_eq(eng_locked.state, "ABORTED")
     end)
+
+    it("enforces PBIT_TAKEOFF_INTERLOCK on ACT_TKL_TAKEOFF_VERT when PBIT fails or is required (TASK-131)", function()
+        local mission = {
+            missionId = "PBIT_INTERLOCK_MISSION",
+            version = "2.0.0",
+            fallbackPolicy = "HOVER_HOLD",
+            checkpoints = {
+                {
+                    checkpointId = "CP_TO",
+                    action = "ACT_TKL_TAKEOFF_VERT",
+                    params = { targetAlt = 120.0 },
+                },
+            },
+        }
+
+        -- Case 1: requirePbit = true without a passing PBIT report -> PBIT_TAKEOFF_INTERLOCK
+        local engReq = create_engine_fixture({})
+        engReq.requirePbit = true
+        assert_true(engReq:load_table(mission))
+        local okNoRep, errNoRep = engReq:start("SINGLE", 1000)
+        assert_false(okNoRep)
+        assert_eq(errNoRep, "PBIT_TAKEOFF_INTERLOCK")
+        assert_eq(engReq.state, "ABORTED")
+
+        -- Case 2: FAIL report blocks takeoff even if requirePbit is not explicitly flagged
+        local engFail = create_engine_fixture({})
+        engFail:set_pbit_report({
+            requestId = "PBIT-1",
+            overallStatus = "FAIL",
+            takeoffPermitted = false,
+            checks = { busRtt = { status = "FAIL" } },
+        })
+        assert_true(engFail:load_table(mission))
+        local okFail, errFail = engFail:start("SINGLE", 1000)
+        assert_false(okFail)
+        assert_eq(errFail, "PBIT_TAKEOFF_INTERLOCK")
+
+        -- Case 3: PASS report allows takeoff
+        local engPass = create_engine_fixture({})
+        engPass.requirePbit = true
+        engPass:set_pbit_report({
+            requestId = "PBIT-2",
+            overallStatus = "PASS",
+            takeoffPermitted = true,
+            checks = { busRtt = { status = "PASS" } },
+        })
+        assert_true(engPass:load_table(mission))
+        local okPass, errPass = engPass:start("SINGLE", 1000)
+        assert_true(okPass, tostring(errPass))
+        assert_eq(engPass.state, "EN_ROUTE")
+        assert_eq(engPass:get_trajectory_goal().flightMode, "TAKEOFF")
+    end)
 end)

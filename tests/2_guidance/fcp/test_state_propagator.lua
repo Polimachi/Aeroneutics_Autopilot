@@ -167,4 +167,38 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP State Propagato
         assert_not_nil(out.navStale)
         assert_not_nil(out.actuatorHealth)
     end)
+
+    it("enforces 1.5s DR hold-over, transitions to HOLD_LEVEL >1500ms, and blends chunk-border spikes across 10 ticks (TASK-128)", function()
+        local state = state_propagator.init({ drHoldoverMaxMs = 1500, chunkBlendTicks = 10 })
+        state_propagator.on_setpoint_epoch(state, {
+            posEpoch = 1, currentPos = { x = 100.0, y = 120.0, z = 200.0 },
+            navValid = true, gpsTimedOut = false, navQuality = "GOOD"
+        }, 1000)
+        state_propagator.on_telemetry(state, { dynamics = { velocity = { vx = 10.0, vy = 0.0, vz = 0.0 } } }, 1000)
+        local p0 = state_propagator.propagate(state, 1050)
+        assert_false(p0.drHoldoverActive)
+        assert_false(p0.holdLevelActive)
+
+        -- GPS dropout <= 1500ms: drHoldoverActive = true, holdLevelActive = false
+        state_propagator.on_setpoint_epoch(state, {
+            posEpoch = 2, currentPos = p0.pos, navValid = true, gpsTimedOut = true, navQuality = "LOST"
+        }, 1600)
+        local pHold = state_propagator.propagate(state, 1650)
+        assert_true(pHold.drHoldoverActive)
+        assert_false(pHold.holdLevelActive)
+
+        -- Extended blackout > 1500ms (t=2700ms): holdLevelActive = true
+        local pLevel = state_propagator.propagate(state, 2700)
+        assert_true(pLevel.holdLevelActive)
+
+        -- Recovery with chunk-border spike (+20m) initiates 10-tick blend
+        local preX = pLevel.pos.x
+        state_propagator.on_setpoint_epoch(state, {
+            posEpoch = 3, currentPos = { x = preX + 20.0, y = 120.0, z = 200.0 },
+            navValid = true, gpsTimedOut = false, navQuality = "GOOD"
+        }, 2750)
+        local pBlend1 = state_propagator.propagate(state, 2800)
+        assert_false(pBlend1.holdLevelActive)
+        assert_true(math.abs(pBlend1.pos.x - preX) < 10.0, "Recovery chunk-border offset must blend across ticks, not snap")
+    end)
 end)

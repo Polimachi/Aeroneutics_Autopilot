@@ -27,6 +27,10 @@ function client_core.new()
     self.pendingResponses = {}
     self.latestStatus = nil
     self.pendingTtlMs = 5000
+    self.consecutiveFailures = 0
+    self.lastHdop = 1.0
+    self.lastSatelliteCount = 4
+    self.navQuality = "GOOD"
     return self
 end
 
@@ -40,6 +44,10 @@ function client_core:init(domainId, clientType, replyChannel)
     end
     self.lastReceivedSeq = 0
     self.lastSolvedSeq = 0
+    self.consecutiveFailures = 0
+    self.lastHdop = 1.0
+    self.lastSatelliteCount = 4
+    self.navQuality = "GOOD"
 end
 
 function client_core:setManaged(managed)
@@ -93,9 +101,25 @@ function client_core:handleMessage(channel, message, nowMs)
         self.lastReceivedSeq = cSeq
         if pl.status == "FIX_OK" or pl.status == "FIX_DEGRADED" then
             self.lastSolvedSeq = cSeq
+            self.consecutiveFailures = 0
+            self.lastHdop = tonumber(pl.hdop) or self.lastHdop
+            self.lastSatelliteCount = tonumber(pl.nodeCount) or self.lastSatelliteCount
+            self.navQuality = pl.navQuality or protocol.classifyNavQuality(self.lastHdop, self.lastSatelliteCount, 0)
+        else
+            self.consecutiveFailures = (self.consecutiveFailures or 0) + 1
+            self.navQuality = protocol.classifyNavQuality(pl.hdop or self.lastHdop, pl.nodeCount or self.lastSatelliteCount, self.consecutiveFailures)
         end
         pruneExpiredPending(self, nowMs)
         self.pendingResponses[cSeq] = { payload = pl, storedAt = tonumber(nowMs) or 0 }
+        return true
+    elseif message.type == protocol.MSG_NAV_QUALITY then
+        if ch ~= self.replyChannel and ch ~= protocol.CH_GPS_SERVICE then return false end
+        local pl = type(message.payload) == "table" and message.payload or nil
+        if not pl or (pl.targetClient and pl.targetClient ~= self.domainId) then return false end
+        self.navQuality = pl.navQuality or self.navQuality
+        if pl.consecutiveFailures ~= nil then self.consecutiveFailures = tonumber(pl.consecutiveFailures) or self.consecutiveFailures end
+        if pl.satelliteCount ~= nil then self.lastSatelliteCount = tonumber(pl.satelliteCount) or self.lastSatelliteCount end
+        if pl.hdop ~= nil then self.lastHdop = tonumber(pl.hdop) or self.lastHdop end
         return true
     elseif message.type == protocol.MSG_STATUS_RESP then
         if ch ~= self.replyChannel and ch ~= protocol.CH_GPS_SERVICE then return false end
@@ -122,6 +146,16 @@ function client_core:pollStatus()
     local st = self.latestStatus
     self.latestStatus = nil
     return st
+end
+
+function client_core:recordTimeout()
+    self.consecutiveFailures = (self.consecutiveFailures or 0) + 1
+    self.navQuality = protocol.classifyNavQuality(self.lastHdop, self.lastSatelliteCount, self.consecutiveFailures)
+    return self.navQuality, self.consecutiveFailures
+end
+
+function client_core:getNavQuality()
+    return self.navQuality or "GOOD", self.consecutiveFailures or 0
 end
 
 function client_core:getStatus()

@@ -1166,3 +1166,70 @@ describe("gps server commissioning, diag, watchdog, and actions", function()
         assert_eq(state.activeNodes, 0)
     end)
 end)
+
+describe("GPS Constellation Health & MSG_NAV_QUALITY (TASK-128)", function()
+    it("classifies navQuality across GOOD, DEGRADED, POOR, and LOST and builds MSG_NAV_QUALITY packets", function()
+        assert_eq(protocol.MSG_NAV_QUALITY, "MSG_NAV_QUALITY")
+        assert_eq(protocol.classifyNavQuality(1.1, 4, 0), "GOOD")
+        assert_eq(protocol.classifyNavQuality(3.0, 4, 0), "DEGRADED")
+        assert_eq(protocol.classifyNavQuality(1.2, 3, 0), "DEGRADED")
+        assert_eq(protocol.classifyNavQuality(1.2, 4, 1), "DEGRADED")
+        assert_eq(protocol.classifyNavQuality(6.0, 4, 0), "POOR")
+        assert_eq(protocol.classifyNavQuality(1.2, 4, 2), "POOR")
+        assert_eq(protocol.classifyNavQuality(1.2, 2, 0), "LOST")
+        assert_eq(protocol.classifyNavQuality(1.2, 4, 3), "LOST")
+
+        local resp = protocol.buildResponse("SERVER", 1, {
+            targetClient = "AIRCRAFT_01",
+            clientSeq = 42,
+            status = "FIX_OK",
+            position = { x = 10, z = 20 },
+            accuracy = 0.2,
+            hdop = 1.1,
+            nodeCount = 4,
+            selectedNodes = { "N1", "N2", "N3", "N4" },
+        }, 1000)
+        assert_eq(resp.payload.navQuality, "GOOD")
+        assert_eq(resp.payload.consecutiveFailures, 0)
+
+        local nq = protocol.buildNavQuality("GPS_BASE_NET", 2, {
+            targetClient = "AIRCRAFT_01",
+            navQuality = "DEGRADED",
+            satelliteCount = 3,
+            consecutiveFailures = 1,
+            hdop = 2.4,
+            drHoldoverActive = true,
+            holdLevelActive = false,
+            blackoutMs = 450,
+        }, 1200)
+        assert_eq(nq.type, "MSG_NAV_QUALITY")
+        assert_eq(nq.payload.navQuality, "DEGRADED")
+        assert_eq(nq.payload.consecutiveFailures, 1)
+    end)
+
+    it("tracks consecutiveFailures on client_core timeouts and resets on FIX_OK", function()
+        local client = client_core.new()
+        client:init("AIRCRAFT_01", "AIRCRAFT", 10005)
+        assert_eq(client:getNavQuality(), "GOOD")
+        client:recordTimeout()
+        assert_eq(client:getNavQuality(), "DEGRADED")
+        client:recordTimeout()
+        assert_eq(client:getNavQuality(), "POOR")
+        client:recordTimeout()
+        assert_eq(client:getNavQuality(), "LOST")
+
+        local okEnv = protocol.buildResponse("GPS_SERVER", 5, {
+            targetClient = "AIRCRAFT_01",
+            clientSeq = 10,
+            status = "FIX_OK",
+            position = { x = 50, z = -20 },
+            accuracy = 0.1,
+            hdop = 1.1,
+            nodeCount = 4,
+            selectedNodes = { "N1", "N2", "N3", "N4" },
+        }, 2000)
+        client:handleMessage(10005, okEnv)
+        assert_eq(client:getNavQuality(), "GOOD")
+        assert_eq(client.consecutiveFailures, 0)
+    end)
+end)

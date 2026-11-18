@@ -77,6 +77,38 @@ function tca_daemon.handle_calib_pulse(inst, pkt)
     if not p then return false end
     local tgt = p.targetThrusterId
     if tgt and tgt ~= inst.cfg.groupId and tgt ~= "ALL" then return false end
+    if p.pbitWiggle == true then
+        local ctrl = inst.lastControlState or "DISARMED"
+        if ctrl ~= "DISARMED" and ctrl ~= "IDLE_ARMED" then
+            return false, "PBIT_REJECTED_IN_FLIGHT"
+        end
+        local ratio = math.max(0.0, math.min(0.04, tonumber(p.pulseRatio) or 0.04))
+        inst.lastPbitWiggleRatio = ratio
+        local act, tot, mode = discovery_handler.resolve_counts(inst.cfg, inst.adapterState)
+        if mode == "API" and inst.adapterState then
+            actuator_adapter.scan_api_peripherals(inst.adapterState)
+        end
+        if inst.adapterState then
+            actuator_adapter.apply_thrust(inst.adapterState, ratio * 15.0, act, tot)
+            actuator_adapter.cut_thrust(inst.adapterState)
+        end
+        local hStat = discovery_handler.compute_health_status(mode, act, tot, false)
+        if inst.reporter then
+            inst.reporter:check_and_send({
+                groupId = inst.cfg.groupId,
+                interactionMode = mode,
+                appliedSignal = 0,
+                appliedRatio = 0.0,
+                activeCount = act,
+                totalCount = tot,
+                isSaturated = false,
+                healthStatus = hStat,
+                appliedGimbal = { x = 0.0, y = 0.0 },
+                gimbalSaturated = false,
+            }, true)
+        end
+        return true
+    end
     if is_flight_state(inst.lastControlState) and inst.lastControlState ~= "CALIBRATION" then return false end
     local pulseSignal = (p.gimbalX ~= nil or p.gimbalY ~= nil)
         and { thrust = p.pulseLevel, gimbalX = p.gimbalX, gimbalY = p.gimbalY }
