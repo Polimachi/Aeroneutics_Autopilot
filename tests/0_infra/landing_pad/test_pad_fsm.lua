@@ -280,4 +280,67 @@ describe("Landing pad finite state machine and local backbone protocol", functio
         assert_eq(fsm:get_state(), "IDLE")
         assert_nil(fsm:get_current_craft())
     end)
+
+    it("consumes and exposes payload.touchdownTime on MSG_TOUCHDOWN_COMPLETE", function()
+        local streamer = tactical_streamer.create(dummyCfg)
+        local fsm = pad_fsm.create(dummyCfg, streamer, true)
+        assert_nil(fsm:get_last_touchdown_time())
+
+        fsm:handle_backbone_message({
+            ver = "1.9.5",
+            type = "MSG_ATC_SLOT_ASSIGN",
+            domainId = "GAC_APRON_01",
+            seq = 601,
+            time = 1000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                aircraftId = "AIRCRAFT_01",
+                slotDurationSec = 120,
+            },
+        }, 10.0)
+
+        local packets = fsm:handle_tactical_message({
+            ver = "1.9.5",
+            type = "MSG_TOUCHDOWN_COMPLETE",
+            domainId = "AIRCRAFT_01",
+            seq = 602,
+            time = 1729850025000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                touchdownTime = 1729850025000,
+                craftState = "GROUND_IDLE",
+            },
+        }, 20.0)
+
+        assert_eq(fsm:get_state(), "OCCUPIED")
+        assert_eq(#packets, 1)
+        assert_eq(fsm:get_last_touchdown_time(), 1729850025000)
+
+        -- Subsequent touchdown without optional touchdownTime clears stale timestamp
+        fsm:force_free()
+        fsm:handle_backbone_message({
+            ver = "1.9.5",
+            type = "MSG_ATC_SLOT_ASSIGN",
+            domainId = "GAC_APRON_01",
+            seq = 603,
+            time = 2000,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                aircraftId = "AIRCRAFT_02",
+                slotDurationSec = 120,
+            },
+        }, 30.0)
+        fsm:handle_tactical_message({
+            ver = "1.9.5",
+            type = "MSG_TOUCHDOWN_COMPLETE",
+            domainId = "AIRCRAFT_02",
+            seq = 604,
+            time = 2050,
+            payload = {
+                facilityId = "PAD_BRAVO_01",
+                craftState = "GROUND_IDLE",
+            },
+        }, 40.0)
+        assert_nil(fsm:get_last_touchdown_time())
+    end)
 end)

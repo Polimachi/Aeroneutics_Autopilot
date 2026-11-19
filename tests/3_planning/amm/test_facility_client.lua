@@ -209,6 +209,59 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_eq(state.padChannel, 50220)
         end)
 
+        it("stores divertChannel on DENIED without switching gacChannel, and switches gacChannel on DIVERT", function()
+            local state = facility_client.init(create_test_config())
+            state.gacChannel = 50201
+
+            facility_client.on_atc_clearance(state, {
+                type = "MSG_GAC_APPROACH_CLEARANCE",
+                payload = {
+                    aircraftId = "AIRCRAFT_01",
+                    status = "DENIED",
+                    reason = "NO_ALTERNATIVE_PAD",
+                    divertChannel = 50001,
+                },
+            }, { x = 0, y = 70.0, z = 0 }, 1500)
+            assert_eq(state.atcStatus, "DENIED")
+            assert_eq(state.divertChannel, 50001)
+            assert_eq(state.gacChannel, 50201)
+            assert_eq(state.atcDeniedCount, 1)
+
+            state.approachRetryCount = 2
+            state.retryCount = 2
+            state.nextAtcRetryMs = 16500
+            state.holdingTargetAlt = 100.0
+
+            facility_client.on_atc_clearance(state, {
+                type = "MSG_GAC_APPROACH_CLEARANCE",
+                payload = {
+                    aircraftId = "AIRCRAFT_01",
+                    status = "DIVERT",
+                    sectorId = "SECTOR_02",
+                    divertChannel = 50401,
+                },
+            }, { x = 0, y = 90.0, z = 0 }, 2000)
+            assert_eq(state.atcStatus, "DIVERT")
+            assert_eq(state.divertChannel, 50401)
+            assert_eq(state.gacChannel, 50401)
+            assert_eq(state.sectorId, "SECTOR_02")
+            assert_eq(state.approachRetryCount, 0)
+            assert_eq(state.retryCount, 0)
+            assert_eq(state.atcDeniedCount, 0)
+            assert_eq(state.nextAtcRetryMs, 0)
+            assert_nil(state.holdingTargetAlt)
+
+            -- Invalid/nil divertChannel on DIVERT must not clear active gacChannel
+            facility_client.on_atc_clearance(state, {
+                type = "MSG_GAC_APPROACH_CLEARANCE",
+                payload = {
+                    aircraftId = "AIRCRAFT_01",
+                    status = "DIVERT",
+                },
+            }, { x = 0, y = 90.0, z = 0 }, 2500)
+            assert_eq(state.gacChannel, 50401)
+        end)
+
         it("handles DENIED status, increments count, raises holdingTargetAlt by 30m, and schedules 15s retry", function()
             local state = facility_client.init(create_test_config())
             local deniedPkt = {
@@ -423,6 +476,9 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_not_nil(td)
             assert_eq(td.type, "MSG_TOUCHDOWN_COMPLETE")
             assert_eq(td.ver, "1.9.5")
+            assert_not_nil(td.domainId)
+            assert_not_nil(td.seq)
+            assert_not_nil(td.time)
             assert_eq(td.payload.facilityId, "PAD_01")
             assert_eq(td.payload.craftState, "GROUND_IDLE")
             assert_not_nil(td.payload.touchdownTime)
@@ -431,6 +487,65 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_not_nil(td_tbl)
             assert_eq(td_tbl.payload.facilityId, "PAD_02")
             assert_eq(td_tbl.payload.craftState, "GROUND_IDLE")
+        end)
+    end)
+
+    describe("5. Canonical runway touchdown and vacated packet builders", function()
+        it("builds compliant MSG_RUNWAY_TOUCHDOWN envelope with required and optional fields", function()
+            local state = facility_client.init({ domainId = "JET_01" })
+            state.activePadId = "RWY_09L"
+
+            local pkt = facility_client.build_runway_touchdown(state, 24.5, {
+                arrestedWire = 3,
+                craftState = "ROLLOUT",
+                nowMs = 3200,
+            })
+            assert_not_nil(pkt)
+            assert_eq(pkt.ver, "1.9.5")
+            assert_eq(pkt.domainId, "JET_01")
+            assert_eq(pkt.seq, 1)
+            assert_eq(pkt.time, 3200)
+            assert_eq(pkt.type, "MSG_RUNWAY_TOUCHDOWN")
+            assert_eq(pkt.payload.facilityId, "RWY_09L")
+            assert_eq(pkt.payload.touchdownSpeed, 24.5)
+            assert_eq(pkt.payload.arrestedWire, 3)
+            assert_eq(pkt.payload.craftState, "ROLLOUT")
+
+            local pkt2 = facility_client.build_runway_touchdown(state, 21.0, {
+                facilityId = "RWY_27R",
+                nowMs = 3250,
+            })
+            assert_eq(pkt2.seq, 2)
+            assert_eq(pkt2.payload.facilityId, "RWY_27R")
+            assert_eq(pkt2.payload.touchdownSpeed, 21.0)
+            assert_nil(pkt2.payload.arrestedWire)
+            assert_nil(pkt2.payload.craftState)
+        end)
+
+        it("builds compliant MSG_RUNWAY_VACATED envelope with runwayCleared defaulting to true", function()
+            local state = facility_client.init({ domainId = "JET_01" })
+            state.activePadId = "RWY_09L"
+
+            local vac1 = facility_client.build_runway_vacated(state, "TAXI_A", { nowMs = 3300 })
+            assert_not_nil(vac1)
+            assert_eq(vac1.ver, "1.9.5")
+            assert_eq(vac1.domainId, "JET_01")
+            assert_eq(vac1.seq, 1)
+            assert_eq(vac1.time, 3300)
+            assert_eq(vac1.type, "MSG_RUNWAY_VACATED")
+            assert_eq(vac1.payload.facilityId, "RWY_09L")
+            assert_eq(vac1.payload.runwayCleared, true)
+            assert_eq(vac1.payload.exitTaxiway, "TAXI_A")
+
+            local vac2 = facility_client.build_runway_vacated(state, nil, {
+                facilityId = "RWY_27R",
+                runwayCleared = false,
+                nowMs = 3350,
+            })
+            assert_eq(vac2.seq, 2)
+            assert_eq(vac2.payload.facilityId, "RWY_27R")
+            assert_eq(vac2.payload.runwayCleared, false)
+            assert_nil(vac2.payload.exitTaxiway)
         end)
     end)
 end)
