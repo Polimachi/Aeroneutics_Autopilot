@@ -410,7 +410,7 @@ flowchart LR
    $$\mathbf{p} \leftarrow \mathbf{p} + \text{clamp\_norm}(\mathbf{p}_{\text{amm}} - \mathbf{p}, \; \Delta p_{\max})$$
 
 3. **항법 정체 플래그 (`navStale`) 판정**:
-   - `AMM`의 `navValid == false`가 연속 임계 시간(`navStaleEpochMs = 500ms`)을 초과하거나 `flightActive == true` 상태에서 `posEpoch`가 임계 시간 이상 갱신되지 않을 경우, `navStale = true`로 판정하고 `MSG_OUTER_LOOP_STATUS` (`Base+4`)를 통해 `AMM`에 즉시 보고합니다.
+   - `AMM`의 `navValid == false`가 연속 임계 시간(`navStaleTimeoutMs = 500ms`)을 초과하거나 `flightActive == true` 상태에서 `posEpoch`가 임계 시간 이상 갱신되지 않을 경우, `navStale = true`로 판정하고 `MSG_OUTER_LOOP_STATUS` (`Base+4`)를 통해 `AMM`에 즉시 보고합니다.
    - `gpsTimedOut == true` 시에도 `AMM`이 DR 적분 위치를 유효(`navValid = true`)하게 유지하는 동안 FCP는 추종을 지속하되, `navStale == true`가 장기화되면 적분기 와인드업을 동결합니다.
 
 4. **1.5초 DR 홀드오버, `HOLD_LEVEL` 전이 및 청크 경계 스파이크 완화 (`TASK-128`, `MSG_NAV_QUALITY`)**:
@@ -1077,7 +1077,7 @@ function state_propagator.update(state, nowMs, telemetry, setpoint, cfg)
         state.lastNavValid = sp.navValid
     end
 
-    local epochStale = (nowMs - (state.lastEpochChangeMs or nowMs)) > (cfg.navStaleEpochMs or 500)
+    local epochStale = (nowMs - (state.lastEpochChangeMs or nowMs)) > (cfg.navStaleTimeoutMs or 500)
     state.navStale = (state.lastNavValid == false) or epochStale
     return { pos = state.pos, vel = state.lastVel, navStale = state.navStale, dt = dt }
 end
@@ -1209,12 +1209,12 @@ function flight_fsm.evaluate(state, nowMs, telemetry, setpoint, alert, navState,
         end
     else
         local ammSilence = nowMs - (state.lastAmmRxMs or nowMs)
-        if state.currentState == "ACTIVE_TRACKING" and ammSilence >= (safety.ammCommandTimeoutMs or 500) then
+        if state.currentState == "ACTIVE_TRACKING" and ammSilence >= (safety.ammSetpointTimeoutMs or 500) then
             state.currentState = "AMM_TIMEOUT_HOLD"
             state.holdEnterMs = nowMs
             state.holdPos = { x = navState.pos.x, y = navState.pos.y, z = navState.pos.z }
             out.resetIntegrators = true
-        elseif state.currentState == "AMM_TIMEOUT_HOLD" and (nowMs - state.holdEnterMs) > ((safety.failsafeHoldDurationSec or 10.0) * 1000.0) then
+        elseif state.currentState == "AMM_TIMEOUT_HOLD" and (nowMs - state.holdEnterMs) > (safety.ammTimeoutHoldToEmgMs or 10000) then
             state.currentState = "EMERGENCY_LAND"
             out.resetIntegrators = true
         end
