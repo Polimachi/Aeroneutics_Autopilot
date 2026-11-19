@@ -73,7 +73,15 @@ end
 --- Process discovery request and respond on caller channel for session isolation
 function discovery_handler.handle_request(modem, recvChannel, replyChannel, pkt, cfg, adapterState)
     if not pkt or pkt.type ~= "MSG_ACTUATOR_DISCOVER_REQ" then return false end
-    if not discovery_handler.is_target_matched(pkt.payload, cfg.groupId) then return false end
+    local payload = pkt.payload
+    if not discovery_handler.is_target_matched(payload, cfg.groupId) then return false end
+    local reqDomain = type(payload) == "table" and payload.requestDomain
+    if type(reqDomain) == "string" and reqDomain ~= "" and cfg and cfg.aircraftDomainId and reqDomain ~= cfg.aircraftDomainId then
+        return false, "DOMAIN_MISMATCH"
+    end
+    if adapterState and reqDomain ~= nil then
+        adapterState.lastRequestDomain = reqDomain
+    end
 
     local ackPkt = discovery_handler.create_ack(pkt, cfg, adapterState)
     local txChan = replyChannel or recvChannel or (cfg.channels and cfg.channels.thrustActuation)

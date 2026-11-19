@@ -1036,11 +1036,44 @@ function mission_engine:enter_checkpoint(index, now_ms, is_retry)
     end
     if type(cp.action) == "string" and string.sub(cp.action, 1, 15) == "ACT_TKL_TAKEOFF" then
         local rep = self.lastPbitReport
-        local blockedByReport = (type(rep) == "table" and rep.takeoffPermitted == false)
+        local hasCheckFail = false
+        if type(rep) == "table" and type(rep.checks) == "table" then
+            for _, chk in pairs(rep.checks) do
+                if type(chk) == "table" and chk.status == "FAIL" then
+                    hasCheckFail = true
+                    break
+                end
+            end
+        end
+        local blockedByReport = type(rep) == "table"
+            and (rep.takeoffPermitted == false or rep.overallStatus == "FAIL" or hasCheckFail)
         local blockedMissingRequired = (self.requirePbit == true and (type(rep) ~= "table" or rep.takeoffPermitted ~= true))
         if blockedByReport or blockedMissingRequired then
+            if type(rep) == "table" then
+                self.lastPbitFailure = {
+                    overallStatus = rep.overallStatus,
+                    summaryReason = rep.summaryReason,
+                    timestampMs = rep.timestampMs,
+                }
+            else
+                self.lastPbitFailure = {
+                    overallStatus = "MISSING",
+                    summaryReason = "PBIT_REPORT_MISSING",
+                    timestampMs = get_time_ms(now_ms),
+                }
+            end
             self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
             return false, "PBIT_TAKEOFF_INTERLOCK"
+        end
+        self.lastPbitFailure = nil
+        if type(rep) == "table" and rep.overallStatus == "WARN" then
+            self.lastPbitWarning = {
+                overallStatus = rep.overallStatus,
+                summaryReason = rep.summaryReason,
+                timestampMs = rep.timestampMs,
+            }
+        else
+            self.lastPbitWarning = nil
         end
     end
     local pre_ctx = build_precond_ctx(self)

@@ -441,4 +441,61 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
 
         cleanup_lease(lease_path)
     end)
+
+    it("records reassignedFrom on MSG_BLOCK_ASSIGN and handles existingDomain/responderStatus on MSG_CHANNEL_PROBE_ACK", function()
+        local lease_path = "config/test_lease_task5_fields.json"
+        cleanup_lease(lease_path)
+
+        local st = channel_sentinel.init({
+            system = { domainId = "AIRCRAFT_01", hardwareUuid = "AMM-TASK5-01" },
+            channels = { baseChannel = 10000 },
+        }, 1000, lease_path)
+
+        channel_sentinel.start_bootstrap(st, 1000)
+        assert_true(channel_sentinel.on_block_assign(st, {
+            status = "REASSIGNED",
+            baseChannel = 10080,
+            bandwidth = 40,
+            reassignedFrom = 10040,
+        }, 1020, function() return 0 end))
+        assert_eq(st.lastReassignedFrom, 10040)
+        assert_true(st.reassignedEvent)
+
+        local st_wait, probe_pkt = channel_sentinel.negotiate_and_probe(st, 1020)
+        assert_eq(st_wait, "PROBING")
+        assert_not_nil(probe_pkt)
+
+        -- Inactive responderStatus ("RELEASED") must not trigger conflict while still recording lastResponderStatus
+        assert_false(channel_sentinel.on_probe_ack(st, {
+            type = "MSG_CHANNEL_PROBE_ACK",
+            payload = {
+                existingDomain = "AIRCRAFT_99",
+                occupiedBase = 10080,
+                status = "CONFLICT_DETECTED",
+                responderStatus = "RELEASED",
+                responderUuid = "OTHER-REL",
+            },
+        }))
+        assert_eq(st.lastResponderStatus, "RELEASED")
+        assert_eq(st.status, "PROBING")
+        assert_eq(st.reassignAttempts, 0)
+
+        -- Foreign existingDomain with active responderStatus must detect conflict even without boolean conflict flag
+        assert_true(channel_sentinel.on_probe_ack(st, {
+            type = "MSG_CHANNEL_PROBE_ACK",
+            payload = {
+                existingDomain = "AIRCRAFT_99",
+                occupiedBase = 10080,
+                status = "CONFLICT_DETECTED",
+                responderStatus = "ACQUIRED",
+                responderUuid = "OTHER-ACT",
+            },
+        }))
+        assert_eq(st.lastConflictDomain, "AIRCRAFT_99")
+        assert_eq(st.lastResponderStatus, "ACQUIRED")
+        assert_eq(st.status, "REASSIGN_REQUEST")
+        assert_eq(st.reassignAttempts, 1)
+
+        cleanup_lease(lease_path)
+    end)
 end)

@@ -28,6 +28,31 @@ local function load_json(path)
     return {}
 end
 
+local function read_raw_file(path)
+    if fs and fs.exists and fs.open and fs.exists(path) then
+        local f = fs.open(path, "r")
+        if f then
+            local txt = f.readAll()
+            f.close()
+            return true, txt
+        end
+    end
+    return false, nil
+end
+
+local function restore_raw_or_delete(path, existed, rawTxt)
+    _json_cache[path] = nil
+    if not fs then return end
+    if existed then
+        if fs.open then
+            local f = fs.open(path, "w")
+            if f then f.write(rawTxt or ""); f.close() end
+        end
+    elseif fs.exists and fs.delete and fs.exists(path) then
+        fs.delete(path)
+    end
+end
+
 local function save_json(path, data)
     _json_cache[path] = nil
     if fs and textutils then
@@ -194,15 +219,60 @@ function core_daemon.init(configDirOrTable)
         running = true, tickCount = 0, lastTickMs = nowMs, timerId = nil, bootElapsedMs = 0
     }
     net.on_profile_sync = function(payload)
-        save_json(dir .. "/thrusters.json", payload)
-        if type(payload) == "table" and type(payload.peripheralManifest) == "table" then
-            daemonState.peripheralManifest = payload.peripheralManifest
-            save_json(dir .. "/peripheral_manifest.json", payload.peripheralManifest)
+        local p = type(payload) == "table" and payload or {}
+        local cs = p.controllabilityStatus
+        if cs ~= "FULL_6DOF_PASS" and cs ~= "AERO_ASSISTED_PASS" then
+            state_machine.update_contraption_interlock(fsm, "ASSEMBLED", true, "CONTROLLABILITY_REJECTED")
+            return false, "CONTROLLABILITY_REJECTED"
         end
+        if not daemonState._preSyncBackup then
+            local tEx, tRaw = read_raw_file(dir .. "/thrusters.json")
+            local mEx, mRaw = read_raw_file(dir .. "/peripheral_manifest.json")
+            daemonState._preSyncBackup = {
+                thrustersExisted = tEx,
+                thrustersRaw = tRaw,
+                manifestExisted = mEx,
+                manifestRaw = mRaw,
+                peripheralManifest = daemonState.peripheralManifest,
+                lastProfileMeta = daemonState.lastProfileMeta,
+                adapter = network_manager.snapshot_mixer(adapter),
+            }
+        end
+        save_json(dir .. "/thrusters.json", p)
+        if type(p.peripheralManifest) == "table" then
+            daemonState.peripheralManifest = p.peripheralManifest
+            save_json(dir .. "/peripheral_manifest.json", p.peripheralManifest)
+        end
+        daemonState.lastProfileMeta = {
+            profileId = p.profileId,
+            calibratedBy = p.calibratedBy,
+            discoveredSurfaces = p.discoveredSurfaces,
+            controllabilityStatus = cs,
+        }
         state_machine.update_contraption_interlock(fsm, "ASSEMBLED", false, "PROFILE_SYNC")
         if adapter and adapter.reload_coefficients then
-            adapter.reload_coefficients(adapter, payload, false)
+            adapter.reload_coefficients(adapter, p, false)
         end
+        return true, "ACCEPTED"
+    end
+    net.on_calib_close = function(closePayload)
+        local cp = type(closePayload) == "table" and closePayload or {}
+        if cp.saveProfile == false then
+            local b = daemonState._preSyncBackup
+            if b then
+                restore_raw_or_delete(dir .. "/thrusters.json", b.thrustersExisted, b.thrustersRaw)
+                restore_raw_or_delete(dir .. "/peripheral_manifest.json", b.manifestExisted, b.manifestRaw)
+                daemonState.peripheralManifest = b.peripheralManifest
+                daemonState.lastProfileMeta = b.lastProfileMeta
+                network_manager.restore_mixer(adapter, b.adapter)
+            end
+            daemonState._preSyncBackup = nil
+            fsm.recalibrationRequired = true
+            fsm.topologyStatus = "RECALIBRATION_REQUIRED"
+            return true, "ROLLED_BACK"
+        end
+        daemonState._preSyncBackup = nil
+        return true, "COMMITTED"
     end
     net.on_pbit_req = function(reqPayload)
         return core_daemon.run_pbit(daemonState, reqPayload)

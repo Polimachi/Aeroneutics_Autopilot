@@ -120,6 +120,13 @@ class TestAuditTools(unittest.TestCase):
         baseline_res = run_guard(REPO_ROOT)
         self.assertEqual(baseline_res["status"], "PASS", f"Guard errors: {baseline_res}")
         self.assertEqual(baseline_res["errors"], [])
+        self.assertEqual(baseline_res["warnings"], [])
+
+        baseline_cfg = json.loads((REPO_ROOT / "config" / "audit_baselines.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            baseline_cfg.get("unconsumed_required_keys_baseline"),
+            [["MSG_SURFACE_DISCOVER_REQ", "targetPod"]],
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

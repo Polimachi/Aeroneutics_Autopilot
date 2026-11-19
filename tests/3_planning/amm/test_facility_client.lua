@@ -131,6 +131,41 @@ describe("AMM 3-Tier facility_client & Dynamic Deck Extrapolation", function()
             assert_nil(outOfRange)
         end)
 
+        it("indexes MSG_FACILITY_BEACON.facilitiesSummary by sectorId in update_beacons", function()
+            local state = facility_client.init(create_test_config())
+            local summary = {
+                totalLandingPads = 2,
+                freeLandingPads = 1,
+                totalRunways = 1,
+                freeRunways = 1,
+                totalDockingArms = 0,
+                freeDockingArms = 0,
+                maxSupportWeight = 15000,
+                maxSupportRadius = 12.0,
+            }
+            local sectorBeacon = {
+                sectorId = "SECTOR_NORTH",
+                gacChannel = 50201,
+                facilitiesSummary = summary,
+                facilities = {
+                    {
+                        facilityId = "PAD_N1",
+                        facilityType = "LANDING_PAD",
+                        status = "FREE",
+                        position = { x = 50, y = 64, z = 50 },
+                    },
+                },
+            }
+
+            facility_client.update_beacons(state, sectorBeacon, 2000)
+            assert_not_nil(state.sectorSummaries)
+            assert_not_nil(state.sectorSummaries["SECTOR_NORTH"])
+            assert_eq(state.sectorSummaries["SECTOR_NORTH"].freeLandingPads, 1)
+            assert_eq(state.sectorSummaries["SECTOR_NORTH"].maxSupportWeight, 15000)
+            assert_not_nil(state.facilitiesSummary)
+            assert_eq(state.facilitiesSummary.totalRunways, 1)
+        end)
+
         it("builds compliant MSG_GAC_CHECKIN_REQ packet", function()
             local state = facility_client.init(create_test_config())
             local craftInfo = {

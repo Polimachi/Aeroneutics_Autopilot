@@ -15,6 +15,9 @@ function facility_client.init(config)
         airframeType = sys.airframeType or cfg.airframeType or "VECTORED_VTOL",
         reqSeq = 0,
         beacons = {},
+        sectorSummaries = {},
+        facilitiesSummary = nil,
+        _sectorSummaryTimes = {},
         runways = {},
         activePadId = nil,
         gacChannel = nil,
@@ -53,6 +56,15 @@ function facility_client.update_beacons(state, beacon_payload, now_ms)
     if not state or not beacon_payload then return end
     local now = now_ms or 0
 
+    if type(beacon_payload.facilitiesSummary) == "table" then
+        state.sectorSummaries = state.sectorSummaries or {}
+        state._sectorSummaryTimes = state._sectorSummaryTimes or {}
+        local secId = beacon_payload.sectorId or state.sectorId or "UNKNOWN_SECTOR"
+        state.sectorSummaries[secId] = beacon_payload.facilitiesSummary
+        state._sectorSummaryTimes[secId] = now
+        state.facilitiesSummary = beacon_payload.facilitiesSummary
+    end
+
     if type(beacon_payload.facilities) == "table" then
         for _, fac in ipairs(beacon_payload.facilities) do
             if type(fac) == "table" and type(fac.facilityId) == "string" and fac.facilityId ~= "" then
@@ -74,6 +86,14 @@ function facility_client.update_beacons(state, beacon_payload, now_ms)
     for fid, b in pairs(state.beacons) do
         if b._receivedMs and b._receivedMs < expire_thresh then
             state.beacons[fid] = nil
+        end
+    end
+    if type(state._sectorSummaryTimes) == "table" and type(state.sectorSummaries) == "table" then
+        for secId, ts in pairs(state._sectorSummaryTimes) do
+            if ts < expire_thresh then
+                state._sectorSummaryTimes[secId] = nil
+                state.sectorSummaries[secId] = nil
+            end
         end
     end
 end

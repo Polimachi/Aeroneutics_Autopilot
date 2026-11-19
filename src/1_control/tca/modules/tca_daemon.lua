@@ -110,6 +110,10 @@ function tca_daemon.handle_calib_pulse(inst, pkt)
         return true
     end
     if is_flight_state(inst.lastControlState) and inst.lastControlState ~= "CALIBRATION" then return false end
+    if type(p.safetyMaxTiltDeg) ~= "number" or p.safetyMaxTiltDeg <= 0 or p.safetyMaxTiltDeg > 45 then
+        return false, "INVALID_SAFETY_MAX_TILT"
+    end
+    inst.lastSafetyMaxTiltDeg = p.safetyMaxTiltDeg
     local pulseSignal = (p.gimbalX ~= nil or p.gimbalY ~= nil)
         and { thrust = p.pulseLevel, gimbalX = p.gimbalX, gimbalY = p.gimbalY }
         or p.pulseLevel

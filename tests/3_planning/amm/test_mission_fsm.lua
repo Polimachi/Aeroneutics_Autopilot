@@ -542,4 +542,91 @@ describe("AMM v2.0.0 Mission Engine Loader, Decorators, Preconditions, and Seque
         assert_eq(engPass.state, "EN_ROUTE")
         assert_eq(engPass:get_trajectory_goal().flightMode, "TAKEOFF")
     end)
+
+    it("enforces R2 PBIT interlock on overallStatus/checks FAIL even if takeoffPermitted=true and allows WARN with metadata", function()
+        local mission = {
+            missionId = "PBIT_R2_MISSION",
+            version = "2.0.0",
+            fallbackPolicy = "HOVER_HOLD",
+            checkpoints = {
+                {
+                    checkpointId = "CP_TO",
+                    action = "ACT_TKL_TAKEOFF_VERT",
+                    params = { targetAlt = 120.0 },
+                },
+            },
+        }
+
+        -- Case A: overallStatus == "FAIL" even when takeoffPermitted == true -> blocked
+        local engStatusFail = create_engine_fixture({})
+        engStatusFail:set_pbit_report({
+            requestId = "PBIT-R2-1",
+            overallStatus = "FAIL",
+            takeoffPermitted = true,
+            summaryReason = "BUS_RTT_EXCEEDED",
+            timestampMs = 12345,
+            checks = { busRtt = { status = "PASS" } },
+        })
+        assert_true(engStatusFail:load_table(mission))
+        local okSF, errSF = engStatusFail:start("SINGLE", 1000)
+        assert_false(okSF)
+        assert_eq(errSF, "PBIT_TAKEOFF_INTERLOCK")
+        assert_not_nil(engStatusFail.lastPbitFailure)
+        assert_eq(engStatusFail.lastPbitFailure.summaryReason, "BUS_RTT_EXCEEDED")
+        assert_eq(engStatusFail.lastPbitFailure.timestampMs, 12345)
+
+        -- Case B: map check entry has status == "FAIL" even when overallStatus == "PASS" & takeoffPermitted == true -> blocked
+        local engMapFail = create_engine_fixture({})
+        engMapFail:set_pbit_report({
+            requestId = "PBIT-R2-2",
+            overallStatus = "PASS",
+            takeoffPermitted = true,
+            summaryReason = "INERTIA_MISMATCH",
+            timestampMs = 23456,
+            checks = {
+                busRtt = { status = "PASS" },
+                inertiaProfile = { status = "FAIL", reason = "MASS_DELTA" },
+            },
+        })
+        assert_true(engMapFail:load_table(mission))
+        local okMF, errMF = engMapFail:start("SINGLE", 1000)
+        assert_false(okMF)
+        assert_eq(errMF, "PBIT_TAKEOFF_INTERLOCK")
+
+        -- Case C: array check entry has status == "FAIL" even when overallStatus == "PASS" & takeoffPermitted == true -> blocked
+        local engArrFail = create_engine_fixture({})
+        engArrFail:set_pbit_report({
+            requestId = "PBIT-R2-3",
+            overallStatus = "PASS",
+            takeoffPermitted = true,
+            checks = {
+                { name = "busRtt", status = "PASS" },
+                { name = "actuatorWiggle", status = "FAIL" },
+            },
+        })
+        assert_true(engArrFail:load_table(mission))
+        local okAF, errAF = engArrFail:start("SINGLE", 1000)
+        assert_false(okAF)
+        assert_eq(errAF, "PBIT_TAKEOFF_INTERLOCK")
+
+        -- Case D: overallStatus == "WARN" with takeoffPermitted == true -> allowed and records warning metadata
+        local engWarn = create_engine_fixture({})
+        engWarn.requirePbit = true
+        engWarn:set_pbit_report({
+            requestId = "PBIT-R2-4",
+            overallStatus = "WARN",
+            takeoffPermitted = true,
+            summaryReason = "LOW_FUEL_WARN",
+            timestampMs = 34567,
+            checks = { energyFuel = { status = "WARN", value = 0.16 } },
+        })
+        assert_true(engWarn:load_table(mission))
+        local okW, errW = engWarn:start("SINGLE", 1000)
+        assert_true(okW, tostring(errW))
+        assert_eq(engWarn.state, "EN_ROUTE")
+        assert_not_nil(engWarn.lastPbitWarning)
+        assert_eq(engWarn.lastPbitWarning.overallStatus, "WARN")
+        assert_eq(engWarn.lastPbitWarning.summaryReason, "LOW_FUEL_WARN")
+        assert_eq(engWarn.lastPbitWarning.timestampMs, 34567)
+    end)
 end)

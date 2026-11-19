@@ -310,7 +310,8 @@ describe("tca vector thruster discovery and status reporting", function()
                 pulseLevel = 8,
                 gimbalX = -0.5,
                 gimbalY = 0.25,
-                pulseDurationMs = 300
+                pulseDurationMs = 300,
+                safetyMaxTiltDeg = 12.0
             }
         }
 
