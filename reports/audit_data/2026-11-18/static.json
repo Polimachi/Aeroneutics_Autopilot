@@ -1,0 +1,3793 @@
+{
+  "total_lua_files": 140,
+  "total_lua_bytes": 1363401,
+  "total_lua_lines": 34670,
+  "total_functions": 1657,
+  "module_sizes": [
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 53250,
+      "lines": 1289
+    },
+    {
+      "file": "src/3_planning/amm/modules/mission_engine.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 51861,
+      "lines": 1254
+    },
+    {
+      "file": "src/0_development/installer/modules/manifest.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 48420,
+      "lines": 915
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 38201,
+      "lines": 1148
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "subsystem": "0_development/sensors",
+      "bytes": 37994,
+      "lines": 954
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 35698,
+      "lines": 958
+    },
+    {
+      "file": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 24605,
+      "lines": 642
+    },
+    {
+      "file": "src/1_control/vas/modules/network_manager.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 24015,
+      "lines": 539
+    },
+    {
+      "file": "src/3_planning/amm/modules/trajectory_generator.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 23333,
+      "lines": 568
+    },
+    {
+      "file": "src/0_development/installer/installer_app.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 22797,
+      "lines": 536
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 22614,
+      "lines": 519
+    },
+    {
+      "file": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 22010,
+      "lines": 563
+    },
+    {
+      "file": "src/1_control/vas/modules/core_daemon.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 21688,
+      "lines": 472
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 21351,
+      "lines": 511
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 21018,
+      "lines": 459
+    },
+    {
+      "file": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 20702,
+      "lines": 518
+    },
+    {
+      "file": "src/0_development/installer/modules/tui_view.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 20479,
+      "lines": 554
+    },
+    {
+      "file": "src/0_infra/gps/server.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 19435,
+      "lines": 470
+    },
+    {
+      "file": "src/3_planning/amm/modules/condition_evaluator.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 19432,
+      "lines": 455
+    },
+    {
+      "file": "src/3_planning/amm/modules/action_registry.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 18812,
+      "lines": 382
+    },
+    {
+      "file": "src/0_development/installer/installer.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 17676,
+      "lines": 453
+    },
+    {
+      "file": "installer.lua",
+      "subsystem": "root",
+      "bytes": 17676,
+      "lines": 453
+    },
+    {
+      "file": "src/0_development/alignment/modules/align_master.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 17227,
+      "lines": 432
+    },
+    {
+      "file": "src/3_planning/amm/modules/ui_renderer.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 17056,
+      "lines": 412
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 16013,
+      "lines": 409
+    },
+    {
+      "file": "src/0_infra/gcs/main.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 15732,
+      "lines": 408
+    },
+    {
+      "file": "src/0_development/installer/modules/startup_generator.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 14865,
+      "lines": 348
+    },
+    {
+      "file": "src/1_control/tca/modules/tca_daemon.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 14709,
+      "lines": 308
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/network_manager.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 14572,
+      "lines": 405
+    },
+    {
+      "file": "src/2_guidance/fcp/main.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 14418,
+      "lines": 391
+    },
+    {
+      "file": "src/3_planning/amm/modules/nav_engine.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 13453,
+      "lines": 335
+    },
+    {
+      "file": "src/3_planning/amm/modules/network_manager.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 13275,
+      "lines": 393
+    },
+    {
+      "file": "src/0_infra/gps/modules/protocol.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 13193,
+      "lines": 261
+    },
+    {
+      "file": "src/0_infra/gac/modules/gac_fsm.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 13064,
+      "lines": 365
+    },
+    {
+      "file": "src/0_development/installer/modules/downloader.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 13031,
+      "lines": 386
+    },
+    {
+      "file": "src/1_control/tca/modules/actuator_adapter.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 12533,
+      "lines": 282
+    },
+    {
+      "file": "src/0_development/ota/main.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 12444,
+      "lines": 342
+    },
+    {
+      "file": "src/0_development/fdr/main.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 12207,
+      "lines": 319
+    },
+    {
+      "file": "src/0_development/alignment/modules/profile_exporter.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 11458,
+      "lines": 362
+    },
+    {
+      "file": "src/0_infra/gcs/modules/channel_manager.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 11337,
+      "lines": 279
+    },
+    {
+      "file": "src/1_control/vas/modules/thrust_mixer.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 11285,
+      "lines": 289
+    },
+    {
+      "file": "src/3_planning/amm/modules/hook_runner.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 10773,
+      "lines": 297
+    },
+    {
+      "file": "src/0_infra/landing_pad/main.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 10647,
+      "lines": 261
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/pad_fsm.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 10242,
+      "lines": 257
+    },
+    {
+      "file": "src/0_infra/gac/modules/allocation_engine.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 9791,
+      "lines": 267
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/flight_fsm.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 9649,
+      "lines": 298
+    },
+    {
+      "file": "src/0_infra/gac/main.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 9414,
+      "lines": 218
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/state_propagator.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 9302,
+      "lines": 229
+    },
+    {
+      "file": "src/1_control/vas/modules/actuator_adapter_tca.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 8907,
+      "lines": 219
+    },
+    {
+      "file": "src/0_development/fdr/modules/jsonl_dumper.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 8901,
+      "lines": 247
+    },
+    {
+      "file": "src/0_infra/gps/modules/session_scheduler.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 8777,
+      "lines": 198
+    },
+    {
+      "file": "src/1_control/vas/modules/vehicle_policy.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 8770,
+      "lines": 201
+    },
+    {
+      "file": "src/0_infra/gps/hal/gps_client.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 8410,
+      "lines": 211
+    },
+    {
+      "file": "src/1_control/asa/main.lua",
+      "subsystem": "1_control/asa",
+      "bytes": 8315,
+      "lines": 216
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 7908,
+      "lines": 224
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/config_store.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 7608,
+      "lines": 221
+    },
+    {
+      "file": "src/0_infra/gps/node.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 7463,
+      "lines": 179
+    },
+    {
+      "file": "src/0_infra/runway/main.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 7438,
+      "lines": 135
+    },
+    {
+      "file": "src/0_infra/gps/modules/monitor_ui.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 7415,
+      "lines": 178
+    },
+    {
+      "file": "src/0_infra/gps/modules/trilateration.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 7271,
+      "lines": 209
+    },
+    {
+      "file": "src/1_control/tca/modules/channel_rebind_handler.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 7102,
+      "lines": 158
+    },
+    {
+      "file": "src/0_infra/runway/modules/runway_fsm.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 7055,
+      "lines": 150
+    },
+    {
+      "file": "src/0_infra/gcs/modules/live_bridge_client.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 7025,
+      "lines": 204
+    },
+    {
+      "file": "src/1_control/tca/main.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 6929,
+      "lines": 200
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tui_view.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 6926,
+      "lines": 161
+    },
+    {
+      "file": "src/3_planning/amm/modules/chattering_guard.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 6844,
+      "lines": 188
+    },
+    {
+      "file": "src/1_control/vas/modules/flight_dynamics_core.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 6785,
+      "lines": 160
+    },
+    {
+      "file": "src/0_development/fdr/modules/packet_tap.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 6703,
+      "lines": 196
+    },
+    {
+      "file": "src/1_control/vas/modules/ui_renderer.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 6615,
+      "lines": 126
+    },
+    {
+      "file": "src/0_development/fdr/modules/storage_pool.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 6573,
+      "lines": 175
+    },
+    {
+      "file": "src/0_infra/gps/modules/client_core.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 6520,
+      "lines": 171
+    },
+    {
+      "file": "src/1_control/tca/modules/tui_dashboard.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 6310,
+      "lines": 144
+    },
+    {
+      "file": "src/0_infra/gcs/modules/ui_renderer.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 6124,
+      "lines": 148
+    },
+    {
+      "file": "src/0_infra/gac/modules/facility_inventory.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 6094,
+      "lines": 194
+    },
+    {
+      "file": "src/0_infra/runway/modules/config_store.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 6054,
+      "lines": 140
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_ui.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 5893,
+      "lines": 148
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/sensor_adapter.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 5890,
+      "lines": 172
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tactical_streamer.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 5845,
+      "lines": 167
+    },
+    {
+      "file": "src/0_infra/runway/modules/gps_client.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 5809,
+      "lines": 133
+    },
+    {
+      "file": "src/0_infra/gac/modules/beacon_broadcaster.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 5791,
+      "lines": 172
+    },
+    {
+      "file": "src/0_development/installer/modules/migration_engine.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 5758,
+      "lines": 175
+    },
+    {
+      "file": "src/0_infra/gcs/modules/network_manager.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 5675,
+      "lines": 165
+    },
+    {
+      "file": "src/1_control/tca/tools/tca_setup.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 5537,
+      "lines": 141
+    },
+    {
+      "file": "src/0_development/alignment/modules/multi_pulse_sequencer.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 5500,
+      "lines": 167
+    },
+    {
+      "file": "src/0_infra/gcs/modules/fleet_tracker.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 5402,
+      "lines": 176
+    },
+    {
+      "file": "src/3_planning/amm/modules/waypoint_queue.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 5382,
+      "lines": 184
+    },
+    {
+      "file": "src/0_development/alignment/modules/ols_regression_engine.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 5305,
+      "lines": 157
+    },
+    {
+      "file": "src/1_control/vas/modules/actuator_adapter_asa.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 5217,
+      "lines": 129
+    },
+    {
+      "file": "src/1_control/asa/modules/tui_dashboard.lua",
+      "subsystem": "1_control/asa",
+      "bytes": 5216,
+      "lines": 118
+    },
+    {
+      "file": "src/1_control/asa/modules/control_surface_mapper.lua",
+      "subsystem": "1_control/asa",
+      "bytes": 5202,
+      "lines": 133
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_protocol.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 5057,
+      "lines": 151
+    },
+    {
+      "file": "src/0_infra/gac/modules/config_loader.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 5031,
+      "lines": 173
+    },
+    {
+      "file": "src/0_infra/runway/modules/tactical_streamer.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 4990,
+      "lines": 121
+    },
+    {
+      "file": "src/0_development/installer/modules/version_registry.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 4805,
+      "lines": 181
+    },
+    {
+      "file": "src/0_infra/runway/modules/sensor_adapter.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 4759,
+      "lines": 115
+    },
+    {
+      "file": "src/0_infra/gps/modules/config_store.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 4714,
+      "lines": 137
+    },
+    {
+      "file": "src/1_control/tca/modules/watchdog_sentinel.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 4677,
+      "lines": 129
+    },
+    {
+      "file": "src/0_infra/gps/hal/wizard_cli.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 4641,
+      "lines": 117
+    },
+    {
+      "file": "src/0_development/alignment/modules/controllability_checker.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 4594,
+      "lines": 120
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/ui_renderer.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 4561,
+      "lines": 87
+    },
+    {
+      "file": "src/0_development/alignment/modules/hud_renderer.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 4046,
+      "lines": 101
+    },
+    {
+      "file": "src/1_control/vas/main.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 4035,
+      "lines": 111
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/setup_wizard.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 4024,
+      "lines": 112
+    },
+    {
+      "file": "src/1_control/vas/modules/telemetry_feeder.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 3832,
+      "lines": 94
+    },
+    {
+      "file": "src/0_infra/runway/modules/lighting_controller.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 3802,
+      "lines": 83
+    },
+    {
+      "file": "src/1_control/tca/modules/discovery_handler.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 3749,
+      "lines": 86
+    },
+    {
+      "file": "src/3_planning/amm/modules/input_handler.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 3696,
+      "lines": 142
+    },
+    {
+      "file": "src/1_control/tca/modules/config_manager.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 3688,
+      "lines": 107
+    },
+    {
+      "file": "src/1_control/asa/modules/config_manager.lua",
+      "subsystem": "1_control/asa",
+      "bytes": 3677,
+      "lines": 113
+    },
+    {
+      "file": "src/0_development/fdr/modules/cloud_exporter.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 3668,
+      "lines": 93
+    },
+    {
+      "file": "src/1_control/vas/modules/quat.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 3591,
+      "lines": 131
+    },
+    {
+      "file": "src/0_development/alignment/main.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 3547,
+      "lines": 100
+    },
+    {
+      "file": "src/0_development/alignment/modules/discovery_client.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 3392,
+      "lines": 117
+    },
+    {
+      "file": "src/0_development/fdr/modules/fdr_ui.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 3224,
+      "lines": 69
+    },
+    {
+      "file": "src/0_infra/gps/modules/commissioning.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 3164,
+      "lines": 107
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/offset_transform.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 3161,
+      "lines": 89
+    },
+    {
+      "file": "src/1_control/tca/modules/status_reporter.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 3097,
+      "lines": 79
+    },
+    {
+      "file": "src/0_infra/runway/modules/setup_wizard.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 3056,
+      "lines": 79
+    },
+    {
+      "file": "src/0_infra/runway/modules/offset_transform.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 3045,
+      "lines": 62
+    },
+    {
+      "file": "src/1_control/tca/modules/group_allocator.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 2946,
+      "lines": 72
+    },
+    {
+      "file": "src/0_infra/runway/modules/tui_view.lua",
+      "subsystem": "0_infra/runway",
+      "bytes": 2846,
+      "lines": 70
+    },
+    {
+      "file": "src/1_control/tca/node_tca.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 2675,
+      "lines": 62
+    },
+    {
+      "file": "src/0_development/alignment/modules/impulse_integrator.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 2638,
+      "lines": 89
+    },
+    {
+      "file": "src/0_development/alignment/modules/safety_sentinel.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 2115,
+      "lines": 61
+    },
+    {
+      "file": "src/0_development/fdr/modules/ring_buffer.lua",
+      "subsystem": "0_development/fdr",
+      "bytes": 1879,
+      "lines": 78
+    },
+    {
+      "file": "src/0_infra/gps/modules/radar_math.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 1867,
+      "lines": 62
+    },
+    {
+      "file": "src/1_control/vas/modules/vec3.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 1854,
+      "lines": 83
+    },
+    {
+      "file": "src/1_control/tca/modules/packet_protocol.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 1809,
+      "lines": 59
+    },
+    {
+      "file": "src/1_control/vas/node_tca.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 1793,
+      "lines": 39
+    },
+    {
+      "file": "src/2_guidance/fcp/node_infra_sim.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 1633,
+      "lines": 47
+    },
+    {
+      "file": "src/0_infra/gps/hal/storage_hal.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 1513,
+      "lines": 47
+    },
+    {
+      "file": "src/1_control/tca/node_core_sim.lua",
+      "subsystem": "1_control/tca",
+      "bytes": 1469,
+      "lines": 45
+    },
+    {
+      "file": "src/0_development/alignment/modules/settling_guard.lua",
+      "subsystem": "0_development/alignment",
+      "bytes": 1463,
+      "lines": 50
+    },
+    {
+      "file": "src/0_infra/gcs/modules/c2_commander.lua",
+      "subsystem": "0_infra/gcs",
+      "bytes": 1359,
+      "lines": 50
+    },
+    {
+      "file": "src/0_infra/gps/client_entry.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 1154,
+      "lines": 33
+    },
+    {
+      "file": "src/2_guidance/fcp/node_asa_sim.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 787,
+      "lines": 30
+    },
+    {
+      "file": "src/0_infra/gps/main.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 545,
+      "lines": 16
+    },
+    {
+      "file": "src/0_development/installer/main.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 314,
+      "lines": 6
+    },
+    {
+      "file": "src/0_infra/gac/config.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 199,
+      "lines": 5
+    },
+    {
+      "file": "src/0_infra/landing_pad/config.lua",
+      "subsystem": "0_infra/landing_pad",
+      "bytes": 199,
+      "lines": 5
+    }
+  ],
+  "top_10pct_modules": [
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 53250,
+      "lines": 1289
+    },
+    {
+      "file": "src/3_planning/amm/modules/mission_engine.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 51861,
+      "lines": 1254
+    },
+    {
+      "file": "src/0_development/installer/modules/manifest.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 48420,
+      "lines": 915
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 38201,
+      "lines": 1148
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "subsystem": "0_development/sensors",
+      "bytes": 37994,
+      "lines": 954
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 35698,
+      "lines": 958
+    },
+    {
+      "file": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 24605,
+      "lines": 642
+    },
+    {
+      "file": "src/1_control/vas/modules/network_manager.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 24015,
+      "lines": 539
+    },
+    {
+      "file": "src/3_planning/amm/modules/trajectory_generator.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 23333,
+      "lines": 568
+    },
+    {
+      "file": "src/0_development/installer/installer_app.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 22797,
+      "lines": 536
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 22614,
+      "lines": 519
+    },
+    {
+      "file": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 22010,
+      "lines": 563
+    },
+    {
+      "file": "src/1_control/vas/modules/core_daemon.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 21688,
+      "lines": 472
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 21351,
+      "lines": 511
+    }
+  ],
+  "top_functions": [
+    {
+      "file": "src/0_infra/gac/modules/gac_fsm.lua",
+      "name": "gac_fsm.create",
+      "start_line": 8,
+      "lines": 356,
+      "code_lines": 316
+    },
+    {
+      "file": "src/0_development/installer/installer_app.lua",
+      "name": "installer_app.run",
+      "start_line": 254,
+      "lines": 281,
+      "code_lines": 265
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "name": "tui_view.create",
+      "start_line": 261,
+      "lines": 249,
+      "code_lines": 220
+    },
+    {
+      "file": "src/0_infra/landing_pad/main.lua",
+      "name": "main",
+      "start_line": 17,
+      "lines": 239,
+      "code_lines": 202
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/pad_fsm.lua",
+      "name": "pad_fsm.create",
+      "start_line": 17,
+      "lines": 239,
+      "code_lines": 207
+    },
+    {
+      "file": "src/0_development/installer/modules/startup_generator.lua",
+      "name": "startup_generator.generateHookContent",
+      "start_line": 55,
+      "lines": 204,
+      "code_lines": 199
+    },
+    {
+      "file": "src/0_infra/gac/main.lua",
+      "name": "main",
+      "start_line": 13,
+      "lines": 204,
+      "code_lines": 170
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ServerMT:deploy",
+      "start_line": 754,
+      "lines": 203,
+      "code_lines": 189
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "name": "gps_client.create",
+      "start_line": 35,
+      "lines": 188,
+      "code_lines": 161
+    },
+    {
+      "file": "src/0_development/installer/installer.lua",
+      "name": "bootstrapper.bootstrapAndRun",
+      "start_line": 260,
+      "lines": 181,
+      "code_lines": 154
+    },
+    {
+      "file": "installer.lua",
+      "name": "bootstrapper.bootstrapAndRun",
+      "start_line": 260,
+      "lines": 181,
+      "code_lines": 154
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "name": "tui_view.apply_operator_action",
+      "start_line": 88,
+      "lines": 172,
+      "code_lines": 165
+    },
+    {
+      "file": "src/0_infra/gac/modules/facility_inventory.lua",
+      "name": "facility_inventory.create",
+      "start_line": 24,
+      "lines": 169,
+      "code_lines": 151
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tactical_streamer.lua",
+      "name": "tactical_streamer.create",
+      "start_line": 8,
+      "lines": 158,
+      "code_lines": 144
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/sensor_adapter.lua",
+      "name": "sensor_adapter.create",
+      "start_line": 15,
+      "lines": 156,
+      "code_lines": 134
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ServerMT:sync_remote",
+      "start_line": 382,
+      "lines": 147,
+      "code_lines": 131
+    },
+    {
+      "file": "src/0_development/installer/modules/downloader.lua",
+      "name": "downloader.fetchString",
+      "start_line": 72,
+      "lines": 135,
+      "code_lines": 115
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tui_view.lua",
+      "name": "tui_view.create",
+      "start_line": 28,
+      "lines": 132,
+      "code_lines": 121
+    },
+    {
+      "file": "src/0_development/installer/installer.lua",
+      "name": "downloadBootstrapFiles",
+      "start_line": 127,
+      "lines": 128,
+      "code_lines": 117
+    },
+    {
+      "file": "installer.lua",
+      "name": "downloadBootstrapFiles",
+      "start_line": 127,
+      "lines": 128,
+      "code_lines": 117
+    },
+    {
+      "file": "src/0_infra/runway/modules/runway_fsm.lua",
+      "name": "runway_fsm.create",
+      "start_line": 23,
+      "lines": 126,
+      "code_lines": 116
+    },
+    {
+      "file": "src/0_infra/runway/modules/gps_client.lua",
+      "name": "gps_client.create",
+      "start_line": 16,
+      "lines": 116,
+      "code_lines": 108
+    },
+    {
+      "file": "src/0_development/installer/installer_app.lua",
+      "name": "installer_app.installModule",
+      "start_line": 33,
+      "lines": 113,
+      "code_lines": 93
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "name": "apply_committed_tx",
+      "start_line": 561,
+      "lines": 111,
+      "code_lines": 101
+    },
+    {
+      "file": "src/0_infra/gac/modules/beacon_broadcaster.lua",
+      "name": "beacon_broadcaster.create",
+      "start_line": 62,
+      "lines": 109,
+      "code_lines": 95
+    },
+    {
+      "file": "src/0_development/ota/main.lua",
+      "name": "main.run",
+      "start_line": 235,
+      "lines": 102,
+      "code_lines": 90
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "name": "render_to_device",
+      "start_line": 305,
+      "lines": 102,
+      "code_lines": 84
+    },
+    {
+      "file": "src/0_development/installer/modules/downloader.lua",
+      "name": "downloader.downloadBatch",
+      "start_line": 285,
+      "lines": 100,
+      "code_lines": 81
+    },
+    {
+      "file": "src/1_control/vas/modules/thrust_mixer.lua",
+      "name": "thrust_mixer.allocate_vector_vtol",
+      "start_line": 115,
+      "lines": 97,
+      "code_lines": 81
+    },
+    {
+      "file": "src/0_infra/runway/modules/tactical_streamer.lua",
+      "name": "tactical_streamer.create",
+      "start_line": 31,
+      "lines": 89,
+      "code_lines": 82
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ServerMT:load_package",
+      "start_line": 534,
+      "lines": 88,
+      "code_lines": 81
+    },
+    {
+      "file": "src/0_infra/gac/modules/allocation_engine.lua",
+      "name": "allocation_engine.select_best_pad",
+      "start_line": 179,
+      "lines": 87,
+      "code_lines": 71
+    },
+    {
+      "file": "src/1_control/vas/modules/core_daemon.lua",
+      "name": "core_daemon.init",
+      "start_line": 140,
+      "lines": 81,
+      "code_lines": 76
+    },
+    {
+      "file": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "name": "sensor_pipeline.verify_and_rebind_topology",
+      "start_line": 347,
+      "lines": 81,
+      "code_lines": 77
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "create_app",
+      "start_line": 918,
+      "lines": 81,
+      "code_lines": 79
+    },
+    {
+      "file": "src/0_infra/runway/modules/sensor_adapter.lua",
+      "name": "sensor_adapter.create",
+      "start_line": 36,
+      "lines": 78,
+      "code_lines": 71
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "name": "state_machine.evaluate_pbit",
+      "start_line": 273,
+      "lines": 77,
+      "code_lines": 65
+    },
+    {
+      "file": "src/0_infra/gps/modules/session_scheduler.lua",
+      "name": "session_scheduler:flushExpired",
+      "start_line": 123,
+      "lines": 74,
+      "code_lines": 74
+    },
+    {
+      "file": "src/0_infra/gps/server.lua",
+      "name": "serverEventLoop",
+      "start_line": 371,
+      "lines": 73,
+      "code_lines": 70
+    },
+    {
+      "file": "src/0_development/alignment/modules/profile_exporter.lua",
+      "name": "profile_exporter.invert_matrix",
+      "start_line": 122,
+      "lines": 72,
+      "code_lines": 57
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "name": "view:handle_key",
+      "start_line": 415,
+      "lines": 72,
+      "code_lines": 71
+    },
+    {
+      "file": "src/0_development/installer/modules/migration_engine.lua",
+      "name": "migration_engine.migrateFile",
+      "start_line": 103,
+      "lines": 71,
+      "code_lines": 61
+    },
+    {
+      "file": "src/1_control/asa/modules/tui_dashboard.lua",
+      "name": "tui_dashboard.render_dashboard",
+      "start_line": 46,
+      "lines": 71,
+      "code_lines": 47
+    },
+    {
+      "file": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "name": "sensor_pipeline.step_gps_dr",
+      "start_line": 446,
+      "lines": 71,
+      "code_lines": 68
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_ui.lua",
+      "name": "ota_ui.render",
+      "start_line": 77,
+      "lines": 70,
+      "code_lines": 65
+    },
+    {
+      "file": "src/0_infra/gac/modules/gac_fsm.lua",
+      "name": "fsm:handle_abort_clear",
+      "start_line": 240,
+      "lines": 70,
+      "code_lines": 61
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/pad_fsm.lua",
+      "name": "fsm:handle_backbone_message",
+      "start_line": 97,
+      "lines": 70,
+      "code_lines": 62
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/setup_wizard.lua",
+      "name": "setup_wizard.create",
+      "start_line": 41,
+      "lines": 70,
+      "code_lines": 65
+    },
+    {
+      "file": "src/0_infra/gcs/modules/channel_manager.lua",
+      "name": "channel_manager.allocate_block",
+      "start_line": 181,
+      "lines": 69,
+      "code_lines": 61
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "handle_modem_message",
+      "start_line": 697,
+      "lines": 68,
+      "code_lines": 66
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "step_5hz_downlink",
+      "start_line": 1000,
+      "lines": 66,
+      "code_lines": 66
+    },
+    {
+      "file": "src/1_control/asa/main.lua",
+      "name": "run_daemon",
+      "start_line": 57,
+      "lines": 65,
+      "code_lines": 62
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "name": "handle_begin",
+      "start_line": 768,
+      "lines": 64,
+      "code_lines": 58
+    },
+    {
+      "file": "src/0_development/installer/modules/downloader.lua",
+      "name": "downloader.downloadFileAtomic",
+      "start_line": 214,
+      "lines": 62,
+      "code_lines": 51
+    },
+    {
+      "file": "src/0_development/ota/main.lua",
+      "name": "run_cli",
+      "start_line": 168,
+      "lines": 62,
+      "code_lines": 62
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "step_20hz_tick",
+      "start_line": 1144,
+      "lines": 62,
+      "code_lines": 56
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "http_fetch_string",
+      "start_line": 118,
+      "lines": 61,
+      "code_lines": 58
+    },
+    {
+      "file": "src/0_infra/gps/hal/gps_client.lua",
+      "name": "gps_client.queryStatus",
+      "start_line": 145,
+      "lines": 61,
+      "code_lines": 61
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/state_propagator.lua",
+      "name": "state_propagator.propagate",
+      "start_line": 167,
+      "lines": 61,
+      "code_lines": 56
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "name": "velocity.read_vector3",
+      "start_line": 453,
+      "lines": 60,
+      "code_lines": 53
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ServerMT:discover",
+      "start_line": 626,
+      "lines": 59,
+      "code_lines": 55
+    },
+    {
+      "file": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "name": "channel_sentinel.init",
+      "start_line": 161,
+      "lines": 58,
+      "code_lines": 58
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ota_server.new",
+      "start_line": 225,
+      "lines": 57,
+      "code_lines": 53
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ServerMT:_wait_for_packet",
+      "start_line": 304,
+      "lines": 57,
+      "code_lines": 54
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "name": "assembler.read",
+      "start_line": 893,
+      "lines": 57,
+      "code_lines": 53
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/sensor_adapter.lua",
+      "name": "adapter:scan_peripherals",
+      "start_line": 48,
+      "lines": 57,
+      "code_lines": 49
+    },
+    {
+      "file": "src/0_infra/runway/main.lua",
+      "name": "step_20hz",
+      "start_line": 22,
+      "lines": 57,
+      "code_lines": 57
+    },
+    {
+      "file": "src/1_control/tca/modules/status_reporter.lua",
+      "name": "status_reporter.check_and_send",
+      "start_line": 21,
+      "lines": 57,
+      "code_lines": 50
+    },
+    {
+      "file": "src/0_development/installer/modules/startup_generator.lua",
+      "name": "startup_generator.installHook",
+      "start_line": 266,
+      "lines": 56,
+      "code_lines": 48
+    },
+    {
+      "file": "src/0_development/installer/modules/tui_view.lua",
+      "name": "tui_view.updateSelection",
+      "start_line": 305,
+      "lines": 56,
+      "code_lines": 48
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "name": "handle_chunk",
+      "start_line": 833,
+      "lines": 56,
+      "code_lines": 50
+    },
+    {
+      "file": "src/0_development/alignment/modules/multi_pulse_sequencer.lua",
+      "name": "multi_pulse_sequencer.generate_vector_sequence",
+      "start_line": 14,
+      "lines": 55,
+      "code_lines": 47
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tui_view.lua",
+      "name": "view:render_daemon",
+      "start_line": 71,
+      "lines": 55,
+      "code_lines": 52
+    },
+    {
+      "file": "src/1_control/vas/modules/network_manager.lua",
+      "name": "network_manager.dispatch",
+      "start_line": 483,
+      "lines": 55,
+      "code_lines": 54
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "name": "state_machine.get_effective_command",
+      "start_line": 423,
+      "lines": 55,
+      "code_lines": 54
+    },
+    {
+      "file": "src/1_control/tca/modules/tui_dashboard.lua",
+      "name": "tui_dashboard.render_full_screen",
+      "start_line": 89,
+      "lines": 54,
+      "code_lines": 51
+    },
+    {
+      "file": "src/3_planning/amm/modules/mission_engine.lua",
+      "name": "mission_engine.new",
+      "start_line": 517,
+      "lines": 54,
+      "code_lines": 54
+    },
+    {
+      "file": "src/3_planning/amm/modules/nav_engine.lua",
+      "name": "nav_engine.init",
+      "start_line": 16,
+      "lines": 54,
+      "code_lines": 54
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_server.lua",
+      "name": "ServerMT:_send_with_retry",
+      "start_line": 695,
+      "lines": 53,
+      "code_lines": 49
+    },
+    {
+      "file": "src/0_development/installer/modules/tui_view.lua",
+      "name": "renderListBodyAndFooter",
+      "start_line": 377,
+      "lines": 52,
+      "code_lines": 47
+    },
+    {
+      "file": "src/0_infra/gcs/main.lua",
+      "name": "main:process_modem_message",
+      "start_line": 173,
+      "lines": 52,
+      "code_lines": 46
+    },
+    {
+      "file": "src/0_infra/runway/modules/setup_wizard.lua",
+      "name": "setup_wizard.create",
+      "start_line": 26,
+      "lines": 52,
+      "code_lines": 48
+    },
+    {
+      "file": "src/0_development/installer/installer_app.lua",
+      "name": "installer_app.uninstallModule",
+      "start_line": 152,
+      "lines": 51,
+      "code_lines": 40
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "name": "handle_discover",
+      "start_line": 691,
+      "lines": 51,
+      "code_lines": 46
+    },
+    {
+      "file": "src/1_control/vas/modules/vehicle_policy.lua",
+      "name": "vehicle_policy.pre_process_guidance",
+      "start_line": 121,
+      "lines": 51,
+      "code_lines": 45
+    },
+    {
+      "file": "src/0_development/alignment/modules/align_master.lua",
+      "name": "align_master.init_bay_session",
+      "start_line": 91,
+      "lines": 50,
+      "code_lines": 49
+    },
+    {
+      "file": "src/0_infra/gcs/main.lua",
+      "name": "load_config",
+      "start_line": 18,
+      "lines": 50,
+      "code_lines": 50
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "handle_file_transfer",
+      "start_line": 147,
+      "lines": 50,
+      "code_lines": 50
+    },
+    {
+      "file": "src/0_development/fdr/modules/jsonl_dumper.lua",
+      "name": "open_next_part",
+      "start_line": 41,
+      "lines": 49,
+      "code_lines": 46
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/config_store.lua",
+      "name": "config_store.normalize_config",
+      "start_line": 67,
+      "lines": 49,
+      "code_lines": 47
+    },
+    {
+      "file": "src/0_infra/runway/modules/tui_view.lua",
+      "name": "tui_view.create",
+      "start_line": 20,
+      "lines": 49,
+      "code_lines": 45
+    },
+    {
+      "file": "src/1_control/tca/main.lua",
+      "name": "main",
+      "start_line": 138,
+      "lines": 49,
+      "code_lines": 44
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.evaluate_guide_watchdog",
+      "start_line": 300,
+      "lines": 49,
+      "code_lines": 47
+    },
+    {
+      "file": "src/0_infra/gac/modules/facility_inventory.lua",
+      "name": "inv:get_summary",
+      "start_line": 142,
+      "lines": 48,
+      "code_lines": 46
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/pad_fsm.lua",
+      "name": "fsm:tick",
+      "start_line": 196,
+      "lines": 48,
+      "code_lines": 42
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/sensor_adapter.lua",
+      "name": "adapter:read_kinematics",
+      "start_line": 106,
+      "lines": 48,
+      "code_lines": 43
+    },
+    {
+      "file": "src/1_control/tca/modules/actuator_adapter.lua",
+      "name": "actuator_adapter.scan_api_peripherals",
+      "start_line": 72,
+      "lines": 48,
+      "code_lines": 47
+    },
+    {
+      "file": "src/3_planning/amm/modules/ui_renderer.lua",
+      "name": "render_hud_pane",
+      "start_line": 132,
+      "lines": 48,
+      "code_lines": 44
+    },
+    {
+      "file": "src/0_development/installer/modules/tui_view.lua",
+      "name": "buildPalettes",
+      "start_line": 52,
+      "lines": 47,
+      "code_lines": 46
+    },
+    {
+      "file": "src/0_infra/gac/modules/gac_fsm.lua",
+      "name": "fsm:handle_aircraft_checkin",
+      "start_line": 75,
+      "lines": 47,
+      "code_lines": 42
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tactical_streamer.lua",
+      "name": "streamer:build_dynamic_guide",
+      "start_line": 52,
+      "lines": 47,
+      "code_lines": 46
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "name": "state_machine.init",
+      "start_line": 111,
+      "lines": 47,
+      "code_lines": 47
+    },
+    {
+      "file": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "name": "c2_arbiter:handle_gcs_packet",
+      "start_line": 75,
+      "lines": 47,
+      "code_lines": 47
+    },
+    {
+      "file": "src/0_development/installer/installer.lua",
+      "name": "bootstrapper.resolveLocalCoreDir",
+      "start_line": 74,
+      "lines": 46,
+      "code_lines": 40
+    },
+    {
+      "file": "src/0_infra/gps/hal/gps_client.lua",
+      "name": "gps_client.locate",
+      "start_line": 85,
+      "lines": 46,
+      "code_lines": 46
+    },
+    {
+      "file": "src/0_infra/gps/modules/client_core.lua",
+      "name": "client_core:handleMessage",
+      "start_line": 87,
+      "lines": 46,
+      "code_lines": 46
+    },
+    {
+      "file": "src/1_control/vas/main.lua",
+      "name": "main",
+      "start_line": 56,
+      "lines": 46,
+      "code_lines": 42
+    },
+    {
+      "file": "src/2_guidance/fcp/main.lua",
+      "name": "fcp_main.step_tick",
+      "start_line": 280,
+      "lines": 46,
+      "code_lines": 39
+    },
+    {
+      "file": "installer.lua",
+      "name": "bootstrapper.resolveLocalCoreDir",
+      "start_line": 74,
+      "lines": 46,
+      "code_lines": 40
+    },
+    {
+      "file": "src/0_development/installer/installer.lua",
+      "name": "bootstrapper.detectContext",
+      "start_line": 24,
+      "lines": 45,
+      "code_lines": 41
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "name": "ota_agent.new",
+      "start_line": 994,
+      "lines": 45,
+      "code_lines": 42
+    },
+    {
+      "file": "src/0_infra/gac/modules/gac_fsm.lua",
+      "name": "fsm:handle_facility_update",
+      "start_line": 155,
+      "lines": 45,
+      "code_lines": 43
+    },
+    {
+      "file": "src/0_infra/gps/server.lua",
+      "name": "handleHeartbeat",
+      "start_line": 137,
+      "lines": 45,
+      "code_lines": 45
+    },
+    {
+      "file": "src/1_control/tca/modules/actuator_adapter.lua",
+      "name": "actuator_adapter.apply_vector_thrust",
+      "start_line": 204,
+      "lines": 45,
+      "code_lines": 38
+    },
+    {
+      "file": "src/1_control/vas/modules/flight_dynamics_core.lua",
+      "name": "flight_dynamics_core.compute_attitude_wrench",
+      "start_line": 65,
+      "lines": 45,
+      "code_lines": 40
+    },
+    {
+      "file": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "name": "c2_arbiter.new",
+      "start_line": 22,
+      "lines": 45,
+      "code_lines": 45
+    },
+    {
+      "file": "installer.lua",
+      "name": "bootstrapper.detectContext",
+      "start_line": 24,
+      "lines": 45,
+      "code_lines": 41
+    },
+    {
+      "file": "src/0_development/alignment/modules/ols_regression_engine.lua",
+      "name": "ols_engine.compute_vector_slopes",
+      "start_line": 112,
+      "lines": 44,
+      "code_lines": 40
+    },
+    {
+      "file": "src/0_development/ota/main.lua",
+      "name": "run_deploy_selected",
+      "start_line": 123,
+      "lines": 44,
+      "code_lines": 42
+    },
+    {
+      "file": "src/0_infra/gac/modules/allocation_engine.lua",
+      "name": "allocation_engine.isEligible",
+      "start_line": 77,
+      "lines": 44,
+      "code_lines": 35
+    },
+    {
+      "file": "src/1_control/vas/modules/network_manager.lua",
+      "name": "handle_calibration_init",
+      "start_line": 173,
+      "lines": 44,
+      "code_lines": 38
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
+      "name": "outer_loop_controller.compute",
+      "start_line": 414,
+      "lines": 44,
+      "code_lines": 42
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.init",
+      "start_line": 6,
+      "lines": 44,
+      "code_lines": 44
+    },
+    {
+      "file": "src/3_planning/amm/modules/mission_engine.lua",
+      "name": "mission_engine:enter_checkpoint",
+      "start_line": 1022,
+      "lines": 44,
+      "code_lines": 44
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/setup_wizard.lua",
+      "name": "wizard:assemble_config",
+      "start_line": 65,
+      "lines": 43,
+      "code_lines": 43
+    },
+    {
+      "file": "src/1_control/tca/modules/tca_daemon.lua",
+      "name": "tca_daemon.handle_calib_pulse",
+      "start_line": 75,
+      "lines": 43,
+      "code_lines": 43
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "name": "state_machine.update_watchdogs",
+      "start_line": 379,
+      "lines": 43,
+      "code_lines": 43
+    },
+    {
+      "file": "src/3_planning/amm/modules/trajectory_generator.lua",
+      "name": "generate_cruise",
+      "start_line": 108,
+      "lines": 43,
+      "code_lines": 39
+    },
+    {
+      "file": "src/0_development/ota/modules/ota_protocol.lua",
+      "name": "ota_protocol.chunk_file",
+      "start_line": 108,
+      "lines": 42,
+      "code_lines": 38
+    },
+    {
+      "file": "src/0_infra/gac/modules/beacon_broadcaster.lua",
+      "name": "bc:build_sector_beacon",
+      "start_line": 78,
+      "lines": 42,
+      "code_lines": 40
+    },
+    {
+      "file": "src/1_control/asa/main.lua",
+      "name": "run_tui",
+      "start_line": 123,
+      "lines": 42,
+      "code_lines": 37
+    },
+    {
+      "file": "src/1_control/tca/modules/config_manager.lua",
+      "name": "config_manager.load",
+      "start_line": 44,
+      "lines": 42,
+      "code_lines": 35
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/state_propagator.lua",
+      "name": "state_propagator.init",
+      "start_line": 12,
+      "lines": 42,
+      "code_lines": 42
+    },
+    {
+      "file": "src/0_development/installer/modules/migration_engine.lua",
+      "name": "migration_engine.deepMerge",
+      "start_line": 53,
+      "lines": 41,
+      "code_lines": 34
+    },
+    {
+      "file": "src/0_infra/gac/modules/config_loader.lua",
+      "name": "config_loader.get_default_config",
+      "start_line": 8,
+      "lines": 41,
+      "code_lines": 41
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/config_store.lua",
+      "name": "config_store.load_config",
+      "start_line": 145,
+      "lines": 41,
+      "code_lines": 34
+    },
+    {
+      "file": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "name": "channel_sentinel.step_rebind_transaction",
+      "start_line": 521,
+      "lines": 41,
+      "code_lines": 38
+    },
+    {
+      "file": "src/0_infra/gcs/main.lua",
+      "name": "main.create_app",
+      "start_line": 86,
+      "lines": 40,
+      "code_lines": 36
+    },
+    {
+      "file": "src/0_infra/gps/modules/session_scheduler.lua",
+      "name": "session_scheduler:ingestReport",
+      "start_line": 82,
+      "lines": 40,
+      "code_lines": 39
+    },
+    {
+      "file": "src/3_planning/amm/modules/trajectory_generator.lua",
+      "name": "generate_loiter",
+      "start_line": 167,
+      "lines": 40,
+      "code_lines": 36
+    },
+    {
+      "file": "src/0_development/alignment/modules/multi_pulse_sequencer.lua",
+      "name": "Sequencer:build_pulse_packet",
+      "start_line": 127,
+      "lines": 39,
+      "code_lines": 39
+    },
+    {
+      "file": "src/0_development/alignment/modules/profile_exporter.lua",
+      "name": "profile_exporter.build_peripheral_manifest",
+      "start_line": 300,
+      "lines": 39,
+      "code_lines": 37
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "name": "collect_velocity_entries",
+      "start_line": 381,
+      "lines": 39,
+      "code_lines": 36
+    },
+    {
+      "file": "src/1_control/vas/modules/actuator_adapter_tca.lua",
+      "name": "actuator_adapter_tca.allocate",
+      "start_line": 106,
+      "lines": 39,
+      "code_lines": 35
+    },
+    {
+      "file": "src/1_control/vas/modules/flight_dynamics_core.lua",
+      "name": "flight_dynamics_core.init",
+      "start_line": 6,
+      "lines": 39,
+      "code_lines": 38
+    },
+    {
+      "file": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "name": "compute_lever_offsets",
+      "start_line": 198,
+      "lines": 39,
+      "code_lines": 36
+    },
+    {
+      "file": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "name": "sensor_pipeline.detect_contraption_state",
+      "start_line": 306,
+      "lines": 39,
+      "code_lines": 36
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "name": "state_machine.apply_output_safety_rule",
+      "start_line": 479,
+      "lines": 39,
+      "code_lines": 39
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "handle_cli_run",
+      "start_line": 198,
+      "lines": 39,
+      "code_lines": 39
+    },
+    {
+      "file": "src/3_planning/amm/modules/action_registry.lua",
+      "name": "eval_single_precondition",
+      "start_line": 316,
+      "lines": 39,
+      "code_lines": 38
+    },
+    {
+      "file": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "name": "channel_sentinel.negotiate_and_probe",
+      "start_line": 348,
+      "lines": 39,
+      "code_lines": 39
+    },
+    {
+      "file": "src/0_development/alignment/main.lua",
+      "name": "main.run",
+      "start_line": 57,
+      "lines": 38,
+      "code_lines": 34
+    },
+    {
+      "file": "src/0_development/alignment/modules/controllability_checker.lua",
+      "name": "controllability_checker.calculate_authorities",
+      "start_line": 14,
+      "lines": 38,
+      "code_lines": 37
+    },
+    {
+      "file": "src/0_development/installer/modules/startup_generator.lua",
+      "name": "startup_generator.resolveTargetPath",
+      "start_line": 11,
+      "lines": 38,
+      "code_lines": 31
+    },
+    {
+      "file": "src/0_development/installer/modules/tui_view.lua",
+      "name": "tui_view.computeViewport",
+      "start_line": 233,
+      "lines": 38,
+      "code_lines": 32
+    },
+    {
+      "file": "src/0_development/installer/modules/version_registry.lua",
+      "name": "version_registry.save",
+      "start_line": 45,
+      "lines": 38,
+      "code_lines": 32
+    },
+    {
+      "file": "src/0_development/ota/ota_agent.lua",
+      "name": "AgentMT:confirm_boot_commit",
+      "start_line": 1087,
+      "lines": 38,
+      "code_lines": 36
+    },
+    {
+      "file": "src/0_infra/gps/hal/gps_client.lua",
+      "name": "standaloneLocate",
+      "start_line": 46,
+      "lines": 38,
+      "code_lines": 38
+    },
+    {
+      "file": "src/0_infra/runway/modules/config_store.lua",
+      "name": "config_store.normalize_config",
+      "start_line": 53,
+      "lines": 38,
+      "code_lines": 37
+    },
+    {
+      "file": "src/1_control/asa/main.lua",
+      "name": "main",
+      "start_line": 166,
+      "lines": 38,
+      "code_lines": 35
+    },
+    {
+      "file": "src/1_control/asa/modules/config_manager.lua",
+      "name": "config_manager.load",
+      "start_line": 52,
+      "lines": 38,
+      "code_lines": 31
+    },
+    {
+      "file": "src/1_control/tca/main.lua",
+      "name": "run_tui",
+      "start_line": 99,
+      "lines": 38,
+      "code_lines": 34
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/state_propagator.lua",
+      "name": "state_propagator.on_setpoint_epoch",
+      "start_line": 128,
+      "lines": 38,
+      "code_lines": 37
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "step_sentinel_20hz",
+      "start_line": 1077,
+      "lines": 38,
+      "code_lines": 38
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.extrapolate_dynamic_deck",
+      "start_line": 261,
+      "lines": 38,
+      "code_lines": 36
+    }
+  ],
+  "unreferenced_functions": [
+    {
+      "file": "src/0_development/alignment/modules/discovery_client.lua",
+      "name": "Client:get_actuator",
+      "start_line": 85,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/alignment/modules/impulse_integrator.lua",
+      "name": "Integrator:sample_baseline",
+      "start_line": 29,
+      "lines": 18,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/alignment/modules/impulse_integrator.lua",
+      "name": "Integrator:get_baseline",
+      "start_line": 79,
+      "lines": 5,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/alignment/modules/impulse_integrator.lua",
+      "name": "Integrator:get_sample_count",
+      "start_line": 85,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/0_development/alignment/modules/multi_pulse_sequencer.lua",
+      "name": "Sequencer:is_complete",
+      "start_line": 123,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/alignment/modules/ols_regression_engine.lua",
+      "name": "ols_engine.compute_vector_slopes",
+      "start_line": 112,
+      "lines": 44,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/0_development/alignment/modules/profile_exporter.lua",
+      "name": "profile_exporter.validate_ack",
+      "start_line": 69,
+      "lines": 19,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/0_development/alignment/modules/settling_guard.lua",
+      "name": "Guard:get_elapsed_time",
+      "start_line": 46,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/0_development/fdr/modules/ring_buffer.lua",
+      "name": "ring_buffer.dropped",
+      "start_line": 47,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 3
+    },
+    {
+      "file": "src/0_development/fdr/modules/storage_pool.lua",
+      "name": "storage_pool.part_dir",
+      "start_line": 26,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/0_development/installer/modules/manifest.lua",
+      "name": "manifest.getCategory",
+      "start_line": 794,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/installer/modules/manifest.lua",
+      "name": "manifest.getAirframePreset",
+      "start_line": 902,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/installer/modules/manifest.lua",
+      "name": "manifest.listAirframePresets",
+      "start_line": 906,
+      "lines": 8,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "name": "M.is_supported_type",
+      "start_line": 82,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 6
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "name": "gimbal.get_angles_rad",
+      "start_line": 623,
+      "lines": 7,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_development/sensors/avionics_sensors.lua",
+      "name": "gimbal.get_angular_rates_rad",
+      "start_line": 666,
+      "lines": 5,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/gac/modules/facility_inventory.lua",
+      "name": "inv:get_free_pads",
+      "start_line": 128,
+      "lines": 13,
+      "scope": "module",
+      "test_refs": 4
+    },
+    {
+      "file": "src/0_infra/gac/modules/tui_view.lua",
+      "name": "view:set_active_tab",
+      "start_line": 284,
+      "lines": 5,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/gcs/main.lua",
+      "name": "main:purge_offline_gps_nodes",
+      "start_line": 259,
+      "lines": 17,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/gcs/modules/channel_manager.lua",
+      "name": "channel_manager.get_allocation",
+      "start_line": 102,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 5
+    },
+    {
+      "file": "src/0_infra/gcs/modules/channel_manager.lua",
+      "name": "channel_manager.release_block",
+      "start_line": 251,
+      "lines": 8,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/0_infra/gcs/modules/fleet_tracker.lua",
+      "name": "fleet_tracker.unregister_craft",
+      "start_line": 73,
+      "lines": 21,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/0_infra/gcs/modules/fleet_tracker.lua",
+      "name": "fleet_tracker.select_craft",
+      "start_line": 107,
+      "lines": 12,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/0_infra/gcs/modules/network_manager.lua",
+      "name": "network_manager.close_bootstrap_channel",
+      "start_line": 57,
+      "lines": 6,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/gps/hal/gps_client.lua",
+      "name": "gps_client.request",
+      "start_line": 24,
+      "lines": 8,
+      "scope": "module",
+      "test_refs": 4
+    },
+    {
+      "file": "src/0_infra/gps/hal/gps_client.lua",
+      "name": "gps_client.queryStatus",
+      "start_line": 145,
+      "lines": 61,
+      "scope": "module",
+      "test_refs": 6
+    },
+    {
+      "file": "src/0_infra/gps/modules/client_core.lua",
+      "name": "client_core:recordTimeout",
+      "start_line": 151,
+      "lines": 5,
+      "scope": "module",
+      "test_refs": 3
+    },
+    {
+      "file": "src/0_infra/gps/modules/client_core.lua",
+      "name": "client_core:getNavQuality",
+      "start_line": 157,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 5
+    },
+    {
+      "file": "src/0_infra/gps/modules/commissioning.lua",
+      "name": "FSM:getWizardStep",
+      "start_line": 25,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/0_infra/gps/modules/config_store.lua",
+      "name": "config_store.normalizeNodeConfig",
+      "start_line": 11,
+      "lines": 25,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/gps/modules/monitor_ui.lua",
+      "name": "UI:getTab",
+      "start_line": 27,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/0_infra/gps/modules/protocol.lua",
+      "name": "protocol.buildNavQuality",
+      "start_line": 106,
+      "lines": 18,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "name": "client:has_valid_fix",
+      "start_line": 181,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 9
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "name": "client:is_degraded",
+      "start_line": 198,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 3
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "name": "client:set_comp_pos",
+      "start_line": 210,
+      "lines": 6,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/gps_client.lua",
+      "name": "client:set_last_gps_time",
+      "start_line": 217,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tui_view.lua",
+      "name": "view:render_countdown",
+      "start_line": 44,
+      "lines": 26,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/0_infra/landing_pad/modules/tui_view.lua",
+      "name": "view:render_halt_warning",
+      "start_line": 127,
+      "lines": 30,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/0_infra/runway/modules/lighting_controller.lua",
+      "name": "controller:set_devices",
+      "start_line": 54,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/actuator_adapter.lua",
+      "name": "actuator_adapter.detect_api_peripherals",
+      "start_line": 121,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/actuator_adapter.lua",
+      "name": "actuator_adapter.toggle_interaction_mode",
+      "start_line": 151,
+      "lines": 6,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/channel_rebind_handler.lua",
+      "name": "channel_rebind_handler.check_timeout",
+      "start_line": 140,
+      "lines": 10,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/1_control/tca/modules/group_allocator.lua",
+      "name": "group_allocator.process_redstone_signal",
+      "start_line": 38,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/tca_daemon.lua",
+      "name": "tca_daemon.hil_smoke_tick",
+      "start_line": 299,
+      "lines": 8,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/tui_dashboard.lua",
+      "name": "tui_dashboard.render_status_line",
+      "start_line": 43,
+      "lines": 12,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/tui_dashboard.lua",
+      "name": "tui_dashboard.format_actuator_row",
+      "start_line": 57,
+      "lines": 17,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/tca/modules/tui_dashboard.lua",
+      "name": "tui_dashboard.get_diagnostic_lines",
+      "start_line": 76,
+      "lines": 11,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/vas/modules/flight_dynamics_core.lua",
+      "name": "flight_dynamics_core.compute_climb_wrench",
+      "start_line": 111,
+      "lines": 13,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/vas/modules/quat.lua",
+      "name": "quat.rotate_vector",
+      "start_line": 60,
+      "lines": 19,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/vas/modules/state_machine.lua",
+      "name": "state_machine.on_actuators_ready",
+      "start_line": 230,
+      "lines": 6,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/1_control/vas/modules/vec3.lua",
+      "name": "vec3.zero",
+      "start_line": 12,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/1_control/vas/modules/vehicle_policy.lua",
+      "name": "vehicle_policy.transition_blend",
+      "start_line": 188,
+      "lines": 12,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/flight_fsm.lua",
+      "name": "flight_fsm.is_flight_active",
+      "start_line": 281,
+      "lines": 5,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/flight_fsm.lua",
+      "name": "flight_fsm.is_armed",
+      "start_line": 287,
+      "lines": 5,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/flight_fsm.lua",
+      "name": "flight_fsm.is_vtol",
+      "start_line": 293,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/network_manager.lua",
+      "name": "network_manager.send_guidance_cmd",
+      "start_line": 367,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/network_manager.lua",
+      "name": "network_manager.send_channel_rebind",
+      "start_line": 375,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/network_manager.lua",
+      "name": "network_manager.rebind_aircraft_channels",
+      "start_line": 393,
+      "lines": 11,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
+      "name": "outer_loop_controller.is_airframe_supported",
+      "start_line": 17,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 5
+    },
+    {
+      "file": "src/3_planning/amm/main.lua",
+      "name": "pbit",
+      "start_line": 463,
+      "lines": 8,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/3_planning/amm/modules/action_registry.lua",
+      "name": "action_registry.is_decorator_supported",
+      "start_line": 149,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/3_planning/amm/modules/action_registry.lua",
+      "name": "action_registry.resolve_lifecycle",
+      "start_line": 166,
+      "lines": 13,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/3_planning/amm/modules/action_registry.lua",
+      "name": "action_registry.validate_action_id",
+      "start_line": 181,
+      "lines": 8,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "name": "c2_arbiter:set_engine",
+      "start_line": 68,
+      "lines": 6,
+      "scope": "module",
+      "test_refs": 6
+    },
+    {
+      "file": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "name": "ESTOP",
+      "start_line": 505,
+      "lines": 11,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "name": "channel_sentinel.initiate_rebind",
+      "start_line": 485,
+      "lines": 23,
+      "scope": "module",
+      "test_refs": 5
+    },
+    {
+      "file": "src/3_planning/amm/modules/chattering_guard.lua",
+      "name": "chattering_guard.eval_hysteresis",
+      "start_line": 101,
+      "lines": 14,
+      "scope": "module",
+      "test_refs": 11
+    },
+    {
+      "file": "src/3_planning/amm/modules/chattering_guard.lua",
+      "name": "chattering_guard.start_dwell",
+      "start_line": 131,
+      "lines": 6,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/3_planning/amm/modules/chattering_guard.lua",
+      "name": "chattering_guard.is_dwell_locked",
+      "start_line": 139,
+      "lines": 11,
+      "scope": "module",
+      "test_refs": 7
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.find_nearest_free_facility",
+      "start_line": 103,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.build_checkin_req",
+      "start_line": 124,
+      "lines": 14,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.evaluate_approach_safety",
+      "start_line": 350,
+      "lines": 17,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/3_planning/amm/modules/facility_client.lua",
+      "name": "facility_client.build_touchdown_complete",
+      "start_line": 388,
+      "lines": 20,
+      "scope": "module",
+      "test_refs": 2
+    },
+    {
+      "file": "src/3_planning/amm/modules/mission_engine.lua",
+      "name": "mission_engine.validate_checkpoint",
+      "start_line": 307,
+      "lines": 4,
+      "scope": "module",
+      "test_refs": 1
+    },
+    {
+      "file": "src/3_planning/amm/modules/network_manager.lua",
+      "name": "network_manager:close_infra_channel",
+      "start_line": 252,
+      "lines": 9,
+      "scope": "module",
+      "test_refs": 0
+    },
+    {
+      "file": "src/3_planning/amm/modules/waypoint_queue.lua",
+      "name": "waypoint_queue:get_all",
+      "start_line": 23,
+      "lines": 3,
+      "scope": "module",
+      "test_refs": 2
+    }
+  ],
+  "protocol_field_consumption": [
+    {
+      "packet": "MSG_FLIGHT_TELEMETRY",
+      "interface": "I-1",
+      "required_keys": 10,
+      "optional_keys": 2,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "attitude": 88,
+        "angularRates": 16,
+        "dynamics": 40,
+        "fuel": 36,
+        "dynamicLoad": 9,
+        "controlState": 28,
+        "activeSource": 26,
+        "sensorOk": 7,
+        "sensorHealth": 7,
+        "actuatorHealth": 16,
+        "satFlags": 5,
+        "diag": 4
+      }
+    },
+    {
+      "packet": "MSG_PBIT_REPORT",
+      "interface": "I-1",
+      "required_keys": 4,
+      "optional_keys": 4,
+      "unreferenced_keys": [
+        "overallStatus",
+        "checks",
+        "summaryReason",
+        "timestampMs"
+      ],
+      "key_read_counts": {
+        "requestId": 6,
+        "overallStatus": 0,
+        "takeoffPermitted": 2,
+        "checks": 0,
+        "contraptionState": 7,
+        "recalibrationRequired": 11,
+        "summaryReason": 0,
+        "timestampMs": 0
+      }
+    },
+    {
+      "packet": "MSG_ATTITUDE_CMD",
+      "interface": "I-2",
+      "required_keys": 6,
+      "optional_keys": 5,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "source": 15,
+        "arm": 21,
+        "flightActive": 18,
+        "commandType": 4,
+        "targetAngularRates": 4,
+        "collectiveThrust": 7,
+        "flightMode": 33,
+        "targetQuaternion": 11,
+        "flapTarget": 4,
+        "acroActive": 4,
+        "translationBias": 4
+      }
+    },
+    {
+      "packet": "MSG_EMERGENCY_OVERRIDE",
+      "interface": "I-2",
+      "required_keys": 3,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "action": 79,
+        "authKey": 1,
+        "source": 15
+      }
+    },
+    {
+      "packet": "MSG_EMERGENCY_ALERT",
+      "interface": "I-2",
+      "required_keys": 4,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "reason": 19,
+        "isAirborne": 19,
+        "fsmState": 25,
+        "altitude": 41
+      }
+    },
+    {
+      "packet": "MSG_THRUST_CMD",
+      "interface": "I-3",
+      "required_keys": 3,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "watchdogSeq": 2,
+        "controlState": 28,
+        "outputs": 4
+      }
+    },
+    {
+      "packet": "MSG_ACTUATOR_STATUS",
+      "interface": "I-3",
+      "required_keys": 7,
+      "optional_keys": 3,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "groupId": 32,
+        "interactionMode": 22,
+        "appliedSignal": 2,
+        "isSaturated": 7,
+        "activeCount": 8,
+        "totalCount": 4,
+        "healthStatus": 23,
+        "appliedRatio": 3,
+        "appliedGimbal": 8,
+        "gimbalSaturated": 9
+      }
+    },
+    {
+      "packet": "MSG_ACTUATOR_DISCOVER_REQ",
+      "interface": "I-3",
+      "required_keys": 1,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "requestDomain"
+      ],
+      "key_read_counts": {
+        "targetGroup": 1,
+        "replyChannel": 43,
+        "requestDomain": 0
+      }
+    },
+    {
+      "packet": "MSG_ACTUATOR_DISCOVER_ACK",
+      "interface": "I-3",
+      "required_keys": 6,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "groupId": 32,
+        "interactionMode": 22,
+        "activeCount": 8,
+        "totalCount": 4,
+        "isVectorCapable": 9,
+        "healthStatus": 23,
+        "gimbalLimits": 1
+      }
+    },
+    {
+      "packet": "MSG_CALIB_PULSE",
+      "interface": "I-3",
+      "required_keys": 5,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "safetyMaxTiltDeg"
+      ],
+      "key_read_counts": {
+        "targetThrusterId": 4,
+        "stepIndex": 12,
+        "pulseLevel": 6,
+        "pulseDurationMs": 2,
+        "safetyMaxTiltDeg": 0,
+        "pbitWiggle": 1,
+        "pulseRatio": 1
+      }
+    },
+    {
+      "packet": "MSG_CALIBRATION_INIT",
+      "interface": "I-4",
+      "required_keys": 3,
+      "optional_keys": 3,
+      "unreferenced_keys": [
+        "targetCraftDomain",
+        "targetThruster"
+      ],
+      "key_read_counts": {
+        "stationId": 10,
+        "bayId": 39,
+        "baseHangarChannel": 3,
+        "targetCraftDomain": 0,
+        "timeoutSec": 4,
+        "targetThruster": 0
+      }
+    },
+    {
+      "packet": "MSG_CALIBRATION_INIT_ACK",
+      "interface": "I-4",
+      "required_keys": 5,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "aircraftDomainId": 30,
+        "hardwareUuid": 23,
+        "bayId": 39,
+        "status": 186,
+        "airframeType": 61,
+        "baseChannel": 157
+      }
+    },
+    {
+      "packet": "MSG_CALIB_BAY_BIND",
+      "interface": "I-4",
+      "required_keys": 4,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "bayCalibrationTap",
+        "bayCalibrationCmd"
+      ],
+      "key_read_counts": {
+        "action": 79,
+        "stationId": 10,
+        "bayId": 39,
+        "baseHangarChannel": 3,
+        "bayCalibrationTap": 0,
+        "bayCalibrationCmd": 0
+      }
+    },
+    {
+      "packet": "MSG_CALIB_START",
+      "interface": "I-4",
+      "required_keys": 3,
+      "optional_keys": 1,
+      "unreferenced_keys": [
+        "targetThruster"
+      ],
+      "key_read_counts": {
+        "action": 79,
+        "targetThruster": 0,
+        "timeoutSec": 4,
+        "stationId": 10
+      }
+    },
+    {
+      "packet": "MSG_CALIB_PULSE",
+      "interface": "I-4",
+      "required_keys": 5,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "safetyMaxTiltDeg"
+      ],
+      "key_read_counts": {
+        "targetThrusterId": 4,
+        "stepIndex": 12,
+        "pulseLevel": 6,
+        "pulseDurationMs": 2,
+        "safetyMaxTiltDeg": 0,
+        "pbitWiggle": 1,
+        "pulseRatio": 1
+      }
+    },
+    {
+      "packet": "MSG_PROFILE_SYNC",
+      "interface": "I-4",
+      "required_keys": 2,
+      "optional_keys": 5,
+      "unreferenced_keys": [
+        "controllabilityStatus",
+        "calibratedBy",
+        "discoveredSurfaces"
+      ],
+      "key_read_counts": {
+        "profileId": 3,
+        "controllabilityStatus": 0,
+        "calibratedBy": 0,
+        "totalDryMass": 5,
+        "discoveredSurfaces": 0,
+        "thrusterCoefficients": 4,
+        "peripheralManifest": 9
+      }
+    },
+    {
+      "packet": "MSG_PBIT_REQ",
+      "interface": "I-4",
+      "required_keys": 2,
+      "optional_keys": 5,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "requestId": 6,
+        "source": 15,
+        "runWiggle": 2,
+        "busRttMs": 3,
+        "energyFuel": 3,
+        "channelConflict": 3,
+        "targetThrusterId": 4
+      }
+    },
+    {
+      "packet": "MSG_PBIT_REPORT",
+      "interface": "I-4",
+      "required_keys": 4,
+      "optional_keys": 4,
+      "unreferenced_keys": [
+        "overallStatus",
+        "checks",
+        "summaryReason",
+        "timestampMs"
+      ],
+      "key_read_counts": {
+        "requestId": 6,
+        "overallStatus": 0,
+        "takeoffPermitted": 2,
+        "checks": 0,
+        "contraptionState": 7,
+        "recalibrationRequired": 11,
+        "summaryReason": 0,
+        "timestampMs": 0
+      }
+    },
+    {
+      "packet": "MSG_CALIB_ACK",
+      "interface": "I-4",
+      "required_keys": 2,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "profileId": 3,
+        "status": 186
+      }
+    },
+    {
+      "packet": "MSG_CALIBRATION_CLOSE",
+      "interface": "I-4",
+      "required_keys": 3,
+      "optional_keys": 1,
+      "unreferenced_keys": [
+        "saveProfile"
+      ],
+      "key_read_counts": {
+        "bayId": 39,
+        "action": 79,
+        "reason": 19,
+        "saveProfile": 0
+      }
+    },
+    {
+      "packet": "MSG_CALIBRATION_CLOSE_ACK",
+      "interface": "I-4",
+      "required_keys": 2,
+      "optional_keys": 1,
+      "unreferenced_keys": [
+        "currentFsmState"
+      ],
+      "key_read_counts": {
+        "bayId": 39,
+        "status": 186,
+        "currentFsmState": 0
+      }
+    },
+    {
+      "packet": "MSG_FACILITY_BEACON",
+      "interface": "I-5",
+      "required_keys": 2,
+      "optional_keys": 9,
+      "unreferenced_keys": [
+        "facilitiesSummary"
+      ],
+      "key_read_counts": {
+        "sectorId": 51,
+        "facilitiesSummary": 0,
+        "sectorName": 3,
+        "sectorType": 2,
+        "position": 107,
+        "towerAtcChannel": 7,
+        "gacChannel": 18,
+        "surfaceWind": 7,
+        "mobility": 29,
+        "status": 186,
+        "facilities": 25
+      }
+    },
+    {
+      "packet": "MSG_ATC_FACILITY_UPDATE",
+      "interface": "I-5",
+      "required_keys": 2,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "facilityId": 135,
+        "status": 186
+      }
+    },
+    {
+      "packet": "MSG_FACILITY_STATIC_GUIDE",
+      "interface": "I-5",
+      "required_keys": 9,
+      "optional_keys": 7,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "facilityId": 135,
+        "facilityType": 10,
+        "targetAircraft": 3,
+        "touchdownPoint": 15,
+        "attitude": 88,
+        "approachDirection": 7,
+        "deckStatus": 4,
+        "landingPermitted": 4,
+        "abortAlert": 2,
+        "endPoint": 7,
+        "glideSlopeAngle": 9,
+        "touchdownZoneLength": 9,
+        "clearanceRadius": 4,
+        "safeDescentRate": 7,
+        "tiltAngleDeg": 2,
+        "heaveRateMps": 2
+      }
+    },
+    {
+      "packet": "MSG_FACILITY_DYNAMIC_GUIDE",
+      "interface": "I-5",
+      "required_keys": 12,
+      "optional_keys": 7,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "facilityId": 135,
+        "facilityType": 10,
+        "targetAircraft": 3,
+        "touchdownPoint": 15,
+        "attitude": 88,
+        "approachDirection": 7,
+        "deckStatus": 4,
+        "landingPermitted": 4,
+        "abortAlert": 2,
+        "velocity": 85,
+        "acceleration": 5,
+        "angularRates": 16,
+        "endPoint": 7,
+        "glideSlopeAngle": 9,
+        "touchdownZoneLength": 9,
+        "clearanceRadius": 4,
+        "safeDescentRate": 7,
+        "tiltAngleDeg": 2,
+        "heaveRateMps": 2
+      }
+    },
+    {
+      "packet": "MSG_GAC_DEPARTURE_CLEARANCE",
+      "interface": "I-5",
+      "required_keys": 2,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "aircraftId": 20,
+        "status": 186
+      }
+    },
+    {
+      "packet": "MSG_GAC_ABORT_CLEAR",
+      "interface": "I-5",
+      "required_keys": 1,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "aircraftId": 20
+      }
+    },
+    {
+      "packet": "MSG_ATC_APPROACH_CLEARANCE",
+      "interface": "I-5",
+      "required_keys": 3,
+      "optional_keys": 5,
+      "unreferenced_keys": [
+        "glideSlope",
+        "retryAfterSec"
+      ],
+      "key_read_counts": {
+        "aircraftId": 20,
+        "targetFacilityId": 1,
+        "status": 186,
+        "assignedGuidanceChannel": 1,
+        "glideSlope": 0,
+        "touchdownPoint": 15,
+        "reason": 19,
+        "retryAfterSec": 0
+      }
+    },
+    {
+      "packet": "MSG_GAC_CHECKIN_REQ",
+      "interface": "I-5",
+      "required_keys": 3,
+      "optional_keys": 3,
+      "unreferenced_keys": [
+        "estimatedArrivalTime"
+      ],
+      "key_read_counts": {
+        "aircraftId": 20,
+        "sectorId": 51,
+        "airframeType": 61,
+        "grossWeight": 1,
+        "clearanceRadius": 4,
+        "estimatedArrivalTime": 0
+      }
+    },
+    {
+      "packet": "MSG_GAC_APPROACH_CLEARANCE",
+      "interface": "I-5",
+      "required_keys": 1,
+      "optional_keys": 12,
+      "unreferenced_keys": [
+        "divertChannel"
+      ],
+      "key_read_counts": {
+        "aircraftId": 20,
+        "assignedFacilityId": 3,
+        "tacticalChannel": 36,
+        "approachHeading": 18,
+        "safeDescentRate": 7,
+        "slotDurationSec": 16,
+        "status": 186,
+        "sectorId": 51,
+        "reason": 19,
+        "assignedTacticalChannel": 3,
+        "touchdownPoint": 15,
+        "clearanceRadius": 4,
+        "divertChannel": 0
+      }
+    },
+    {
+      "packet": "MSG_TOUCHDOWN_COMPLETE",
+      "interface": "I-5",
+      "required_keys": 2,
+      "optional_keys": 1,
+      "unreferenced_keys": [
+        "touchdownTime"
+      ],
+      "key_read_counts": {
+        "facilityId": 135,
+        "craftState": 1,
+        "touchdownTime": 0
+      }
+    },
+    {
+      "packet": "MSG_RUNWAY_TOUCHDOWN",
+      "interface": "I-5",
+      "required_keys": 2,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "touchdownSpeed",
+        "arrestedWire"
+      ],
+      "key_read_counts": {
+        "facilityId": 135,
+        "touchdownSpeed": 0,
+        "arrestedWire": 0,
+        "craftState": 1
+      }
+    },
+    {
+      "packet": "MSG_RUNWAY_VACATED",
+      "interface": "I-5",
+      "required_keys": 2,
+      "optional_keys": 1,
+      "unreferenced_keys": [
+        "exitTaxiway"
+      ],
+      "key_read_counts": {
+        "facilityId": 135,
+        "runwayCleared": 1,
+        "exitTaxiway": 0
+      }
+    },
+    {
+      "packet": "MSG_OPERATOR_CMD",
+      "interface": "I-6",
+      "required_keys": 3,
+      "optional_keys": 3,
+      "unreferenced_keys": [
+        "emergencyAction"
+      ],
+      "key_read_counts": {
+        "authority": 17,
+        "command": 18,
+        "params": 48,
+        "targetCraft": 7,
+        "flightMode": 33,
+        "emergencyAction": 0
+      }
+    },
+    {
+      "packet": "MSG_MISSION_CMD",
+      "interface": "I-6",
+      "required_keys": 1,
+      "optional_keys": 5,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "action": 79,
+        "missionName": 3,
+        "executionMode": 16,
+        "forceRestart": 5,
+        "missionData": 6,
+        "saveToDisk": 3
+      }
+    },
+    {
+      "packet": "MSG_MISSION_ACK",
+      "interface": "I-6",
+      "required_keys": 2,
+      "optional_keys": 5,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "action": 79,
+        "status": 186,
+        "missionId": 20,
+        "missionState": 2,
+        "activeIndex": 1,
+        "totalCheckpoints": 1,
+        "reason": 19
+      }
+    },
+    {
+      "packet": "MSG_MFD_STATE",
+      "interface": "I-6",
+      "required_keys": 6,
+      "optional_keys": 4,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "fsmState": 25,
+        "flightMode": 33,
+        "attitude": 88,
+        "dynamics": 40,
+        "fuel": 36,
+        "actuatorHealth": 16,
+        "controlState": 28,
+        "sensorOk": 7,
+        "dynamicLoad": 9,
+        "source": 15
+      }
+    },
+    {
+      "packet": "MSG_GPS_REQUEST",
+      "interface": "I-7",
+      "required_keys": 4,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "replyChannel": 43,
+        "altitudeY": 28,
+        "clientType": 6,
+        "clientSeq": 21
+      }
+    },
+    {
+      "packet": "MSG_GPS_RESPONSE",
+      "interface": "I-7",
+      "required_keys": 3,
+      "optional_keys": 7,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "targetClient": 34,
+        "clientSeq": 21,
+        "status": 186,
+        "position": 107,
+        "accuracy": 13,
+        "hdop": 39,
+        "nodeCount": 6,
+        "selectedNodes": 3,
+        "navQuality": 37,
+        "consecutiveFailures": 28
+      }
+    },
+    {
+      "packet": "MSG_NAV_QUALITY",
+      "interface": "I-7",
+      "required_keys": 4,
+      "optional_keys": 5,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "targetClient": 34,
+        "navQuality": 37,
+        "satelliteCount": 4,
+        "consecutiveFailures": 28,
+        "hdop": 39,
+        "status": 186,
+        "drHoldoverActive": 12,
+        "holdLevelActive": 16,
+        "blackoutMs": 1
+      }
+    },
+    {
+      "packet": "MSG_BLOCK_REQUEST",
+      "interface": "I-8",
+      "required_keys": 3,
+      "optional_keys": 2,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "domainId": 158,
+        "hardwareUuid": 23,
+        "requestedBandwidth": 1,
+        "preferredBase": 1,
+        "conflictBase": 5
+      }
+    },
+    {
+      "packet": "MSG_BLOCK_ASSIGN",
+      "interface": "I-8",
+      "required_keys": 2,
+      "optional_keys": 6,
+      "unreferenced_keys": [
+        "reassignedFrom"
+      ],
+      "key_read_counts": {
+        "status": 186,
+        "bandwidth": 8,
+        "blockId": 9,
+        "baseChannel": 157,
+        "channelRange": 1,
+        "leaseState": 2,
+        "reassignedFrom": 0,
+        "reason": 19
+      }
+    },
+    {
+      "packet": "MSG_CHANNEL_PROBE",
+      "interface": "I-9",
+      "required_keys": 3,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "hardwareUuid": 23,
+        "candidateBase": 18,
+        "bandwidth": 8
+      }
+    },
+    {
+      "packet": "MSG_CHANNEL_PROBE_ACK",
+      "interface": "I-9",
+      "required_keys": 3,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "existingDomain",
+        "responderStatus"
+      ],
+      "key_read_counts": {
+        "existingDomain": 0,
+        "occupiedBase": 1,
+        "status": 186,
+        "responderUuid": 2,
+        "responderStatus": 0
+      }
+    },
+    {
+      "packet": "MSG_CHANNEL_REBIND",
+      "interface": "I-9",
+      "required_keys": 5,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "transactionId": 22,
+        "action": 79,
+        "oldBaseChannel": 10,
+        "newBaseChannel": 12,
+        "bandwidth": 8
+      }
+    },
+    {
+      "packet": "MSG_CHANNEL_REBIND_ACK",
+      "interface": "I-9",
+      "required_keys": 5,
+      "optional_keys": 2,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "transactionId": 22,
+        "action": 79,
+        "status": 186,
+        "oldBaseChannel": 10,
+        "newBaseChannel": 12,
+        "nodeId": 42,
+        "subNodesReady": 8
+      }
+    },
+    {
+      "packet": "MSG_AERO_CMD",
+      "interface": "I-10",
+      "required_keys": 3,
+      "optional_keys": 1,
+      "unreferenced_keys": [
+        "dynamicPressureFactor"
+      ],
+      "key_read_counts": {
+        "watchdogSeq": 2,
+        "controlState": 28,
+        "surfaces": 13,
+        "dynamicPressureFactor": 0
+      }
+    },
+    {
+      "packet": "MSG_AERO_STATUS",
+      "interface": "I-10",
+      "required_keys": 5,
+      "optional_keys": 3,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "podId": 5,
+        "surfaceId": 3,
+        "interactionMode": 22,
+        "appliedDeflection": 1,
+        "healthStatus": 23,
+        "boundSide": 1,
+        "isSaturated": 7,
+        "isJammed": 2
+      }
+    },
+    {
+      "packet": "MSG_SURFACE_DISCOVER_REQ",
+      "interface": "I-10",
+      "required_keys": 1,
+      "optional_keys": 2,
+      "unreferenced_keys": [
+        "targetPod",
+        "requestDomain"
+      ],
+      "key_read_counts": {
+        "targetPod": 0,
+        "replyChannel": 43,
+        "requestDomain": 0
+      }
+    },
+    {
+      "packet": "MSG_SURFACE_DISCOVER_ACK",
+      "interface": "I-10",
+      "required_keys": 3,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "podId": 5,
+        "managedSurfaces": 1,
+        "healthStatus": 23,
+        "boundPorts": 1
+      }
+    },
+    {
+      "packet": "MSG_PAYLOAD_REQ",
+      "interface": "I-11",
+      "required_keys": 3,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "checkpointId": 19,
+        "command": 18,
+        "replyChannel": 43,
+        "params": 48
+      }
+    },
+    {
+      "packet": "MSG_PAYLOAD_ACK",
+      "interface": "I-11",
+      "required_keys": 3,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "checkpointId": 19,
+        "command": 18,
+        "status": 186,
+        "detail": 1
+      }
+    },
+    {
+      "packet": "MSG_TRAJECTORY_SETPOINT",
+      "interface": "I-12",
+      "required_keys": 8,
+      "optional_keys": 6,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "flightMode": 33,
+        "arm": 21,
+        "flightActive": 18,
+        "constraintProfile": 11,
+        "targetPos": 68,
+        "targetVel": 4,
+        "feedforwardAccel": 2,
+        "targetHeading": 5,
+        "flapHint": 10,
+        "currentPos": 9,
+        "navValid": 18,
+        "gpsTimedOut": 9,
+        "hdop": 39,
+        "posEpoch": 9
+      }
+    },
+    {
+      "packet": "MSG_OUTER_LOOP_STATUS",
+      "interface": "I-12",
+      "required_keys": 7,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "fsmState": 25,
+        "posError": 1,
+        "velError": 1,
+        "saturated": 7,
+        "navStale": 9,
+        "activeConstraintProfile": 4,
+        "commandedCollectiveThrust": 1
+      }
+    },
+    {
+      "packet": "MSG_OTA_DISCOVER_REQ",
+      "interface": "I-13",
+      "required_keys": 2,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "targetModuleId": 6,
+        "targetDomainId": 6
+      }
+    },
+    {
+      "packet": "MSG_OTA_DISCOVER_ACK",
+      "interface": "I-13",
+      "required_keys": 7,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "moduleId": 48,
+        "versions": 2,
+        "filesCount": 1,
+        "controlState": 28,
+        "isAirborne": 19,
+        "freeSpace": 1,
+        "agentVer": 1
+      }
+    },
+    {
+      "packet": "MSG_OTA_BEGIN",
+      "interface": "I-13",
+      "required_keys": 7,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "targetDomainId": 6,
+        "targetModuleId": 6,
+        "targetVersion": 8,
+        "files": 34,
+        "totalBytes": 7,
+        "totalCrc32": 5,
+        "overwriteConfig": 12
+      }
+    },
+    {
+      "packet": "MSG_OTA_CHUNK",
+      "interface": "I-13",
+      "required_keys": 7,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "targetDomainId": 6,
+        "targetModuleId": 6,
+        "fileIndex": 6,
+        "chunkIndex": 13,
+        "chunkCrc32": 3,
+        "data": 4
+      }
+    },
+    {
+      "packet": "MSG_OTA_COMMIT",
+      "interface": "I-13",
+      "required_keys": 4,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "targetDomainId": 6,
+        "targetModuleId": 6,
+        "autoReboot": 11
+      }
+    },
+    {
+      "packet": "MSG_OTA_ABORT",
+      "interface": "I-13",
+      "required_keys": 4,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "targetDomainId": 6,
+        "targetModuleId": 6,
+        "reason": 19
+      }
+    },
+    {
+      "packet": "MSG_OTA_REBOOT",
+      "interface": "I-13",
+      "required_keys": 3,
+      "optional_keys": 0,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "targetDomainId": 6,
+        "targetModuleId": 6
+      }
+    },
+    {
+      "packet": "MSG_OTA_ACK",
+      "interface": "I-13",
+      "required_keys": 4,
+      "optional_keys": 2,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "moduleId": 48,
+        "phase": 8,
+        "status": 186,
+        "fileIndex": 6,
+        "chunkIndex": 13
+      }
+    },
+    {
+      "packet": "MSG_OTA_NACK",
+      "interface": "I-13",
+      "required_keys": 4,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "moduleId": 48,
+        "phase": 8,
+        "reason": 19,
+        "expectedIndex": 3
+      }
+    },
+    {
+      "packet": "MSG_OTA_BOOT_STATUS",
+      "interface": "I-13",
+      "required_keys": 4,
+      "optional_keys": 1,
+      "unreferenced_keys": [],
+      "key_read_counts": {
+        "txId": 55,
+        "moduleId": 48,
+        "status": 186,
+        "version": 39,
+        "rollbackReason": 3
+      }
+    }
+  ],
+  "config_key_usage": [
+    {
+      "file": "src/0_development/fdr/config/fdr_config.json",
+      "subsystem": "0_development/fdr",
+      "unused_keys": [
+        "bandwidth",
+        "export.timeoutSec",
+        "debug"
+      ]
+    },
+    {
+      "file": "src/0_development/ota/config/ota_config.json",
+      "subsystem": "0_development/ota",
+      "unused_keys": []
+    },
+    {
+      "file": "src/0_infra/gcs/config/channel_registry.json",
+      "subsystem": "0_infra/gcs",
+      "unused_keys": []
+    },
+    {
+      "file": "src/0_infra/gcs/config/gcs_config.json",
+      "subsystem": "0_infra/gcs",
+      "unused_keys": []
+    },
+    {
+      "file": "src/2_guidance/fcp/config/fcp_config.json",
+      "subsystem": "2_guidance/fcp",
+      "unused_keys": [
+        "version",
+        "system._airframeType_comment",
+        "system.loopFrequencyHz",
+        "outerLoop.fixed_wing.emergencyMaxBankDeg",
+        "safety.coreTelemetryTimeoutMs",
+        "safety.rebindAckTimeoutMs"
+      ]
+    },
+    {
+      "file": "src/3_planning/amm/config/amm_config.json",
+      "subsystem": "3_planning/amm",
+      "unused_keys": [
+        "system.loopFrequencyHz",
+        "system.uiFrequencyHz",
+        "channels.facilityBeaconChannel",
+        "channels.runwayDirectoryChannel",
+        "channels.atcCommChannel",
+        "channels.gpsPingChannel",
+        "channels.gpsServiceChannel",
+        "trajectory.docking.maxHorizToleranceM",
+        "trajectory.docking.maxVertToleranceM",
+        "trajectory.docking.maxHeadingToleranceDeg"
+      ]
+    }
+  ]
+}

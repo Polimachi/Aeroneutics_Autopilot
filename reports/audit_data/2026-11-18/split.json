@@ -1,0 +1,523 @@
+{
+  "thresholds": {
+    "lua": {
+      "bytes": 20000,
+      "lines": 450
+    },
+    "subsystem_bytes": 90000,
+    "spec_bytes": 80000,
+    "webui_bytes": 100000,
+    "single_read_bytes": 46080
+  },
+  "subsystem_candidates": [
+    {
+      "id": "3_planning/amm",
+      "bytes": 299795,
+      "lines": 7513,
+      "files": 15
+    },
+    {
+      "id": "1_control/vas",
+      "bytes": 151703,
+      "lines": 3630,
+      "files": 15
+    },
+    {
+      "id": "0_development/installer",
+      "bytes": 148145,
+      "lines": 3554,
+      "files": 9
+    },
+    {
+      "id": "0_development/ota",
+      "bytes": 97293,
+      "lines": 2747,
+      "files": 5
+    },
+    {
+      "id": "0_infra/gps",
+      "bytes": 96082,
+      "lines": 2396,
+      "files": 15
+    }
+  ],
+  "lua_candidates": [
+    {
+      "id": "src/3_planning/amm/main.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 53250,
+      "lines": 1289,
+      "read_chunks_needed": 1.16,
+      "recent_commits": 15,
+      "call_graph": {
+        "function_count": 66,
+        "connected_components": 6,
+        "edge_count": 88
+      },
+      "test_file_refs": 16,
+      "deploy_refs": 2,
+      "gate_refs": 2,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/3_planning/amm/modules/mission_engine.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 51861,
+      "lines": 1254,
+      "read_chunks_needed": 1.13,
+      "recent_commits": 8,
+      "call_graph": {
+        "function_count": 95,
+        "connected_components": 27,
+        "edge_count": 112
+      },
+      "test_file_refs": 8,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/installer/modules/manifest.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 48420,
+      "lines": 915,
+      "read_chunks_needed": 1.05,
+      "recent_commits": 14,
+      "call_graph": {
+        "function_count": 8,
+        "connected_components": 7,
+        "edge_count": 1
+      },
+      "test_file_refs": 3,
+      "deploy_refs": 2,
+      "gate_refs": 1,
+      "is_data_heavy": true,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/ota/ota_agent.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 38201,
+      "lines": 1148,
+      "read_chunks_needed": 0.83,
+      "recent_commits": 2,
+      "call_graph": {
+        "function_count": 48,
+        "connected_components": 3,
+        "edge_count": 93
+      },
+      "test_file_refs": 2,
+      "deploy_refs": 2,
+      "gate_refs": 1,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/sensors/avionics_sensors.lua",
+      "subsystem": "0_development/sensors",
+      "bytes": 37994,
+      "lines": 954,
+      "read_chunks_needed": 0.82,
+      "recent_commits": 0,
+      "call_graph": {
+        "function_count": 42,
+        "connected_components": 1,
+        "edge_count": 79
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 1,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/ota/modules/ota_server.lua",
+      "subsystem": "0_development/ota",
+      "bytes": 35698,
+      "lines": 958,
+      "read_chunks_needed": 0.77,
+      "recent_commits": 2,
+      "call_graph": {
+        "function_count": 21,
+        "connected_components": 3,
+        "edge_count": 24
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/3_planning/amm/modules/c2_arbiter.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 24605,
+      "lines": 642,
+      "read_chunks_needed": 0.53,
+      "recent_commits": 8,
+      "call_graph": {
+        "function_count": 37,
+        "connected_components": 12,
+        "edge_count": 32
+      },
+      "test_file_refs": 4,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/1_control/vas/modules/network_manager.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 24015,
+      "lines": 539,
+      "read_chunks_needed": 0.52,
+      "recent_commits": 6,
+      "call_graph": {
+        "function_count": 29,
+        "connected_components": 4,
+        "edge_count": 39
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/3_planning/amm/modules/trajectory_generator.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 23333,
+      "lines": 568,
+      "read_chunks_needed": 0.51,
+      "recent_commits": 2,
+      "call_graph": {
+        "function_count": 25,
+        "connected_components": 4,
+        "edge_count": 26
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/installer/installer_app.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 22797,
+      "lines": 536,
+      "read_chunks_needed": 0.49,
+      "recent_commits": 1,
+      "call_graph": {
+        "function_count": 8,
+        "connected_components": 1,
+        "edge_count": 9
+      },
+      "test_file_refs": 2,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/1_control/vas/modules/state_machine.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 22614,
+      "lines": 519,
+      "read_chunks_needed": 0.49,
+      "recent_commits": 4,
+      "call_graph": {
+        "function_count": 20,
+        "connected_components": 5,
+        "edge_count": 21
+      },
+      "test_file_refs": 2,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/3_planning/amm/modules/channel_sentinel.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 22010,
+      "lines": 563,
+      "read_chunks_needed": 0.48,
+      "recent_commits": 7,
+      "call_graph": {
+        "function_count": 25,
+        "connected_components": 5,
+        "edge_count": 30
+      },
+      "test_file_refs": 2,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/1_control/vas/modules/core_daemon.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 21688,
+      "lines": 472,
+      "read_chunks_needed": 0.47,
+      "recent_commits": 6,
+      "call_graph": {
+        "function_count": 22,
+        "connected_components": 1,
+        "edge_count": 24
+      },
+      "test_file_refs": 4,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_infra/gac/modules/tui_view.lua",
+      "subsystem": "0_infra/gac",
+      "bytes": 21351,
+      "lines": 511,
+      "read_chunks_needed": 0.46,
+      "recent_commits": 1,
+      "call_graph": {
+        "function_count": 19,
+        "connected_components": 1,
+        "edge_count": 26
+      },
+      "test_file_refs": 2,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/2_guidance/fcp/modules/outer_loop_controller.lua",
+      "subsystem": "2_guidance/fcp",
+      "bytes": 21018,
+      "lines": 459,
+      "read_chunks_needed": 0.46,
+      "recent_commits": 5,
+      "call_graph": {
+        "function_count": 26,
+        "connected_components": 2,
+        "edge_count": 43
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/1_control/vas/modules/sensor_pipeline.lua",
+      "subsystem": "1_control/vas",
+      "bytes": 20702,
+      "lines": 518,
+      "read_chunks_needed": 0.45,
+      "recent_commits": 2,
+      "call_graph": {
+        "function_count": 17,
+        "connected_components": 5,
+        "edge_count": 12
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/installer/modules/tui_view.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 20479,
+      "lines": 554,
+      "read_chunks_needed": 0.44,
+      "recent_commits": 0,
+      "call_graph": {
+        "function_count": 21,
+        "connected_components": 3,
+        "edge_count": 36
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_infra/gps/server.lua",
+      "subsystem": "0_infra/gps",
+      "bytes": 19435,
+      "lines": 470,
+      "read_chunks_needed": 0.42,
+      "recent_commits": 2,
+      "call_graph": {
+        "function_count": 23,
+        "connected_components": 1,
+        "edge_count": 37
+      },
+      "test_file_refs": 1,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/3_planning/amm/modules/condition_evaluator.lua",
+      "subsystem": "3_planning/amm",
+      "bytes": 19432,
+      "lines": 455,
+      "read_chunks_needed": 0.42,
+      "recent_commits": 3,
+      "call_graph": {
+        "function_count": 41,
+        "connected_components": 17,
+        "edge_count": 33
+      },
+      "test_file_refs": 2,
+      "deploy_refs": 2,
+      "gate_refs": 0,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "src/0_development/installer/installer.lua",
+      "subsystem": "0_development/installer",
+      "bytes": 17676,
+      "lines": 453,
+      "read_chunks_needed": 0.38,
+      "recent_commits": 1,
+      "call_graph": {
+        "function_count": 4,
+        "connected_components": 1,
+        "edge_count": 3
+      },
+      "test_file_refs": 5,
+      "deploy_refs": 2,
+      "gate_refs": 1,
+      "is_data_heavy": false,
+      "single_file_constraint": false
+    },
+    {
+      "id": "installer.lua",
+      "subsystem": "root",
+      "bytes": 17676,
+      "lines": 453,
+      "read_chunks_needed": 0.38,
+      "recent_commits": 1,
+      "call_graph": {
+        "function_count": 4,
+        "connected_components": 1,
+        "edge_count": 3
+      },
+      "test_file_refs": 11,
+      "deploy_refs": 2,
+      "gate_refs": 1,
+      "is_data_heavy": false,
+      "single_file_constraint": true
+    }
+  ],
+  "spec_candidates": [
+    {
+      "id": "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+      "status": "Implemented",
+      "bytes": 143328,
+      "lines": 1785,
+      "read_chunks_needed": 3.11,
+      "section_count": 12,
+      "max_section_bytes": 28311,
+      "recent_commits": 13,
+      "in_degree_links": 23,
+      "out_degree_links": 10
+    },
+    {
+      "id": "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md",
+      "status": "Approved",
+      "bytes": 142631,
+      "lines": 1704,
+      "read_chunks_needed": 3.1,
+      "section_count": 5,
+      "max_section_bytes": 97079,
+      "recent_commits": 12,
+      "in_degree_links": 22,
+      "out_degree_links": 15
+    },
+    {
+      "id": "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+      "status": "Implemented",
+      "bytes": 113984,
+      "lines": 1017,
+      "read_chunks_needed": 2.47,
+      "section_count": 11,
+      "max_section_bytes": 21378,
+      "recent_commits": 13,
+      "in_degree_links": 20,
+      "out_degree_links": 13
+    },
+    {
+      "id": "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+      "status": "Implemented",
+      "bytes": 113686,
+      "lines": 1302,
+      "read_chunks_needed": 2.47,
+      "section_count": 12,
+      "max_section_bytes": 23243,
+      "recent_commits": 13,
+      "in_degree_links": 20,
+      "out_degree_links": 15
+    },
+    {
+      "id": "docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md",
+      "status": "Approved",
+      "bytes": 111434,
+      "lines": 1010,
+      "read_chunks_needed": 2.42,
+      "section_count": 8,
+      "max_section_bytes": 23194,
+      "recent_commits": 13,
+      "in_degree_links": 21,
+      "out_degree_links": 17
+    },
+    {
+      "id": "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "status": "Implemented",
+      "bytes": 89557,
+      "lines": 1199,
+      "read_chunks_needed": 1.94,
+      "section_count": 11,
+      "max_section_bytes": 17694,
+      "recent_commits": 6,
+      "in_degree_links": 19,
+      "out_degree_links": 11
+    },
+    {
+      "id": "docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md",
+      "status": "Implemented",
+      "bytes": 83896,
+      "lines": 615,
+      "read_chunks_needed": 1.82,
+      "section_count": 10,
+      "max_section_bytes": 15744,
+      "recent_commits": 9,
+      "in_degree_links": 4,
+      "out_degree_links": 5
+    }
+  ],
+  "webui_candidates": [
+    {
+      "id": "tools/amm_mission_editor.html",
+      "bytes": 260802,
+      "lines": 5197,
+      "read_chunks_needed": 5.66,
+      "style_bytes": 17350,
+      "script_bytes": 229974,
+      "html_shell_bytes": 13478,
+      "recent_commits": 5,
+      "single_file_constraint": true
+    }
+  ]
+}

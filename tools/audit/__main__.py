@@ -12,6 +12,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.audit.dupes import analyze_dupes
+from tools.audit.guard import run_guard
 from tools.audit.registry import build_registry
 from tools.audit.specs_analysis import analyze_specs
 from tools.audit.split_analysis import analyze_splits
@@ -23,6 +24,7 @@ SUBCOMMANDS: dict[str, Callable[[Path], dict[str, Any]]] = {
     "dupes": analyze_dupes,
     "specs": analyze_specs,
     "split": analyze_splits,
+    "guard": run_guard,
 }
 
 
@@ -60,11 +62,14 @@ def main(argv: list[str] | None = None) -> int:
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    cmds = list(SUBCOMMANDS.keys()) if args.command == "all" else [args.command]
+    cmds = [k for k in SUBCOMMANDS if k != "guard"] if args.command == "all" else [args.command]
     results: dict[str, Any] = {}
+    has_fail = False
     for cmd in cmds:
         data = SUBCOMMANDS[cmd](root)
         results[cmd] = data
+        if cmd == "guard" and data.get("status") == "FAIL":
+            has_fail = True
         if out_dir is not None:
             (out_dir / f"{cmd}.json").write_text(
                 json.dumps(data, indent=2, ensure_ascii=False),
@@ -76,8 +81,17 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         for cmd, data in results.items():
-            print(f"[audit:{cmd}] ok -> keys={list(data.keys())}")
-    return 0
+            if cmd == "guard":
+                print(
+                    f"[audit:guard] {data['status']} (errors={len(data['errors'])}, warnings={len(data['warnings'])})"
+                )
+                for err in data["errors"]:
+                    print(f"  [ERROR] {err}")
+                for warn in data["warnings"]:
+                    print(f"  [WARN]  {warn}")
+            else:
+                print(f"[audit:{cmd}] ok -> keys={list(data.keys())}")
+    return 1 if has_fail else 0
 
 
 if __name__ == "__main__":

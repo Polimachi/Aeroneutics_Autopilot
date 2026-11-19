@@ -1,0 +1,689 @@
+{
+  "documents": [
+    {
+      "id": "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+      "bytes": 143328,
+      "lines": 1785,
+      "status": "Implemented",
+      "version": "v1.25.0",
+      "date": "2026-11-18",
+      "section_count": 12,
+      "headings": [
+        "1. 프로그램 개요 및 통합 아키텍처 (Overview & Architecture)",
+        "2. 하드웨어 구성 및 물리 인터페이스 (Hardware Interfaces)",
+        "3. 고정밀 센서 획득 및 수치해석 파이프라인 (Sensor Processing Pipeline)",
+        "4. 실시간 제어 루프 실행 생명주기 (20Hz Execution Lifecycle)",
+        "5. 12대 핵심 소프트웨어 모듈 아키텍처 (Modular Architecture & Signatures)",
+        "6. 정밀 제어 및 동역학 수치해석 알고리즘 (Dynamics & Control Algorithms)",
+        "7. 유한 상태 기계(FSM) 및 상태 전이 매트릭스 (Finite State Machine)",
+        "8. 데이터 패킷 인터페이스 명세 (Interface Specifications)",
+        "9. 설정 파일(JSON) 표준 데이터 스키마 (Configuration Schemas)",
+        "10. 소프트웨어 모듈 레이아웃 및 배포 구조 (Module Layout)",
+        "11. 결함 대응 및 안전 인터록 (Fault Tolerance & Safety Rules)",
+        "12. 소프트웨어 구현 현황 및 하네스/통합 검증 결과 (Implementation & Verification Status)"
+      ],
+      "msg_count": 42,
+      "iface_refs": [
+        "I-1",
+        "I-10",
+        "I-12",
+        "I-13",
+        "I-2",
+        "I-3",
+        "I-4",
+        "I-6",
+        "I-7",
+        "I-9"
+      ],
+      "in_degree": 23,
+      "out_degree": 10,
+      "recent_commits": 13
+    },
+    {
+      "id": "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md",
+      "bytes": 142631,
+      "lines": 1704,
+      "status": "Approved",
+      "version": "v1.38.0",
+      "date": "2026-11-18",
+      "section_count": 5,
+      "headings": [
+        "1. 개요 및 공통 데이터 표준 (Overview & Protocol Standards)",
+        "2. 프로그램 간 데이터 인터페이스 매트릭스 (Interface Matrix)",
+        "3. 인터페이스별 세부 데이터 교환 명세 (Interface Specifications)",
+        "4. 안전 및 통신 워치독 요약 매트릭스",
+        "5. 서브시스템 구현 및 통합 검증 현황 (Implementation & Verification Status)"
+      ],
+      "msg_count": 87,
+      "iface_refs": [
+        "I-1",
+        "I-10",
+        "I-11",
+        "I-12",
+        "I-13",
+        "I-2",
+        "I-3",
+        "I-4",
+        "I-5",
+        "I-6",
+        "I-7",
+        "I-8",
+        "I-9"
+      ],
+      "in_degree": 22,
+      "out_degree": 15,
+      "recent_commits": 12
+    },
+    {
+      "id": "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+      "bytes": 113984,
+      "lines": 1017,
+      "status": "Implemented",
+      "version": "v2.6.0",
+      "date": "2026-11-18",
+      "section_count": 11,
+      "headings": [
+        "1. 프로그램 개요 및 시스템 위상 (Overview & System Role)",
+        "2. 검토된 대안 및 채택 아키텍처 (Architectural Approaches)",
+        "3. 하드웨어 구성 및 RF 네트워크 인터페이스 (Hardware & Network)",
+        "4. 패킷 스키마 및 프로토콜 규격 (Packet Protocols)",
+        "5. 조종석 51x19 분할 TUI 및 헤드리스 모드 설계 (Cockpit TUI & Headless Mode)",
+        "6. 통합 미션 시퀀서 및 3계층 표준 행동 규격 (`v2.0.0` `ACT_*` / `DEC_*` / `MAC_*`)",
+        "7. 사용자 인터랙션 규격 (Hotkeys & CLI Commands)",
+        "8. 제어 권한 및 원격 미션 중재 (Arbitration & Remote Mission C2)",
+        "9. 호스트 PC 외부 비주얼 미션 에디터 규격 (`tools/amm_mission_editor.html`)",
+        "10. 소프트웨어 모듈 아키텍처 및 설정 스키마 (Software Architecture & Config)",
+        "11. 결함 감시·페일세이프 및 검증 기준 (Failsafe Matrix & Verification Criteria)"
+      ],
+      "msg_count": 50,
+      "iface_refs": [
+        "I-1",
+        "I-11",
+        "I-12",
+        "I-13",
+        "I-2",
+        "I-4",
+        "I-5",
+        "I-6",
+        "I-7",
+        "I-8",
+        "I-9"
+      ],
+      "in_degree": 20,
+      "out_degree": 13,
+      "recent_commits": 13
+    },
+    {
+      "id": "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+      "bytes": 113686,
+      "lines": 1302,
+      "status": "Implemented",
+      "version": "v2.5.0",
+      "date": "2026-11-18",
+      "section_count": 12,
+      "headings": [
+        "1. 프로그램 개요 및 통합 아키텍처 (Overview & Architecture)",
+        "2. 하드웨어 구성 및 물리 인터페이스 (Hardware Interfaces)",
+        "3. 좌표계, 물리 단위 및 신호 규약 (Coordinate System, Units, & Conventions)",
+        "4. 소프트웨어 모듈 아키텍처 및 20Hz 실행 파이프라인 (Software Architecture & Execution Pipeline)",
+        "5. 통합 SE(3) 외루프 제어 법칙 및 6대 기체 투영 (Unified SE(3) Outer-Loop Law & 6-Airframe Projections)",
+        "6. 로컬 상태 전파 및 항법 정체 감시 (`state_propagator.lua`)",
+        "7. 7-State 외루프 비행 유한 상태 기계 (`flight_fsm.lua`)",
+        "8. 통신 패킷 규격 및 인터페이스 제어 명세 (Interface Control Document, ICD)",
+        "9. 설정 관리 규격 (`config/fcp_config.json`)",
+        "10. 결함 감시 및 페일세이프 아키텍처 (Fault Tolerance & Watchdog Sentinels)",
+        "11. 핵심 모듈별 의사코드 (Pseudocode Implementations)",
+        "12. 검증 및 시뮬레이션 프로토콜 (Test & Verification Protocols)"
+      ],
+      "msg_count": 39,
+      "iface_refs": [
+        "I-1",
+        "I-10",
+        "I-12",
+        "I-13",
+        "I-2",
+        "I-3",
+        "I-4",
+        "I-5",
+        "I-6",
+        "I-7",
+        "I-8",
+        "I-9"
+      ],
+      "in_degree": 20,
+      "out_degree": 15,
+      "recent_commits": 13
+    },
+    {
+      "id": "docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md",
+      "bytes": 111434,
+      "lines": 1010,
+      "status": "Approved",
+      "version": "v2.21.0",
+      "date": "2026-11-18",
+      "section_count": 8,
+      "headings": [
+        "1. 개요 (Overview)",
+        "2. 전체 시스템 프로그램 배치 및 도메인 관계도 (System Architecture Diagram)",
+        "3. 프로그램 간 패킷 교환 인터페이스 매트릭스 (Packet Exchange Matrix)",
+        "4. 핵심 생명주기별 교환 패킷 시퀀스 (Lifecycle Interaction Sequences)",
+        "5. 전체 통신 채널 마스터 맵 및 스펙트럼 배치 (Master Communication Channel Architecture)",
+        "6. 채널 중복(Overlap) 및 충돌 감지 체계 (Channel Duplicate & Conflict Detection Protocol)",
+        "7. 통신 채널 블록 대역폭(Bandwidth) 및 경계 검증 규격 (Channel Block Bandwidth & Boundary Detection Specification)",
+        "8. 결론 및 운용 기준 (Operational Assurance)"
+      ],
+      "msg_count": 82,
+      "iface_refs": [
+        "I-1",
+        "I-10",
+        "I-11",
+        "I-12",
+        "I-13",
+        "I-2",
+        "I-3",
+        "I-4",
+        "I-5",
+        "I-6",
+        "I-7",
+        "I-8",
+        "I-9"
+      ],
+      "in_degree": 21,
+      "out_degree": 17,
+      "recent_commits": 13
+    },
+    {
+      "id": "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "bytes": 89557,
+      "lines": 1199,
+      "status": "Implemented",
+      "version": "v2.4.0",
+      "date": "2026-11-18",
+      "section_count": 11,
+      "headings": [
+        "1. 개요 및 시스템 목적 (Overview & System Objectives)",
+        "2. 엔더 모뎀 통신 채널 대역 및 네트워크 매트릭스 (Channel Allocation Matrix)",
+        "3. 공통 메시지 엔벨로프 및 패킷 상세 명세 (Packet Specifications)",
+        "4. 수학적 측위 알고리즘 및 계층형 안전 연산 엔진 명세 (`gps/lib/trilateration.lua`)",
+        "5. 지상 관제 센터(GCS) 외장 Advanced Monitor 전용 UI 및 3-코루틴 런타임 엔진 (`gps/server.lua`)",
+        "6. 스웜 노드 수명주기, 3초 부팅 핫키 및 경량 콘솔 로깅 데몬 (`gps/node.lua`)",
+        "7. 서버 세션 버킷 스케줄러, 지연 보고 툼스톤 캐시 및 영구 노드 DB (`gps/server.lua`)",
+        "8. 클라이언트 라이브러리 하이브리드 프로그래밍 인터페이스 (`gps/client.lua`)",
+        "9. 통합 코드베이스 인스톨러 배포 및 파일 패키징 규격",
+        "10. 통신 타임아웃, 안전 및 페일세이프 매트릭스 (Safety & Fail-Safe)",
+        "11. 인터페이스 추적성 매트릭스 (Interface Traceability)"
+      ],
+      "msg_count": 17,
+      "iface_refs": [
+        "I-7"
+      ],
+      "in_degree": 19,
+      "out_degree": 11,
+      "recent_commits": 6
+    },
+    {
+      "id": "docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md",
+      "bytes": 83896,
+      "lines": 615,
+      "status": "Implemented",
+      "version": "v0.6.0",
+      "date": "2026-11-18",
+      "section_count": 10,
+      "headings": [
+        "1. 프로그램 개요 및 불변 제약 (Overview, Constraints & Non-Goals)",
+        "2. 시스템 연동 및 외부 파일 파이프라인 (System Context & In-Game Workflow)",
+        "3. UI 레이아웃, 디자인 시스템 및 반응형 규격 (Layout Shell & Design Tokens)",
+        "4. 에디터 상태 모델, 하위 호환 변환 및 영속성 (§4)",
+        "5. 미션 헤더 및 3계층 (`ACT_*` / `DEC_*` / `MAC_*`) 액션 · `preconditions` 폼 매트릭스 (§5)",
+        "6. 14종 조건 빌더 및 4종 라이프사이클 훅 빌더 (§6)",
+        "7. 실시간 프리플라이트 스키마 검증 엔진 (§7)",
+        "8. 2D `(X, Z)` 전술 경로 프리뷰 캔버스 규격 (§8)",
+        "9. JSON 입출력, 스타터 프리셋 및 단축키 규격 (§9)",
+        "10. 내부 모듈 아키텍처 및 `TASK-402` 인수 기준 (§10)"
+      ],
+      "msg_count": 5,
+      "iface_refs": [
+        "I-11",
+        "I-12"
+      ],
+      "in_degree": 4,
+      "out_degree": 5,
+      "recent_commits": 9
+    },
+    {
+      "id": "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+      "bytes": 62917,
+      "lines": 891,
+      "status": "Implemented",
+      "version": "v2.9.0",
+      "date": "2026-11-18",
+      "section_count": 11,
+      "headings": [
+        "1. 프로그램 개요 및 목적 (Overview & Objectives)",
+        "2. 하드웨어 배치 및 네트워크 토폴로지 (Hardware & Network Topology)",
+        "3. 14단계 유한 상태 머신 (FSM Lifecycle)",
+        "4. 정밀 기체 동역학 식별 수치해석 알고리즘 (Mathematics & SysID Engine)",
+        "5. 안전 인터록 및 비상 중단 체계 (Safety Interlocks & Sentinel Guards)",
+        "6. 제어 권능 자동 검증 및 이중 승인 동기화 (Controllability & Approval Gate)",
+        "7. 지상 관제소 3x2 대형 모니터 HUD 및 터미널 명세 (Display & HUD Specifications)",
+        "8. 표준 설정 파일 규격 (`config.json`)",
+        "9. 10대 소스 모듈 인터페이스 및 핵심 의사코드 (Modular Architecture)",
+        "10. 교환 데이터 패킷 스키마 (Packet Schemas)",
+        "11. 소프트웨어 구현 현황, 배포 및 통합 검증 결과 (Implementation & Verification Status)"
+      ],
+      "msg_count": 19,
+      "iface_refs": [
+        "I-13",
+        "I-4"
+      ],
+      "in_degree": 15,
+      "out_degree": 9,
+      "recent_commits": 9
+    },
+    {
+      "id": "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+      "bytes": 60312,
+      "lines": 803,
+      "status": "Implemented",
+      "version": "v2.5.0",
+      "date": "2026-11-14",
+      "section_count": 6,
+      "headings": [
+        "1. 개요 및 시스템 범위 (Overview & System Scope)",
+        "2. 네트워크 채널 및 노드 토폴로지 (Network Channels & Topology)",
+        "3. 통신 패킷 상세 규격 (Message Envelope & Payload Specification)",
+        "4. 유한 상태 기계 및 동작 시퀀스 (FSM & Sequence)",
+        "5. 수치해석 및 페일세이프 알고리즘 (Algorithms & Failsafe)",
+        "6. 착륙패드 비콘 설치 셋업 마법사 및 TUI 운용 규격 (Commissioning Wizard & TUI)"
+      ],
+      "msg_count": 25,
+      "iface_refs": [
+        "I-5"
+      ],
+      "in_degree": 10,
+      "out_degree": 9,
+      "recent_commits": 4
+    },
+    {
+      "id": "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+      "bytes": 55500,
+      "lines": 684,
+      "status": "Implemented",
+      "version": "v1.14.0",
+      "date": "2026-11-18",
+      "section_count": 7,
+      "headings": [
+        "1. 프로그램 개요 및 목적 (Overview & Architecture)",
+        "2. 하드웨어 구성 및 물리 포트 할당",
+        "3. 노드 설정 관리 체계 (`config.json`)",
+        "4. 8대 핵심 소프트웨어 모듈 아키텍처",
+        "5. 실시간 데몬 생명주기 및 이벤트 제어 루프",
+        "6. 결함 격리 및 안전 인터록 매트릭스",
+        "7. 소프트웨어 구현 현황, 배포 및 통합 검증 결과 (Implementation & Verification Status)"
+      ],
+      "msg_count": 21,
+      "iface_refs": [
+        "I-13",
+        "I-4",
+        "I-9"
+      ],
+      "in_degree": 13,
+      "out_degree": 10,
+      "recent_commits": 7
+    },
+    {
+      "id": "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "bytes": 52245,
+      "lines": 806,
+      "status": "Implemented",
+      "version": "v1.7.0",
+      "date": "2026-11-18",
+      "section_count": 6,
+      "headings": [
+        "1. 개요 및 계층형 시스템 범위 (Overview & Hierarchical Scope)",
+        "2. 네트워크 채널 및 3대 계층 토폴로지 (Network Channels & Topology)",
+        "3. 통신 패킷 상세 규격 (Message Envelope & Payload Specification)",
+        "4. 유한 상태 기계 및 동작 시퀀스 (FSM & Sequences)",
+        "5. 수치해석 및 최적 분배 알고리즘 (Mathematical Modeling & Algorithms)",
+        "6. 관제사 터미널 UI 및 수동 조작 규격 (TUI Console & Operator Interface)"
+      ],
+      "msg_count": 25,
+      "iface_refs": [
+        "I-5"
+      ],
+      "in_degree": 14,
+      "out_degree": 9,
+      "recent_commits": 6
+    },
+    {
+      "id": "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md",
+      "bytes": 35699,
+      "lines": 553,
+      "status": "Approved",
+      "version": "v1.8.0",
+      "date": "2026-11-14",
+      "section_count": 7,
+      "headings": [
+        "1. 프로그램 개요 및 목적 (Overview & Architecture)",
+        "2. 하드웨어 구성 및 동적 포트 할당 메커니즘",
+        "3. 노드 설정 관리 체계 (`config.json`)",
+        "4. 통신 프로토콜 및 패킷 스키마",
+        "5. FSM 상태 머신 및 안전 센티넬 (Safe Glide Trim)",
+        "6. 소프트웨어 모듈 아키텍처 및 의사코드",
+        "7. 교차 참조 및 버전 메타데이터"
+      ],
+      "msg_count": 15,
+      "iface_refs": [
+        "I-10",
+        "I-4",
+        "I-9"
+      ],
+      "in_degree": 12,
+      "out_degree": 9,
+      "recent_commits": 4
+    },
+    {
+      "id": "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+      "bytes": 34223,
+      "lines": 461,
+      "status": "Implemented",
+      "version": "v1.12.0",
+      "date": "2026-11-16",
+      "section_count": 6,
+      "headings": [
+        "1. 개요 및 시스템 범위 (Overview & System Scope)",
+        "2. 네트워크 채널 및 하드웨어 토폴로지 (Network Channels & Hardware Topology)",
+        "3. 통신 패킷 상세 규격 (Message Envelope & Payload Specification)",
+        "4. 유한 상태 기계 및 동작 시퀀스 (FSM & Sequence)",
+        "5. 수치해석 및 가상 ILS 유도 알고리즘 (ILS Guidance & Algorithms)",
+        "6. 소프트웨어 모듈 아키텍처, 설정 스키마 및 검증 기준 (`src/0_infra/runway/`)"
+      ],
+      "msg_count": 24,
+      "iface_refs": [
+        "I-5"
+      ],
+      "in_degree": 10,
+      "out_degree": 9,
+      "recent_commits": 5
+    },
+    {
+      "id": "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+      "bytes": 34038,
+      "lines": 471,
+      "status": "Approved",
+      "version": "v1.12.0",
+      "date": "2026-11-14",
+      "section_count": 5,
+      "headings": [
+        "1. 개요 및 시스템 범위 (Overview & System Scope)",
+        "2. 네트워크 채널 및 하드웨어 토폴로지 (Network Channels & Hardware Topology)",
+        "3. 통신 패킷 상세 규격 (Message Envelope & Payload Specification)",
+        "4. 유한 상태 기계 및 동작 시퀀스 (FSM & Sequence)",
+        "5. 정밀 도킹 유도 알고리즘 및 인터록 (Algorithms & Interlocks)"
+      ],
+      "msg_count": 18,
+      "iface_refs": [
+        "I-5"
+      ],
+      "in_degree": 10,
+      "out_degree": 9,
+      "recent_commits": 4
+    },
+    {
+      "id": "docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md",
+      "bytes": 30479,
+      "lines": 292,
+      "status": "Implemented",
+      "version": "v0.4.0",
+      "date": "2026-11-16",
+      "section_count": 8,
+      "headings": [
+        "1. 프로그램 개요 및 실환경 Alignmenter 아키텍처 (Overview & Ground Aligner Architecture)",
+        "2. 동적 기체 바인딩 및 감청 채널 매트릭스 (Dynamic Binding & Tapped Channels)",
+        "3. 다중 디스크 통합 VFS 및 디스크 서버 규격 (Multi-Disk Pooling / VFS)",
+        "4. JSONL 레코드 포맷, 기록 모드 및 `VAS` Opt-In 진단 확장",
+        "5. 호스트 PC 오프라인 분석기 및 프로필 자동 산출 (`tools/analyze_flight_log.py`)",
+        "6. CC:Tweaked → 외부 보고서/로그 반출 아키텍처 (External Export)",
+        "7. 설정 스키마 및 51×19 TUI / 헤드리스 운용 규격",
+        "8. 검증 및 합격 기준 (Verification & Acceptance Gates)"
+      ],
+      "msg_count": 11,
+      "iface_refs": [
+        "I-1",
+        "I-10",
+        "I-12",
+        "I-2",
+        "I-3"
+      ],
+      "in_degree": 3,
+      "out_degree": 10,
+      "recent_commits": 3
+    },
+    {
+      "id": "docs/specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md",
+      "bytes": 21956,
+      "lines": 255,
+      "status": "Implemented",
+      "version": "v0.1.0",
+      "date": "2026-11-15",
+      "section_count": 6,
+      "headings": [
+        "1. 프로그램 개요 및 아키텍처 (Overview & Architecture)",
+        "2. 격납고 채널 할당 및 다중 노드 주소 지정 (Channel Allocation & Addressing)",
+        "3. `[I-13]` 무선 OTA 와이어 프로토콜 규격 (ICD `1.9.5`)",
+        "4. 슬레이브 안전 게이트 규격 (Slave Safety Gate)",
+        "5. 원자적 스테이징, 설정 보존 및 2단계 롤백 워치독",
+        "6. OTA 서버, 원격 동기화 및 설정 스키마 (`src/0_development/ota/`)"
+      ],
+      "msg_count": 11,
+      "iface_refs": [
+        "I-13",
+        "I-4"
+      ],
+      "in_degree": 10,
+      "out_degree": 9,
+      "recent_commits": 3
+    },
+    {
+      "id": "docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md",
+      "bytes": 18759,
+      "lines": 180,
+      "status": "Implemented",
+      "version": "v1.2.0",
+      "date": "2026-11-15",
+      "section_count": 6,
+      "headings": [
+        "1. 프로그램 개요 및 3종 실행 컨텍스트 (Overview & Execution Contexts)",
+        "2. 이중 원격 소스 및 부트스트랩 규격 (Dual Sources & Bootstrap)",
+        "3. 선언적 매니페스트 및 도메인 카테고리 분류 (`manifest.lua`)",
+        "4. `51x19` 2계층 폴더 TUI 및 뷰포트 스크롤 규격 (`tui_view.lua`, `installer_app.lua`)",
+        "5. 원자적 설치 파이프라인 및 데이터 보존 (`downloader.lua`, `migration_engine.lua`, `startup_generator.lua`, `version_registry.lua`)",
+        "6. 정적 검증 및 안전/페일세이프 매트릭스 (Verification & Fail-Safe Matrix)"
+      ],
+      "msg_count": 0,
+      "iface_refs": [],
+      "in_degree": 4,
+      "out_degree": 6,
+      "recent_commits": 3
+    },
+    {
+      "id": "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "bytes": 16278,
+      "lines": 220,
+      "status": "Implemented",
+      "version": "v1.4.0",
+      "date": "2026-11-18",
+      "section_count": 6,
+      "headings": [
+        "1. 프로그램 개요 및 시스템 위상 (Overview & Role)",
+        "2. 채널 부트스트랩 프로토콜 사양 (CH 50000, Interface I-8)",
+        "3. 원격 C2 지휘 및 비상 직결 인터페이스 (Interface I-6, I-2)",
+        "4. 51x19 분할 TUI 콘솔 레이아웃",
+        "5. 설정 및 레지스트리 스키마",
+        "6. WebSocket 실시간 브리지 및 월드 프리셋 연동 (`TASK-404` / `405` / `406`, Optional)"
+      ],
+      "msg_count": 8,
+      "iface_refs": [
+        "I-2",
+        "I-6",
+        "I-8"
+      ],
+      "in_degree": 5,
+      "out_degree": 7,
+      "recent_commits": 7
+    }
+  ],
+  "pairwise_overlap": [
+    {
+      "doc_a": "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 343,
+      "containment": 0.1135,
+      "jaccard": 0.0594
+    },
+    {
+      "doc_a": "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 325,
+      "containment": 0.1076,
+      "jaccard": 0.0389
+    },
+    {
+      "doc_a": "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 305,
+      "containment": 0.0986,
+      "jaccard": 0.0361
+    },
+    {
+      "doc_a": "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 452,
+      "containment": 0.0935,
+      "jaccard": 0.045
+    },
+    {
+      "doc_a": "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md",
+      "doc_b": "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 264,
+      "containment": 0.0882,
+      "jaccard": 0.0347
+    },
+    {
+      "doc_a": "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md",
+      "doc_b": "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 236,
+      "containment": 0.0788,
+      "jaccard": 0.0141
+    },
+    {
+      "doc_a": "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 228,
+      "containment": 0.0755,
+      "jaccard": 0.0299
+    },
+    {
+      "doc_a": "docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md",
+      "doc_b": "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 220,
+      "containment": 0.0735,
+      "jaccard": 0.0134
+    },
+    {
+      "doc_a": "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md",
+      "doc_b": "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 805,
+      "containment": 0.0733,
+      "jaccard": 0.0333
+    },
+    {
+      "doc_a": "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+      "doc_b": "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 381,
+      "containment": 0.0705,
+      "jaccard": 0.0204
+    },
+    {
+      "doc_a": "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+      "doc_b": "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 299,
+      "containment": 0.0612,
+      "jaccard": 0.0164
+    },
+    {
+      "doc_a": "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 184,
+      "containment": 0.0595,
+      "jaccard": 0.0238
+    },
+    {
+      "doc_a": "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md",
+      "doc_b": "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
+      "shared_shingles": 64,
+      "containment": 0.0569,
+      "jaccard": 0.0043
+    },
+    {
+      "doc_a": "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+      "doc_b": "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+      "shared_shingles": 245,
+      "containment": 0.0501,
+      "jaccard": 0.0244
+    }
+  ],
+  "cochange": {
+    "commits_analyzed": 100,
+    "spec_touching_commits": 22,
+    "avg_specs_per_spec_commit": 6.09
+  },
+  "traceability": {
+    "spec_msg_total": 130,
+    "in_contracts": 62,
+    "in_src": 90,
+    "in_tests": 75,
+    "spec_only_msgs": [
+      "MSG_ACTUATOR_DISCOVER",
+      "MSG_ACTUATOR_DISCOVER_",
+      "MSG_AERO_",
+      "MSG_AERO_DISCOVER_ACK",
+      "MSG_AERO_DISCOVER_REQ",
+      "MSG_ATC_",
+      "MSG_ATC_ABORT_CLEAR",
+      "MSG_ATC_ARM_READY",
+      "MSG_ATC_COMM",
+      "MSG_ATC_DEPLOY_ARM",
+      "MSG_ATC_DISCONNECT_CMD",
+      "MSG_ATC_EMERGENCY_ALERT",
+      "MSG_ATC_ENROUTE_ACK",
+      "MSG_ATC_ENROUTE_CHECKIN",
+      "MSG_ATC_RESERVE_RUNWAY",
+      "MSG_ATC_RUNWAY_ACK",
+      "MSG_ATC_RUNWAY_CLEAR",
+      "MSG_ATC_UNDOCK_REQ",
+      "MSG_BLOCK_",
+      "MSG_CALIBRATION_TAP_CMD",
+      "MSG_DOCKING_ARM_CMD",
+      "MSG_FACILITY_",
+      "MSG_FACILITY_STATIC",
+      "MSG_GAC_",
+      "MSG_GAC_COMM",
+      "MSG_GAC_DEPARTURE_",
+      "MSG_GAC_DEPARTURE_COMPLETE",
+      "MSG_GPS_DIAG_",
+      "MSG_GPS_NODE_",
+      "MSG_PAD_CLAMP_STATUS",
+      "MSG_PAD_SERVICE_STATUS",
+      "MSG_REBIND_ACK",
+      "MSG_RUNWAY_TAKEOFF_CLEARANCE",
+      "MSG_SURFACE_CMD",
+      "MSG_SURFACE_DISCOVER",
+      "MSG_SURFACE_DISCOVER_",
+      "MSG_SURFACE_STATUS",
+      "MSG_TAXI_CMD",
+      "MSG_TYPE_NAME",
+      "MSG_UNDOCK_CLEARANCE"
+    ]
+  }
+}

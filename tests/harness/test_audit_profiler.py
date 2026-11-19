@@ -133,6 +133,18 @@ class TestAuditProfiler(unittest.TestCase):
             self.assertEqual(rep_base["contract_errors"], [])
             self.assertEqual(rep_prof["contract_errors"], [])
 
+    def test_e2e_check_baseline_passes_with_warnings_only_on_regression(self) -> None:
+        parser = build_arg_parser()
+        args = parser.parse_args(["--check-baseline"])
+        self.assertTrue(args.check_baseline)
+
+        code, report = run_e2e_cli(
+            ["--json", "--check-baseline"],
+            workspace_root=self.repo_root,
+        )
+        self.assertEqual(code, 0, f"E2E check-baseline failed: {report}")
+        self.assertEqual(report.get("baseline_warnings"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

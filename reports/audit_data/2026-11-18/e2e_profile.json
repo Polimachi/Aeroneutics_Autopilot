@@ -1,0 +1,1395 @@
+{
+  "duration_ms": 1630.06,
+  "total_insns": 2116700,
+  "total_cpu_ms": 279,
+  "nodes": {
+    "ALIGN": {
+      "base_dir": "src/0_development/alignment",
+      "require_calls": 16,
+      "require_ms": 0,
+      "require_insns": 3800,
+      "calls": 18,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 17300,
+      "insns_per_call": 961.11
+    },
+    "AMM": {
+      "base_dir": "src/3_planning/amm",
+      "require_calls": 200,
+      "require_ms": 77,
+      "require_insns": 129100,
+      "calls": 956,
+      "tick_calls": 0,
+      "cpu_ms": 9,
+      "insns": 553200,
+      "insns_per_call": 578.66
+    },
+    "AMM_02": {
+      "base_dir": "src/3_planning/amm",
+      "require_calls": 1,
+      "require_ms": 0,
+      "require_insns": 200,
+      "calls": 27,
+      "tick_calls": 0,
+      "cpu_ms": 1,
+      "insns": 3600,
+      "insns_per_call": 133.33
+    },
+    "AMM_RTB": {
+      "base_dir": "src/3_planning/amm",
+      "require_calls": 16,
+      "require_ms": 0,
+      "require_insns": 11000,
+      "calls": 1,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 12700,
+      "insns_per_call": 12700.0
+    },
+    "ASA": {
+      "base_dir": "src/1_control/asa",
+      "require_calls": 1,
+      "require_ms": 0,
+      "require_insns": 0,
+      "calls": 2,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 200,
+      "insns_per_call": 100.0
+    },
+    "FCP": {
+      "base_dir": "src/2_guidance/fcp",
+      "require_calls": 90,
+      "require_ms": 13,
+      "require_insns": 27000,
+      "calls": 797,
+      "tick_calls": 62,
+      "cpu_ms": 16,
+      "insns": 566900,
+      "insns_per_call": 711.29
+    },
+    "FDR": {
+      "base_dir": "src/0_development/fdr",
+      "require_calls": 7,
+      "require_ms": 9,
+      "require_insns": 2100,
+      "calls": 22,
+      "tick_calls": 0,
+      "cpu_ms": 5,
+      "insns": 103200,
+      "insns_per_call": 4690.91
+    },
+    "GAC": {
+      "base_dir": "src/0_infra/gac",
+      "require_calls": 14,
+      "require_ms": 0,
+      "require_insns": 100,
+      "calls": 96,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 10700,
+      "insns_per_call": 111.46
+    },
+    "GCS": {
+      "base_dir": "src/0_infra/gcs",
+      "require_calls": 16,
+      "require_ms": 11,
+      "require_insns": 4300,
+      "calls": 17,
+      "tick_calls": 8,
+      "cpu_ms": 0,
+      "insns": 19200,
+      "insns_per_call": 1129.41
+    },
+    "GPS": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 1,
+      "require_ms": 0,
+      "require_insns": 100,
+      "calls": 2,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 300,
+      "insns_per_call": 150.0
+    },
+    "GPS_CLI": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 3,
+      "require_ms": 0,
+      "require_insns": 1300,
+      "calls": 20,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 3500,
+      "insns_per_call": 175.0
+    },
+    "GPS_N1": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 6,
+      "require_ms": 0,
+      "require_insns": 2200,
+      "calls": 6,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 3900,
+      "insns_per_call": 650.0
+    },
+    "GPS_N2": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 6,
+      "require_ms": 0,
+      "require_insns": 2500,
+      "calls": 6,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 3800,
+      "insns_per_call": 633.33
+    },
+    "GPS_N3": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 6,
+      "require_ms": 0,
+      "require_insns": 2000,
+      "calls": 5,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 3300,
+      "insns_per_call": 660.0
+    },
+    "GPS_N4": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 6,
+      "require_ms": 0,
+      "require_insns": 2400,
+      "calls": 4,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 3500,
+      "insns_per_call": 875.0
+    },
+    "GPS_SRV": {
+      "base_dir": "src/0_infra/gps",
+      "require_calls": 8,
+      "require_ms": 0,
+      "require_insns": 3700,
+      "calls": 52,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 21700,
+      "insns_per_call": 417.31
+    },
+    "INSTALLER": {
+      "base_dir": "src/0_development/installer",
+      "require_calls": 4,
+      "require_ms": 0,
+      "require_insns": 0,
+      "calls": 10,
+      "tick_calls": 0,
+      "cpu_ms": 17,
+      "insns": 1500,
+      "insns_per_call": 150.0
+    },
+    "OCCUPANT_03": {
+      "base_dir": "src/3_planning/amm",
+      "require_calls": 1,
+      "require_ms": 0,
+      "require_insns": 200,
+      "calls": 3,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 700,
+      "insns_per_call": 233.33
+    },
+    "OTA_SRV": {
+      "base_dir": "src/0_development/ota",
+      "require_calls": 12,
+      "require_ms": 0,
+      "require_insns": 1200,
+      "calls": 232,
+      "tick_calls": 0,
+      "cpu_ms": 110,
+      "insns": 114200,
+      "insns_per_call": 492.24
+    },
+    "PAD_01": {
+      "base_dir": "src/0_infra/landing_pad",
+      "require_calls": 5,
+      "require_ms": 0,
+      "require_insns": 0,
+      "calls": 8,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 1400,
+      "insns_per_call": 175.0
+    },
+    "PAD_PUB_01": {
+      "base_dir": "src/0_infra/landing_pad",
+      "require_calls": 2,
+      "require_ms": 0,
+      "require_insns": 0,
+      "calls": 2,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 100,
+      "insns_per_call": 50.0
+    },
+    "PAD_VIP_02": {
+      "base_dir": "src/0_infra/landing_pad",
+      "require_calls": 2,
+      "require_ms": 0,
+      "require_insns": 0,
+      "calls": 2,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 100,
+      "insns_per_call": 50.0
+    },
+    "RWY_09L": {
+      "base_dir": "src/0_infra/runway",
+      "require_calls": 2,
+      "require_ms": 0,
+      "require_insns": 0,
+      "calls": 2,
+      "tick_calls": 0,
+      "cpu_ms": 0,
+      "insns": 200,
+      "insns_per_call": 100.0
+    },
+    "TCA": {
+      "base_dir": "src/1_control/tca",
+      "require_calls": 130,
+      "require_ms": 19,
+      "require_insns": 48200,
+      "calls": 271,
+      "tick_calls": 21,
+      "cpu_ms": 114,
+      "insns": 191400,
+      "insns_per_call": 706.27
+    },
+    "TCA_VEC_1": {
+      "base_dir": "src/1_control/tca",
+      "require_calls": 10,
+      "require_ms": 3,
+      "require_insns": 3500,
+      "calls": 20,
+      "tick_calls": 0,
+      "cpu_ms": 1,
+      "insns": 8500,
+      "insns_per_call": 425.0
+    },
+    "VAS": {
+      "base_dir": "src/1_control/vas",
+      "require_calls": 163,
+      "require_ms": 33,
+      "require_insns": 70800,
+      "calls": 294,
+      "tick_calls": 67,
+      "cpu_ms": 6,
+      "insns": 471600,
+      "insns_per_call": 1604.08
+    }
+  },
+  "channels": {
+    "101": {
+      "channel": 101,
+      "packets": 9,
+      "total_bytes": 2955,
+      "avg_bytes": 328.33,
+      "max_bytes": 819,
+      "unreceived_packets": 0,
+      "senders": {
+        "ALIGN": 9
+      }
+    },
+    "102": {
+      "channel": 102,
+      "packets": 6,
+      "total_bytes": 1404,
+      "avg_bytes": 234.0,
+      "max_bytes": 441,
+      "unreceived_packets": 0,
+      "senders": {
+        "VAS": 6
+      }
+    },
+    "104": {
+      "channel": 104,
+      "packets": 4,
+      "total_bytes": 808,
+      "avg_bytes": 202.0,
+      "max_bytes": 300,
+      "unreceived_packets": 0,
+      "senders": {
+        "ALIGN": 2,
+        "TCA_VEC_1": 1,
+        "TCA": 1
+      }
+    },
+    "105": {
+      "channel": 105,
+      "packets": 16,
+      "total_bytes": 4630,
+      "avg_bytes": 289.38,
+      "max_bytes": 509,
+      "unreceived_packets": 0,
+      "senders": {
+        "OTA_SRV": 16
+      }
+    },
+    "106": {
+      "channel": 106,
+      "packets": 19,
+      "total_bytes": 3981,
+      "avg_bytes": 209.53,
+      "max_bytes": 260,
+      "unreceived_packets": 0,
+      "senders": {
+        "VAS": 2,
+        "TCA": 12,
+        "FCP": 4,
+        "AMM": 1
+      }
+    },
+    "10000": {
+      "channel": 10000,
+      "packets": 2,
+      "total_bytes": 361,
+      "avg_bytes": 180.5,
+      "max_bytes": 207,
+      "unreceived_packets": 1,
+      "senders": {
+        "GCS": 1,
+        "ALIGN": 1
+      }
+    },
+    "10001": {
+      "channel": 10001,
+      "packets": 66,
+      "total_bytes": 29468,
+      "avg_bytes": 446.48,
+      "max_bytes": 529,
+      "unreceived_packets": 0,
+      "senders": {
+        "FCP": 62,
+        "MFD_ACRO": 3,
+        "VAS": 1
+      }
+    },
+    "10002": {
+      "channel": 10002,
+      "packets": 65,
+      "total_bytes": 40789,
+      "avg_bytes": 627.52,
+      "max_bytes": 656,
+      "unreceived_packets": 0,
+      "senders": {
+        "VAS": 65
+      }
+    },
+    "10003": {
+      "channel": 10003,
+      "packets": 14,
+      "total_bytes": 10044,
+      "avg_bytes": 717.43,
+      "max_bytes": 909,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 9,
+        "VAS": 5
+      }
+    },
+    "10004": {
+      "channel": 10004,
+      "packets": 107,
+      "total_bytes": 46746,
+      "avg_bytes": 436.88,
+      "max_bytes": 635,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 49,
+        "FCP": 58
+      }
+    },
+    "10005": {
+      "channel": 10005,
+      "packets": 3,
+      "total_bytes": 871,
+      "avg_bytes": 290.33,
+      "max_bytes": 358,
+      "unreceived_packets": 0,
+      "senders": {
+        "GPS": 1,
+        "GPS_SRV": 2
+      }
+    },
+    "10008": {
+      "channel": 10008,
+      "packets": 5,
+      "total_bytes": 1409,
+      "avg_bytes": 281.8,
+      "max_bytes": 619,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 1,
+        "VAS": 1,
+        "ALIGN": 3
+      }
+    },
+    "10009": {
+      "channel": 10009,
+      "packets": 4,
+      "total_bytes": 813,
+      "avg_bytes": 203.25,
+      "max_bytes": 235,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 1,
+        "GCS": 1,
+        "FCP": 1,
+        "VAS": 1
+      }
+    },
+    "10010": {
+      "channel": 10010,
+      "packets": 105,
+      "total_bytes": 37183,
+      "avg_bytes": 354.12,
+      "max_bytes": 503,
+      "unreceived_packets": 1,
+      "senders": {
+        "VAS": 85,
+        "TCA": 18,
+        "TCA_VEC_1": 2
+      }
+    },
+    "10011": {
+      "channel": 10011,
+      "packets": 19,
+      "total_bytes": 3667,
+      "avg_bytes": 193.0,
+      "max_bytes": 414,
+      "unreceived_packets": 5,
+      "senders": {
+        "VAS": 18,
+        "ASA": 1
+      }
+    },
+    "10040": {
+      "channel": 10040,
+      "packets": 2,
+      "total_bytes": 422,
+      "avg_bytes": 211.0,
+      "max_bytes": 258,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM_02": 1,
+        "OCCUPANT_03": 1
+      }
+    },
+    "10045": {
+      "channel": 10045,
+      "packets": 3,
+      "total_bytes": 964,
+      "avg_bytes": 321.33,
+      "max_bytes": 358,
+      "unreceived_packets": 0,
+      "senders": {
+        "GPS_SRV": 3
+      }
+    },
+    "10080": {
+      "channel": 10080,
+      "packets": 2,
+      "total_bytes": 328,
+      "avg_bytes": 164.0,
+      "max_bytes": 164,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM_02": 2
+      }
+    },
+    "10081": {
+      "channel": 10081,
+      "packets": 5,
+      "total_bytes": 2445,
+      "avg_bytes": 489.0,
+      "max_bytes": 500,
+      "unreceived_packets": 0,
+      "senders": {
+        "FCP": 5
+      }
+    },
+    "10082": {
+      "channel": 10082,
+      "packets": 5,
+      "total_bytes": 3170,
+      "avg_bytes": 634.0,
+      "max_bytes": 634,
+      "unreceived_packets": 0,
+      "senders": {
+        "VAS": 5
+      }
+    },
+    "10083": {
+      "channel": 10083,
+      "packets": 1,
+      "total_bytes": 893,
+      "avg_bytes": 893.0,
+      "max_bytes": 893,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 1
+      }
+    },
+    "10084": {
+      "channel": 10084,
+      "packets": 10,
+      "total_bytes": 4543,
+      "avg_bytes": 454.3,
+      "max_bytes": 600,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 5,
+        "FCP": 5
+      }
+    },
+    "10090": {
+      "channel": 10090,
+      "packets": 5,
+      "total_bytes": 2335,
+      "avg_bytes": 467.0,
+      "max_bytes": 469,
+      "unreceived_packets": 0,
+      "senders": {
+        "VAS": 5
+      }
+    },
+    "50000": {
+      "channel": 50000,
+      "packets": 9,
+      "total_bytes": 1967,
+      "avg_bytes": 218.56,
+      "max_bytes": 265,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 1,
+        "GCS": 5,
+        "AMM_02": 3
+      }
+    },
+    "50003": {
+      "channel": 50003,
+      "packets": 1,
+      "total_bytes": 825,
+      "avg_bytes": 825.0,
+      "max_bytes": 825,
+      "unreceived_packets": 0,
+      "senders": {
+        "GAC": 1
+      }
+    },
+    "50201": {
+      "channel": 50201,
+      "packets": 8,
+      "total_bytes": 2311,
+      "avg_bytes": 288.88,
+      "max_bytes": 363,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 5,
+        "GAC": 3
+      }
+    },
+    "50202": {
+      "channel": 50202,
+      "packets": 8,
+      "total_bytes": 1728,
+      "avg_bytes": 216.0,
+      "max_bytes": 255,
+      "unreceived_packets": 0,
+      "senders": {
+        "GAC": 3,
+        "PAD_01": 2,
+        "PAD_VIP_02": 2,
+        "RWY_09L": 1
+      }
+    },
+    "50206": {
+      "channel": 50206,
+      "packets": 1,
+      "total_bytes": 342,
+      "avg_bytes": 342.0,
+      "max_bytes": 342,
+      "unreceived_packets": 0,
+      "senders": {
+        "GPS_SRV": 1
+      }
+    },
+    "50211": {
+      "channel": 50211,
+      "packets": 5,
+      "total_bytes": 1343,
+      "avg_bytes": 268.6,
+      "max_bytes": 442,
+      "unreceived_packets": 0,
+      "senders": {
+        "PAD_01": 1,
+        "AMM": 3,
+        "RWY_09L": 1
+      }
+    },
+    "50212": {
+      "channel": 50212,
+      "packets": 1,
+      "total_bytes": 161,
+      "avg_bytes": 161.0,
+      "max_bytes": 161,
+      "unreceived_packets": 0,
+      "senders": {
+        "AMM": 1
+      }
+    },
+    "60001": {
+      "channel": 60001,
+      "packets": 33,
+      "total_bytes": 5662,
+      "avg_bytes": 171.58,
+      "max_bytes": 173,
+      "unreceived_packets": 27,
+      "senders": {
+        "AMM": 28,
+        "GPS_CLI": 4,
+        "PAD_01": 1
+      }
+    },
+    "60002": {
+      "channel": 60002,
+      "packets": 2,
+      "total_bytes": 286,
+      "avg_bytes": 143.0,
+      "max_bytes": 164,
+      "unreceived_packets": 0,
+      "senders": {
+        "GPS_CLI": 1,
+        "GPS_SRV": 1
+      }
+    },
+    "60003": {
+      "channel": 60003,
+      "packets": 21,
+      "total_bytes": 5666,
+      "avg_bytes": 269.81,
+      "max_bytes": 272,
+      "unreceived_packets": 0,
+      "senders": {
+        "GPS_N4": 4,
+        "GPS_N1": 6,
+        "GPS_N3": 5,
+        "GPS_N2": 6
+      }
+    }
+  },
+  "node_channel_edges": [
+    {
+      "from": "VAS",
+      "channel": 10010,
+      "packet_type": "MSG_THRUST_CMD",
+      "count": 67,
+      "total_bytes": 27837
+    },
+    {
+      "from": "VAS",
+      "channel": 10002,
+      "packet_type": "MSG_FLIGHT_TELEMETRY",
+      "count": 64,
+      "total_bytes": 40170
+    },
+    {
+      "from": "FCP",
+      "channel": 10001,
+      "packet_type": "MSG_ATTITUDE_CMD",
+      "count": 60,
+      "total_bytes": 27787
+    },
+    {
+      "from": "FCP",
+      "channel": 10004,
+      "packet_type": "MSG_OUTER_LOOP_STATUS",
+      "count": 57,
+      "total_bytes": 18046
+    },
+    {
+      "from": "AMM",
+      "channel": 10004,
+      "packet_type": "MSG_TRAJECTORY_SETPOINT",
+      "count": 47,
+      "total_bytes": 27950
+    },
+    {
+      "from": "AMM",
+      "channel": 60001,
+      "packet_type": "MSG_GPS_REQUEST",
+      "count": 28,
+      "total_bytes": 4802
+    },
+    {
+      "from": "VAS",
+      "channel": 10010,
+      "packet_type": "MSG_ACTUATOR_DISCOVER_REQ",
+      "count": 12,
+      "total_bytes": 1920
+    },
+    {
+      "from": "VAS",
+      "channel": 10011,
+      "packet_type": "MSG_SURFACE_DISCOVER_REQ",
+      "count": 12,
+      "total_bytes": 1884
+    },
+    {
+      "from": "AMM",
+      "channel": 10003,
+      "packet_type": "MSG_MFD_STATE",
+      "count": 9,
+      "total_bytes": 6476
+    },
+    {
+      "from": "TCA",
+      "channel": 106,
+      "packet_type": "MSG_OTA_ACK",
+      "count": 9,
+      "total_bytes": 1772
+    },
+    {
+      "from": "TCA",
+      "channel": 10010,
+      "packet_type": "MSG_ACTUATOR_DISCOVER_ACK",
+      "count": 8,
+      "total_bytes": 2328
+    },
+    {
+      "from": "TCA",
+      "channel": 10010,
+      "packet_type": "MSG_ACTUATOR_STATUS",
+      "count": 8,
+      "total_bytes": 2559
+    },
+    {
+      "from": "OTA_SRV",
+      "channel": 105,
+      "packet_type": "MSG_OTA_CHUNK",
+      "count": 7,
+      "total_bytes": 1992
+    },
+    {
+      "from": "GPS_N1",
+      "channel": 60003,
+      "packet_type": "MSG_GPS_NODE_REPORT",
+      "count": 6,
+      "total_bytes": 1608
+    },
+    {
+      "from": "GPS_N2",
+      "channel": 60003,
+      "packet_type": "MSG_GPS_NODE_REPORT",
+      "count": 6,
+      "total_bytes": 1620
+    },
+    {
+      "from": "AMM",
+      "channel": 10084,
+      "packet_type": "MSG_TRAJECTORY_SETPOINT",
+      "count": 5,
+      "total_bytes": 3000
+    },
+    {
+      "from": "FCP",
+      "channel": 10081,
+      "packet_type": "MSG_ATTITUDE_CMD",
+      "count": 5,
+      "total_bytes": 2445
+    },
+    {
+      "from": "FCP",
+      "channel": 10084,
+      "packet_type": "MSG_OUTER_LOOP_STATUS",
+      "count": 5,
+      "total_bytes": 1543
+    },
+    {
+      "from": "GCS",
+      "channel": 50000,
+      "packet_type": "MSG_BLOCK_ASSIGN",
+      "count": 5,
+      "total_bytes": 1174
+    },
+    {
+      "from": "GPS_N3",
+      "channel": 60003,
+      "packet_type": "MSG_GPS_NODE_REPORT",
+      "count": 5,
+      "total_bytes": 1350
+    },
+    {
+      "from": "VAS",
+      "channel": 10003,
+      "packet_type": "MSG_MFD_STATE",
+      "count": 5,
+      "total_bytes": 3568
+    },
+    {
+      "from": "VAS",
+      "channel": 10082,
+      "packet_type": "MSG_FLIGHT_TELEMETRY",
+      "count": 5,
+      "total_bytes": 3170
+    },
+    {
+      "from": "VAS",
+      "channel": 10090,
+      "packet_type": "MSG_THRUST_CMD",
+      "count": 5,
+      "total_bytes": 2335
+    },
+    {
+      "from": "ALIGN",
+      "channel": 101,
+      "packet_type": "MSG_CALIB_PULSE",
+      "count": 4,
+      "total_bytes": 975
+    },
+    {
+      "from": "AMM",
+      "channel": 50201,
+      "packet_type": "MSG_GAC_CHECKIN_REQ",
+      "count": 4,
+      "total_bytes": 1184
+    },
+    {
+      "from": "GPS_CLI",
+      "channel": 60001,
+      "packet_type": "MSG_GPS_REQUEST",
+      "count": 4,
+      "total_bytes": 688
+    },
+    {
+      "from": "GPS_N4",
+      "channel": 60003,
+      "packet_type": "MSG_GPS_NODE_REPORT",
+      "count": 4,
+      "total_bytes": 1088
+    },
+    {
+      "from": "OTA_SRV",
+      "channel": 105,
+      "packet_type": "MSG_OTA_BEGIN",
+      "count": 4,
+      "total_bytes": 1645
+    },
+    {
+      "from": "ALIGN",
+      "channel": 101,
+      "packet_type": "MSG_PROFILE_SYNC",
+      "count": 3,
+      "total_bytes": 1651
+    },
+    {
+      "from": "ALIGN",
+      "channel": 10008,
+      "packet_type": "MSG_CALIBRATION_INIT",
+      "count": 3,
+      "total_bytes": 625
+    },
+    {
+      "from": "AMM_02",
+      "channel": 50000,
+      "packet_type": "MSG_BLOCK_REQUEST",
+      "count": 3,
+      "total_bytes": 615
+    },
+    {
+      "from": "GAC",
+      "channel": 50201,
+      "packet_type": "MSG_GAC_APPROACH_CLEARANCE",
+      "count": 3,
+      "total_bytes": 961
+    },
+    {
+      "from": "GAC",
+      "channel": 50202,
+      "packet_type": "MSG_ATC_SLOT_ASSIGN",
+      "count": 3,
+      "total_bytes": 744
+    },
+    {
+      "from": "GPS_SRV",
+      "channel": 10045,
+      "packet_type": "MSG_GPS_RESPONSE",
+      "count": 3,
+      "total_bytes": 964
+    },
+    {
+      "from": "MFD_ACRO",
+      "channel": 10001,
+      "packet_type": "MSG_ATTITUDE_CMD",
+      "count": 3,
+      "total_bytes": 897
+    },
+    {
+      "from": "VAS",
+      "channel": 10010,
+      "packet_type": "MSG_CALIB_BAY_BIND",
+      "count": 3,
+      "total_bytes": 689
+    },
+    {
+      "from": "VAS",
+      "channel": 10011,
+      "packet_type": "MSG_CALIB_BAY_BIND",
+      "count": 3,
+      "total_bytes": 689
+    },
+    {
+      "from": "ALIGN",
+      "channel": 101,
+      "packet_type": "MSG_CALIBRATION_CLOSE",
+      "count": 2,
+      "total_bytes": 329
+    },
+    {
+      "from": "ALIGN",
+      "channel": 104,
+      "packet_type": "MSG_ACTUATOR_DISCOVER_REQ",
+      "count": 2,
+      "total_bytes": 259
+    },
+    {
+      "from": "AMM",
+      "channel": 10004,
+      "packet_type": "MSG_CHANNEL_REBIND",
+      "count": 2,
+      "total_bytes": 439
+    },
+    {
+      "from": "AMM_02",
+      "channel": 10080,
+      "packet_type": "MSG_CHANNEL_PROBE",
+      "count": 2,
+      "total_bytes": 328
+    },
+    {
+      "from": "FCP",
+      "channel": 106,
+      "packet_type": "MSG_OTA_NACK",
+      "count": 2,
+      "total_bytes": 376
+    },
+    {
+      "from": "FCP",
+      "channel": 10001,
+      "packet_type": "MSG_CHANNEL_REBIND",
+      "count": 2,
+      "total_bytes": 499
+    },
+    {
+      "from": "GPS_SRV",
+      "channel": 10005,
+      "packet_type": "MSG_GPS_RESPONSE",
+      "count": 2,
+      "total_bytes": 586
+    },
+    {
+      "from": "OTA_SRV",
+      "channel": 105,
+      "packet_type": "MSG_OTA_COMMIT",
+      "count": 2,
+      "total_bytes": 414
+    },
+    {
+      "from": "OTA_SRV",
+      "channel": 105,
+      "packet_type": "MSG_OTA_ABORT",
+      "count": 2,
+      "total_bytes": 424
+    },
+    {
+      "from": "TCA",
+      "channel": 106,
+      "packet_type": "MSG_OTA_BOOT_STATUS",
+      "count": 2,
+      "total_bytes": 432
+    },
+    {
+      "from": "TCA",
+      "channel": 10010,
+      "packet_type": "MSG_CHANNEL_REBIND_ACK",
+      "count": 2,
+      "total_bytes": 497
+    },
+    {
+      "from": "TCA_VEC_1",
+      "channel": 10010,
+      "packet_type": "MSG_ACTUATOR_STATUS",
+      "count": 2,
+      "total_bytes": 684
+    },
+    {
+      "from": "VAS",
+      "channel": 102,
+      "packet_type": "MSG_CALIBRATION_INIT_ACK",
+      "count": 2,
+      "total_bytes": 514
+    },
+    {
+      "from": "VAS",
+      "channel": 102,
+      "packet_type": "MSG_CALIB_ACK",
+      "count": 2,
+      "total_bytes": 305
+    },
+    {
+      "from": "VAS",
+      "channel": 10010,
+      "packet_type": "MSG_CHANNEL_REBIND",
+      "count": 2,
+      "total_bytes": 439
+    },
+    {
+      "from": "VAS",
+      "channel": 10011,
+      "packet_type": "MSG_CHANNEL_REBIND",
+      "count": 2,
+      "total_bytes": 439
+    },
+    {
+      "from": "ALIGN",
+      "channel": 10000,
+      "packet_type": "MSG_OPERATOR_CMD",
+      "count": 1,
+      "total_bytes": 154
+    },
+    {
+      "from": "AMM",
+      "channel": 106,
+      "packet_type": "MSG_OTA_DISCOVER_ACK",
+      "count": 1,
+      "total_bytes": 259
+    },
+    {
+      "from": "AMM",
+      "channel": 10008,
+      "packet_type": "MSG_PBIT_REQ",
+      "count": 1,
+      "total_bytes": 165
+    },
+    {
+      "from": "AMM",
+      "channel": 10009,
+      "packet_type": "MSG_EMERGENCY_OVERRIDE",
+      "count": 1,
+      "total_bytes": 232
+    },
+    {
+      "from": "AMM",
+      "channel": 10083,
+      "packet_type": "MSG_MFD_STATE",
+      "count": 1,
+      "total_bytes": 893
+    },
+    {
+      "from": "AMM",
+      "channel": 50000,
+      "packet_type": "MSG_BLOCK_REQUEST",
+      "count": 1,
+      "total_bytes": 178
+    },
+    {
+      "from": "AMM",
+      "channel": 50201,
+      "packet_type": "MSG_GAC_ABORT_CLEAR",
+      "count": 1,
+      "total_bytes": 166
+    },
+    {
+      "from": "AMM",
+      "channel": 50211,
+      "packet_type": "MSG_TOUCHDOWN_COMPLETE",
+      "count": 1,
+      "total_bytes": 155
+    },
+    {
+      "from": "AMM",
+      "channel": 50211,
+      "packet_type": "MSG_RUNWAY_TOUCHDOWN",
+      "count": 1,
+      "total_bytes": 143
+    },
+    {
+      "from": "AMM",
+      "channel": 50211,
+      "packet_type": "MSG_RUNWAY_VACATED",
+      "count": 1,
+      "total_bytes": 163
+    },
+    {
+      "from": "AMM",
+      "channel": 50212,
+      "packet_type": "MSG_TOUCHDOWN_COMPLETE",
+      "count": 1,
+      "total_bytes": 161
+    },
+    {
+      "from": "AMM_02",
+      "channel": 10040,
+      "packet_type": "MSG_CHANNEL_PROBE",
+      "count": 1,
+      "total_bytes": 164
+    },
+    {
+      "from": "ASA",
+      "channel": 10011,
+      "packet_type": "MSG_AERO_STATUS",
+      "count": 1,
+      "total_bytes": 414
+    },
+    {
+      "from": "FCP",
+      "channel": 106,
+      "packet_type": "MSG_OTA_DISCOVER_ACK",
+      "count": 1,
+      "total_bytes": 255
+    },
+    {
+      "from": "FCP",
+      "channel": 106,
+      "packet_type": "MSG_OTA_ACK",
+      "count": 1,
+      "total_bytes": 180
+    },
+    {
+      "from": "FCP",
+      "channel": 10004,
+      "packet_type": "MSG_CHANNEL_REBIND_ACK",
+      "count": 1,
+      "total_bytes": 311
+    },
+    {
+      "from": "FCP",
+      "channel": 10009,
+      "packet_type": "MSG_EMERGENCY_OVERRIDE",
+      "count": 1,
+      "total_bytes": 170
+    },
+    {
+      "from": "GAC",
+      "channel": 50003,
+      "packet_type": "MSG_FACILITY_BEACON",
+      "count": 1,
+      "total_bytes": 825
+    },
+    {
+      "from": "GCS",
+      "channel": 10000,
+      "packet_type": "MSG_OPERATOR_CMD",
+      "count": 1,
+      "total_bytes": 207
+    },
+    {
+      "from": "GCS",
+      "channel": 10009,
+      "packet_type": "MSG_EMERGENCY_OVERRIDE",
+      "count": 1,
+      "total_bytes": 235
+    },
+    {
+      "from": "GPS",
+      "channel": 10005,
+      "packet_type": "MSG_NAV_QUALITY",
+      "count": 1,
+      "total_bytes": 285
+    },
+    {
+      "from": "GPS_CLI",
+      "channel": 60002,
+      "packet_type": "MSG_GPS_STATUS_REQ",
+      "count": 1,
+      "total_bytes": 122
+    },
+    {
+      "from": "GPS_SRV",
+      "channel": 50206,
+      "packet_type": "MSG_GPS_RESPONSE",
+      "count": 1,
+      "total_bytes": 342
+    },
+    {
+      "from": "GPS_SRV",
+      "channel": 60002,
+      "packet_type": "MSG_GPS_STATUS_RESP",
+      "count": 1,
+      "total_bytes": 164
+    },
+    {
+      "from": "OCCUPANT_03",
+      "channel": 10040,
+      "packet_type": "MSG_CHANNEL_PROBE_ACK",
+      "count": 1,
+      "total_bytes": 258
+    },
+    {
+      "from": "OTA_SRV",
+      "channel": 105,
+      "packet_type": "MSG_OTA_DISCOVER_REQ",
+      "count": 1,
+      "total_bytes": 155
+    },
+    {
+      "from": "PAD_01",
+      "channel": 50202,
+      "packet_type": "MSG_ATC_SLOT_ACK",
+      "count": 1,
+      "total_bytes": 199
+    },
+    {
+      "from": "PAD_01",
+      "channel": 50202,
+      "packet_type": "MSG_ATC_FACILITY_UPDATE",
+      "count": 1,
+      "total_bytes": 184
+    },
+    {
+      "from": "PAD_01",
+      "channel": 50211,
+      "packet_type": "MSG_FACILITY_STATIC_GUIDE",
+      "count": 1,
+      "total_bytes": 442
+    },
+    {
+      "from": "PAD_01",
+      "channel": 60001,
+      "packet_type": "MSG_GPS_REQUEST",
+      "count": 1,
+      "total_bytes": 172
+    },
+    {
+      "from": "PAD_VIP_02",
+      "channel": 50202,
+      "packet_type": "MSG_ATC_SLOT_ACK",
+      "count": 1,
+      "total_bytes": 210
+    },
+    {
+      "from": "PAD_VIP_02",
+      "channel": 50202,
+      "packet_type": "MSG_ATC_FACILITY_UPDATE",
+      "count": 1,
+      "total_bytes": 195
+    },
+    {
+      "from": "RWY_09L",
+      "channel": 50202,
+      "packet_type": "MSG_ATC_SLOT_ACK",
+      "count": 1,
+      "total_bytes": 196
+    },
+    {
+      "from": "RWY_09L",
+      "channel": 50211,
+      "packet_type": "MSG_FACILITY_STATIC_GUIDE",
+      "count": 1,
+      "total_bytes": 440
+    },
+    {
+      "from": "TCA",
+      "channel": 104,
+      "packet_type": "MSG_ACTUATOR_DISCOVER_ACK",
+      "count": 1,
+      "total_bytes": 249
+    },
+    {
+      "from": "TCA",
+      "channel": 106,
+      "packet_type": "MSG_OTA_DISCOVER_ACK",
+      "count": 1,
+      "total_bytes": 259
+    },
+    {
+      "from": "TCA_VEC_1",
+      "channel": 104,
+      "packet_type": "MSG_ACTUATOR_DISCOVER_ACK",
+      "count": 1,
+      "total_bytes": 300
+    },
+    {
+      "from": "VAS",
+      "channel": 102,
+      "packet_type": "MSG_CALIBRATION_CLOSE_ACK",
+      "count": 1,
+      "total_bytes": 144
+    },
+    {
+      "from": "VAS",
+      "channel": 102,
+      "packet_type": "MSG_FLIGHT_TELEMETRY",
+      "count": 1,
+      "total_bytes": 441
+    },
+    {
+      "from": "VAS",
+      "channel": 106,
+      "packet_type": "MSG_OTA_DISCOVER_ACK",
+      "count": 1,
+      "total_bytes": 260
+    },
+    {
+      "from": "VAS",
+      "channel": 106,
+      "packet_type": "MSG_OTA_NACK",
+      "count": 1,
+      "total_bytes": 188
+    },
+    {
+      "from": "VAS",
+      "channel": 10001,
+      "packet_type": "MSG_CHANNEL_REBIND_ACK",
+      "count": 1,
+      "total_bytes": 285
+    },
+    {
+      "from": "VAS",
+      "channel": 10002,
+      "packet_type": "MSG_PBIT_REPORT",
+      "count": 1,
+      "total_bytes": 619
+    },
+    {
+      "from": "VAS",
+      "channel": 10008,
+      "packet_type": "MSG_PBIT_REPORT",
+      "count": 1,
+      "total_bytes": 619
+    },
+    {
+      "from": "VAS",
+      "channel": 10009,
+      "packet_type": "MSG_EMERGENCY_ALERT",
+      "count": 1,
+      "total_bytes": 176
+    },
+    {
+      "from": "VAS",
+      "channel": 10010,
+      "packet_type": "MSG_CALIB_PULSE",
+      "count": 1,
+      "total_bytes": 230
+    },
+    {
+      "from": "VAS",
+      "channel": 10011,
+      "packet_type": "MSG_AERO_CMD",
+      "count": 1,
+      "total_bytes": 241
+    }
+  ]
+}

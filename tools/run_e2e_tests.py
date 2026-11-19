@@ -62,6 +62,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Write node/channel execution profile JSON to the given path.",
     )
+    parser.add_argument(
+        "--check-baseline",
+        action="store_true",
+        default=False,
+        help="Compare E2E profile metrics against config/audit_baselines.json and emit warnings on regressions.",
+    )
     return parser
 
 
@@ -151,11 +157,12 @@ def run_e2e_cli(
             "/_e2e/" + f.name for f in e2e_files
         ]
 
+        enable_profile = bool(args.profile or args.check_baseline)
         runner_cfg = {
             "test_files": rel_test_files,
             "filter_substr": "",
-            "instruction_budget": 650000 if args.profile else 500000,
-            "enable_profile": bool(args.profile),
+            "instruction_budget": 650000 if enable_profile else 500000,
+            "enable_profile": enable_profile,
         }
         (harness_dest / "config.json").write_text(
             json.dumps(runner_cfg, indent=2), encoding="utf-8"
@@ -295,7 +302,7 @@ os.shutdown()
         "logs": guest_data.get("logs", []),
     }
 
-    if args.profile:
+    if args.profile or args.check_baseline:
         raw_prof = guest_data.get("audit_profile") or {}
         raw_nodes = raw_prof.get("nodes") or {}
         raw_bus = raw_prof.get("bus") or {}
@@ -373,10 +380,37 @@ os.shutdown()
             "channels": formatted_channels,
             "node_channel_edges": edges_list,
         }
-        prof_path = Path(args.profile)
-        prof_path.parent.mkdir(parents=True, exist_ok=True)
-        prof_path.write_text(json.dumps(profile_summary, indent=2), encoding="utf-8")
+        if args.profile:
+            prof_path = Path(args.profile)
+            prof_path.parent.mkdir(parents=True, exist_ok=True)
+            prof_path.write_text(json.dumps(profile_summary, indent=2), encoding="utf-8")
         report_payload["profile"] = profile_summary
+
+        if args.check_baseline:
+            baseline_warnings: list[str] = []
+            bpath = root / "config" / "audit_baselines.json"
+            if bpath.is_file():
+                bdata = json.loads(bpath.read_text(encoding="utf-8"))
+                ratio = float(bdata.get("e2e_node_insns_tolerance_ratio", 1.25))
+                slack = int(bdata.get("e2e_node_insns_min_slack", 5000))
+                base_nodes = bdata.get("e2e_node_insns") or {}
+                for nid, nstats in formatted_nodes.items():
+                    if nid in base_nodes:
+                        bval = int(base_nodes[nid])
+                        limit = max(int(bval * ratio), bval + slack)
+                        if nstats["insns"] > limit:
+                            baseline_warnings.append(
+                                f"Node '{nid}' insns {nstats['insns']} exceeded baseline limit {limit} (base={bval})."
+                            )
+                base_unrecv = bdata.get("e2e_unreceived_packets") or {}
+                for ch_k, cstats in formatted_channels.items():
+                    obs_u = int(cstats.get("unreceived_packets") or 0)
+                    exp_u = int(base_unrecv.get(ch_k, 0))
+                    if obs_u > exp_u:
+                        baseline_warnings.append(
+                            f"Channel {ch_k} unreceived_packets={obs_u} exceeded baseline {exp_u}."
+                        )
+            report_payload["baseline_warnings"] = baseline_warnings
 
     if not args.json:
         if session_res.timed_out:
@@ -404,6 +438,14 @@ os.shutdown()
                 print(f"  - {cerr}")
         elif not args.skip_contract_check:
             print(f"Wire Protocol Contracts: PASS ({len(captured_packets)} packets validated, 0 violations)")
+        if args.check_baseline:
+            bw = report_payload.get("baseline_warnings") or []
+            if bw:
+                print(f"\n[BASELINE WARN] {len(bw)} regression warning(s):")
+                for w in bw:
+                    print(f"  - {w}")
+            else:
+                print("Audit Baseline Check: PASS (0 warnings)")
         print(f"\nOverall Result: {final_status} ({total_passed}/{total_passed + total_failed} passed, {total_dur_ms}ms)")
 
     exit_code = 0 if all_pass else 1

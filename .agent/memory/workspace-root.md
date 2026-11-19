@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-18 — 제품 아키텍처(L1~L4) 효율성·효용성 검사 및 계측·회귀 가드 구축 (TASK-016)
+
+- **배경 및 범위 확정**: 정합성·결함 전수 감사(`TASK-013`)에 이어 구조의 비용 대비 효용을 평가하기 위해 Q1~Q4·추가 지침을 확정함: ① 범위는 제품 아키텍처 L1(토폴로지)·L2(RF/프로토콜)·L3(코드 구조)·L4(사양 체계)로 한정, ② `harness/simulation/`·`runner_lib.lua`·`run_e2e_tests.py`에 `--profile` 틱/명령어/버스 계측 추가, ③ `tools/audit/` 영구 편입 및 회귀 가드 활용, ④ 렌즈별 병렬 검토(`R-L1..R-L4`) + 독립 교차 검증(`V-A`, `V-B`), ⑤ `docking_arm` `[SPEC-ONLY]` 검토 및 대형 모듈·사양서 분할 트랙(S) 수행.
+- **P1 계측·도구 구축 (`eb339b5`) 및 P5 회귀 가드(A1)**:
+  - `harness/simulation/{node_sandbox,virtual_bus}.lua`·`runner_lib.lua`에 `_G.__AUDIT_PROFILE` 기반 경계 호출·바이트코드 명령어(`insns`)·`os.epoch("utc")` CPU ms·채널별 바이트/미수신 계측을 구현(미활성 시 zero-overhead, E2E `--profile` 유무 결과 `23/23 PASS`·`566`패킷 동일).
+  - `tools/audit/{registry,static_analysis,dupes,specs_analysis,split_analysis,guard}.py`와 `config/audit_baselines.json`을 영구 편입하고 `tools/run_e2e_tests.py --check-baseline`을 구현함(Gate A1: `installer.lua` 미러 불일치만 Fail, 기준선 명령어/미수신 초과·신규 `>46,080 B` Lua·신규 미소비 `requiredKeys`는 Warn 우선).
+- **주요 진단 결과 및 교차 검증 교정**:
+  - `V-A` 스위트 격리 재현을 통해 `TCA`의 E2E `114 ms`(`40.86%` CPU)가 20Hz 추력 루프(`test_e2e_3node_se3_closed_loop.lua`: `0 ms`, `86,000` insns)가 아니라 `test_e2e_ota_deploy_rollback.lua`(`112 ms`) 내 `ota_agent` 호스트 NTFS 파일 I/O임을 재규명함.
+  - 주요 확인 항목: `AMM` Zone 3 `30..39` 차단 버그(`E-L2-01`), `protocol_contracts.json` E2E 5종 + 활성 `src/` 9종 누락(`E-L2-02`), `amm/main.lua` 사문화 16핸들러 및 `MSG_RUNWAY_TOUCHDOWN`/`VACATED` 송신 부재(`E-L2-03`), 미소비 `requiredKeys` 9·`optionalKeys` 20(`E-L2-04`), `installer.lua` 400줄 동일본 복제(`E-L3-01`), 복사본 논리 분기 3건(`tca` shallow copy·`vas/fcp` Euler·`vas/amm` `save_flight_state`) 및 `landing_pad`↔`runway` 11쌍 유사 복제(`E-L3-02`), 사문화 함수 17종·미사용 설정키 19종(`E-L3-03`/`04`), 사양 인라인 버전 배지 `111/210 (52.9%)` 부패 및 `avg 6.09` 문서/커밋(`E-L4-01`), `verify_all_specs.py` WebUI 사양 1종 누락(`E-L4-04`), `docking_arm` `§4.2` `CH 50002` ATC 직접 제어 모순(`E-L1-07`/`E-L2-06`).
+- **산출물 및 후속 TASK**: 설계서 `docs/superpowers/specs/2026-11-18-task-016-architecture-efficiency-audit-design.md`, 보고서 `reports/underReview/Architecture_Efficiency_Audit_1_11182026.md`, 원자료 `reports/audit_data/2026-11-18/`, 후속 과제 `TASK-017`..`021` 및 `TASK-104` 선행 조건 등록 (`TASK.md`).
+
 ## 2026-11-18 — 컨트랩션 조립 인터록(TASK-136)·5단계 PBIT(TASK-131)·GPS 품질/DR 가드(TASK-128) 구현 및 사양 승격 (TASK-136, TASK-131, TASK-128)
 
 - **배경 및 실행 순서 재판단**: 세 과제가 모두 `VAS_PROGRAM_SPECIFICATION.md`, `src/1_control/vas/`, `config/protocol_contracts.json`을 공유하므로 Spec-First 통합 개정(`Task 1`) 후 **`TASK-136` → `TASK-131` → `TASK-128`** 순으로 TDD 구현(`docs/superpowers/plans/2026-11-18-task-136-131-128-safety-and-nav-integrity.md`)을 수행함. `manifest.lua`·`config/gdrive_mapping.json` 3-way 135엔트리 패리티를 유지하기 위해 신규 `.lua` 파일 생성 대신 기존 등록 모듈 내에 논리를 배치함.
