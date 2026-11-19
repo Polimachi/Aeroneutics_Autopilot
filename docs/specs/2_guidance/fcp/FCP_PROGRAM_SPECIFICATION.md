@@ -67,7 +67,7 @@
    - `AMM`이 `Base+4`로 개시한 4계층 채널 재바인딩(`MSG_CHANNEL_REBIND`) 트랜잭션을 `Base+1`을 통해 `VAS`로 중계하고 하위 ACK를 취합해 `Base+4`로 회신합니다.
 5. **구버전 이관 책임 명시 (`[DEPRECATED — Migrated to AMM v1.3.0]`)**:
    - 고유 40채널 블록($Base = 10000 + (N - 1) \times 40$, $N=1\sim 1000$) 부트스트랩(`CH 50000`), `Base+0` 충돌 프로브 및 C2 중재, `Base+3` 5Hz MFD 다운링크, `CH 60001/60002` 및 `Base+5` GPS/DR 융합(`nav_engine`), `CH 50001~50004` / $Base_{\text{sec}}+*$ 3-Tier ATC/GAC/시설물 핸드오프(`facility_client`), `LOITER`/`POI_HOLD`/도킹/활주로 궤적 합성은 모두 **`AMM (Node 03, v1.3.0)`**으로 이관되었습니다(`FCP v2.0.0`에서는 `[DEPRECATED]`).
-   - 공력 조종면 구동계 `ASA` (`Base+11`, 구 `Base+7 [DEPRECATED]`) 및 추진기 구동계 `TCA` (`Base+10`, 구 `Base+6 [DEPRECATED]`), 동적압 스케줄링, 실속 가드 및 기체별 추진기 프로파일 기반 6-DoF 믹싱은 **`VAS (Node 01, v1.20.0)`**가 전담합니다.
+   - 공력 조종면 구동계 `ASA` (`Base+11`, 구 `Base+7 [DEPRECATED]`) 및 추진기 구동계 `TCA` (`Base+10`, 구 `Base+6 [DEPRECATED]`), 동적압 스케줄링, 실속 가드 및 기체별 추진기 프로파일 기반 6-DoF 믹싱은 **`VAS (Node 01)`**가 전담합니다.
 
 ### 1.3 서브시스템 간 상호작용 아키텍처
 
@@ -499,9 +499,9 @@ stateDiagram-v2
 | :--- | :--- | :--- | :--- | :--- |
 | `[I-1]` 텔레메트리 | `Base+2` (`CH_TELEMETRY`) | `VAS->FCP` (20Hz) | `MSG_FLIGHT_TELEMETRY` | `altY`, `vSpeed` `[DEPRECATED]` |
 | `[I-2]` 유도 지령 | `Base+1` (`CH_FLIGHT_GUIDANCE`) | `FCP->VAS` (20Hz; ACRO 침묵) | `MSG_ATTITUDE_CMD` (`QUATERNION_RATE`) | `"ATTITUDE_ANGLE"`, `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave` `[DEPRECATED]` |
-| `[I-2]` 비상 코어 | `Base+9` (`CH_EMERGENCY_CORE`) | `VAS/AMM/MFD/GCS->FCP` (이벤트) | `MSG_EMERGENCY_ALERT`, `MSG_EMERGENCY_OVERRIDE` (`E_STOP`, 참조) | 구 `Base+1` 직결, `CUTOFF`/`CUSHION_STOP`, `descentRate`, `targetOrientation` `[DEPRECATED]` |
+| `[I-2]` 비상 코어 | `Base+9` (`CH_EMERGENCY_CORE`) | `VAS->FCP` 구독 (`MSG_EMERGENCY_ALERT`); `AMM/MFD/GCS->VAS` (`MSG_EMERGENCY_OVERRIDE`, 참조) | `MSG_EMERGENCY_ALERT`, `MSG_EMERGENCY_OVERRIDE` (`E_STOP` 시 `VAS Base+2` `controlState=="E_STOP"` 관찰) | 구 `Base+1` 직결, `CUTOFF`/`CUSHION_STOP`, `descentRate`, `targetOrientation` `[DEPRECATED]` |
 | `[I-12]` 궤적·상태 | `Base+4` (`CH_TRAJECTORY_CMD`) | `AMM<->FCP` (20Hz/On-Change) | `MSG_TRAJECTORY_SETPOINT`, `MSG_OUTER_LOOP_STATUS` (선택 `coreTelemetryTimedOut`) | `CH_NAV_SENSOR` `[DEPRECATED]` |
-| `[I-7]` 항법 품질 | `Base+4` | `AMM->FCP` (20Hz) | `MSG_NAV_QUALITY` (`navValid`/`gpsTimedOut`/`navQuality`) | — |
+| `[I-7]` 항법 품질 | `Base+5`/`Base+2`/`60002` (상위 `AMM`) -> `Base+4` (`[I-12]` 경유) | `GPS->AMM` (이벤트) / `AMM->FCP` `Base+4` 전달 (`FCP` 미직수신) | `MSG_NAV_QUALITY` (상위 `AMM` 소비; `FCP`는 `[I-12]` `MSG_TRAJECTORY_SETPOINT` 내 `navValid`/`gpsTimedOut`/`navQuality` 수신) | — |
 | `[I-9]` 채널 재바인딩 | `Base+4`->`Base+1`->`+10/+11` | `AMM<->FCP<->VAS` (500ms) | `MSG_CHANNEL_REBIND`, `MSG_CHANNEL_REBIND_ACK` | `MSG_REBIND_ACK`, `Base+6/7` `[DEPRECATED]` |
 | `[I-13]` 무선 OTA | $Base_{\text{hangar}}+4/+5$ (`105`/`106`) | `OTA<->FCP` (이벤트) | `MSG_OTA_DISCOVER_REQ`, `MSG_OTA_DISCOVER_ACK`, `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_ABORT`, `MSG_OTA_REBOOT`, `MSG_OTA_ACK`, `MSG_OTA_NACK`, `MSG_OTA_BOOT_STATUS` | — |
 
@@ -515,15 +515,15 @@ stateDiagram-v2
 - **`[I-9]` `rebindAckTimeoutMs` (`500ms`) 캐스케이드**: `Base+4` `MSG_CHANNEL_REBIND`를 `Base+1`로 중계해 `MSG_CHANNEL_REBIND_ACK`를 취합하며, `500ms` 초과 시 `ROLLBACK`, `COMMIT` 시 `fcp_config.json` `baseChannel`을 갱신합니다.
 - **`[I-2]` `Base+9` `EMERGENCY_HOLD`**: `MSG_EMERGENCY_ALERT` 또는 `activeSource == "EMERGENCY_DIRECT"`/`controlState == "E_STOP"` 시 적분기를 리셋하고 `EMERGENCY_HOLD`로 전이해 `Base+1` 지령을 중단합니다(`arm == false` 시 `IDLE_ARMED` 복귀).
 
-### 8.3 `[DEPRECATED — Migrated to AMM]` 이관 및 구버전 인터페이스 (`§8.4`, `[I-5]`~`[I-10]`)
+### 8.3 `[DEPRECATED — Migrated to AMM]` 이관 및 구버전 인터페이스 (`[I-5]`~`[I-10]`)
 
 | 구 인터페이스 (`[DEPRECATED]`) | 구 채널 / 식별자 (`[DEPRECATED]`) | 이관 대상 및 현행 표준 |
 | :--- | :--- | :--- |
 | `[I-5]` 시설물·ATC (`[DEPRECATED]`) | `CH 50001`(구 `30001`), `Base+5`, $Base_{\text{sec}}+10+\text{Idx}$ | `AMM` `facility_client` 전담 (`FCP` 미개방) |
 | `[I-6]` C2·MFD (`[DEPRECATED]`) | `Base+0` `MSG_OPERATOR_CMD`, `Base+3` `MSG_MFD_STATE` | `AMM` 전담 (`FCP`는 `Base+4` `[I-12]`만 소비) |
-| `[I-7]` 외부 GPS (`[DEPRECATED]`) | `CH 60001`(구 `30004`), `Base+5` `MSG_GPS_REQUEST`/`RESPONSE` | `AMM` `nav_engine` 전담 (`Base+4` 전달) |
-| `[I-8]`/`[I-9]` 프로브 (`[DEPRECATED]`) | `CH 50000` `MSG_BLOCK_REQUEST`/`ASSIGN`, `Base+0` `MSG_CHANNEL_PROBE` / `MSG_CHANNEL_PROBE_ACK` | `AMM` `channel_sentinel` 이관 (구 `MSG_REBIND_ACK`, `CH_NAV_SENSOR` `[DEPRECATED]`) |
-| `[I-10]` ASA 직결 (`[DEPRECATED]`) | `Base+7 [DEPRECATED]` (`MSG_SURFACE_CMD`/`STATUS`/`DISCOVER_REQ`/`ACK`), `Base+6 [DEPRECATED]` | [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) `Base+10`/`+11` 이관 (`FCP`는 `flapTarget`만 전달) |
+| `[I-7]` 외부 GPS (`[DEPRECATED]`) | `CH 60001`(구 `30004`), `Base+5` `MSG_GPS_REQUEST`, `MSG_GPS_RESPONSE` | `AMM` `nav_engine` 전담 (`Base+4` 전달) |
+| `[I-8]`/`[I-9]` 프로브 (`[DEPRECATED]`) | `CH 50000` `MSG_BLOCK_REQUEST`, `MSG_BLOCK_ASSIGN`, `Base+0` `MSG_CHANNEL_PROBE` / `MSG_CHANNEL_PROBE_ACK` | `AMM` `channel_sentinel` 이관 (구 `MSG_REBIND_ACK` `[DEPRECATED]`) |
+| `[I-10]` ASA 직결 (`[DEPRECATED]`) | `Base+7 [DEPRECATED]` (`MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, `MSG_SURFACE_DISCOVER_REQ`, `MSG_SURFACE_DISCOVER_ACK`), `Base+6 [DEPRECATED]` | [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) `Base+10`/`+11` 이관 (`FCP`는 `flapTarget`만 전달) |
 | `[I-2]` 구 `ATTITUDE_CMD` (`[DEPRECATED]`) | `"ATTITUDE_ANGLE"`, `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave` `[DEPRECATED]` | `QUATERNION_RATE` 단일 채택 (Zero-Fallback) |
 
 ---
