@@ -283,10 +283,16 @@ local function handle_calib_close(state, fsm, mixer, rawPacket)
         state.wirelessModem.close(state.hangarChannels.tap)
     end
     state.hangarChannels = nil
-    if fsm and fsm.transition_to then fsm.transition_to(fsm, "IDLE_ARMED", rollback and "CALIB_ROLLBACK" or "CALIB_CLOSE") end
     if rollback and fsm then
         fsm.recalibrationRequired = true
         fsm.topologyStatus = "RECALIBRATION_REQUIRED"
+    end
+    local needsRecalib = rollback or (fsm ~= nil and fsm.recalibrationRequired == true)
+    if fsm and fsm.transition_to then
+        local nextState = needsRecalib and "DISARMED" or "IDLE_ARMED"
+        local reason = rollback and "CALIB_ROLLBACK"
+            or (needsRecalib and "CALIB_CLOSE_LOCKED" or "CALIB_CLOSE")
+        fsm.transition_to(fsm, nextState, reason)
     end
     return true
 end

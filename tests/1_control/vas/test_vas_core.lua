@@ -1804,6 +1804,36 @@ describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollba
         end
     end)
 
+    it("transitions CALIBRATION to DISARMED on MSG_CALIBRATION_CLOSE after rejected MSG_PROFILE_SYNC", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, false)
+
+        assert_true(network_manager.dispatch(net, fsm, nil, {}, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIBRATION_INIT", time = 1000,
+            payload = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101, targetCraftDomain = "AIRCRAFT_01" },
+        }))
+        assert_eq(fsm.currentState, "CALIBRATION")
+
+        assert_true(network_manager.dispatch(net, fsm, nil, {}, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_PROFILE_SYNC", time = 1010,
+            payload = { profileId = "PROF-REJ", controllabilityStatus = "FAIL_INSUFFICIENT_AUTHORITY" },
+        }))
+        assert_true(fsm.recalibrationRequired)
+        assert_eq(fsm.currentState, "CALIBRATION")
+
+        assert_true(network_manager.dispatch(net, fsm, nil, {}, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3,
+            type = "MSG_CALIBRATION_CLOSE", time = 1020,
+            payload = { bayId = 1, action = "CLOSE_SESSION", reason = "COMPLETE", saveProfile = true },
+        }))
+        assert_true(fsm.recalibrationRequired)
+        assert_eq(fsm.currentState, "DISARMED")
+    end)
+
     it("rolls back disk thrusters.json, peripheralManifest, mixer coefficients, and recalibrationRequired when saveProfile == false (R3)", function()
         local tmpDir = sdk.temp_path("vas_rollback_dir")
         fs.makeDir(tmpDir)
@@ -1814,7 +1844,7 @@ describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollba
         local h2 = fs.open(tmpDir .. "/peripheral_manifest.json", "w")
         h2.write(textutils.serializeJSON(origManifest)); h2.close()
         local h3 = fs.open(tmpDir .. "/system.json", "w")
-        h3.write(textutils.serializeJSON({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 })); h3.close()
+        h3.write(textutils.serializeJSON({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000, bootRecovery = { enabled = false } })); h3.close()
 
         local wirelessModem = mock.modem({ wireless = true })
         mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
@@ -1831,6 +1861,7 @@ describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollba
         assert_false(okBad)
         assert_eq(errBad, "CONTROLLABILITY_REJECTED")
         assert_true(daemon.fsm.recalibrationRequired)
+        assert_eq(daemon.fsm.currentState, "DISARMED")
         assert_not_nil(daemon.adapter.coefficients.THR_ORIG)
         assert_nil(daemon.adapter.coefficients.THR_BAD)
 
@@ -1864,6 +1895,7 @@ describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollba
             payload = { bayId = 1, action = "CLOSE_SESSION", reason = "MANUAL", saveProfile = false },
         }))
         assert_true(daemon.fsm.recalibrationRequired)
+        assert_eq(daemon.fsm.currentState, "DISARMED")
         assert_not_nil(daemon.adapter.coefficients.THR_ORIG)
         assert_nil(daemon.adapter.coefficients.THR_TEMP)
         assert_not_nil(daemon.peripheralManifest)
@@ -1884,7 +1916,7 @@ describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollba
         local freshDir = sdk.temp_path("vas_rollback_fresh")
         fs.makeDir(freshDir)
         local hf = fs.open(freshDir .. "/system.json", "w")
-        hf.write(textutils.serializeJSON({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000 })); hf.close()
+        hf.write(textutils.serializeJSON({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000, bootRecovery = { enabled = false } })); hf.close()
         local freshDaemon = core_daemon.init(freshDir)
         assert_false(fs.exists(freshDir .. "/thrusters.json"))
         assert_true(network_manager.dispatch(freshDaemon.net, freshDaemon.fsm, freshDaemon.controller, freshDaemon.mixer, 10008, 10008, {
@@ -1909,6 +1941,7 @@ describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollba
         }))
         assert_false(fs.exists(freshDir .. "/thrusters.json"))
         assert_true(freshDaemon.fsm.recalibrationRequired)
+        assert_eq(freshDaemon.fsm.currentState, "DISARMED")
         fs.delete(freshDir)
     end)
 end)
