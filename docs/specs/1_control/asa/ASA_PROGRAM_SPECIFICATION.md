@@ -6,26 +6,27 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v1.8.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 버전 (Version)** | `v1.8.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/1_control/asa/` |
 | **주관 도메인 (Domain)** | 공력 조종면 및 날개 구동기 분산 클러스터 (ASA / Node 06-xx) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.15.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터 v1.12.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.7.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
+> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (추력기 어댑터)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.8.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드·스키마 무변경)**: 상단 `연관 문서` 및 §7 교차 참조의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Approved` 유지) |
 | `v1.8.0` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Approved` 유지)**: ① `[I-10]` `MSG_AERO_STATUS` 내 `mode`를 `interactionMode = "API" \| "REDSTONE"`(`mode [DEPRECATED]`)로 단일화하고 `healthStatus = "NOMINAL" \| "DEGRADED" \| "TOTAL_LOSS"` 명시, ② `[I-4]` `MSG_CALIB_BAY_BIND` 키를 `baseHangarChannel`(`bayBaseChannel [DEPRECATED]`)로 통일, ③ `[I-9]` `MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) 및 응답 상태 `"READY"`(`"PREPARED"` 제거) Option A 정합화, ④ 연관 문서 버전 배지 동기화 | Q1·Q2·Q4 사용자 확정 결정 반영 및 제어 버스 Zero-Fallback 규격 통일 |
 | `v1.7.0` | 2026-11-12 | FCP-AMM 역할 분리(ICD v1.28.0) 및 채널/스키마 정합화: FCP 순수 `SE(3)` 외루프 `QUATERNION_RATE` + 선택적 `flapTarget`(`Base+1` $\to$ `VAS`) 및 `AMM` 궤적/C2 역할 반영, `Base+2` `FCP`/`AMM` 수신 명시, `top` 모뎀 `VAS (Node 01)` 및 `Alignment` 전용 포트 정정, `config.json` `surfaceActuation`(`10011`) 및 `MSG_CHANNEL_REBIND`(`bandwidth = 40`, `oldBase + 11`, `newBaseChannel + 11`) 결함 수정, `MSG_AERO_CMD` 스키마(`controlState`, `dynamicPressureFactor`) ICD 정합화, 구 `Base+7` `[DEPRECATED]` 이력 정정 및 과장 표현 제거 | AMM-FCP-VAS 계층 분리 동기화 및 `Base+11` 채널·패킷 결함 해소 |
 | `v1.6.0` | 2026-11-08 | 포드 ID(podId) ASA_L/R/T 완전 단일화, 구 명칭(구버전 명칭) 잔재 전면 척결 | 포드 명칭 표준화 및 잔재 제거 |
@@ -542,12 +543,5 @@ end
 
 ## 7. 교차 참조 및 버전 메타데이터
 
-- 본 규격서 시맨틱 버전: **v1.8.0**
-- 연계 상위 마스터 ICD: **v1.30.0**
-- 연계 AMM 규격서: **v2.0.1**
-- 연계 FCP 비행 제어 규격서: **v2.1.0**
-- 연계 VAS 규격서: **v1.20.0**
-- 연계 전체 구조도: **v2.15.0**
-- 연계 TCA 규격서: **v1.12.0**
-- 연계 Alignment 규격서: **v2.7.0**
-- 연계 GPS 체계 규격서: **v2.3.3**
+- 본 규격서 최신 상태·버전 SSOT는 상단 메타데이터 표에서 관리하며, 전체 서브시스템 버전 매트릭스는 [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) `§5.1`을 참조합니다.
+- 상단 `연관 문서` 목록의 전체 구조도 및 연계 규격서(`AMM`, `FCP`, `VAS`, `TCA`, `Alignment`, `GPS`)와 인터페이스 정합성을 유지합니다.

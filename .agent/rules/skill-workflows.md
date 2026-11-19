@@ -44,9 +44,10 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
 
 ## 3. 사양서 생명주기 가드레일 (Spec Lifecycle Guardrails)
 - **사양서 수정 및 양방향 동기화 시 (Revision Protocol)**:
-  - 활성 사양서 수정 시 `specification-lifecycle-manager` 규칙에 따라 `docs/system/*.md` 및 활성 `docs/specs/**/*.md`(Status != `Draft`) 간 양방향 동기화를 수행한다.
+  - 활성 사양서 수정 시 `specification-lifecycle-manager` 규칙에 따라 `docs/system/*.md` 및 실제 인터페이스·링크 영향을 받는 활성 `docs/specs/**/*.md`(Status != `Draft`) 간 양방향 동기화를 수행하며, 비영향 피어 사양서는 버전 배지 동기화만으로 편집하지 않는다.
   - 활성 프로토콜·패킷 엔벨로프·채널·열거형·수치 범위 변경 시 `config/protocol_contracts.json`을 동기화하고, `python tools/verify_contracts.py --specs-only`를 실행하여 오류 0건(`0 errors`)을 확인한다.
-  - `Implemented` 사양서 중 요구사항·패킷 스키마·채널·파라미터 변경으로 **`src/` 런타임 코드 수정이 필요한 사양서만** 상단 메타데이터 표의 `문서 상태`를 `Approved`로 전이하고 `최종 수정일` 갱신 및 `Revision History` 테이블(버전, 일자, 변경 요약, 변경 사유)에 행을 추가한다. 단순 상대 링크나 참조 버전 배지만 갱신된 연관 사양서는 `Implemented` 상태를 유지한다.
+  - `Implemented` 사양서 중 요구사항·패킷 스키마·채널·파라미터 변경으로 **`src/` 런타임 코드 수정이 필요한 사양서만** 상단 메타데이터 표의 `문서 상태`를 `Approved`로 전이하고 `최종 수정일` 갱신 및 `Revision History` 테이블(버전, 일자, 변경 요약, 변경 사유)에 행을 추가한다. 단순 상대 링크만 갱신된 연관 사양서는 `Implemented` 상태를 유지한다.
+  - **단일 버전 SSOT 및 인라인 피어 버전 배지 금지**: 각 사양서의 버전 SSOT는 해당 문서 상단 메타데이터 표와 마스터 ICD(`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md`) `§5.1`로 일원화한다. `### Revision History` 및 마스터 ICD `§5.1` 외부에 타 사양서 인라인 버전 배지(`[PEER.md](...) vX.Y.Z` 등)를 기재하는 것은 금지되며 `tools/verify_all_specs.py` Rule 10으로 검증한다.
 - **신규 및 폐기 사양서 전이 시 (Drafting & Deprecation Protocol)**:
   - 신규 기획안은 대상 도메인 디렉토리에 직접 `문서 상태`: `Draft`로 작성하며(`specification-lifecycle-manager` 비발동), 검토 완료 후 `Approved`로 상태를 승격할 때 `specification-lifecycle-manager`로 전역 동기화를 수행한다.
   - 사양서 폐기 시 상단 메타데이터 표의 `문서 상태`를 `Deprecated`로 변경하고, `specification-lifecycle-manager`로 활성 문서 내 참조 정리 및 대체 규격 명시를 수행한 뒤 Zero-Fallback 원칙을 엄수한다.

@@ -6,24 +6,25 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.4.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 버전 (Version)** | `v1.4.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/0_infra/gcs/` |
 | **주관 도메인 (Domain)** | 지상 인프라 및 전역 무선 채널 관리 (GCS / Node 08) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.1)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말 v2.5.0)
-> - [AMM_MISSION_EDITOR_SPECIFICATION.md](../../3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md) (외부 웹 GUI 미션 에디터 v0.6.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도 v2.4.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말)
+> - [AMM_MISSION_EDITOR_SPECIFICATION.md](../../3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md) (외부 웹 GUI 미션 에디터)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.4.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `참조 문서` 목록의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v1.4.0` | `2026-11-18` | **`TASK-405` `--lan` 브리지 바인딩 및 `TASK-406` `CH 60003` GPS 하트비트·`gacNode` 무게중심·`60s` `OFFLINE` TTL 규격 추가 (`Implemented` $\to$ `Approved`)**: ① `channels.gpsHeartbeatChannel` (`60003`) 상시 청취로 `MSG_GPS_NODE_HEARTBEAT` 수신 및 WebSocket `GPS_NODES_SYNC` 중계, ② `WORLD_PRESET_SYNC`에 `gacNode` 요약(명시적 `position` 우선, 부재 시 `facilities[]` 무게중심 자동 산출) 첨부, ③ `60,000ms` 무신호 시 GPS/비행체 노드를 삭제 대신 `OFFLINE`/`STALE` 상태로 표기 및 `purge_offline_gps_nodes()` 제공, ④ 호스트 브리지 `tools/gcs_live_bridge.py`에 `--lan`(`0.0.0.0` 바인딩 및 LAN 접속 URL 안내) 옵션 추가 및 연관 배지(`AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`, `ICD v1.36.0`, `Diagram v2.20.0`, `Editor v0.6.0`) 동기화 | `TASK-405` LAN 사설망 Live Bridge 접속 및 `TASK-406` 실시간 GPS/GAC 노드 관제·`60s` TTL 연동 |
 | `v1.3.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 채널 관리자 결함 해소 (`Implemented`)**: ① `OFFSET_ESTOP = 9` (`Base+9` `CH_EMERGENCY_CORE` `E_STOP` 직결 송출, `Base+1` 분리), ② `BW = 40` 고정 계약(`requestedBandwidth ~= 40` 시 `"DENIED"`), ③ `MSG_BLOCK_REQUEST` 선택 필드(`preferredBase`, `conflictBase`) 및 `MSG_BLOCK_ASSIGN.status` 표준 열거형(`"ASSIGNED"` \| `"REASSIGNED"` \| `"DENIED"` \| `"FAILED"`), 영속 리스 필드(`leaseState`, `reassignedFrom`, `reason`, `lastSeenMs`) 추가, ④ 4인자 블록 충돌 검사(`checkCollision(baseA, 40, baseB, 40)`) 정합 및 연관 배지(`ICD v1.35.0`, `Diagram v2.19.0`, `AMM v2.4.0`, `FCP v2.3.0`, `VAS v1.23.0`) 동기화 | `TASK-125` GCS 대역폭 검증·충돌 재할당·리스 영속화·E_STOP 채널 분리 반영 및 `TASK-404` 통합 |
 | `v1.2.0` | `2026-11-16` | **`TASK-404` 다중 기체 동시 구독, 시설 비콘 수집(`CH 50003`/`50004`) 및 선택적 WebSocket Live Bridge (`modules/live_bridge_client.lua`) 규격 추가 (`Implemented` $	o$ `Approved`)**: ① 등록된 모든 편대 기체의 `Base+3`/`Base+0` 동시 개방 및 `CH 50003` (`MSG_FACILITY_BEACON`)·`CH 50004` (`MSG_MISSION_ACK`) 수신 통합, ② 로컬 브리지(`tools/gcs_live_bridge.py`, `ws://127.0.0.1:8765`)와 `WORLD_PRESET_SYNC`/`FLEET_TELEMETRY_SYNC`/`MISSION_PUSH_CMD`/`MISSION_PUSH_ACK` 양방향 중계 규격 신설, ③ `gcs_config.json` `liveBridge` 및 연관 문서(`ICD v1.34.0`, `Diagram v2.18.0`, `AMM v2.3.0`, `Editor v0.5.0`) 동기화 | `TASK-404` WebUI 미션 에디터 실시간 연동 및 원클릭 무선 미션 푸시·로드 지원 |

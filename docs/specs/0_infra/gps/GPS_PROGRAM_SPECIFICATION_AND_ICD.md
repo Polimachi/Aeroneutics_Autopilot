@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.4.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 버전 (Version)** | `v2.4.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/0_infra/gps/` |
 | **주관 도메인 (Domain)** | 중앙 고정밀 GPS 서버 및 분산 노드 군 (GPS Infrastructure) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.4.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연계 규격` 목록의 `(vX.Y.Z 동기화)` 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v2.4.0` | `2026-11-18` | **`TASK-128` GPS 성상 품질 등급 및 `MSG_NAV_QUALITY` 브로드캐스트/진단 규격 추가 (`Implemented` $\to$ `Approved`)**: ① §3.4 `MSG_GPS_RESPONSE` 선택 필드(`navQuality`, `consecutiveFailures`) 추가, ② `§3.4.1 MSG_NAV_QUALITY` (`targetClient`, `navQuality` = `"GOOD" \| "DEGRADED" \| "POOR" \| "LOST"`, `satelliteCount`, `consecutiveFailures`, 선택 `hdop`, `status`, `drHoldoverActive`, `holdLevelActive`, `blackoutMs`) 및 클라이언트 타임아웃 추적 규약 신설, ③ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `AMM v2.6.0`, `FCP v2.5.0`, `VAS v1.25.0`, `TCA v1.14.0`, `Alignment v2.9.0`) 동기화 | `TASK-128` 위성 수/HDOP/연속 타임아웃 기반 항법 품질 조기 경보 지원 (`src/0_infra/gps/` 반영 후 `Implemented` 승격 예정) |
 | `v2.3.3` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): 공용 GPS 채널 대역(`60001 ~ 60004` 활성 + `60005 ~ 60020` 예비 예약) 명세 정합 및 연관 문서 버전(`ICD v1.30.0`, `Diagram v2.15.0`, `GAC v1.5.0`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `TCA v1.12.0`, `Alignment v2.7.0`, `Docking Arm v1.12.0`, `Landing Pad v2.5.0`, `Runway v1.11.0`) 동기화 | 마스터 ICD v1.30.0 채널 대역 표기 및 전 규격서 버전 정합성 확보 |
 | `v2.3.2` | 2026-11-14 | 고부하 경합 및 지연 보고 방어 강화 (`Implemented` $\to$ `Approved`, `TASK-123`): ① `session_scheduler.lua`의 `ingestReport` 내 동일 클라이언트 구형 활성 세션(`clientSeq < seq`) 즉시 축출·툼스톤 전환, ② `flushExpired` 만료 3노드 해법 성공 시 HWM(`client_last_solved`) 갱신 및 만료 루프 HWM 재검사, ③ `client_core.lua`의 `lastReceivedSeq` 단조 증가 수신 가드(구형/중복 `MSG_GPS_RESPONSE` 폐기 및 시퀀스 래핑 리셋), ④ 클라이언트(`AMM nav_engine` · `landing_pad gps_client`) `computerId` 기반 결정론적 송출 위상 분산(`offset = computerId % interval`) 및 착륙패드 `CH 60001` 송신 전용(Listen 제거) 규격 동기화 | TASK-123 다중 클라이언트/고부하 GPS 경합 및 스테일 세션 잔류 문제 해소 |
@@ -27,17 +28,17 @@
 | `v2.1.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장 반영, 01호기 회신 채널 `Base+5` (`10005`, 구 10045 [DEPRECATED]) 동기화, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
   
 > **연계 규격**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환 (v1.38.0 동기화)  
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서 (v1.7.0 동기화)  
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) AMM 비행체 측위/항법 클라이언트 연계 (v2.6.0 동기화)  
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 외루프 제어기 규격서 연계 (v2.5.0 동기화)  
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환 (v1.25.0 동기화)  
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환 (v2.21.0 동기화)  
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계 (v1.14.0 동기화)  
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계 (v2.9.0 동기화)  
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계 (v1.12.0 동기화)  
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계 (v2.5.0 동기화)  
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계 (v1.11.0 동기화)  
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) Interface I-7 표준 상호 호환  
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) GAC 지상 구역 관제사 규격서  
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) AMM 비행체 측위/항법 클라이언트 연계  
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) FCP 외루프 제어기 규격서 연계  
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) VAS 고도/센서 규격서 호환  
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) 전역 통신 및 패킷 흐름도 호환  
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) TCA 클러스터 규격서 연계  
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) Alignment 규격서 연계  
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) 도킹암 규격서 연계  
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) 착륙패드 규격서 연계  
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) 활주로 규격서 연계  
 
 ---
 
