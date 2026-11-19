@@ -1,8 +1,8 @@
 ﻿# Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
-> **최종 갱신일**: 2026-11-18  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-405, TASK-406, TASK-130, TASK-125, TASK-501, TASK-404, TASK-103, TASK-403, TASK-117, TASK-014 / 활성 대기: TASK-302, 128, 131, 136, 140, 015, 135, 214, 105, 210, 132, 129)
+> **최종 갱신일**: 2026-11-19  
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-018, TASK-017, TASK-016, TASK-128, TASK-131, TASK-136, TASK-406, TASK-405, TASK-130, TASK-125 / 활성 대기: TASK-302, 019, 140, 015, 020, 021, 135, 214, 105, 210, 132, 129)
 
 ---
 
@@ -22,19 +22,7 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) → **2순위** `TASK-017` (프로토콜·Zone 3 `30..39`·계약 정합화) · `TASK-018` (`installer.lua` 중복·논리 분기·사문화 정리) · `TASK-019` (사양 배지 폐지·제자리 경량화·18종 검증 보완) · `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) · `TASK-015` (전 계층 모듈·신규 프로그램 통합 플레이북 체계) → **3순위** `TASK-020` (`46KB` 초과 Lua 3종 분할/추출) · `TASK-021` (지상 3종 20Hz TUI 분리·클로저 팩토리 분해) · `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
-- [ ] **TASK-017: [2순위 / 프로토콜·계약 정합화] Zone 3 `30..39` 차단 버그 수정, 누락 계약 편입 및 사문화 핸들러·미소비 필드 정리 (`TASK-016` 도출)** (`config/protocol_contracts.json`, `src/3_planning/amm/`, `src/0_infra/runway/`)
-  - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §3 (`E-L2-01`·`02`·`03`·`04`).
-  - **주요 작업**:
-    - [ ] **TASK-017-1**: `amm/modules/{mission_engine.lua, network_manager.lua}` Zone 3 `20..29` 하드코딩을 계약 규격 `20..39`로 확장 (`INVALID_ZONE3_CHANNEL` 차단 해소)
-    - [ ] **TASK-017-2**: `config/protocol_contracts.json`에 E2E 송신 5종(`MSG_ATC_SLOT_ASSIGN/ACK`, `MSG_GPS_NODE_REPORT`, `MSG_GPS_STATUS_REQ/RESP`) + 활성 `src/` 9종 편입 및 `MSG_RUNWAY_TOUCHDOWN`/`VACATED` `AMM` 송신 또는 계약 정합화
-    - [ ] **TASK-017-3**: `amm/main.lua` `BASE_PLUS_5_INFRA_RESPONSES` 송신자 0 사문화 16종 정리 및 미소비 `requiredKeys` 9필드·`optionalKeys` 20필드 정리 (Spec-First 병행)
-- [ ] **TASK-018: [2순위 / 코드 복제·분기·사문화 정리] `installer.lua` 이중 사본 통합, 복사본 논리 분기 3건 정합화 및 사문화 함수·설정키 제거 (`TASK-016` 도출)** (`installer.lua`, `src/`)
-  - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §3 (`E-L3-01`·`02`·`03`·`04`).
-  - **주요 작업**:
-    - [ ] **TASK-018-1**: `src/0_development/installer/installer.lua` 중복 사본 1벌(400줄) 정리 및 `BOOTSTRAP_FILES` 3중 복제 단일화 (`manifest.lua`/`verify_manifest_sync.py`/`audit/guard.py` 동기화)
-    - [ ] **TASK-018-2**: 논리 분기 3건 정합화 — `tca/config_manager.lua` 얕은 복사(중첩 테이블 앨리어싱) → 깊은 복사, `vas/quat.lua` `[0,360)` vs `fcp` `[-180,180]` 오일러 yaw 규약 통일, `vas/state_machine.lua` vs `amm/mission_engine.lua` `save_flight_state` 파라미터 시그니처 통일
-    - [ ] **TASK-018-3**: 교차 검증된 사문화 함수 17종(`tca/tui_dashboard`, `fcp/network_manager`, `fcp/flight_fsm`, `amm`, `vas`, `landing_pad`) 및 미사용 설정키 19종(`amm_config.json` 10·`fcp_config.json` 6·`fdr_config.json` 3) 정리
+> **권장 실행 우선순위**: **1순위** `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) → **2순위** `TASK-019` (사양 배지 폐지·제자리 경량화·18종 검증 보완) · `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) · `TASK-015` (전 계층 모듈·신규 프로그램 통합 플레이북 체계) → **3순위** `TASK-020` (`46KB` 초과 Lua 3종 분할/추출) · `TASK-021` (지상 3종 20Hz TUI 분리·클로저 팩토리 분해) · `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
 - [ ] **TASK-019: [2순위 / 사양 경량화·동기화 비용 절감] 인라인 피어 버전 배지 폐지, `VAS`/`AMM`/`FCP` 제자리 `Extract`, 18종 검증 보완 (`TASK-016` 도출)** (`docs/`, `tools/verify_all_specs.py`)
   - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §3·§4.3 (`E-L4-01`·`02`·`03`·`04`).
   - **주요 작업**:
@@ -112,17 +100,17 @@
     4. `[I-9]` 4계층 재바인딩 Option A 정렬: `MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK`(`transactionId`, `action`, `oldBaseChannel`, `newBaseChannel`, `500ms` 워치독, `"READY"`/`"COMMITTED"`/`"ROLLED_BACK"`/`"FAILED"`).
     5. `ASA §3.2` 설정 스키마 정합화: `schemaVersion` vs `version` 단일화, `ver == "1.9.5"` 및 `domainId` 검증 복원, `s.ELEV or s.elevator` 등 듀얼키 폴백(Zero-Fallback) 제거.
 
-- [ ] **TASK-210: [3순위 / 연계 · ASA 실노드 연동] ASA v1.8.0 구현 정합화 및 VAS·Alignment 실노드 연동 검증 (`MSG_AERO_*` · `MSG_SURFACE_DISCOVER_*` · 4계층 재바인딩 반영)** (`docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md` (현재 v1.8.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.14.0 Implemented), `docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md` (현재 v2.9.0 Implemented), `src/1_control/asa/`)
+- [ ] **TASK-210: [3순위 / 연계 · ASA 실노드 연동] ASA v1.8.0 구현 정합화 및 VAS·Alignment 실노드 연동 검증 (`MSG_AERO_*` · `MSG_SURFACE_DISCOVER_*` · 4계층 재바인딩 반영)** (`docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md` (현재 v1.8.0 Approved), `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md` (현재 v1.15.0 Implemented), `docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md` (현재 v2.9.0 Implemented), `src/1_control/asa/`)
   - **권장 착수 순위**: **3순위** (`TASK-105` 연계 TASK — 3순위 섹션 동시 배치·병행 수행)
   - **선행·연계 의존성**:
-    - **기완료 기반 (`TASK-206`·`TASK-207`·`TASK-208`·`TASK-209`·`TASK-013` 완료)**: `VAS v1.20.0` (당시 기준, 현행 `v1.25.0 Implemented`; `actuator_adapter_asa.lua`·`Base+11` 송신단), `TCA v1.12.0` (당시 기준, 현행 `v1.14.0 Implemented`; `Option A` 재바인딩·`Base_hangar+3` 탐색), `ALIGNMENT v2.7.0` (당시 기준, 현행 `v2.9.0 Implemented`; `discovery_client.lua` `MSG_SURFACE_DISCOVER_REQ/ACK`·`profile_exporter.lua`) 정합화 및 1차 E2E(`244c940`) 완료.
+    - **기완료 기반 (`TASK-206`·`TASK-207`·`TASK-208`·`TASK-209`·`TASK-013` 완료)**: `VAS v1.20.0` (당시 기준, 현행 `v1.26.0 Implemented`; `actuator_adapter_asa.lua`·`Base+11` 송신단), `TCA v1.12.0` (당시 기준, 현행 `v1.15.0 Implemented`; `Option A` 재바인딩·`Base_hangar+3` 탐색), `ALIGNMENT v2.7.0` (당시 기준, 현행 `v2.9.0 Implemented`; `discovery_client.lua` `MSG_SURFACE_DISCOVER_REQ/ACK`·`profile_exporter.lua`) 정합화 및 1차 E2E(`244c940`) 완료.
     - **연계 TASK (`TASK-105`)**: **`TASK-105` (ASA 본 구현 및 `FLT-HIGH-12` 5대 골격 결함 해소)** — `TASK-013` Q4 방안 B에 따라 `src/1_control/asa/**`·`tests/1_control/asa/**`가 동결(`0 diff`)되어 있으므로, 3순위 `TASK-105` 착수 시 본 과제를 연계·병행 수행함.
   - **배경 및 목적**: ① **[기반 완료]** `TCA`·`Alignment`·`VAS`(`actuator_adapter_asa.lua` 송신단·`Base+11`) 1차 E2E(`244c940`) 및 `TASK-013` 정합화 완료. ② **[잔여 범위 — `TASK-105` 연계 수행]** 동결 중인 `ASA` 본 구현과 함께 `TASK-105`의 `FLT-HIGH-12` 5대 결함을 해소하고, 다중 노드 E2E(`AMM ↔ FCP ↔ VAS ↔ ASA ↔ Alignment`) 검증 후 `ASA` 사양서를 `Implemented`로 승격함.
 
 - [ ] **TASK-132: [3순위 / 비상 비행 제어] 추력 상실·대파(Battle Damage) 시 비상 활공(Best-Glide) 및 오토로테이션 가드** (`src/1_control/vas/`, `src/2_guidance/fcp/`, `src/3_planning/amm/`)
   - **권장 착수 순위**: **3순위** (고정익·하이브리드 기체용 공력 조종면 `TASK-105`/`210` `ASA` 체계와 연계 — 2순위→3순위 조정, 착수 시 Spec-First 사양 개정 선행)
-  - **사양서 상태**: 개정 대기 (`VAS v1.25.0`, `FCP v2.5.0`, `AMM v2.6.0` Implemented 기반 추가 반영 필요)
-  - **대상 사양서**: `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.25.0 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.5.0 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.6.0 Implemented)
+  - **사양서 상태**: 개정 대기 (`VAS v1.26.0`, `FCP v2.6.0`, `AMM v2.7.0` Implemented 기반 추가 반영 필요)
+  - **대상 사양서**: `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md` (현재 v1.26.0 Implemented), `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md` (현재 v2.6.0 Implemented), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.7.0 Implemented)
   - **배경 및 필요성**: Create: Aeronautics / Create: Big Cannons 운용 환경에서 엔진 피격, 회전력(SU) 과부하, 또는 다수 추진기 TOTAL_LOSS로 총 가용 추력이 기체 중량을 지탱하지 못할 때(availableThrust < weight), 기존 호버/고도 유지 루프는 기수를 과도하게 들어 올려 실속(Stall)·스핀 추락을 유발함.
   - **주요 작업**:
     - [ ] **TASK-132-1**: VAS 실시간 추력 여유도 감시기 구현 — TCA 상태 피드백 합산 추력이 임계치 미만으로 하락 시 `POWER_LOSS_EMERGENCY` 상태 전이
@@ -131,7 +119,7 @@
 
 - [ ] **TASK-129: [3순위 / 적응형 비행 제어] 비행 중 질량·무게중심(CoG) 변화 및 구동기 열화 대응 실시간 트림 보정기** (`src/1_control/vas/`, `src/1_control/tca/`, `docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`, `docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md`)
   - **권장 착수 순위**: **3순위** (Spec-First 절차상 `VAS`·`TCA` 사양서 `Approved` 개정 선행)
-  - **사양서 상태**: 추후 착수 시점 개정 예정 (현재 `VAS v1.25.0 Implemented`, `TCA v1.14.0 Implemented` → 착수 시점 Spec-First `Approved` 개정 및 연동)
+  - **사양서 상태**: 추후 착수 시점 개정 예정 (현재 `VAS v1.26.0 Implemented`, `TCA v1.15.0 Implemented` → 착수 시점 Spec-First `Approved` 개정 및 연동)
   - **배경 및 필요성**: Alignment(v2.8.0)는 격납고 정지 상태의 관성 텐서만 측정하므로, 비행 중 화물 투하(TASK-401), 연료 소모, 또는 특정 추진기/조종면의 DEGRADED 판정 시 피치·롤 정적 불균형과 적분항 와인드업(Wind-up)이 발생함.
   - **주요 작업**:
     - [ ] **TASK-129-1**: VAS 수평 정속 비행 구간 감지 및 지속 편향 PID 적분항을 정적 트림 오프셋으로 이관하는 적응형 트림 학습기(Adaptive Trim Estimator) 구현 (비정상 급기동 시 학습 동결 가드 포함)
@@ -158,9 +146,9 @@
   - **사양서 상태**: `docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md` (v1.12.0 Approved)
   - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (`AMM (Node 03)` 주도 4단계 랑데부 연동; 일정 연기 — **착수 전 `TASK-016` 도출 선행 조건**: `§4.2` `CH 50002` ATC 직접 제어 제거 및 `GAC Base_sec+1` 경유 통일, `Base+5` 기체별 바인딩을 `Base_sec+10+Idx`로 일원화, `§3.4` `seq`·`"ABORTED"` stage 보완; 구현 시 `manifest.lua`·`verify_spec_status.py`·`config/protocol_contracts.json`·`tools/run_boot_smoke.py` 등록 필요)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
-  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.38.0 Approved) Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
+  - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.39.0 Approved) Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
-- [ ] **[연기] TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.38.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.21.0 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.6.0 Implemented), `docs/specs/4_mission/`)
+- [ ] **[연기] TASK-401: PAYLOAD 계층(Zone 3) 통신 스키마 정의** (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` (현재 v1.39.0 Approved), `docs/system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md` (현재 v2.22.0 Approved), `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md` (현재 v2.7.0 Implemented), `docs/specs/4_mission/`)
   - **상태 및 이관 사유**: 선행 우선순위 취소 및 로드맵 백로그 이관 (`TASK-204`는 `AMM v2.0.0` 기본 `ACT_PAY_BUS_CMD`/`ACT_PAY_REDSTONE`/`ACT_PAY_SET_ROI` 계약으로 독립 구현 완료; 세부 탑재체 행동은 `[로드맵: TASK-401]` `TBD`로 이관)
   - **사양서 상태**: PAYLOAD 계층 전용 사양서 미작성 (Draft → Approved 수립 및 마스터 ICD Interface I-11·전체 구조도·AMM 사양서 동기화 필요)
   - **배경 및 목적**: 현행 마스터 ICD Interface I-11(`Base+20~29`, Zone 3 탑재체 버스)에는 `MSG_PAYLOAD_REQ`/`MSG_PAYLOAD_ACK` 기본 예시 패킷만 정의되어 있으며, 전체 구조도의 세부 채널 구분(`Base+20` `CH_PAYLOAD_BUS`, `Base+21` `CH_WEAPON_BUS`, `Base+22~29` 예비) 및 다양한 탑재체 노드(화물 투하, 마그넷 래치, 엄빌리컬 급유/충전, `CC:Radars`/터렛 무장 제어 등) 간 표준 통신 계약이 미비함. 탐색/기능 등록(Discovery & Capability), 상태/헬스 텔레메트리, 명령·응답(`ACK`/`NACK`)·오류 코드, 안전 인터록 및 채널 오프셋 배분 규칙을 포함한 PAYLOAD 계층 표준 통신 스키마를 정의함
@@ -190,6 +178,16 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
+
+- [x] **TASK-018: 코드 복제·분기·사문화 정리 (`installer.lua` 단일 SSOT화, 복제 분기 3건 정합화, 사문화 함수 17·설정키 19 제거) (`TASK-018-1..3`)** (완료일: 2026-11-19)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-19-task-017-018-protocol-and-code-hygiene.md` (Locked Rulings `R4`·`R5`)
+  - **핵심 성과**: `src/0_development/installer/installer.lua` 및 `manifest.BOOTSTRAP_FILES` 중복 제거로 루트 `/installer.lua` 단일 SSOT 확립(`verify_manifest_sync.py`·`sync_gdrive.py`·`audit/guard.py`·`harness` 동기화, `gdrive_mapping.json` 135엔트리 유지), `save_flight_state` 3인자 단일화·`quat.to_euler` 정규화/`[-1,1]` 클램프(`vas [0,360)`·`fcp [-180,180]` 보존)·`tca/config_manager` 재귀 `deep_copy`, 10파일 사문화 함수 17종(`DEAD_HITS=0`) 및 미사용 설정키 19종(`amm_config.json` 10·`fcp_config.json` 6·`fdr_config.json` 3; `R5` 소프트 버전·`coreTelemetryTimeoutMs` 적분기 동결·`emergencyMaxBankDeg` `75°`) 정리.
+  - **승격·검증**: `FDR v0.5.0`, `INSTALLER v1.3.0`, `LANDING_PAD v2.6.0`, `VAS v1.26.0`, `TCA v1.15.0`, `FCP v2.6.0`, `AMM v2.7.0` `Implemented` 승격(`14 Implemented, 4 Approved`); Lua 5.2 `139/139 PASS`, 단위 `655/655 PASS`, E2E `23/23 PASS`(`566`패킷 `0` violations), 부트 `13/13 PASS`, 돌연변이 `25/25 KILLED(100.0%)`, `audit guard`·`verify_runtime_wiring`·`verify_manifest_sync` 통과.
+
+- [x] **TASK-017: 프로토콜·계약 정합화 (Zone 3 `30..39` 확장, 누락 계약 14종 편입, 사문화 RX·미소비 필드 정리) (`TASK-017-1..3`)** (완료일: 2026-11-19)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-19-task-017-018-protocol-and-code-hygiene.md` (Locked Rulings `R1`·`R2`·`R3`)
+  - **핵심 성과**: `config/protocol_contracts.json`(+14패킷, -5유령 키, +3가이드 키)·마스터 ICD `v1.39.0`·전체 구조도 `v2.22.0` 동기화, `AMM` Zone 3 `20..29`→`20..39` 확장, `facility_client` `MSG_RUNWAY_TOUCHDOWN`/`VACATED` 빌더 및 `pad_fsm` `touchdownTime`·`runway_fsm` `touchdownSpeed`/`arrestedWire`/`exitTaxiway`·`DIVERT` `divertChannel` 전환 구현, `AMM` `BASE_PLUS_5_INFRA_RESPONSES` 구형 14종 제거(`MSG_DOCK_CAPTURE_STAGE`/`MSG_UMBILICAL_STATUS` 보존), 비-ASA `requiredKeys` 전량 배선(`audit_baselines.json` `9 → 1`) 및 `R2` `PBIT` 실패 게이트·`R3` `VAS` 롤백/`TCA` `safetyMaxTiltDeg` 경계 구현.
+  - **승격·검증**: `LANDING_PAD v2.6.0`, `RUNWAY v1.13.0`, `VAS v1.26.0`, `TCA v1.15.0`, `AMM v2.7.0` `Implemented` 승격(`14 Implemented, 4 Approved`); `verify_contracts.py` `0 errors`, `verify_all_specs.py --check-readmes` `0 Errors/0 Warnings`, `run_e2e_tests.py --check-baseline` `23/23 PASS`(`566`패킷 `0` violations), 동결 `asa/**` `0 diff`.
 
 - [x] **TASK-016: 제품 아키텍처(L1~L4) 효율성·효용성 감사 및 계측·회귀 가드 구축** (완료일: 2026-11-18)
   - **설계서 및 최종 보고서**: `docs/superpowers/specs/2026-11-18-task-016-architecture-efficiency-audit-design.md`, `reports/underReview/Architecture_Efficiency_Audit_1_11182026.md`, 원자료 `reports/audit_data/2026-11-18/`
@@ -229,12 +227,4 @@
   - **실행 계획서**: `docs/superpowers/plans/2026-11-15-task-125-40ch-protocol-remediation.md`
   - **핵심 성과**: `Base+8` (`CH_CALIBRATION_INIT`)·`Base+9` (`CH_EMERGENCY_CORE`) 채널 격리 및 `Base+0` VAS 런타임 미개방, `Base+3` `VAS` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 우선권 + `250ms` 타이머 히스테리시스, `Base+30..39` Zone 3 확장(`formationLink` 제거, 편대 `TBD` 광역 데이터링크 이관), `GCS` `BW=40` 고정 검증·`REASSIGNED`·영속 리스(`OFFLINE_RESERVED`)·4인자 충돌 검사, `AMM` 프로브 지터/2회 프로브/부팅 직후 `Base+0` 응답자/전 블록(`Base+0..39`) 침범 감시/무음 리셋, `FCP` `Base+9` `E_STOP` 비상 전이, `Alignment` `Base+8` 바인딩 및 `FDR` `Base+9` 감청 구현 (`asa/` `0 diff` 유지).
   - **승격·검증**: `AMM v2.4.0`, `VAS v1.23.0`, `FCP v2.3.0`, `GCS v1.3.0`, `ALIGNMENT v2.8.0`, `FDR v0.4.0` `Implemented` 승격(`ICD v1.35.0`, `Diagram v2.19.0` `Approved` 유지, `14 Implemented, 4 Approved`); 병합 통합 후 단위 15타겟 `608/608 PASS`, E2E 10스위트 `20/20 PASS` (`534`패킷 `0` violations), 부트 스모크 `13/13 PASS`, `verify_contracts.py` `0 errors`, `verify_runtime_wiring.py` `0 violations`, `verify_all_specs.py`·`verify_manifest_sync.py` `0 Errors, 0 Warnings`, Lua 5.2 `140/140 PASS`, 돌연변이 `25/25 KILLED` (`100.0%`), 에디터 `24/24 PASS`.
-
-- [x] **TASK-501: Google Drive 전수 패키지(135파일) 업로드·매핑 동기화 및 `--strict-gdrive-packages` 기본 게이트 활성화** (완료일: 2026-11-16)
-  - **핵심 성과**: `tools/sync_gdrive.py` 패키지 원격 파일명 `<modId>__<dest_underscored>` 충돌 제거, `--max 0` 전체 목록 조회, `BOOTSTRAP_FILES`/`SHARED_LIBS`/전 15모듈 `MODULES.*.files` 전수 `--embed` 및 변경된 `manifest.lua` 재업로드, `tools/verify_manifest_sync.py` `strict_gdrive_packages=True` 기본 활성화 (`TASK-501-1~3`).
-  - **검증**: `sync_gdrive.py verify --category all` (`135 mapped files PASS`), `verify_manifest_sync.py --strict-gdrive-packages` (`15 modules, 134 manifest paths, 145 source files, 135 GDrive entries, 0 Errors, 0 Warnings`), `test_gdrive_sync.py`·`test_manifest_sync_verifier.py` `15/15 PASS`.
-
-- [x] **TASK-404: GCS WebSocket Live Bridge, GAC·시설물 기반 월드 프리셋 자동 생성 및 실시간 전술 지도·원클릭 미션 무선 푸시** (완료일: 2026-11-16)
-  - **핵심 성과**: stdlib `asyncio` 로컬 RFC 6455 서버(`tools/gcs_live_bridge.py`, `ws://127.0.0.1:8765`), `GCS v1.2.0` (`live_bridge_client.lua`·`CH 50003`/`50004`·전 기체 `Base+3`/`+0` 동시 구독), `AMM v2.3.0` `MSG_MISSION_CMD` `"LOAD"` 인라인 `/missions/<id>.json` 저장·적재, `tools/amm_mission_editor.html v0.5.0` Live Mode (`WORLD_PRESET_SYNC`→`WorldStore` 병합·다중 기체 마커/궤적·`'Push to Aircraft'` 모달) 구현 (`TASK-404-1~3`).
-  - **승격·검증**: `GCS v1.2.0`·`AMM v2.3.0`·`AMM_MISSION_EDITOR v0.5.0` `Implemented` 승격(`14 Implemented, 4 Approved`), `0_infra/gcs` `30/30 PASS`, `3_planning/amm` `138/138 PASS`, `test_amm_mission_editor.py` `24/24 PASS`, `test_gcs_live_bridge.py` 통과.
 

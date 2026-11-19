@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-19 — 프로토콜·계약 정합화(TASK-017) 및 코드 복제·분기·사문화 정리(TASK-018) (TASK-017, TASK-018)
+
+- **배경 및 확정 설계 결정(`R1~R5`)**: `TASK-016` 감사(`Architecture_Efficiency_Audit_1_11182026.md`)에서 도출된 `TASK-017`·`TASK-018`을 격리 워크트리(`.worktrees/feat-task-017-018-hygiene`, `feat/task-017-018-hygiene`)에서 Spec-First + Subagent-Driven Development(`docs/superpowers/plans/2026-11-19-task-017-018-protocol-and-code-hygiene.md`)로 수행하고 5대 결정(`R1~R5`)을 확정함:
+  - **`R1` (워크트리 및 순차 실행)**: Task 1 Spec-First(`Approved` 8종) → Task 2~8 TDD·리뷰 → Task 9 전체 게이트 검증 및 `Implemented` 재승격 순으로 진행(`src/1_control/asa/**`·`tests/1_control/asa/**`·`docs/specs/1_control/asa/**`·`config/gdrive_mapping.json` 무변경 유지).
+  - **`R2` (교정·PBIT 안전 인터록)**: `AMM` `enter_checkpoint`는 `takeoffPermitted` 여부와 무관하게 `overallStatus == "FAIL"` 또는 개별 `checks[*].status == "FAIL"`일 때만 `PBIT_TAKEOFF_INTERLOCK`로 이륙을 차단(`"WARN"`은 경고 메타데이터만 보존하고 허용); `VAS` `MSG_PROFILE_SYNC`는 `"FULL_6DOF_PASS"` 또는 `"AERO_ASSISTED_PASS"`일 때만 `recalibrationRequired`를 해제하고 `"ACCEPTED"`를 응답(그 외 `"REJECTED"` 유지).
+  - **`R3` (보조 계약 필드 정책)**: `TCA` 비-PBIT `MSG_CALIB_PULSE`는 `0 < safetyMaxTiltDeg <= 45` 검증, `VAS` `MSG_PROFILE_SYNC` 적용 전 백업 스냅샷 보관 후 `MSG_CALIBRATION_CLOSE(saveProfile=false)` 시 디스크·인메모리 롤백 및 `DISARMED` 전이, `AMM` `on_atc_clearance`는 `status == "DIVERT"` + `divertChannel` 수신 시 섹터 채널을 전환.
+  - **`R4` (`installer.lua` 단일 원본)**: `src/0_development/installer/installer.lua`와 `manifest.BOOTSTRAP_FILES` 중복을 제거해 루트 `/installer.lua`를 단일 `BOOTSTRAP_FILES` SSOT로 확립(`manifest.lua` 내 `require("installer")` 미추가, `config/gdrive_mapping.json` 135엔트리 유지).
+  - **`R5` (오일러 규약 및 `FCP` 설정)**: `vas` `[0,360)`와 `fcp` `[-180,180]` yaw 도메인을 보존한 채 정규화·`asin` `[-1,1]` 클램프를 적용하고, `fcp_config.json`의 `"version": "2.1.0"`·`"loopFrequencyHz": 20`을 유지한 채 소프트 버전 경고, `coreTelemetryTimeoutMs` 적분기 동결/플래그, `rebindAckTimeoutMs`, `emergencyMaxBankDeg` `75.0°`(`EMERGENCY_MANEUVER`/`EMERGENCY_LAND`)를 배선.
+- **구현 및 승격 내역**:
+  1. **Spec/Contract 동기화 (`Task 1`, `Task 9`)**: `config/protocol_contracts.json`(+14 패킷, -5 유령 키, +3 가이드 키), 마스터 ICD `v1.39.0`, 전체 구조도 `v2.22.0` 동기화 및 변경 대상 8종 사양서(`FDR v0.5.0`, `INSTALLER v1.3.0`, `LANDING_PAD v2.6.0`, `RUNWAY v1.13.0`, `VAS v1.26.0`, `TCA v1.15.0`, `FCP v2.6.0`, `AMM v2.7.0`) 개정 후 `Implemented` 승격(`14 Implemented, 4 Approved`).
+  2. **프로토콜·계약 정합 (`Task 2~5`)**: `AMM` Zone 3 경계 `20..29` → `20..39` 확장, `facility_client` `MSG_RUNWAY_TOUCHDOWN`/`VACATED` 빌더 및 `pad_fsm` `touchdownTime`·`runway_fsm` `touchdownSpeed`/`arrestedWire`/`exitTaxiway` 소비, `AMM` `BASE_PLUS_5_INFRA_RESPONSES` 구형 14종 제거(`MSG_DOCK_CAPTURE_STAGE`/`MSG_UMBILICAL_STATUS` 보존), 비-ASA `requiredKeys` 전량 배선(`config/audit_baselines.json` `unconsumed_required_keys_baseline` `9 → 1`).
+  3. **복제·사문화 정리 (`Task 6~8`)**: `src/0_development/installer/installer.lua` 삭제 및 하네스/도구/가드(`guard.py`·`verify_manifest_sync.py`·`sync_gdrive.py`) 루트 단일 원본 정렬, `save_flight_state` 3인자 단일화·오일러 클램프·`tca/config_manager` 재귀 `deep_copy`, 10파일 사문화 함수 17종 제거(`DEAD_HITS=0`) 및 미사용 설정키 19종(`amm_config.json` 10·`fcp_config.json` 6·`fdr_config.json` 3) 정합화.
+- **검증**: Lua 5.2 `139/139 PASS`, 계약 `0 errors`, 배선 `0 violations`, 매니페스트 3-Way `0 Errors/0 Warnings`, 사양 17종+README `0 Errors/0 Warnings`, 상태 `18종(14 Implemented, 4 Approved) PASS`, 부트 `13/13 PASS`, 단위 `15타겟 655/655 PASS`, E2E `23/23 PASS`(`566`패킷 `0 violations`, Baseline `0 warnings`), 돌연변이 `25/25 KILLED(100.0%)`, 에디터 `30/30 PASS`, 하네스 회귀·컨텍스트 정합성·감사 가드 통과, 동결 `asa/**`·`gdrive_mapping.json` `0 diff`.
+
 ## 2026-11-18 — 제품 아키텍처(L1~L4) 효율성·효용성 검사 및 계측·회귀 가드 구축 (TASK-016)
 
 - **배경 및 범위 확정**: 정합성·결함 전수 감사(`TASK-013`)에 이어 구조의 비용 대비 효용을 평가하기 위해 Q1~Q4·추가 지침을 확정함: ① 범위는 제품 아키텍처 L1(토폴로지)·L2(RF/프로토콜)·L3(코드 구조)·L4(사양 체계)로 한정, ② `harness/simulation/`·`runner_lib.lua`·`run_e2e_tests.py`에 `--profile` 틱/명령어/버스 계측 추가, ③ `tools/audit/` 영구 편입 및 회귀 가드 활용, ④ 렌즈별 병렬 검토(`R-L1..R-L4`) + 독립 교차 검증(`V-A`, `V-B`), ⑤ `docking_arm` `[SPEC-ONLY]` 검토 및 대형 모듈·사양서 분할 트랙(S) 수행.
