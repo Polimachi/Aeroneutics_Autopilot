@@ -3,8 +3,15 @@
 local network_manager = {}
 network_manager.__index = network_manager
 
+local ZONE3_MIN_OFFSET = 20
+local ZONE3_MAX_OFFSET = 39
+
 local function is_finite_int(v)
     return type(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge and math.floor(v) == v
+end
+
+local function is_zone3_channel_for_base(ch, base)
+    return ch >= base + ZONE3_MIN_OFFSET and ch <= base + ZONE3_MAX_OFFSET
 end
 
 local function open_ch_list(m, ch_list)
@@ -108,7 +115,7 @@ function network_manager:apply_rebind(new_base)
 
     local offsets = {}
     for ch, open in pairs(self.openPayloadChannels) do
-        if open and ch >= old_base + 20 and ch <= old_base + 29 then
+        if open and is_zone3_channel_for_base(ch, old_base) then
             offsets[#offsets + 1] = ch - old_base
         end
     end
@@ -263,14 +270,14 @@ function network_manager:is_payload_channel(channel)
     if not is_finite_int(channel) then
         return false
     end
-    return channel >= self.baseChannel + 20 and channel <= self.baseChannel + 29
+    return is_zone3_channel_for_base(channel, self.baseChannel)
 end
 
 function network_manager:resolve_payload_channel(channel_or_offset)
     if not is_finite_int(channel_or_offset) then
         return nil, "INVALID_ZONE3_CHANNEL"
     end
-    if channel_or_offset >= 20 and channel_or_offset <= 29 then
+    if channel_or_offset >= ZONE3_MIN_OFFSET and channel_or_offset <= ZONE3_MAX_OFFSET then
         return self.baseChannel + channel_or_offset, nil
     end
     if self:is_payload_channel(channel_or_offset) then
