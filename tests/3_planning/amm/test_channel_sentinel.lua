@@ -498,4 +498,71 @@ describe("AMM channel_sentinel 40-channel validation, jittered multi-probe, boot
 
         cleanup_lease(lease_path)
     end)
+
+    it("routes foreign existingDomain and inactive responderStatus probe ACKs through negotiate_and_probe without boolean conflict flags", function()
+        local lease_path = "config/test_lease_task5_step_probing.json"
+        cleanup_lease(lease_path)
+
+        local st = channel_sentinel.init({
+            system = { domainId = "AIRCRAFT_01", hardwareUuid = "AMM-STEP-01" },
+            channels = { baseChannel = 10000 },
+        }, 1000, lease_path)
+        channel_sentinel.start_bootstrap(st, 1000)
+        assert_true(channel_sentinel.on_block_assign(st, {
+            status = "ASSIGNED",
+            baseChannel = 10080,
+            bandwidth = 40,
+        }, 1020, function() return 0 end))
+
+        local st_wait = channel_sentinel.negotiate_and_probe(st, 1020)
+        assert_eq(st_wait, "PROBING")
+
+        -- 1. Inactive responderStatus passes through step_probing: records lastResponderStatus and still completes window cleanly
+        local st_rel = channel_sentinel.negotiate_and_probe(st, 1250, {
+            probe = {
+                type = "MSG_CHANNEL_PROBE_ACK",
+                payload = {
+                    existingDomain = "AIRCRAFT_77",
+                    occupiedBase = 10080,
+                    status = "CONFLICT_DETECTED",
+                    responderStatus = "RELEASED",
+                    responderUuid = "OTHER-REL-2",
+                },
+            },
+        }, function() return 0 end)
+        assert_eq(st.lastResponderStatus, "RELEASED")
+        assert_eq(st_rel, "PROBING")
+
+        -- 2. Foreign existingDomain without conflict=true or status="CONFLICT_DETECTED" still triggers REASSIGN_REQUEST via step_probing
+        local st2 = channel_sentinel.init({
+            system = { domainId = "AIRCRAFT_02", hardwareUuid = "AMM-STEP-02" },
+            channels = { baseChannel = 10000 },
+        }, 2000, lease_path)
+        channel_sentinel.start_bootstrap(st2, 2000)
+        channel_sentinel.on_block_assign(st2, {
+            status = "ASSIGNED",
+            baseChannel = 10120,
+            bandwidth = 40,
+        }, 2020, function() return 0 end)
+        channel_sentinel.negotiate_and_probe(st2, 2020)
+
+        local st_conf = channel_sentinel.negotiate_and_probe(st2, 2050, {
+            probe = {
+                type = "MSG_CHANNEL_PROBE_ACK",
+                payload = {
+                    existingDomain = "AIRCRAFT_88",
+                    occupiedBase = 10120,
+                    status = "ACTIVE",
+                    responderStatus = "ACQUIRED",
+                    responderUuid = "OTHER-ACT-2",
+                },
+            },
+        }, function() return 0 end)
+        assert_eq(st_conf, "REASSIGN_REQUEST")
+        assert_eq(st2.lastConflictDomain, "AIRCRAFT_88")
+        assert_eq(st2.lastResponderStatus, "ACQUIRED")
+        assert_eq(st2.reassignAttempts, 1)
+
+        cleanup_lease(lease_path)
+    end)
 end)

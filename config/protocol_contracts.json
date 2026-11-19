@@ -1967,7 +1967,9 @@
             "activeConstraintProfile",
             "commandedCollectiveThrust"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "coreTelemetryTimedOut"
+          ],
           "enums": {
             "fsmState": [
               "BOOT",

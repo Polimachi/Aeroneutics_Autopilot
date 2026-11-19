@@ -349,8 +349,7 @@ end
 
 local function step_probing(state, now_ms, inbound, rng)
     local p = inbound and inbound.probe
-    if p and p.payload and (p.payload.conflict == true or p.payload.status == "CONFLICT_DETECTED") then
-        channel_sentinel.on_probe_ack(state, p)
+    if p and channel_sentinel.on_probe_ack(state, p) then
         return state.status, nil
     end
     if (now_ms - state.probeStartMs) >= state.channelProbeWaitMs then

@@ -749,6 +749,7 @@ stateDiagram-v2
 | `payload.navStale` | boolean | true/false | 필수 | `posEpoch` 정체 또는 `navValid == false` 임계(`500ms`) 초과 여부 |
 | `payload.activeConstraintProfile` | string | 프로파일 코드 | 필수 | 실제 적용 중인 제약 프로파일 (예: 스웨이 추력기 결손 시 `"TILT_ASSISTED"` 폴백 반영) |
 | `payload.commandedCollectiveThrust` | float | $0.0 \sim 1.0$ | 필수 | 현재 `Base+1`로 하달 중인 정규화 집합 추력 |
+| `payload.coreTelemetryTimedOut` | boolean | true/false | 선택 | `VAS Base+2` 코어 텔레메트리 수신이 `coreTelemetryTimeoutMs`를 초과해 적분기가 동결되었는지 여부 |
 
 ```lua
 -- FCP -> AMM: 외루프 상태 피드백 패킷 예시 (MSG_OUTER_LOOP_STATUS, Base+4)

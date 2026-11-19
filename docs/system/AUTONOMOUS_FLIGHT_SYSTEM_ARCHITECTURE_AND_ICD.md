@@ -1617,6 +1617,7 @@ flowchart TD
 | `payload.navStale` | boolean | true/false | 필수 | `posEpoch` 정체 또는 `navValid == false` 임계 초과 여부 |
 | `payload.activeConstraintProfile` | string | 프로파일 코드 | 필수 | `FCP`가 실제 적용 중인 기동 제약 프로파일 (예: 스웨이 추력기 상실 시 틸트 폴백 반영) |
 | `payload.commandedCollectiveThrust` | float | $0.0 \sim 1.0$ | 필수 | `FCP`가 현재 `Base+1`로 하달 중인 정규화 집합 추력 |
+| `payload.coreTelemetryTimedOut` | boolean | true/false | 선택 | `VAS Base+2` 코어 텔레메트리 수신이 `coreTelemetryTimeoutMs`를 초과해 적분기가 동결되었는지 여부 |
 
 ```lua
 -- FCP -> AMM: 외루프 상태 피드백 패킷 예시 (MSG_OUTER_LOOP_STATUS, Base+4)
@@ -1688,18 +1689,18 @@ flowchart TD
 ### 5.1 온보드 및 인프라 프로그램 사양·구현 현황
 | 프로그램 명 | 노드 ID | 사양 버전 / 상태 | 구현 및 검증 현황 | 비고 |
 | :--- | :---: | :---: | :--- | :--- |
-| **AMM** | Node 03 | `v2.7.0` (`Approved`) | `v2.6.0` 기반 `TASK-017`/`018`·`TASK-131`/`128`: `PBIT` `FAIL` 인터록 단일화, `DIVERT`/`divertChannel` 분기, 정적 죽은 RX·설정 키 제거 및 계약 정합 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+8/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.6.0` (`Implemented`) |
-| **FCP** | Node 04 | `v2.6.0` (`Approved`) | `v2.5.0` 기반 `TASK-017`/`018`: `config/fcp_config.json` `version="2.1.0"` 소프트 검증·`coreTelemetryTimeoutMs`·`emergencyMaxBankDeg`·`rebindAckTimeoutMs`·`loopFrequencyHz` 소비 정합화 | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
-| **VAS** | Node 01 | `v1.26.0` (`Approved`) | `v1.25.0` 기반 `TASK-017`/`018`: `MSG_CALIBRATION_INIT` `targetCraftDomain`/`targetThruster`, `saveProfile=false` 롤백, `controllabilityStatus` 판정, `currentFsmState` 제거 | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
-| **TCA 클러스터** | Node 02-xx | `v1.15.0` (`Approved`) | `v1.14.0` 기반 `TASK-017`/`018`: `MSG_CALIB_PULSE` `safetyMaxTiltDeg` 경계, `MSG_CALIB_BAY_BIND`/`MSG_ACTUATOR_DISCOVER_REQ` 정합, 재귀 `deep_copy` | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독, $Base_{\text{hangar}}+4/+5$ |
+| **AMM** | Node 03 | `v2.7.0` (`Implemented`) | `v2.6.0` 기반 `TASK-017`/`018`·`TASK-131`/`128`: `PBIT` `FAIL` 인터록 단일화, `DIVERT`/`divertChannel` 분기, 정적 죽은 RX·설정 키 제거 및 계약 정합 | 듀얼 모뎀 `CH 50000~50004`, `60001/60002`, `Base_sec+*`, `Base+0/+2/+3/+4/+5/+8/+9/+20~39`, $Base_{\text{hangar}}+4/+5$, WebUI 에디터 `v0.6.0` (`Implemented`) |
+| **FCP** | Node 04 | `v2.6.0` (`Implemented`) | `v2.5.0` 기반 `TASK-017`/`018`: `config/fcp_config.json` `version="2.1.0"` 소프트 검증·`coreTelemetryTimeoutMs`·`emergencyMaxBankDeg`·`rebindAckTimeoutMs`·`loopFrequencyHz` 소비 정합화 | 단일 `top` 모뎀 `Base+4/+2/+1/+9`, $Base_{\text{hangar}}+4/+5$, $g=11.0\text{ m/s}^2$, `QUATERNION_RATE`, 7-State FSM |
+| **VAS** | Node 01 | `v1.26.0` (`Implemented`) | `v1.25.0` 기반 `TASK-017`/`018`: `MSG_CALIBRATION_INIT` `targetCraftDomain`/`targetThruster`, `saveProfile=false` 롤백, `controllabilityStatus` 판정, `currentFsmState` 제거 | `SO(3)` 내루프, `Base+9 E_STOP > MFD_ACRO > FCP`, `Base+3` 20Hz `ACRO` HUD, $Base_{\text{hangar}}+4/+5$ |
+| **TCA 클러스터** | Node 02-xx | `v1.15.0` (`Implemented`) | `v1.14.0` 기반 `TASK-017`/`018`: `MSG_CALIB_PULSE` `safetyMaxTiltDeg` 경계, `MSG_CALIB_BAY_BIND`/`MSG_ACTUATOR_DISCOVER_REQ` 정합, 재귀 `deep_copy` | `Base+10` (구 `Base+6` `[DEPRECATED]`), REDSTONE/API 듀얼 모드, 300ms 워치독, $Base_{\text{hangar}}+4/+5$ |
 | **ASA 클러스터** | Node 06-xx | `v1.8.0` (`Approved`) | `MSG_AERO_CMD`/`MSG_AERO_STATUS.interactionMode`·`[I-9]` 정합 사양 확정 (`OTA` 연동 동결 제외) | `Base+11` (구 `Base+7` `[DEPRECATED]`), 300ms Safe Glide Trim |
 | **Alignment** | Node 05 | `v2.9.0` (`Implemented`) | `v2.8.0` 기반 `TASK-136`: `peripheral_manifest.json` 및 `MSG_PROFILE_SYNC.peripheralManifest` 토폴로지 해시 생성 | 베이 `101~200`, `Base+8` 직결 바인딩, 6-DoF OLS 프로파일 생성 |
-| **Installer** | Ground / Dev | `v1.3.0` (`Approved`) | [INSTALLER_PROGRAM_SPECIFICATION.md](../specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md) 루트 `/installer.lua` 단일 SSOT 정합 (`src/0_development/installer/installer.lua` 및 `manifest.BOOTSTRAP_FILES` 폐기) | 3종 실행 모드, `/startup/00_<id>.lua`, `/.ota_pending.json` 롤백 가드 |
+| **Installer** | Ground / Dev | `v1.3.0` (`Implemented`) | [INSTALLER_PROGRAM_SPECIFICATION.md](../specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md) 루트 `/installer.lua` 단일 SSOT 정합 (`src/0_development/installer/installer.lua` 및 `manifest.BOOTSTRAP_FILES` 폐기) | 3종 실행 모드, `/startup/00_<id>.lua`, `/.ota_pending.json` 롤백 가드 |
 | **OTA** | Ground / Lib | `v0.1.0` (`Implemented`) | [OTA_PROGRAM_SPECIFICATION.md](../specs/0_development/ota/OTA_PROGRAM_SPECIFICATION.md) `[I-13]` 무선 OTA 배포 서버 및 `/lib/ota_agent.lua` 규격 신설 | $Base_{\text{hangar}}+4/+5$, CRC32 스테이징, `/ota_packages/` 원격 동기화, 51x19 TUI/CLI |
-| **FDR** | Ground / Dev | `v0.5.0` (`Approved`) | [FDR_PROGRAM_SPECIFICATION.md](../specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) `TASK-018`: 미소비 설정 키(`bandwidth`, `export.timeoutSec`, `debug`) 스키마 제거 | `Base+1/+2/+9/+10`(+선택 `+11/+4`) 수신 전용 패시브 감청 (`modem.transmit` 0회) |
+| **FDR** | Ground / Dev | `v0.5.0` (`Implemented`) | [FDR_PROGRAM_SPECIFICATION.md](../specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) `TASK-018`: 미소비 설정 키(`bandwidth`, `export.timeoutSec`, `debug`) 스키마 제거 | `Base+1/+2/+9/+10`(+선택 `+11/+4`) 수신 전용 패시브 감청 (`modem.transmit` 0회) |
 | **GAC** | Node 07 | `v1.7.0` (`Implemented`) | `v1.6.0` 기반 `/gac/config.json` 및 `MSG_FACILITY_BEACON` 내 GAC 본체 좌표 `position = { x, y, z }` 명시화 | 3-Tier 섹터 관제, `CH 50002/50003/50004`, $Base_{\text{sec}}+0/+1/+2/+5$ |
-| **LANDING_PAD** | Infra | `v2.6.0` (`Approved`) | `v2.5.0` 기반 `TASK-017`/`018`: `pad_fsm` `MSG_TOUCHDOWN_COMPLETE.touchdownTime` 소비 및 미사용 UI 코드 제거 | 순수 가상 비콘, 동적 갑판 10°/2.5m/s 인터록, `CH 60001` 송신 전용·위상 분산 |
-| **RUNWAY** | Infra | `v1.13.0` (`Approved`) | `v1.12.0` 기반 `TASK-017`/`018`: `runway_fsm` `MSG_RUNWAY_TOUCHDOWN.touchdownSpeed` 소비 정합화 | 가상 ILS, 유선 PAPI/RWSL 조명, `src/0_infra/runway/` |
+| **LANDING_PAD** | Infra | `v2.6.0` (`Implemented`) | `v2.5.0` 기반 `TASK-017`/`018`: `pad_fsm` `MSG_TOUCHDOWN_COMPLETE.touchdownTime` 소비 및 미사용 UI 코드 제거 | 순수 가상 비콘, 동적 갑판 10°/2.5m/s 인터록, `CH 60001` 송신 전용·위상 분산 |
+| **RUNWAY** | Infra | `v1.13.0` (`Implemented`) | `v1.12.0` 기반 `TASK-017`/`018`: `runway_fsm` `MSG_RUNWAY_TOUCHDOWN.touchdownSpeed` 소비 정합화 | 가상 ILS, 유선 PAPI/RWSL 조명, `src/0_infra/runway/` |
 | **DOCKING_ARM** | Infra | `v1.12.0` (`Approved`) | `v1.11.2` 기반 GAC `CH 50003` 중앙 집중화·3-시설 대칭형 `[I-5]` 가이드·`MSG_DOCKING_ARM_CMD [DEPRECATED]` 사양 개정 | 2축 갠트리 포획, `AMM` 주도 4단계 랑데부 및 엄빌리컬 보급 |
 | **GCS** | Infra | `v1.4.0` (`Implemented`) | `TASK-405`/`406` (`--lan` 브리지 바인딩, `CH 60003` GPS 하트비트, `gacNode` 무게중심, `60s` `OFFLINE` TTL) + `TASK-404`/`125` (`OFFSET_ESTOP = 9`, `BW=40`, `"REASSIGNED"`) | `CH 50000` 부트스트랩 채널 관리자, `CH 50003`/`50004`/`60003` 청취 및 원격 C2 콘솔 |
 | **GPS** | Infra | `v2.4.0` (`Implemented`) | `v2.3.3` 기반 `TASK-128`: `MSG_GPS_RESPONSE` 품질 필드(`navQuality`, `consecutiveFailures`) 및 `MSG_NAV_QUALITY` 브로드캐스트 | `CH 60001/60002` 측위 서버 군, 구형 세션 축출·HWM·단조 응답 가드·위상 분산 |

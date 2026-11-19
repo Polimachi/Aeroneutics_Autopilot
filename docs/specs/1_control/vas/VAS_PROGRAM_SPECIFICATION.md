@@ -64,7 +64,7 @@
 5. **VICD-Spec 3계층 샌드위치 제어 파이프라인**:
    - **Layer 2A (Pre-Filter)**: `QUATERNION_RATE` / `RATE_COMMAND` 유도 명령 조건화, 센서 유효성 기반 실속 방지(Stall Guard, $\le 10\text{ m/s}$), 플랩 한계 속도 가드($V_{fe} > 15\text{ m/s}$ 플랩 강제 접음), 틸트 각도 제한 및 FSM 비상 유도 합성.
    - **Layer 1 (Flight Dynamics Core)**: 순수 수학적 단위 쿼터니언($SO(3)$) 자세/각속도 추종 조절기(오일러 특이점 배제), `collectiveThrust` 정규화 집합 추력 매핑, 추진기(TCA) 및 공력면(ASA) 구동계 역방향 포화 피드백(`satStatus`)에 연동된 방향성 안티 와인드업. *(일반 비행 수직 속도 PI 루프는 제거되었으며, 고도/수직 속도 홀드는 `FCP_TIMEOUT`(1,500ms) 시 `state_machine`의 `FAILSAFE_HOLD` / `EMERGENCY_LAND` 내부에서만 제한 가동)*
-   - **Layer 2B (Post-Mixer)**: 피치 트림 및 반토크 피드포워드($\tau_{yaw} = \tau_{yaw} + F_{heave} \cdot K_{antiTorque}$) 주입, `WINGED_VTOL` 천이 블렌더(`transition_blend`).
+   - **Layer 2B (Post-Mixer)**: 피치 트림 및 반토크 피드포워드($\tau_{yaw} = \tau_{yaw} + F_{heave} \cdot K_{antiTorque}$) 주입.
    - **Layer 3 (Platform Actuator Adapters - Dual Adapter Architecture)**: 
      - **`actuator_adapter_tca`**: TCA 클러스터 제어 할당 행렬($0 \sim 15$ 이산 정수 스케일링, 불감대 확장), `dynamicLoad` 실시간 산출, 채널 `Base+10` (구 `Base+6` [DEPRECATED]) 20Hz `MSG_THRUST_CMD` 송출.
      - **`actuator_adapter_asa`**: ASA 공력 조종면(Aileron, Elevator, Rudder, Flap) 제어 할당, 동적압($V^2$) 역비례 게인 스케일링($\eta_q$), 채널 `Base+11` (구 `Base+7` [DEPRECATED]) 20Hz `MSG_AERO_CMD` 송출 (`FIXED_WING`, `WINGED_VTOL` 전용).
@@ -500,7 +500,6 @@ flowchart TD
   function quat.normalize(q) -> quatTable
   function quat.conjugate(q) -> quatTable
   function quat.multiply(a, b) -> quatTable
-  function quat.rotate_vector(q, v) -> vec3Table
   function quat.error_quaternion(targetQ, measQ) -> errQuatTable
   function quat.from_euler(pitchDeg, rollDeg, yawDeg) -> quatTable
   function quat.to_euler(q) -> { pitch, roll, yaw }
@@ -517,8 +516,8 @@ flowchart TD
   function flight_dynamics_core.compute(state, telem, guidance, dt, satStatus) -> baseWrench
   ```
 
-### 5.7 모듈 7: `vehicle_policy` [Layer 2] (기종별 포락선 보호 / Stall Guard / Flap Guard / 트림 주입 / 천이 블렌더)
-- **역할**: Layer 1을 감싸는 샌드위치 래퍼로, Pre-Filter(`QUATERNION_RATE` / `RATE_COMMAND` 해석, 대기속도 유효 기반 단일화 Stall Guard 10m/s, 플랩 구조 한계 Vfe 15m/s 가드, 틸트 한계 클램프, 미교정 감쇄 모드 20도 제한)와 Post-Mixer(적분기 왜곡 없는 피치 트림 및 반토크 피드포워드 주입), 6대 기체별 `collectiveThrust` 및 `WINGED_VTOL` `transitionAlpha` 블렌딩을 집행합니다.
+### 5.7 모듈 7: `vehicle_policy` [Layer 2] (기종별 포락선 보호 / Stall Guard / Flap Guard / 트림 주입)
+- **역할**: Layer 1을 감싸는 샌드위치 래퍼로, Pre-Filter(`QUATERNION_RATE` / `RATE_COMMAND` 해석, 대기속도 유효 기반 단일화 Stall Guard 10m/s, 플랩 구조 한계 Vfe 15m/s 가드, 틸트 한계 클램프, 미교정 감쇄 모드 20도 제한)와 Post-Mixer(적분기 왜곡 없는 피치 트림 및 반토크 피드포워드 주입) 및 6대 기체별 `collectiveThrust` 제어를 집행합니다.
 - **기종별 정책 (Airframe Policy)**: `ADVANCED_VTOL`은 `VECTORED_VTOL`, `QUADROTOR`, `HEXAROTOR`와 함께 비공력 순수 추력형 기종으로 분류되어 `transitionAlpha = 0.0`, `resolve_flap_target = 0.0`, Stall Guard 및 Flap Guard가 바이패스되며 `translationBias { surge, sway }` 기반 수평 병진 제어가 활성화됩니다.
 - **핵심 시그니처**:
   ```lua
@@ -529,7 +528,6 @@ flowchart TD
   function vehicle_policy.apply_flap_speed_guard(policy, telem, flapTarget) -> safeFlapTarget
   function vehicle_policy.pre_process_guidance(policy, telem, rawCmd, fsmState) -> conditionedCmd
   function vehicle_policy.post_process_wrench(policy, baseWrench, telem, conditionedCmd) -> compositeWrench
-  function vehicle_policy.transition_blend(hoverWrench, cruiseWrench, alpha) -> blendedWrench
   ```
 
 ### 5.8 모듈 8: `actuator_adapter_tca` [Layer 3] (TCA 클러스터 추진기 어댑터 & 역방향 포화 피드백)
@@ -659,10 +657,6 @@ end
 Layer 1의 적분기 내부를 왜곡하지 않고 구동계로 전달되는 최종 합성 렌치에 직접 주입합니다:
 $$\tau_{pitch, final} = \tau_{pitch, base} + \tau_{trim}$$
 $$\tau_{yaw, final} = \tau_{yaw, base} + F_{heave} \cdot K_{antiTorque}$$
-
-#### 3) 천이 블렌더 (`transition_blend`)
-`WINGED_VTOL` 호버링 렌치 $\mathbf{W}_{hover}$와 순항 렌치 $\mathbf{W}_{cruise}$를 무차원 천이 계수 $\alpha \in [0.0, 1.0]$로 선형 가중 블렌딩합니다:
-$$\mathbf{W}_{composite} = (1.0 - \alpha) \cdot \mathbf{W}_{hover} + \alpha \cdot \mathbf{W}_{cruise}$$
 
 ### 6.4 Layer 3 Platform Actuator Adapter: TCA 추진기 할당 (`actuator_adapter_tca`)
 각 추진기 그룹 $i$의 기여도 계수 벡터 $\mathbf{M}_i$와 6-DoF 합성 렌치 $\mathbf{W}$의 내적 $S_{raw, i} = \mathbf{M}_i \cdot \mathbf{W}$에 대해 불감대($deadband$) 선형 확장을 적용하여 $0 \sim 15$ 이산 정수 신호를 생성합니다:
