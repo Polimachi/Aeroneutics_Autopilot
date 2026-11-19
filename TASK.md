@@ -49,18 +49,18 @@
     - [ ] **TASK-302-3**: `Alignment`·`FDR` 등 원격 링크 및 세션 제어 연동 — Pocket PDA에서 기체 인덱스 $N$을 지정해 `Alignment`(격납고 베이 바인딩·교정 세션 개시/중단/해제)·`FDR`(`STANDBY`↔`LOGGING` 동적 기체 $N$ 바인딩 전환·로그 반출 트리거) 등 주요 노드 간 원격 링크·해제 수행 지원
     - [ ] **TASK-302-4**: 사양서/계약 및 배포·가드레일 통합 — Pocket PDA 사양서(`Draft` → `Approved` → `Implemented`), `config/protocol_contracts.json`, `manifest.lua`, `config/gdrive_mapping.json`, `tools/run_boot_smoke.py` 등록 및 `verify_contracts.py`·`verify_runtime_wiring.py`·단위/E2E 검증 완료
 
-- [ ] **TASK-140: [2순위 / 정밀 착륙 제어] 저고도 센서 융합 고도계 및 지면 효과(Ground Effect) 착륙 감쇠 보상** (`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`, `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md`, `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/1_control/vas/`, `src/2_guidance/fcp/`, `tests/1_control/vas/`)
+- [ ] **TASK-140: [2순위 / 정밀 착륙 제어] 저고도 센서 융합 고도계, 양방향 지면 효과 착륙 보상 및 터치다운 프로토콜 개선** (`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`, `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md`, `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/1_control/vas/`, `src/2_guidance/fcp/`, `tests/1_control/vas/`)
   - **권장 착수 순위**: **2순위** (`TASK-403`의 `ACT_TKL_LAND_NORM` / `ACT_TKL_LAND_PREC` / `ACT_TKL_LAND_NEAREST` 착륙 정밀도 향상 연계)
   - **사양서 상태**: 미개정 (`VAS` · `FCP` · `AMM` 사양서 개정 필요)
-  - **배경 및 필요성**: 20Hz GPS 위치 측정은 수직 방향 양자화 오차와 미세 지연을 포함하고 있어, 지상 `15m` 이하의 최종 착륙 접근(Final Flare) 구간에서 지면 표고 오판이나 로터·하향 추력기의 지면 효과(Ground Effect) 양력 증가로 인해 접지 직전 기체가 다시 튀어 오르는 바운싱(Porpoising) 현상이 발생함. 다중 센서 융합 대지 고도(AGL) 필터와 지수 감쇠 플레어 프로파일로 안정적인 소프트 터치다운을 구현해야 함.
+  - **배경 및 필요성**: 20Hz GPS 위치 측정은 수직 방향 양자화 오차와 미세 지연을 포함하고 있어, 지상 `15m` 이하의 최종 착륙 접근(Final Flare) 구간에서 지면 표고 오판이나 로터·하향 추력기의 지면 효과(Ground Effect)로 인한 양력 변동(양의 양력 증가뿐 아니라 음의 방향 흡입·양력 감소 포함)으로 인해 접지 직전 기체가 튀어 오르는 바운싱(Porpoising) 또는 급침하가 발생함. 다중 센서 융합 대지 고도(AGL) 필터, 음/양 양방향 지면 효과 추력 보상, 지수 감쇠 플레어 프로파일 및 단계별 터치다운 프로토콜 개선으로 안정적이고 정밀한 소프트 터치다운을 구현해야 함.
   - **핵심 기술 규격**:
     - 상보 필터 기반 대지 고도계(`AGL_Estimator`): 지상 `15m` 이하 접근 시 GPS 수직 위치, VAS 수직 가속도/속도 적분값, 및 하향 거리 센서(또는 착륙패드 비콘 기준 표고 `padSurfaceY`)를 융합하여 지연 없는 정밀 AGL 고도와 침하율(`sinkRateMps`)을 산출함.
-    - 지면 효과 추력 감쇠 곡선(`GROUND_EFFECT_COMP`): `AGL < 4.0m` 진입 시 지면 반발 양력 증가분을 보상하는 점진적 추력 감쇠 계수를 적용하고, 최종 접지 직전(`AGL < 1.5m`) 목표 침하율을 `0.35 m/s`로 고정하는 지수 플레어(Exponential Flare) 제어를 수행함.
-    - 바운싱 억제 접지 래치: 접지 순간 수직 오차 적분항(`Ki`)을 즉시 리셋하고 하향 홀드 바이어스를 인가하여 재부양을 차단함.
+    - 양방향 지면 효과 추력 보상 곡선(`GROUND_EFFECT_COMP`): `AGL < 4.0m` 진입 시 지면 효과로 인한 양력 증가가 양/음 어느 방향으로든 발생할 수 있음을 전제로, 음/양 양방향 추력 보상 계수(감쇠 및 증강 모두 허용, 부호 있는 보상 바이어스)를 적용하고, 최종 접지 직전(`AGL < 1.5m`) 목표 침하율을 `0.35 m/s`로 고정하는 지수 플레어(Exponential Flare) 제어를 수행함.
+    - 착륙 정밀도 향상을 위한 터치다운 프로토콜 과정 개선: 최종 접근 → 수평 위치/자세 정렬 안정화 게이트 → 플레어 하강 → 다중 조건 접지 판정(AGL·침하율·수직 가속도 변화량 조합) → 바운싱 억제 접지 래치(수직 오차 적분항 `Ki` 즉시 리셋 및 하향 홀드 바이어스 인가) → 추력 단계 감축 및 `AMM`/`Landing Pad` 착륙 완료 핸드셰이크로 이어지는 터치다운 시퀀스를 정밀화함.
   - **주요 작업**:
-    - [ ] **TASK-140-1**: `VAS` · `FCP` · `AMM` 사양서 개정 — `AGL_Estimator` 센서 융합 가중치, `GROUND_EFFECT_COMP` 감쇠 곡선 및 최종 플레어 침하율 규격 정의
-    - [ ] **TASK-140-2**: `VAS` 저고도 상보 고도 필터 및 지면 효과 추력 보상 모듈 구현 (`src/1_control/vas/agl_flare_controller.lua`)
-    - [ ] **TASK-140-3**: 정밀 착륙 시나리오 접지 수직 속도 및 바운싱 0회 검증 단위·E2E 테스트 통과 후 사양서 `Implemented` 승격
+    - [ ] **TASK-140-1**: `VAS` · `FCP` · `AMM` 사양서 개정 — `AGL_Estimator` 센서 융합 가중치, 음/양 양방향 `GROUND_EFFECT_COMP` 보상 곡선, 최종 플레어 침하율 및 개선된 터치다운 프로토콜 단계별 전이 규격 정의
+    - [ ] **TASK-140-2**: `VAS` 저고도 상보 고도 필터·양방향 지면 효과 추력 보상 모듈(`src/1_control/vas/agl_flare_controller.lua`) 및 `FCP`/`AMM` 터치다운 프로토콜 시퀀스 개선 구현
+    - [ ] **TASK-140-3**: 정밀 착륙 시나리오(음/양 지면 효과 외란 포함) 접지 위치·수직 속도 정밀도 및 바운싱 0회 검증 단위·E2E 테스트 통과 후 사양서 `Implemented` 승격
 
 - [ ] **TASK-015: [2순위 / 운용 매뉴얼] 전 계층 코드베이스·신규 추가 모듈/프로그램 통합 플레이북 체계 구축 (`TASK-010` + `TASK-011` 통합 확장)** (`playbook/README.md`, `tools/verify_playbooks.py`, `playbook/0_development/{alignment,fdr,installer,ota,sensors}.md`, `playbook/0_infra/{gps,gcs,gac,landing_pad,runway}.md`, `playbook/1_control/{vas,tca}.md`, `playbook/2_guidance/fcp.md`, `playbook/3_planning/{amm,amm_mission_editor}.md`)
   - **권장 착수 순위**: **2순위** (1순위→2순위 조정 — `TASK-302`·`130`·`128` 및 `TASK-103` `Runway v1.12.0` 등 핵심 런타임/안전 기능 반영 후 일괄 마감)
