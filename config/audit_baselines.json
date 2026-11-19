@@ -7,8 +7,7 @@
     "src/3_planning/amm/modules/mission_engine.lua",
     "src/0_development/installer/modules/manifest.lua"
   ],
-  "installer_mirror_pair": [
-    "installer.lua",
+  "installer_forbidden_duplicates": [
     "src/0_development/installer/installer.lua"
   ],
   "unconsumed_required_keys_baseline": [

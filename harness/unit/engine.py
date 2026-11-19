@@ -131,6 +131,12 @@ def run_target_unit_tests(
         # Stage source codebase at /
         session.stage_tree(target.source_dir, computer_id=0, dest_subdir="")
 
+        # Stage root SSOT installer.lua when running installer unit tests
+        if target.target_id == "0_development/installer" or target.source_dir.name == "installer":
+            root_installer = target.source_dir.parent.parent.parent / "installer.lua"
+            if root_installer.is_file():
+                shutil.copy2(root_installer, c0 / "installer.lua")
+
         # Stage test suite at /_tests/
         session.stage_tree(target.tests_dir, computer_id=0, dest_subdir="_tests")
 

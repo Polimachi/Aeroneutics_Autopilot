@@ -263,6 +263,55 @@ class TestBootSmokeRunner(unittest.TestCase):
                 parsed = json.loads(content)
                 self.assertIsInstance(parsed, dict, f"Expected JSON object in {cfg_path}")
 
+    @patch("tools.run_boot_smoke.EphemeralCraftOSSession")
+    def test_run_target_boot_smoke_stages_root_installer_for_installer_target(
+        self, mock_session_cls: MagicMock
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            comp_dir = Path(temp_dir) / "comp0"
+            comp_dir.mkdir()
+
+            mock_session = MagicMock()
+            mock_session_cls.return_value.__enter__.return_value = mock_session
+            mock_session.computer_dir.return_value = comp_dir
+            mock_session.run.return_value = CraftOSSessionResult(
+                session_id="dummy_installer_stage",
+                exit_code=0,
+                timed_out=False,
+                duration_ms=25.0,
+                stdout_raw="ok",
+                stderr_raw="",
+                guest_result={"status": "PASS", "error": None, "opened_channels": []},
+            )
+
+            target = SmokeTarget(
+                target_id="0_development/installer",
+                source_dir=WORKSPACE_ROOT / "src" / "0_development" / "installer",
+                expected_channels=[],
+                cli_args=[],
+                deferred=False,
+                workspace_root=WORKSPACE_ROOT,
+            )
+            fake_paths = CraftOSPaths(
+                craftos_exe=Path("fake_exe"),
+                rom_dir=Path("fake_rom"),
+                lua52_dll=None,
+            )
+            report = run_target_boot_smoke(
+                target=target,
+                craftos_paths=fake_paths,
+                sessions_root=WORKSPACE_ROOT / ".runtime" / "test_sessions",
+                timeout_sec=5.0,
+                tick_window=0.1,
+            )
+            self.assertEqual(report["status"], "PASS")
+            staged_installer = comp_dir / "installer.lua"
+            self.assertTrue(staged_installer.is_file(), "Expected root installer.lua to be staged")
+            self.assertEqual(
+                staged_installer.read_bytes(),
+                (WORKSPACE_ROOT / "installer.lua").read_bytes(),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

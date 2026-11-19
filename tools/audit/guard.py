@@ -1,7 +1,6 @@
-"""Regression guard checks for installer mirror parity, oversize Lua files, and dead requiredKeys."""
+"""Regression guard checks for root installer SSOT, duplicate copies, oversize Lua files, and dead requiredKeys."""
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -11,12 +10,8 @@ from tools.audit.static_analysis import _analyze_protocol_fields
 from tools.verify_contracts import DEFAULT_CONTRACTS_PATH, load_contracts
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def run_guard(root: Path, baseline_path: Path | None = None) -> dict[str, Any]:
-    """Run P5-approved architectural regression guards (Fail on installer drift, Warn on new bloat/dead keys)."""
+    """Run P5-approved architectural regression guards (Fail on missing/duplicate installer, Warn on new bloat/dead keys)."""
     root = root.resolve()
     bpath = baseline_path or (root / "config" / "audit_baselines.json")
     baseline: dict[str, Any] = {}
@@ -26,19 +21,20 @@ def run_guard(root: Path, baseline_path: Path | None = None) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
 
-    # 1. Fail on installer.lua mirror divergence if both copies exist
-    pair = baseline.get("installer_mirror_pair") or [
-        "installer.lua",
-        "src/0_development/installer/installer.lua",
-    ]
-    if len(pair) == 2:
-        p1, p2 = root / pair[0], root / pair[1]
-        if p1.is_file() and p2.is_file():
-            h1, h2 = _sha256(p1), _sha256(p2)
-            if h1 != h2:
-                errors.append(
-                    f"Mirror drift detected between '{pair[0]}' ({h1[:12]}) and '{pair[1]}' ({h2[:12]})."
-                )
+    # 1. Fail if root installer.lua is missing or any forbidden duplicate copy exists
+    root_installer = root / "installer.lua"
+    if not root_installer.is_file():
+        errors.append("Missing root SSOT installer 'installer.lua'.")
+
+    forbidden_duplicates = baseline.get("installer_forbidden_duplicates")
+    if forbidden_duplicates is None:
+        forbidden_duplicates = ["src/0_development/installer/installer.lua"]
+    for rel_dup in forbidden_duplicates:
+        dup_path = root / rel_dup
+        if dup_path.exists():
+            errors.append(
+                f"Forbidden duplicate installer copy detected at '{rel_dup}' (root 'installer.lua' is SSOT)."
+            )
 
     # 2. Warn on new Lua files exceeding single-read limit (46,080 B)
     max_bytes = int(baseline.get("single_read_bytes") or SINGLE_READ_BYTE_LIMIT)

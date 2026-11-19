@@ -45,7 +45,6 @@ ALLOWED_GDRIVE_CATEGORIES = {
 }
 
 INSTALLER_ENTRY_EXEMPTIONS = {
-    "src/0_development/installer/installer.lua",
     "src/0_development/installer/main.lua",
 }
 
@@ -222,8 +221,24 @@ def _parse_kv_table(table_block: str) -> Dict[str, str]:
     return result
 
 
+def _has_bootstrap_table(lua_text: str) -> bool:
+    """Returns True if lua_text defines a BOOTSTRAP_FILES table outside comments/strings."""
+    chunks: List[str] = []
+    i = 0
+    n = len(lua_text)
+    while i < n:
+        next_i = _skip_lua_non_code(lua_text, i)
+        if next_i != i:
+            chunks.append(" ")
+            i = next_i
+        else:
+            chunks.append(lua_text[i])
+            i += 1
+    return bool(re.search(r"\bBOOTSTRAP_FILES\s*=\s*\{", "".join(chunks)))
+
+
 def parse_bootstrap_entries(lua_text: str) -> List[Dict[str, Optional[str]]]:
-    """Parses BOOTSTRAP_FILES = { ... } entries from installer.lua or manifest.lua."""
+    """Parses BOOTSTRAP_FILES = { ... } entries from root installer.lua."""
     block = _extract_named_table(lua_text, r"BOOTSTRAP_FILES\s*=\s*\{")
     entries: List[Dict[str, Optional[str]]] = []
     for _, raw_item in _iter_top_level_entries(block):
@@ -249,7 +264,7 @@ def parse_manifest(manifest_path: Path) -> Dict[str, Any]:
     """Structurally parses manifest.lua without executing Lua."""
     text = manifest_path.read_text(encoding="utf-8")
 
-    bootstrap_files = parse_bootstrap_entries(text)
+    defines_bootstrap_files = _has_bootstrap_table(text)
 
     shared_block = _extract_named_table(text, r"SHARED_LIBS\s*=\s*\{")
     shared_libs: Dict[str, Dict[str, Optional[str]]] = {}
@@ -317,7 +332,7 @@ def parse_manifest(manifest_path: Path) -> Dict[str, Any]:
         }
 
     return {
-        "bootstrap_files": bootstrap_files,
+        "defines_bootstrap_files": defines_bootstrap_files,
         "shared_libs": shared_libs,
         "module_order": module_order,
         "modules": modules,
@@ -354,9 +369,10 @@ def verify_workspace(
 
     if not root_installer.is_file():
         report.errors.append(f"MISSING_DISK_FILE: installer.lua missing at {root_installer}")
-    if not src_installer.is_file():
+    if src_installer.exists():
         report.errors.append(
-            f"MISSING_DISK_FILE: mirror installer missing at {src_installer}"
+            "DUPLICATE_INSTALLER_SOURCE: duplicate installer exists at "
+            "src/0_development/installer/installer.lua (root /installer.lua is SSOT)"
         )
     if not manifest_path.is_file():
         report.errors.append(f"MISSING_DISK_FILE: manifest.lua missing at {manifest_path}")
@@ -368,29 +384,25 @@ def verify_workspace(
         report.errors.append(f"MANIFEST_PARSE_ERROR: {exc}")
         return report
 
-    bootstrap_files: List[Dict[str, Optional[str]]] = manifest_data["bootstrap_files"]
+    if manifest_data.get("defines_bootstrap_files"):
+        report.errors.append(
+            "DUPLICATE_INSTALLER_SOURCE: manifest.lua must not define BOOTSTRAP_FILES "
+            "(root /installer.lua is SSOT)"
+        )
+
     shared_libs: Dict[str, Dict[str, Optional[str]]] = manifest_data["shared_libs"]
     module_order: List[str] = manifest_data["module_order"]
     modules: Dict[str, Dict[str, Any]] = manifest_data["modules"]
 
     report.checked_modules = len(modules)
 
-    # 1. Installer parity & bootstrap sync
-    if root_installer.is_file() and src_installer.is_file():
-        if root_installer.read_bytes() != src_installer.read_bytes():
-            report.errors.append(
-                "INSTALLER_BYTE_PARITY_MISMATCH: installer.lua differs from src/0_development/installer/installer.lua"
-            )
-
+    # 1. Single-source root installer BOOTSTRAP_FILES parsing
+    bootstrap_files: List[Dict[str, Optional[str]]] = []
     if root_installer.is_file():
         try:
-            inst_bootstrap = parse_bootstrap_entries(
+            bootstrap_files = parse_bootstrap_entries(
                 root_installer.read_text(encoding="utf-8")
             )
-            if inst_bootstrap != bootstrap_files:
-                report.errors.append(
-                    "INSTALLER_BOOTSTRAP_LIST_MISMATCH: installer.lua BOOTSTRAP_FILES differs from manifest.lua BOOTSTRAP_FILES"
-                )
         except Exception as exc:
             report.errors.append(f"INSTALLER_PARSE_ERROR: {exc}")
 
@@ -592,7 +604,7 @@ def verify_workspace(
         bid = bootstrap_map.get(rp)
         if not gid or fid != gid or bid != gid:
             report.errors.append(
-                f"BOOTSTRAP_GDRIVE_ID_MISMATCH: '{rp}' manifest gdriveId={gid!r}, files.id={fid!r}, bootstrapMap={bid!r}"
+                f"BOOTSTRAP_GDRIVE_ID_MISMATCH: '{rp}' installer.lua gdriveId={gid!r}, files.id={fid!r}, bootstrapMap={bid!r}"
             )
 
     for repo_p, fmeta in sorted(gdrive_files.items()):

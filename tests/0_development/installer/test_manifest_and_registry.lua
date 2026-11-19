@@ -67,11 +67,17 @@ describe("manifest dual-source module definitions", function()
         assert_eq(gdOk, "https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOp&export=download&confirm=t")
     end)
 
-    it("exposes manifest constants and bootstrap file definitions", function()
+    it("exposes manifest constants and delegates BOOTSTRAP_FILES SSOT to root installer", function()
         assert_eq(manifest.VERSION, "1.1.0")
         assert_eq(manifest.SOURCES.GITHUB, "github")
         assert_eq(manifest.SOURCES.GDRIVE, "gdrive")
-        assert_eq(#manifest.BOOTSTRAP_FILES, 7)
+        assert_nil(manifest.BOOTSTRAP_FILES)
+        local prevLibMode = _G.__INSTALLER_LIB_MODE
+        _G.__INSTALLER_LIB_MODE = true
+        local okReq, bootstrapper = pcall(require, "installer")
+        _G.__INSTALLER_LIB_MODE = prevLibMode
+        assert_true(okReq, "Failed to require root installer: " .. tostring(bootstrapper))
+        assert_eq(#bootstrapper.BOOTSTRAP_FILES, 7)
         assert_eq(version_registry.DEFAULT_META_PATH, "/.version.json")
     end)
 

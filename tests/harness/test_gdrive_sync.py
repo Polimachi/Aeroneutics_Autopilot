@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -58,12 +59,17 @@ class TestGDriveSyncCLI(unittest.TestCase):
             # Check bootstrap files were staged
             bootstrap_app = tmp_staging / "bootstrap" / "installer_app.lua"
             self.assertTrue(bootstrap_app.is_file(), f"Missing bootstrap app: {bootstrap_app}")
+            self.assertTrue(
+                (tmp_staging / "bootstrap" / "modules" / "manifest.lua").is_file(),
+                "Missing bootstrap manifest.lua",
+            )
 
             # Check manifest was created
             manifest_json = tmp_staging / "manifest.json"
             self.assertTrue(manifest_json.is_file(), f"Missing manifest.json: {manifest_json}")
             data = json.loads(manifest_json.read_text(encoding="utf-8"))
             self.assertIn("files", data)
+            self.assertEqual(data.get("categories", {}).get("bootstrap"), 7)
             self.assertGreaterEqual(len(data["files"]), 100)
 
     def test_sync_dry_run(self) -> None:
@@ -164,6 +170,57 @@ class TestGDriveSyncCLI(unittest.TestCase):
         self.assertIn("vas__main.lua", remote_names)
         self.assertIn("gcs__main.lua", remote_names)
         self.assertIn("runway__main.lua", remote_names)
+
+    def test_discover_and_embed_use_root_installer_only(self) -> None:
+        sys.path.insert(0, str(WORKSPACE_ROOT))
+        import tools.sync_gdrive as sync_gdrive  # noqa: E402
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            ws = Path(tmp_dir)
+            (ws / "src" / "0_development" / "installer" / "modules").mkdir(parents=True)
+            (ws / "installer.lua").write_text(
+                'bootstrapper.BOOTSTRAP_FILES = {\n'
+                '    { repoPath = "src/0_development/installer/installer_app.lua", cacheRelPath = "installer_app.lua", gdriveId = nil },\n'
+                '}\n',
+                encoding="utf-8",
+            )
+            (ws / "src" / "0_development" / "installer" / "modules" / "manifest.lua").write_text(
+                'local manifest = {}\n'
+                'manifest.MODULES = {\n'
+                '    vas = {\n'
+                '        files = {\n'
+                '            { repoPath = "src/1_control/vas/main.lua", dest = "/main.lua", gdriveId = nil },\n'
+                '        },\n'
+                '    },\n'
+                '}\n'
+                'return manifest\n',
+                encoding="utf-8",
+            )
+
+            with patch.object(sync_gdrive, "WORKSPACE_ROOT", ws):
+                entries = sync_gdrive.discover_manifest_files()
+                boot = [e for e in entries if e["category"] == "bootstrap"]
+                self.assertEqual(len(boot), 1)
+                self.assertEqual(boot[0]["repoPath"], "src/0_development/installer/installer_app.lua")
+
+                modified = sync_gdrive.embed_bootstrap_ids({
+                    "bootstrapMap": {
+                        "src/0_development/installer/installer_app.lua": "GID_BOOT_1",
+                    },
+                    "files": {
+                        "src/1_control/vas/main.lua": {"id": "GID_PKG_1"},
+                    },
+                })
+                self.assertEqual(
+                    modified,
+                    ["installer.lua", "src/0_development/installer/modules/manifest.lua"],
+                )
+                self.assertIn('gdriveId = "GID_BOOT_1"', (ws / "installer.lua").read_text(encoding="utf-8"))
+                self.assertIn(
+                    'gdriveId = "GID_PKG_1"',
+                    (ws / "src" / "0_development" / "installer" / "modules" / "manifest.lua").read_text(encoding="utf-8"),
+                )
+                self.assertFalse((ws / "src" / "0_development" / "installer" / "installer.lua").exists())
 
 
 if __name__ == "__main__":

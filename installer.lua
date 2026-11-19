@@ -1,4 +1,4 @@
--- src/0_development/installer/installer.lua
+-- installer.lua
 -- Self-contained 3-Mode Root Bootstrapper for Create_Aeroneutics Unified Installer
 
 local bootstrapper = {}

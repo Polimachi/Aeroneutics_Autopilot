@@ -172,6 +172,11 @@ def resolve_require_target(
     clean = target[:-4] if target.endswith(".lua") else target
     path_var = clean.replace(".", "/")
 
+    if subsystem_dir.name == "installer" and clean == "installer":
+        root_installer = repo_root / "installer.lua"
+        if root_installer.is_file():
+            return root_installer.resolve()
+
     candidates: list[Path] = [
         subsystem_dir / f"{path_var}.lua",
         subsystem_dir / f"{clean}.lua",
@@ -316,6 +321,11 @@ def analyze_subsystem_wiring(
         all_subsystem_lua.add(lua_path.resolve())
 
     # BFS reachability
+    root_installer_resolved = (
+        (repo_root / "installer.lua").resolve()
+        if subsystem_dir.name == "installer" and (repo_root / "installer.lua").is_file()
+        else None
+    )
     visited: set[Path] = {main_file.resolve()}
     queue: list[Path] = [main_file.resolve()]
 
@@ -360,7 +370,10 @@ def analyze_subsystem_wiring(
                             )
                         )
 
-                if resolved in all_subsystem_lua and resolved not in visited:
+                is_root_installer = (
+                    root_installer_resolved is not None and resolved == root_installer_resolved
+                )
+                if (resolved in all_subsystem_lua or is_root_installer) and resolved not in visited:
                     visited.add(resolved)
                     queue.append(resolved)
 

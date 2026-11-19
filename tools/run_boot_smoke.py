@@ -713,6 +713,11 @@ def run_target_boot_smoke(
 
         # 2. Stage target source tree
         session.stage_tree(target.source_dir, computer_id=0, dest_subdir="")
+        if target.target_id == "0_development/installer" or target.source_dir.name == "installer":
+            root_installer = workspace_root / "installer.lua"
+            if not root_installer.is_file():
+                raise FileNotFoundError(f"Root installer.lua missing at {root_installer}")
+            shutil.copy2(root_installer, c0 / "installer.lua")
 
         # 3. Stage minimal configs
         _stage_minimal_configs(c0)

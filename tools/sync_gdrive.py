@@ -57,7 +57,12 @@ def discover_manifest_files() -> List[Dict[str, Any]]:
     if not manifest_path.is_file():
         raise FileNotFoundError(f"Manifest missing at {manifest_path}")
 
+    root_installer_path = WORKSPACE_ROOT / "installer.lua"
+    if not root_installer_path.is_file():
+        raise FileNotFoundError(f"Root installer missing at {root_installer_path}")
+
     text = manifest_path.read_text(encoding="utf-8")
+    installer_text = root_installer_path.read_text(encoding="utf-8")
     files: List[Dict[str, Any]] = []
     seen_paths = set()
 
@@ -85,9 +90,9 @@ def discover_manifest_files() -> List[Dict[str, Any]]:
     # 1. Root Installer
     add_entry("installer.lua", "installer/installer.lua", "installer", "/installer.lua")
 
-    # 2. Bootstrap files
+    # 2. Bootstrap files (SSOT: root installer.lua)
     bootstrap_matches = re.findall(
-        r'repoPath\s*=\s*"([^"]+)",\s*cacheRelPath\s*=\s*"([^"]+)"', text
+        r'repoPath\s*=\s*"([^"]+)",\s*cacheRelPath\s*=\s*"([^"]+)"', installer_text
     )
     for repo_p, cache_rel in bootstrap_matches:
         add_entry(repo_p, f"bootstrap/{cache_rel}", "bootstrap", f"/.installer_cache/{cache_rel}")
@@ -388,7 +393,7 @@ def cmd_sync(
 
 
 def embed_bootstrap_ids(mapping: Dict[str, Any]) -> List[str]:
-    """Embeds mapped file IDs into installer.lua, src/0_development/installer/installer.lua, and manifest.lua."""
+    """Embeds mapped file IDs into root installer.lua (bootstrap) and manifest.lua (shared/packages)."""
     files_map = mapping.get("files", {})
     bootstrap_map = mapping.get("bootstrapMap", {})
     id_by_repo: Dict[str, str] = {}
@@ -403,7 +408,6 @@ def embed_bootstrap_ids(mapping: Dict[str, Any]) -> List[str]:
 
     installer_files = [
         WORKSPACE_ROOT / "installer.lua",
-        WORKSPACE_ROOT / "src" / "0_development" / "installer" / "installer.lua",
         WORKSPACE_ROOT / "src" / "0_development" / "installer" / "modules" / "manifest.lua",
     ]
     modified: List[str] = []
@@ -416,11 +420,12 @@ def embed_bootstrap_ids(mapping: Dict[str, Any]) -> List[str]:
         is_manifest = fpath.name == "manifest.lua"
 
         for repo_p, fid in id_by_repo.items():
-            boot_pat = re.compile(
-                r'(\{\s*repoPath\s*=\s*"' + re.escape(repo_p) + r'",\s*cacheRelPath\s*=\s*"[^"]+",\s*gdriveId\s*=\s*)(nil|"[^"]*")(\s*\})'
-            )
-            content = boot_pat.sub(rf'\g<1>"{fid}"\g<3>', content)
-            if is_manifest:
+            if not is_manifest:
+                boot_pat = re.compile(
+                    r'(\{\s*repoPath\s*=\s*"' + re.escape(repo_p) + r'",\s*cacheRelPath\s*=\s*"[^"]+",\s*gdriveId\s*=\s*)(nil|"[^"]*")(\s*\})'
+                )
+                content = boot_pat.sub(rf'\g<1>"{fid}"\g<3>', content)
+            else:
                 dest_pat = re.compile(
                     r'(\{[^{}]*?repoPath\s*=\s*"' + re.escape(repo_p) + r'"[^{}]*?dest\s*=\s*"[^"]+"[^{}]*?gdriveId\s*=\s*)(nil|"[^"]*")'
                 )
