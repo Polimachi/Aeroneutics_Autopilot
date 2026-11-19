@@ -67,6 +67,21 @@ describe("tca config and channel allocation", function()
         assert_true(config_manager.default_cfg.debug)
     end)
 
+    it("deeply isolates default_config() nested tables from default_cfg", function()
+        local cfg1 = config_manager.default_config()
+        cfg1.channels.thrustActuation = 99999
+        cfg1.ports.modemSide = "bottom"
+        cfg1.ports.apiSides[1] = "top"
+
+        local cfg2 = config_manager.default_config()
+        assert_eq(cfg2.channels.thrustActuation, 10010)
+        assert_eq(cfg2.ports.modemSide, "top")
+        assert_eq(cfg2.ports.apiSides[1], "left")
+        assert_eq(config_manager.default_cfg.channels.thrustActuation, 10010)
+        assert_eq(config_manager.default_cfg.ports.modemSide, "top")
+        assert_eq(config_manager.default_cfg.ports.apiSides[1], "left")
+    end)
+
 
     it("validates compute_base bounds without legacy 20-channel migration (Zero-Fallback)", function()
         assert_eq(config_manager.compute_base(1), 10000)

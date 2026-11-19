@@ -25,10 +25,17 @@ config_manager.default_cfg = {
     debug = true
 }
 
+local function deep_copy(v)
+    if type(v) ~= "table" then return v end
+    local copy = {}
+    for k, val in pairs(v) do
+        copy[deep_copy(k)] = deep_copy(val)
+    end
+    return copy
+end
+
 function config_manager.default_config()
-    local def = {}
-    for k, v in pairs(config_manager.default_cfg) do def[k] = v end
-    return def
+    return deep_copy(config_manager.default_cfg)
 end
 
 --- Master ICD Base formula: Base = 10000 + (N - 1) * 40

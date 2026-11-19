@@ -29,6 +29,40 @@ describe("vas quaternion math invariants", function()
         assert_near(err.y, 0.0, 1e-6)
         assert_near(err.z, 0.0, 1e-6)
     end)
+
+    it("converts quaternions to euler with [0, 360) yaw wrap, gimbal lock clamp, and non-unit normalization", function()
+        -- 4 quadrants + negative atan2 wrap into [0, 360)
+        local cases = {
+            { deg = 45.0, expected = 45.0 },
+            { deg = 135.0, expected = 135.0 },
+            { deg = -45.0, expected = 315.0 },
+            { deg = -90.0, expected = 270.0 },
+            { deg = -135.0, expected = 225.0 },
+        }
+        for _, c in ipairs(cases) do
+            local e = quat.to_euler(quat.from_euler(0.0, 0.0, c.deg))
+            assert_true(e.yaw >= 0.0 and e.yaw < 360.0, "VAS yaw must lie in [0, 360), got: " .. tostring(e.yaw))
+            assert_near(e.yaw, c.expected, 1e-3)
+        end
+
+        -- Gimbal lock +90 / -90 deg stays finite and clamped
+        local ePlus90 = quat.to_euler(quat.from_euler(90.0, 0.0, 0.0))
+        assert_true(ePlus90.pitch == ePlus90.pitch and ePlus90.roll == ePlus90.roll and ePlus90.yaw == ePlus90.yaw)
+        assert_near(ePlus90.pitch, 90.0, 1e-3)
+
+        local eMinus90 = quat.to_euler(quat.from_euler(-90.0, 0.0, 0.0))
+        assert_true(eMinus90.pitch == eMinus90.pitch and eMinus90.roll == eMinus90.roll and eMinus90.yaw == eMinus90.yaw)
+        assert_near(eMinus90.pitch, -90.0, 1e-3)
+
+        -- Non-unit quaternion normalization
+        local eNonUnitYaw = quat.to_euler({ w = 3.0, x = 0.0, y = 0.0, z = -3.0 })
+        assert_near(eNonUnitYaw.pitch, 0.0, 1e-3)
+        assert_near(eNonUnitYaw.roll, 0.0, 1e-3)
+        assert_near(eNonUnitYaw.yaw, 270.0, 1e-3)
+
+        local eNonUnitPitch = quat.to_euler({ w = 2.0, x = 0.0, y = 2.0, z = 0.0 })
+        assert_near(eNonUnitPitch.pitch, 90.0, 1e-3)
+    end)
 end)
 
 describe("vas flight dynamics core and integrators", function()
@@ -1350,7 +1384,13 @@ describe("vas TASK-130 airborne cold-boot recovery and /.flight_state.json persi
         local snapPath = sdk.temp_path("vas_flight_state.json")
         if fs.exists(snapPath) then fs.delete(snapPath) end
 
-        assert_true(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE", {
+        -- Zero-Fallback: legacy non-table 2nd arg and invalid enum must be rejected
+        assert_false(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE"), "Legacy string 2nd arg must be rejected")
+        assert_false(state_machine.save_flight_state(snapPath, nil), "Nil 2nd arg must be rejected")
+        assert_false(state_machine.save_flight_state(snapPath, { armedState = "DISARMED" }), "Invalid armedState enum must be rejected")
+
+        assert_true(state_machine.save_flight_state(snapPath, {
+            armedState = "AIRBORNE_ACTIVE",
             missionId = "SORTIE_09",
             currentCpIdx = 4,
             homePadId = "PAD_ALPHA",
@@ -1385,7 +1425,7 @@ describe("vas TASK-130 airborne cold-boot recovery and /.flight_state.json persi
     it("boots immediately into AIRBORNE_RECOVERY_HOLD <= 500ms from snapshot or airborne sensors and stabilizes", function()
         local snapPath = sdk.temp_path("vas_coldboot_snap.json")
         if fs.exists(snapPath) then fs.delete(snapPath) end
-        assert_true(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE", { savedAtEpoch = 1000 }))
+        assert_true(state_machine.save_flight_state(snapPath, { armedState = "AIRBORNE_ACTIVE", savedAtEpoch = 1000 }))
 
         local wirelessModem = mock.modem({ wireless = true })
         mock.peripheral_registry({

@@ -109,13 +109,8 @@ function quat.to_euler(q)
     local qn = quat.normalize(q)
     local w, x, y, z = qn.w, qn.x, qn.y, qn.z
 
-    local sinp = 2.0 * (w * y - z * x)
-    local pitchRad
-    if math.abs(sinp) >= 1.0 then
-        pitchRad = (sinp > 0) and (math.pi * 0.5) or (-math.pi * 0.5)
-    else
-        pitchRad = math.asin(sinp)
-    end
+    local sinp = math.max(-1.0, math.min(1.0, 2.0 * (w * y - z * x)))
+    local pitchRad = math.asin(sinp)
 
     local rollRad = math.atan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y))
     local yawRad = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))

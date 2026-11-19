@@ -64,12 +64,14 @@ local function euler_deg_to_quat(pitchDeg, rollDeg, yawDeg)
 end
 
 local function quat_to_euler_deg(q)
-    local sinp = clamp(2.0 * (q.w * q.y - q.z * q.x), -1.0, 1.0)
+    local qn = normalize_quat(q)
+    local sinp = clamp(2.0 * (qn.w * qn.y - qn.z * qn.x), -1.0, 1.0)
     local pitch = math.deg(math.asin(sinp))
-    local roll = math.deg(math.atan2(2.0 * (q.w * q.x + q.y * q.z), 1.0 - 2.0 * (q.x * q.x + q.y * q.y)))
-    local yaw = math.deg(math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z)))
+    local roll = math.deg(math.atan2(2.0 * (qn.w * qn.x + qn.y * qn.z), 1.0 - 2.0 * (qn.x * qn.x + qn.y * qn.y)))
+    local yaw = math.deg(math.atan2(2.0 * (qn.w * qn.z + qn.x * qn.y), 1.0 - 2.0 * (qn.y * qn.y + qn.z * qn.z)))
     return pitch, roll, yaw
 end
+outer_loop_controller._quat_to_euler_deg = quat_to_euler_deg
 
 local function quat_slerp(q1, q2, alpha)
     local dot = q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z

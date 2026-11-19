@@ -507,4 +507,51 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
         assert_false(cmd_sp_false.flightActive, "sp.flightActive = false must yield cmd.flightActive == false when fsmCtx.flightActive is nil")
     end)
 
+    it("pins [-180, 180] signed yaw across 4 quadrants, gimbal-lock +-90 pitch, and non-unit normalization", function()
+        assert_eq(type(outer_loop_controller._quat_to_euler_deg), "function", "_quat_to_euler_deg helper must be exposed for testing")
+        local to_euler = outer_loop_controller._quat_to_euler_deg
+
+        -- 4 quadrants in signed [-180, 180] domain
+        local quadCases = {
+            { q = { w = math.cos(math.rad(22.5)), x = 0, y = 0, z = math.sin(math.rad(22.5)) }, yaw = 45.0 },
+            { q = { w = math.cos(math.rad(67.5)), x = 0, y = 0, z = math.sin(math.rad(67.5)) }, yaw = 135.0 },
+            { q = { w = math.cos(math.rad(-22.5)), x = 0, y = 0, z = math.sin(math.rad(-22.5)) }, yaw = -45.0 },
+            { q = { w = math.cos(math.rad(-67.5)), x = 0, y = 0, z = math.sin(math.rad(-67.5)) }, yaw = -135.0 },
+        }
+        for _, c in ipairs(quadCases) do
+            local p, r, y = to_euler(c.q)
+            assert_true(y >= -180.0 and y <= 180.0, "FCP yaw must lie in [-180, 180], got: " .. tostring(y))
+            assert_near(p, 0.0, 1e-3)
+            assert_near(r, 0.0, 1e-3)
+            assert_near(y, c.yaw, 1e-3)
+        end
+
+        -- Gimbal lock +-90 deg stays finite and clamped within [-90, 90]
+        local s2 = math.sqrt(0.5)
+        local pPos, rPos, yPos = to_euler({ w = s2, x = 0.0, y = s2, z = 0.0 })
+        assert_true(pPos == pPos and rPos == rPos and yPos == yPos)
+        assert_true(pPos >= -90.0 and pPos <= 90.0)
+        assert_near(pPos, 90.0, 1e-3)
+
+        local pNeg, rNeg, yNeg = to_euler({ w = s2, x = 0.0, y = -s2, z = 0.0 })
+        assert_true(pNeg == pNeg and rNeg == rNeg and yNeg == yNeg)
+        assert_true(pNeg >= -90.0 and pNeg <= 90.0)
+        assert_near(pNeg, -90.0, 1e-3)
+
+        -- Non-unit quaternions must normalize before Euler extraction
+        local pn1, rn1, yn1 = to_euler({ w = 2.0, x = 0.0, y = 0.0, z = 2.0 })
+        assert_near(pn1, 0.0, 1e-3)
+        assert_near(rn1, 0.0, 1e-3)
+        assert_near(yn1, 90.0, 1e-3)
+
+        local pn2, rn2, yn2 = to_euler({ w = 2.0, x = 0.0, y = 0.0, z = -2.0 })
+        assert_near(pn2, 0.0, 1e-3)
+        assert_near(rn2, 0.0, 1e-3)
+        assert_near(yn2, -90.0, 1e-3)
+
+        local pn3, _, _ = to_euler({ w = 3.0, x = 0.0, y = 3.0, z = 0.0 })
+        assert_true(pn3 == pn3 and pn3 >= -90.0 and pn3 <= 90.0)
+        assert_near(pn3, 90.0, 1e-3)
+    end)
+
 end)

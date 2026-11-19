@@ -41,25 +41,25 @@ function state_machine.load_flight_state(path, fsApi)
     return parsed
 end
 
-function state_machine.save_flight_state(path, armedState, extra, fsApi)
+function state_machine.save_flight_state(path, stateTbl, fsApi)
     local fsObj = fsApi or _G.fs
     local target = path or "/.flight_state.json"
     local ser = textutils and (textutils.serializeJSON or textutils.serialiseJSON)
-    if not fsObj or not fsObj.open or not ser then return false end
-    if armedState ~= "AIRBORNE_ACTIVE" and armedState ~= "GROUND_SAFE" then return false end
+    if not fsObj or not fsObj.open or not ser or type(stateTbl) ~= "table" then return false end
+    local armed = stateTbl.armedState
+    if armed ~= "AIRBORNE_ACTIVE" and armed ~= "GROUND_SAFE" then return false end
     local dir = fsObj.getDir and fsObj.getDir(target) or ""
     if dir ~= "" and fsObj.exists and fsObj.makeDir and not fsObj.exists(dir) then
         fsObj.makeDir(dir)
     end
-    local ex = type(extra) == "table" and extra or {}
     local snapshot = {
         schemaVersion = 1,
-        armedState = armedState,
-        missionId = ex.missionId or "",
-        currentCpIdx = ex.currentCpIdx or 0,
-        homePadId = ex.homePadId or "",
-        homePos = ex.homePos or { x = 0.0, y = 0.0, z = 0.0 },
-        savedAtEpoch = ex.savedAtEpoch or resolve_epoch_ms(),
+        armedState = armed,
+        missionId = stateTbl.missionId or "",
+        currentCpIdx = stateTbl.currentCpIdx or 0,
+        homePadId = stateTbl.homePadId or "",
+        homePos = stateTbl.homePos or { x = 0.0, y = 0.0, z = 0.0 },
+        savedAtEpoch = stateTbl.savedAtEpoch or resolve_epoch_ms(),
     }
     local payload = ser(snapshot)
     if fsObj.move and fsObj.delete and fsObj.exists then
@@ -162,7 +162,7 @@ local function persist_transition_state(state, nextState)
     local armedState = AIRBORNE_PERSIST_STATES[nextState] and "AIRBORNE_ACTIVE"
         or (GROUND_PERSIST_STATES[nextState] and "GROUND_SAFE" or nil)
     if armedState and armedState ~= state.lastPersistedArmedState then
-        state_machine.save_flight_state(br.stateFilePath, armedState, nil, br.fsApi)
+        state_machine.save_flight_state(br.stateFilePath, { armedState = armedState }, br.fsApi)
         state.lastPersistedArmedState = armedState
     end
 end
