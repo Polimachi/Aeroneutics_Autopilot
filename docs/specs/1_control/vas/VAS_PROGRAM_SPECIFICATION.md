@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.25.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.26.0` |
+| **최종 수정일 (Date)** | `2026-11-19` |
 | **구현 코드 (Source)** | `src/1_control/vas/` |
 | **주관 도메인 (Domain)** | 온보드 실시간 비행 제어 및 고정밀 계측 코어 (VAS / Node 01) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.26.0` | `2026-11-19` | **`TASK-017`·`TASK-018` `[I-4]` 교정 세션 계약 정합·프로파일 롤백 및 유령 키 제거 (`Implemented` $\to$ `Approved`)**: ① `MSG_CALIBRATION_INIT` 수신 시 `targetCraftDomain` 일치 검증 및 `targetThruster` 저장·전파, ② `MSG_CALIB_START` 수신 시 `targetThruster` 추적, ③ `MSG_PROFILE_SYNC` 수신 시 적용 전 기존 프로파일 백업 후 `controllabilityStatus` (`"FULL_6DOF_PASS"`/`"AERO_ASSISTED_PASS"` $\to$ `"ACCEPTED"`, 그 외 `"REJECTED"`) 검증 및 `MSG_CALIBRATION_CLOSE.saveProfile == false` 시 백업 프로파일 롤백(`R2`/`R3`), ④ `MSG_CALIBRATION_CLOSE_ACK`에서 미소비 유령 키 `currentFsmState` `[DEPRECATED]` 제거, ⑤ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `TCA v1.15.0`, `AMM v2.7.0`, `FCP v2.6.0`) 동기화 | `TASK-016` 감사 후속 `[I-4]` 미소비·유령 필드 정합 및 교정 취소 시 안전 롤백 확정 (`src/1_control/vas/` 반영 후 `Implemented` 승격 예정) |
 | `v1.25.0` | `2026-11-18` | **`TASK-136` 컨트랩션 조립 인터록·`TASK-131` 5단계 PBIT·`TASK-128` GPS DR 홀드오버 가드 반영 (`Implemented` $\to$ `Approved`)**: ① `TASK-136`: `CONTRAPTION_STATE` (`"ASSEMBLED"` \| `"DISASSEMBLED"`), 공중 해제 시 `E_STOP` (`"CONTRAPTION_DISASSEMBLED_IN_FLIGHT"`), 지상 해제/미교정 시 시동 거부(`ERR_CONTRAPTION_DISASSEMBLED` / `ERR_RECALIBRATION_REQUIRED`) 및 `peripheralManifest` 수량·질량(`<= 5%`) 대조 인터록 신설, ② `TASK-131`: 5단계 비행 전 자가진단(`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`) 및 `MSG_PBIT_REQ`(`Base+8`/`Base+1`) $\to$ `MSG_CALIB_PULSE` (`pbitWiggle = true`, `pulseRatio <= 0.04`) $\to$ `MSG_PBIT_REPORT`(`Base+2`/`Base+8`) 파이프라인 추가, ③ `TASK-128`: `MSG_NAV_QUALITY` 연동, 1,500ms 이내 속도 적분 DR 홀드오버 및 초과 두절 시 `HOLD_LEVEL` 수평 자세·고도 유지 강제, 청크 경계 스파이크 완화 반영, ④ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `Alignment v2.9.0`, `TCA v1.14.0`, `AMM v2.6.0`, `GPS v2.4.0`, `FCP v2.5.0`) 동기화 | `TASK-136`·`TASK-131`·`TASK-128` 비행 안전 인터록 및 항법 무결성 가드 규격화 (`src/1_control/vas/` 반영 후 `Implemented` 승격 예정) |
 | `v1.24.0` | `2026-11-18` | **`TASK-130` 공중 콜드부트 복구(`AIRBORNE_RECOVERY_HOLD`) 및 `/.flight_state.json` 영속화 규격 신설 (`Implemented` — 2026-11-18 승격)**: ① 10번째 FSM 상태 **`AIRBORNE_RECOVERY_HOLD`** 추가(`isFlight = true`, `QUATERNION_RATE` 수평 자세·수직 속도 0 홀드 / 고정익 $18^\circ$ 협조 선회, 미동기화 `FCP` 조기 `arm=false` 무시 인터록, `Base+3` 5Hz 폴백 HUD, `recoveryMaxHoldSec = 10.0s` 초과 시 `EMERGENCY_LAND` 에스컬레이션), ② 비휘발성 스냅샷 `/.flight_state.json` 원자적 쓰기(`.tmp` + `fs.move`) 및 `schemaVersion = 1` Zero-Fallback 규격화, ③ 부팅 시점 공중 감지(`isAirborneAtBoot`: 고도/속도 노름 `GROUND_SAFE` 임계 초과 OR `armedState == "AIRBORNE_ACTIVE"`) 및 `bootTimeoutMs = 500ms` 목표 비차단 20Hz 루프 즉시 기동 규격 추가, ④ `config/system.json` `bootRecovery` 블록 신설 및 연관 문서 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `AMM v2.5.0`, `FCP v2.4.0`) 동기화 | `TASK-130-2`·`TASK-130-4` (`src/1_control/vas/` 및 단위·E2E 검증 완료) |
 | `v1.23.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 채널 분리 규격 개정 (`Implemented` $\to$ `Approved`)**: ① `Base+8` (`CH_CALIBRATION_INIT`: `MSG_CALIBRATION_INIT` 전용 수신) 신설 및 런타임 `Base+0` (`CH_OPERATOR_C2`) 미개방 원칙 확립, ② `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE` `E_STOP` 수신 & `MSG_EMERGENCY_ALERT` 송신) 신설 및 `Base+1` 순수 `MSG_ATTITUDE_CMD` 분리, ③ `Base+3` `MFD_ACRO`/`FAILSAFE_HOLD`/`EMERGENCY_LAND` 배타적 우선권 및 `acroTimeoutMs = 250ms` 규약 추가, ④ `ZONE_OFFSETS`/`system.json` `subchannels`에서 `formationLink = 30` 제거(`calibrationInit = 8`, `emergencyCore = 9` 추가) 및 연관 문서(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`, `FCP v2.3.0`, `Alignment v2.8.0`, `FDR v0.4.0`) 동기화 | `TASK-125` 40채널 블록 경합·보안 분리 결함 해소 (`src/1_control/vas/` 반영 후 `Implemented` 재승격 예정) |
@@ -32,16 +33,16 @@
 | `v1.12.0` | 2026-11-07 | 비행체 전용 40채널($BW=40$) 대역 확장($Base = 10000 + (N-1)\times 40$) 반영, 구동계 버스 Zone 2 이관(`Base+10`: TCA, `Base+11`: ASA, `Base+12~19`: 구동계 예비), 구버전 `Base+10` (구 `Base+6` [DEPRECATED]), `Base+11` (구 `Base+7` [DEPRECATED])에 `[DEPRECATED]` 부여, `Base+0` C2 상시 개방 명세 확립, 승격 전이(`implemented/` $\to$ `approved/`) | 서브채널 대역폭 확장 및 기능 영역별 직교성 확보, 1000대 수용량 확립 |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.5.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.4.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 통합 단말 규격서 v2.7.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 자율 비행 제어 규격서 v2.6.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 날개 및 조종면 규격서 v1.8.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.13.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.8.0)
-> - [FDR_PROGRAM_SPECIFICATION.md](../../0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) (지상 실환경 비행 식별·계측기 FDR v0.4.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [TCA_PROGRAM_SPECIFICATION.md](../tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 상세 규격서 v1.15.0)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.9.0)
+> - [FDR_PROGRAM_SPECIFICATION.md](../../0_development/fdr/FDR_PROGRAM_SPECIFICATION.md) (지상 실환경 비행 식별·계측기 FDR v0.5.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.4.0)
 
 ---
 
@@ -1219,7 +1220,7 @@ stateDiagram-v2
     }
 }
 
--- 7. 교정 세션 종료 및 채널 해제 완료 응답 (MSG_CALIBRATION_CLOSE_ACK, VAS -> Alignment Base_hangar+1)
+-- 7. 교정 세션 종료 및 채널 해제 완료 응답 (MSG_CALIBRATION_CLOSE_ACK, VAS -> Alignment Base_hangar+1; 구 currentFsmState [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -1228,11 +1229,17 @@ stateDiagram-v2
     time = 1729845095050,
     payload = {
         bayId = 1,
-        status = "CLOSED",
-        currentFsmState = "IDLE_ARMED"
+        status = "CLOSED"
     }
 }
 ```
+
+> **`[I-4]` 교정 세션 계약 검증 및 롤백 규약 (`R2`/`R3`)**:
+> - `MSG_CALIBRATION_INIT`: `payload.targetCraftDomain`이 기체 `domainId`와 불일치하면 바인딩을 거부하고, 선택 `targetThruster`를 세션 상태에 보존합니다.
+> - `MSG_CALIB_START`: 선택 `payload.targetThruster`를 교정 세션 대상 스러스터로 기록합니다.
+> - `MSG_PROFILE_SYNC`: 반영 전 현재 활성 프로파일/매니페스트 스냅샷을 메모리에 백업하며, `controllabilityStatus`가 `"FULL_6DOF_PASS"` 또는 `"AERO_ASSISTED_PASS"`일 때만 프로파일을 적용하고 `MSG_CALIB_ACK` (`status = "ACCEPTED"`)를 회신합니다(그 외 `"REJECTED"`).
+> - `MSG_CALIBRATION_CLOSE`: `payload.saveProfile == false`인 경우 적용된 임시 프로파일을 백업 스냅샷으로 즉시 롤백한 뒤 `IDLE_ARMED`로 복귀합니다.
+> - `MSG_CALIBRATION_CLOSE_ACK`: 구 `currentFsmState` 선택 필드는 `[DEPRECATED]` 제거되었습니다(Zero-Fallback).
 
 ### 8.6 [Interface I-3 / I-10] 추진기 및 공력면 디스커버리 핸드셰이크 (`VAS` $\leftrightarrow$ `TCA` & `ASA`)
 - **채널**: `CH_THRUST_ACTUATION` (`Base + 10`, 구버전 `Base + 6` [DEPRECATED]) 및 `CH_SURFACE_ACTUATION` (`Base + 11`, 구버전 `Base + 7` [DEPRECATED])
@@ -1383,7 +1390,7 @@ stateDiagram-v2
 
 ### 8.9 [Interface I-4] 동역학 프로파일 수신 확인 응답 (`VAS` $\rightarrow$ `Alignment`)
 - **채널**: $Base_{\text{hangar}} + 1$ (`CH_CALIBRATION_TELEM`, 구버전 `1001`, `1002` 및 `Base + 4` [DEPRECATED])
-- **전송 시점**: Alignment의 `MSG_PROFILE_SYNC` 수신 후 디스크 저장(`save_json`) 및 어댑터 리로드 완료 즉시 1회 회신.
+- **전송 시점**: Alignment의 `MSG_PROFILE_SYNC` 수신 시 `controllabilityStatus` (`"FULL_6DOF_PASS"` | `"AERO_ASSISTED_PASS"`)를 검증하여 유효한 경우 기존 프로파일 백업 후 디스크 저장(`save_json`) 및 어댑터 리로드 완료 즉시 `"ACCEPTED"` 회신(유효하지 않으면 `"REJECTED"` 회신).
 
 ```lua
 {

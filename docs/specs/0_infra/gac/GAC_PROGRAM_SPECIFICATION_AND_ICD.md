@@ -310,14 +310,15 @@ GAC가 다속성 알고리즘으로 선정한 최적 패드 ID와 전술 유도 
     payload = {
         sectorId = "BASE_ALPHA_SECTOR_01",
         aircraftId = "AIRCRAFT_01",
-        status = "CLEARED",                  -- "CLEARED" | "HOLD" | "DENIED"
+        status = "CLEARED",                  -- "CLEARED" | "HOLD" | "DENIED" | "DIVERT"
         assignedFacilityId = "PAD_BRAVO_01", -- GAC가 최종 선정한 최적 패드
         assignedTacticalChannel = 50211,     -- 패드 전술 채널 (Base_sec + 10 + PadID)
         touchdownPoint = { x = 1250.0, y = 65.0, z = -820.0 },
         safeDescentRate = 1.0,
         clearanceRadius = 5.0,               -- (구 clearanceZoneRadius [DEPRECATED])
         holdingArea = nil,                   -- HOLD 시 선회 중심점 및 고도
-        reason = nil                         -- DENIED 시 거절 사유 ("SECTOR_ALL_OCCUPIED", "OVERWEIGHT", "FACILITY_DEDICATED")
+        divertChannel = nil,                 -- DIVERT 시 대체 섹터 GAC 채널 (Base_sec' + 0)
+        reason = nil                         -- DENIED/DIVERT 시 사유 ("SECTOR_ALL_OCCUPIED", "OVERWEIGHT", "FACILITY_DEDICATED")
     }
 }
 ```

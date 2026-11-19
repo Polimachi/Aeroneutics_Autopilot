@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.5.0` |
-| **최종 수정일 (Date)** | `2026-11-14` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.6.0` |
+| **최종 수정일 (Date)** | `2026-11-19` |
 | **구현 코드 (Source)** | `src/0_infra/landing_pad/` |
 | **주관 도메인 (Domain)** | 지상 인프라 수직이착륙 착륙패드 비콘 (Landing Pad) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v2.6.0` | `2026-11-19` | **`TASK-017`·`TASK-018` `MSG_TOUCHDOWN_COMPLETE.touchdownTime` 소비 정합 및 미사용 UI 정리 (`Implemented` $\to$ `Approved`)**: ① `pad_fsm`이 `MSG_TOUCHDOWN_COMPLETE` 수신 시 `payload.touchdownTime`을 `state.lastTouchdownTime`으로 소비·기록하도록 명시화, ② `tui_view.lua` 미사용 `render_halt_warning` 정리 계획 반영, ③ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `AMM v2.7.0`, `FCP v2.6.0`, `VAS v1.26.0`, `Runway v1.13.0`) 동기화 | `TASK-016` 감사 후속 미소비 계약 필드(`touchdownTime`) 소비 정합화 및 죽은 함수 제거 (`src/0_infra/landing_pad/` 반영 후 `Implemented` 승격 예정) |
 | `v2.5.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `[I-5]` `MSG_FACILITY_STATIC_GUIDE`·`MSG_FACILITY_DYNAMIC_GUIDE` 시설물 3종 대칭 공통 스키마(`facilityType = "LANDING_PAD"`, `touchdownPoint`, `attitude`, `approachDirection = "DOWNWARD"`, `deckStatus`, `landingPermitted`, `abortAlert`, 동적 `velocity`/`acceleration`/`angularRates`, 보조 `clearanceRadius`·`safeDescentRate`·`tiltAngleDeg`·`heaveRateMps`) 정합, `clearanceZoneRadius` $\to$ `clearanceRadius` 및 장식 필드(`approachHeading`, `surfaceWind`) 제거, `CH 50003` GAC 집약 비콘 명시 및 연관 문서 버전(`ICD v1.30.0`, `GAC v1.5.0`, `Diagram v2.15.0`, `GPS v2.3.3`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Runway v1.11.0`, `Docking Arm v1.12.0`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 시설물 3종 가이드 패킷 대칭 스키마 단일화 |
 | `v2.4.4` | 2026-11-14 | GPS 고부하 경합 완화 및 위상 분산 규격 반영 (`Implemented` $\to$ `Approved`, `TASK-123`): ① `CH 60001` (`GPS_PING_CHANNEL`)을 송신 전용(Transmit-Only)으로 전환해 `main.lua`의 `modem.open(60001)` 개방을 제거(타 클라이언트 핑 패킷의 수신 큐 유입 차단), ② `gps_client.lua` `should_query_gps`에 `computerId` 기반 결정론적 틱 위상 분산(`offset = (computerId or 0) % interval`, `ID = 0`일 때 `offset = 0`) 추가 | 다수 패드·비행체의 동시 측위 질의 집중 완화 및 모뎀 수신 이벤트 큐 보호 |
 | `v2.4.3` | 2026-11-12 | FCP-AMM 역할 분리(마스터 ICD v1.28.0)에 따른 기체 외부 교신·2차 테일러 외삽·300ms 복행 및 `landingPermitted`/`DANGEROUS` 호버 게이팅 주체 용어 정렬(`FCP (Node 04)` $\to$ `AMM (Node 03)`, `Base+4`로 `FCP`에 세트포인트 전달) 및 연관 규격서 버전 동기화 (`src/0_infra/landing_pad/` 런타임 무변경, `Implemented` 유지) | AMM 외부 게이트웨이·궤적 생성 전담 및 FCP 순수 외루프 제어기 역할 분리 정합화 |
@@ -27,14 +28,14 @@
 
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.30.0)
-> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.5.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.15.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.0.1)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.1.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.20.0)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.11.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
+> - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.7.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.22.0)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.4.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.7.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.6.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.26.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.13.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
 
 ---
@@ -322,7 +323,7 @@ flowchart TD
 ---
 
 ### 3.4 접지 통보 인터페이스 (`MSG_TOUCHDOWN_COMPLETE`, $Base_{\text{sec}}+10+\text{Idx}$ / Base+5 $\rightarrow$ Pad / GAC)
-기체의 온보드 제어기(수직 하강 정지 $v_y \approx 0$)가 물리 접지를 판정했을 때 송출하여 패드 상태를 즉시 `OCCUPIED`로 전이시키고 직속 GAC에 통보합니다.
+기체의 온보드 제어기(수직 하강 정지 $v_y \approx 0$)가 물리 접지를 판정했을 때 송출하여 패드 상태를 즉시 `OCCUPIED`로 전이시키고 `pad_fsm`에 `payload.touchdownTime`(`lastTouchdownTime`)을 기록한 뒤 직속 GAC에 통보합니다.
 ```lua
 {
     ver = "1.9.5",

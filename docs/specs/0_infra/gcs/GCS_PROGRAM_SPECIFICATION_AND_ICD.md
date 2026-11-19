@@ -113,7 +113,7 @@
   - `command`: `"ARM"` | `"DISARM"` | `"TAKEOFF"` | `"CRUISE"` | `"LOITER"` | `"POI_HOLD"` | `"LANDING"` | `"DOCKING"`
   - `flightMode`: 목표 비행 모드 문자열 (예: `"AUTO_NAV"`, `"CRUISE_HOLD"`)
   - `params`: 세부 매개변수 (목표 고도, 속도, 좌표 등)
-  - `emergencyAction`: `"NONE"` | `"HOVER_HOLD"` | `"EMERGENCY_LAND"` | `"RTH"`
+  - `emergencyAction` `[DEPRECATED]`: 구버전 비상 액션 필드(제거됨; `RTH`/`HOVER_HOLD`/`EMERGENCY_LAND`는 `command`/`flightMode`로 단일 전달)
 
 ### 3.2 하드 비상차단 직결 지령 (`MSG_EMERGENCY_OVERRIDE`, Base + 9 / `OFFSET_ESTOP = 9`)
 - **발신 채널**: 관제 대상 기체의 **`Base + 9` (`CH_EMERGENCY_CORE`, `OFFSET_ESTOP = 9`, 구 `Base + 1` `[DEPRECATED]`)**

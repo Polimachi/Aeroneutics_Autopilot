@@ -5,25 +5,25 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.5.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.6.0` |
+| **최종 수정일 (Date)** | `2026-11-19` |
 | **구현 코드 (Source)** | `src/2_guidance/fcp/` |
 | **주관 도메인 (Domain)** | 순수 온보드 SE(3) 외루프 유도 제어기 (FCP / Node 04) |
 
 > **참조 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.6.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.25.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (조종석 통합 단말 및 미션·항법·궤적 생성기 v2.7.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.26.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (공력 날개 및 조종면 규격서 v1.8.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.14.0)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (추력 어댑터 규격서 v1.15.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.9.0)
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (GAC 관제사 규격서 v1.7.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS 규격서 v2.4.0)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.13.0)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.6.0)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
 > - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서 v1.4.0)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
@@ -32,6 +32,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.6.0` | `2026-11-19` | **`TASK-017`·`TASK-018` `config/fcp_config.json` 정합·소프트 버전 검증·안전 타임아웃 소비 (`Implemented` $\to$ `Approved`)**: ① `fcp_config.json` 최상위 `"version": "2.1.0"`(부팅 중단 없는 소프트 경고/메타데이터 검증) 및 `safety` 표준 키(`ammSetpointTimeoutMs`, `ammTimeoutHoldToEmgMs`, `coreTelemetryTimeoutMs`, `navStaleTimeoutMs`, `rebindAckTimeoutMs`, `emergencyDescentRateMps`, `fixedWingGlideDescentMps`) 정합화 및 미소비 주석 키 `_airframeType_comment` `[DEPRECATED]` 제거, ② §10.1 `coreTelemetryTimeoutMs`(`500ms`) 적분기 동결+타임아웃 경고 플래그, `emergencyMaxBankDeg`($75.0^\circ$, `EMERGENCY_MANEUVER`/`EMERGENCY_LAND` 전용; `AMM_TIMEOUT_HOLD`는 $18^\circ$ 유지), `rebindAckTimeoutMs`(`500ms`) 소비 및 `loopFrequencyHz`(`20`) 틱 주기 산출 명시 (`R5` 확정), ③ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `AMM v2.7.0`, `VAS v1.26.0`, `TCA v1.15.0`, `RUNWAY v1.13.0`, `LANDING_PAD v2.6.0`) 동기화 | `TASK-016` 감사(`E-L3-04`) 후속 미소비 설정 키 제거·런타임 소비 정합화 (`src/2_guidance/fcp/` 반영 후 `Implemented` 승격 예정) |
 | `v2.5.0` | `2026-11-18` | **`TASK-128` `state_propagator` 1.5초 DR 홀드오버·`HOLD_LEVEL` 전이 및 청크 경계 스파이크 완화 반영 (`Implemented` $\to$ `Approved`)**: ① `gpsTimedOut == true` 또는 `MSG_NAV_QUALITY` (`navQuality == "LOST"`) 시 `drHoldoverMaxMs = 1,500ms` 이내에서 `drHoldoverActive = true`로 속도 적분 추종 유지, ② `> 1,500ms` 장기 두절 시 `holdLevelActive = true` 진입으로 수평 속도 지령 0 및 수평 자세(`HOLD_LEVEL`) 강제, ③ 복구 시 또는 청크 경계 대점프 시 `chunkBlendTicks = 10` 틱 완만 보간 및 `HOLD_LEVEL` 이탈 시 `2.0초` 범프리스 램핑 적용, ④ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `AMM v2.6.0`, `VAS v1.25.0`, `GPS v2.4.0`) 동기화 | `TASK-128` 청크 경계 GPS 두절 및 좌표 스파이크 안전 완화 (`src/2_guidance/fcp/` 반영 후 `Implemented` 승격 예정) |
 | `v2.4.0` | `2026-11-18` | **`TASK-130` 공중 콜드부트 복구 중 `VAS AIRBORNE_RECOVERY_HOLD` 비간섭·안전 게이트 정합 (`Implemented` — 2026-11-18 승격)**: ① `VAS Base+2` `controlState == "AIRBORNE_RECOVERY_HOLD"` 수신 중 `IDLE_ARMED` 상태에서 조기 `arm = false / flightActive = false` `Base+1` 지령 송출을 억제(Silence)해 `VAS` 자체 안정화 루프 간섭을 방지하고 `AMM Base+4`(`arm=true, flightActive=true`) 동기화 시 **2.0초 범프리스 램핑**으로 `ACTIVE_TRACKING` 진입, ② `[I-13]` 무선 OTA `getStatusFn` `isAirborne` 판정 집합에 `"AIRBORNE_RECOVERY_HOLD"` 추가(`NOT_DISARMED` 차단), ③ 연관 문서 배지(`ICD v1.36.0`, `Diagram v2.20.0`, `AMM v2.5.0`, `VAS v1.24.0`) 동기화 | `TASK-130` (`src/2_guidance/fcp/` 및 단위·E2E 검증 완료) |
 | `v2.3.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 비상 코어 구독 분리 (`Implemented` $\to$ `Approved`)**: ① `Base+1` (`CH_FLIGHT_GUIDANCE`) 순수 20Hz `MSG_ATTITUDE_CMD` 송신 및 `MSG_CHANNEL_REBIND` 중계 전용화, ② `Base+9` (`CH_EMERGENCY_CORE`) `MSG_EMERGENCY_ALERT` 구독 추가 및 비상 경보 수신 시 `EMERGENCY_HOLD` 안전 전이 명세, ③ 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`, `VAS v1.23.0`, `Alignment v2.8.0`, `GCS v1.2.0`) 동기화 | `TASK-125` 유도/비상 버스 분리 및 FCP 비상 안전 전이 확립 (`src/2_guidance/fcp/` 반영 후 `Implemented` 승격 예정) |
@@ -854,11 +855,11 @@ stateDiagram-v2
 
 ```json
 {
+  "version": "2.1.0",
   "system": {
     "domainId": "AIRCRAFT_01",
     "hardwareUuid": "FCP-NODE-04-UUID",
     "airframeType": "WINGED_VTOL",
-    "_airframeType_comment": "6대 표준: FIXED_WING | WINGED_VTOL | VECTORED_VTOL | ADVANCED_VTOL | QUADROTOR | HEXAROTOR",
     "loopFrequencyHz": 20,
     "primaryModemSide": "top",
     "debug": false
@@ -920,17 +921,22 @@ stateDiagram-v2
     }
   },
   "safety": {
-    "ammCommandTimeoutMs": 500,
+    "ammSetpointTimeoutMs": 500,
+    "ammTimeoutHoldToEmgMs": 10000,
     "coreTelemetryTimeoutMs": 500,
-    "failsafeHoldDurationSec": 10.0,
-    "emergencyLandDescentMps": 1.5,
-    "fixedWingGlideDescentMps": 1.0,
+    "navStaleTimeoutMs": 500,
+    "rebindAckTimeoutMs": 500,
     "bumplessRampSec": 2.0,
-    "navStaleEpochMs": 500,
-    "rebindAckTimeoutMs": 500
+    "emergencyDescentRateMps": -1.5,
+    "fixedWingGlideDescentMps": -1.0
   }
 }
 ```
+
+> **설정 스키마·소비 규칙 (`R5`)**:
+> - `version` (`"2.1.0"`): 부팅 시 소프트 경고/메타데이터 확인용으로만 소비하며 버전 불일치로 부팅을 중단하지 않습니다.
+> - 구 `_airframeType_comment` 주석 키는 `[DEPRECATED]` 제거되었습니다(Zero-Fallback).
+> - `system.loopFrequencyHz`(`20`): 메인 제어 루프 틱 간격(`1 / loopFrequencyHz`) 산출에 직접 사용되며, `safety.coreTelemetryTimeoutMs`, `safety.rebindAckTimeoutMs`, `outerLoop.fixed_wing.emergencyMaxBankDeg` 역시 런타임 워치독 및 비상 착륙 기동에서 소비됩니다.
 
 ---
 
@@ -940,12 +946,12 @@ stateDiagram-v2
 
 | 감시 인터페이스 | 타임아웃 / 조건 | 감지 주체 | 자동 페일세이프 집행 액션 |
 | :--- | :---: | :---: | :--- |
-| **I-12: AMM 궤적 세트포인트 (`Base+4`)** | **500ms** (`AMM_TIMEOUT`) | `FCP` (`flight_fsm`) | **`AMM_TIMEOUT_HOLD` (10.0초)**: 적분기 초기화 후 현재 전파 위치·고도에서 수평 호버(회전익/VTOL) 또는 $18^\circ$ 뱅크 선회(고정익) 유지 $\to$ 10.0초 초과 미복구 시 **`EMERGENCY_LAND`** (`-1.5 m/s` 수직 강하 / `-1.0 m/s` 활공) |
-| **I-1: VAS 텔레메트리 (`Base+2`)** | **500ms** (`VAS_TIMEOUT`) | `FCP` (`flight_fsm`) | **외루프 적분기 동결**: `SE(3)` 위치 적분기 즉시 동결, 마지막 전파 위치 기준 수평 호버(또는 안전 활공) `QUATERNION_RATE` 출력 및 `Base+4`로 `AMM` 경보 상태 보고 |
+| **I-12: AMM 궤적 세트포인트 (`Base+4`)** | **500ms** (`ammSetpointTimeoutMs`) | `FCP` (`flight_fsm`) | **`AMM_TIMEOUT_HOLD` (`ammTimeoutHoldToEmgMs = 10.0s`)**: 적분기 초기화 후 현재 전파 위치·고도에서 수평 호버(회전익/VTOL) 또는 $18^\circ$ 뱅크 선회(고정익) 유지 $\to$ 10.0초 초과 미복구 시 **`EMERGENCY_LAND`** (`emergencyDescentRateMps = -1.5 m/s` 수직 강하 / `fixedWingGlideDescentMps = -1.0 m/s` 활공; 고정익 `EMERGENCY_MANEUVER`/`EMERGENCY_LAND` 뱅크 한계는 `emergencyMaxBankDeg = 75.0°` 적용) |
+| **I-1: VAS 텔레메트리 (`Base+2`)** | **500ms** (`coreTelemetryTimeoutMs`) | `FCP` (`flight_fsm`) | **외루프 적분기 동결 + 텔레메트리 타임아웃 경고**: `coreTelemetryTimeoutMs` 초과 시 `SE(3)` 위치 적분기를 즉시 동결하고 텔레메트리 타임아웃 경고 플래그를 설정하며, 마지막 전파 위치 기준 수평 호버(또는 안전 활공) `QUATERNION_RATE` 출력 및 `Base+4`로 `AMM` 경보 상태 보고 |
 | **I-2: FCP 유도 명령 (`Base+1`)** | **1,500ms** (`FCP_TIMEOUT`) | `VAS` (`state_machine`) | `VAS` 자체 **`FAILSAFE_HOLD` (10초)** $\to$ 미복구 시 `VAS` 자체 `EMERGENCY_LAND` 자동 에스컬레이션 |
 | **I-2 / I-1: 비상 경보 / `E_STOP` (`Base+9`/`Base+2`)** | **이벤트 즉시** | `FCP` (`flight_fsm`) | `Base+9` `MSG_EMERGENCY_ALERT` 또는 `Base+2` `activeSource == "EMERGENCY_DIRECT"` 감지 시 즉시 적분기 초기화 및 **`EMERGENCY_HOLD`** (지상 복귀 시 `IDLE_ARMED`) 안전 전이 |
 | **I-1 / I-10 / I-3: 구동계 헬스 (`Base+2`)** | **20Hz 감시** (`actuatorHealth`) | `FCP` (`outer_loop_controller`) | `tap == false` 감지 시 `STRICT_LEVEL` 대신 **틸트 폴백(`TILT_ASSISTED`)** 전환 및 포화 축 적분 동결; `asa == false` 감지 시 `Base+4` 상태 보고 (ASA 로컬 300ms 타임아웃은 `VAS`가 직접 완결) |
-| **I-12: `AMM` 항법 정체 (`navValid`/`posEpoch`)** | **500ms** (`navStaleEpochMs`) | `FCP` (`state_propagator`) | `navStale = true` 판정 후 `MSG_OUTER_LOOP_STATUS`로 `AMM`에 상향 보고하고 장기화 시 적분기 와인드업 동결 |
+| **I-12: `AMM` 항법 정체 (`navValid`/`posEpoch`)** | **500ms** (`navStaleTimeoutMs`) | `FCP` (`state_propagator`) | `navStale = true` 판정 후 `MSG_OUTER_LOOP_STATUS`로 `AMM`에 상향 보고하고 장기화 시 적분기 와인드업 동결 |
 | **I-12 / I-9: 채널 재바인딩 ACK** | **500ms** (`rebindAckTimeoutMs`) | `FCP` (`network_manager`) | 하위 `VAS`/`TCA`/`ASA` `MSG_CHANNEL_REBIND_ACK` 누락 시 `action = "ROLLBACK"` 전파 및 `oldBaseChannel` 유지 |
 
 ### 10.2 이관된 구버전 외부 인프라 워치독 (`[DEPRECATED — Migrated to AMM v1.3.0]`)

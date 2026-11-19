@@ -5,19 +5,19 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.14.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.15.0` |
+| **최종 수정일 (Date)** | `2026-11-19` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.38.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.21.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.6.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.25.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.5.0)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.7.0)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.26.0)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.6.0)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.9.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.4.0)
@@ -27,6 +27,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.15.0` | `2026-11-19` | **`TASK-017`·`TASK-018` 교정 펄스 안전 경계(`safetyMaxTiltDeg`) 및 바인딩·탐색·설정 복제 정합 (`Implemented` $\to$ `Approved`)**: ① 일반(비-PBIT) `MSG_CALIB_PULSE` 수신 시 `0 < safetyMaxTiltDeg <= 45` 범위 검증 추가(`R3`), ② `MSG_CALIB_BAY_BIND`의 `bayCalibrationTap`/`bayCalibrationCmd` 채널 바인딩 소비 및 `MSG_ACTUATOR_DISCOVER_REQ.requestDomain` 일치 검증 추가, ③ `config_manager` 재귀 `deep_copy` 정합화, ④ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `AMM v2.7.0`, `VAS v1.26.0`, `FCP v2.6.0`) 동기화 | `TASK-016` 감사 후속 `[I-4]` 미소비 필드 소비 정합 및 설정 복제 안전성 확보 (`src/1_control/tca/` 반영 후 `Implemented` 승격 예정) |
 | `v1.14.0` | `2026-11-18` | **`TASK-136` 동적 페리페럴 리바인딩 및 `TASK-131` PBIT `< 5%` Wiggle 테스트 응답 추가 (`Implemented` $\to$ `Approved`)**: ① `scan_api_peripherals()`에서 재조립 시 변경된 페리페럴 ID(`thruster_2` $\to$ `thruster_5`)를 순번 기반 `logicalBindingMap`으로 동적 리바인딩, ② `MSG_CALIB_PULSE` (`pbitWiggle = true`, `pulseRatio <= 0.04`) 수신 시 `DISARMED`/`IDLE_ARMED` 상태에서도 `< 5%` 미소 시험 추력을 인가하고 즉시 `cut_thrust()` 복원 후 `MSG_ACTUATOR_STATUS` (`force = true`) 회신 (`MSG_PBIT_REQ`/`MSG_PBIT_REPORT` 연계), ③ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `VAS v1.25.0`, `Alignment v2.9.0`, `AMM v2.6.0`) 동기화 | `TASK-136` 재조립 어댑터 ID 매핑 유지 및 `TASK-131` PBIT 액추에이터 응답성 점검 지원 (`src/1_control/tca/` 반영 후 `Implemented` 승격 예정) |
 | `v1.13.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `tca_daemon` 초기화 시 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 응답, ② `controlState = inst.lastControlState or "DISARMED"` 및 `isAirborne = (inst.adapterState.lastSignal or 0) > 0` 안전 게이트 연동, ③ `step_event` 정상 틱 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/1_control/tca/` 반영 후 `Implemented` 재승격 예정) |
 | `v1.12.0` | `2026-11-14` | **Wave 1 전역 ICD/사양 정합 동기화 (`Implemented` $\to$ `Approved`)**: ① `[I-9]` `MSG_CHANNEL_REBIND_ACK`(`MSG_REBIND_ACK [DEPRECATED]`) Option A 정합화 및 응답 상태 `"READY"`(`"PREPARED"` 제거), ② `[I-4]` `MSG_ACTUATOR_DISCOVER_REQ/ACK` 채널 `Base_hangar+3` (`replyChannel = Base_hangar+3`, `targetGroup`, 구 `targetGroupId [DEPRECATED]`) vs `MSG_CALIB_PULSE` 채널 `Base_hangar+0` 분리 명시 및 `MSG_CALIB_BAY_BIND` 키를 `baseHangarChannel`로 단일화, ③ §7.1 `IS-06.1` 채널 수식을 `10000 + (N - 1) * 40`으로 정정, ④ 연관 문서 버전 배지 동기화 | Q1·Q2 사용자 확정 결정 반영 (`src/1_control/tca/` Wave 2 반영 후 `Implemented` 재승격 예정) |
@@ -427,7 +428,7 @@ function discovery_handler.handle_request(modem, recvChannel, replyChannel, pkt,
 ### 4.7 모듈 7: `config_manager` (JSON 설정 로더 및 채널 바인딩)
 
 #### 1) 모듈 역할
-`config.json` 파일을 역직렬화하고 기체 인덱스 $N$에 따른 무선 모뎀 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]) 상시, 지상 교정 시 $Base_{\text{hangar}}+3$ 동적 바인딩) 및 런타임 영속화를 전담합니다.
+`config.json` 파일을 역직렬화하고 재귀 `deep_copy`로 중첩 설정 테이블을 독립 복제하며, 기체 인덱스 $N$에 따른 무선 모뎀 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]) 상시, 지상 교정 시 $Base_{\text{hangar}}+3$ 동적 바인딩) 및 런타임 영속화를 전담합니다.
 
 ```lua
 function config_manager.load(path) -> configTable, err
@@ -449,8 +450,8 @@ function config_manager.save(path, cfg) -> boolean, err
 - **통신 채널**: `CH_THRUST_ACTUATION` (`Base + 10` (구 `Base + 6` [DEPRECATED]))
 - **전송 조건**: 기체가 정비 격납고에 입고되어 VAS가 [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) 베이 바인딩 명령을 중계 전파할 때 수신.
 - **수신 동작**:
-  1. `baseHangarChannel` ($101 \sim 200$, 구 `bayBaseChannel [DEPRECATED]`)을 파싱하여 $Base_{\text{hangar}} + 0$ (Hangar C2 / `MSG_CALIB_PULSE` 펄스 시험) 및 $Base_{\text{hangar}} + 3$ (`MSG_ACTUATOR_DISCOVER_REQ/ACK` 탐색 응답) 채널을 동적 개방.
-  2. Alignment으로부터 $Base_{\text{hangar}} + 3$으로 수신되는 `MSG_ACTUATOR_DISCOVER_REQ`에 `replyChannel = Base_hangar + 3`으로 회신하고, $Base_{\text{hangar}} + 0$으로 수신되는 `MSG_CALIB_PULSE` 시험 펄스에 응답.
+  1. `baseHangarChannel` ($101 \sim 200$, 구 `bayBaseChannel [DEPRECATED]`) 및 선택적 `bayCalibrationCmd` (기본 $Base_{\text{hangar}} + 0$) / `bayCalibrationTap` (기본 $Base_{\text{hangar}} + 3$)을 파싱하여 두 격납고 교정 채널을 동적 개방.
+  2. Alignment으로부터 $Base_{\text{hangar}} + 3$으로 수신되는 `MSG_ACTUATOR_DISCOVER_REQ`는 `requestDomain` 지정 시 `cfg.aircraftDomainId` 일치 여부를 검증한 뒤 `replyChannel = Base_hangar + 3`으로 회신하고, $Base_{\text{hangar}} + 0$으로 수신되는 `MSG_CALIB_PULSE`는 비-PBIT 일반 교정 펄스인 경우 `0 < safetyMaxTiltDeg <= 45` 유효 범위를 검증(`R3`)한 뒤 응답.
   3. 교정 완료 시 해당 격납고 채널을 닫고 비행 채널(`Base + 10` (구 `Base + 6` [DEPRECATED]))로 복귀.
 
 #### 2) 계층적 Base 채널 재바인딩 캐스케이드 (`MSG_CHANNEL_REBIND` / `MSG_CHANNEL_REBIND_ACK`, Core $\rightarrow$ TCA, oldBase + 10, 구 oldBase + 6 [DEPRECATED])
