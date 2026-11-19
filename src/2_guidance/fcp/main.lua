@@ -45,9 +45,14 @@ function fcp_main.load_config(path)
             cfg = (textutils and textutils.unserializeJSON and textutils.unserializeJSON(raw)) or {}
         end
     end
+    if cfg.version ~= nil and cfg.version ~= "2.1.0" then
+        cfg._versionWarning = "CONFIG_VERSION_MISMATCH: expected 2.1.0, got " .. tostring(cfg.version)
+    end
+    cfg.version = cfg.version or "2.1.0"
     cfg.system = cfg.system or {}
     if cfg.system.debug == nil then cfg.system.debug = false end
     if not cfg.system.airframeType then cfg.system.airframeType = "VECTORED_VTOL" end
+    if not cfg.system.loopFrequencyHz then cfg.system.loopFrequencyHz = 20 end
     cfg.channels = cfg.channels or {}
     if not cfg.channels.baseChannel then cfg.channels.baseChannel = 10000 end
     if not cfg.channels.trajectoryOffset then cfg.channels.trajectoryOffset = 4 end
@@ -123,7 +128,10 @@ end
 
 function fcp_main.create_context(config, modemResolver)
     local cfg = config or fcp_main.load_config()
+    local sys = cfg.system or {}
     local safe = cfg.safety or {}
+    local loopHz = tonumber(sys.loopFrequencyHz)
+    local loopIntervalSec = (loopHz and loopHz > 0) and (1.0 / loopHz) or 0.05
     local net = network_manager.init(cfg, modemResolver)
     local fsm = flight_fsm.init(cfg, safe)
     local ctrl = outer_loop_controller.init(cfg)
@@ -140,6 +148,8 @@ function fcp_main.create_context(config, modemResolver)
         lastTickMs = 0,
         lastAmmSetpoint = nil,
         lastTelemPayload = nil,
+        loopIntervalSec = loopIntervalSec,
+        freezeIntegrators = false,
         rampAlpha = 1.0,
         rampStartMs = nil,
         bumplessRampSec = tonumber(safe.bumplessRampSec) or 2.0,
@@ -197,6 +207,19 @@ local function build_fsm_ctx(ctx, inbound)
     }
 end
 
+local function build_status_payload(ctx, fsmState, posErr, velErr, profile, saturated, colThrust)
+    return {
+        fsmState = fsmState,
+        posError = posErr,
+        velError = velErr,
+        saturated = saturated,
+        navStale = (ctx.nav and ctx.nav.navStale) or false,
+        coreTelemetryTimedOut = (ctx.nav and ctx.nav.coreTelemetryTimedOut == true) or false,
+        activeConstraintProfile = profile,
+        commandedCollectiveThrust = colThrust,
+    }
+end
+
 local function dispatch_idle_armed(ctx, posErr, velErr, sp)
     local vasRecovering = (ctx.lastTelemPayload and ctx.lastTelemPayload.controlState == "AIRBORNE_RECOVERY_HOLD")
     if not vasRecovering then
@@ -215,25 +238,21 @@ local function dispatch_idle_armed(ctx, posErr, velErr, sp)
     end
     outer_loop_controller.reset_integrators(ctx.ctrl)
 
-    local status_payload = {
-        fsmState = "IDLE_ARMED",
-        posError = posErr,
-        velError = velErr,
-        saturated = false,
-        navStale = ctx.nav.navStale or false,
-        activeConstraintProfile = sp.constraintProfile or "STRICT_LEVEL",
-        commandedCollectiveThrust = 0.0,
-    }
+    local status_payload = build_status_payload(
+        ctx, "IDLE_ARMED", posErr, velErr, sp.constraintProfile or "STRICT_LEVEL", false, 0.0
+    )
     network_manager.send_outer_loop_status(ctx.net, status_payload)
     ctx.latestOuterLoopStatus = status_payload
 end
 
-local function dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp)
+local function dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp, events)
+    local ev = events or {}
     local satFlags = {
         rampAlpha = ctx.rampAlpha,
         navStale = ctx.nav.navStale,
         actuatorHealth = ctx.nav.actuatorHealth,
         vasSat = ctx.lastTelemPayload and ctx.lastTelemPayload.satFlags,
+        freezeIntegrators = (ctx.freezeIntegrators == true or ev.freezeIntegrators == true),
         currentState = currState,
         arm = ctx.fsm.arm,
         flightActive = ctx.fsm.flightActive,
@@ -241,45 +260,47 @@ local function dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp)
     local cmd = outer_loop_controller.compute(ctx.ctrl, ctx.nav, sp, satFlags, dt)
     network_manager.send_attitude_cmd(ctx.net, cmd)
 
-    local status_payload = {
-        fsmState = currState,
-        posError = posErr,
-        velError = velErr,
-        saturated = (ctx.ctrl and ctx.ctrl.saturated == true),
-        navStale = ctx.nav.navStale or false,
-        activeConstraintProfile = (ctx.ctrl and ctx.ctrl.activeConstraintProfile) or sp.constraintProfile or "STRICT_LEVEL",
-        commandedCollectiveThrust = cmd.collectiveThrust or 0.0,
-    }
+    local profile = (ctx.ctrl and ctx.ctrl.activeConstraintProfile) or sp.constraintProfile or "STRICT_LEVEL"
+    local status_payload = build_status_payload(
+        ctx, currState, posErr, velErr, profile, (ctx.ctrl and ctx.ctrl.saturated == true), cmd.collectiveThrust or 0.0
+    )
     network_manager.send_outer_loop_status(ctx.net, status_payload)
     ctx.latestOuterLoopStatus = status_payload
 end
 
-local function dispatch_outputs(ctx, dt, posErr, velErr)
+local function dispatch_outputs(ctx, dt, posErr, velErr, events)
     local currState = ctx.fsm.currentState or "BOOT"
     local sp = ctx.lastAmmSetpoint or {}
 
     if currState == "PASSIVE_TRACKING" or currState == "EMERGENCY_HOLD" then
-        local status_payload = {
-            fsmState = currState,
-            posError = posErr,
-            velError = velErr,
-            saturated = false,
-            navStale = ctx.nav.navStale or false,
-            activeConstraintProfile = sp.constraintProfile or "STRICT_LEVEL",
-            commandedCollectiveThrust = 0.0,
-        }
+        local status_payload = build_status_payload(
+            ctx, currState, posErr, velErr, sp.constraintProfile or "STRICT_LEVEL", false, 0.0
+        )
         network_manager.send_outer_loop_status(ctx.net, status_payload)
         ctx.latestOuterLoopStatus = status_payload
     elseif currState == "IDLE_ARMED" then
         dispatch_idle_armed(ctx, posErr, velErr, sp)
     elseif currState == "ACTIVE_TRACKING" or currState == "AMM_TIMEOUT_HOLD" or currState == "EMERGENCY_LAND" then
-        dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp)
+        dispatch_active_flight(ctx, currState, dt, posErr, velErr, sp, events)
     end
+end
+
+local function update_core_telem_watchdog(ctx, now)
+    local nav = ctx.nav
+    local lastTelemMs = (nav and nav.lastTelemMs) or 0
+    local timeoutMs = (nav and tonumber(nav.coreTelemetryTimeoutMs))
+        or (ctx.config and ctx.config.safety and tonumber(ctx.config.safety.coreTelemetryTimeoutMs))
+        or 500
+    local timedOut = (lastTelemMs > 0) and ((now - lastTelemMs) >= timeoutMs)
+    if nav then
+        nav.coreTelemetryTimedOut = timedOut
+    end
+    ctx.freezeIntegrators = timedOut
 end
 
 function fcp_main.step_tick(ctx, dt, now_ms)
     local now = tonumber(now_ms) or (os.epoch and os.epoch("utc") or 0)
-    local d_t = (tonumber(dt) and dt > 0) and dt or 0.05
+    local d_t = (tonumber(dt) and dt > 0) and dt or (ctx and ctx.loopIntervalSec) or 0.05
 
     local inbound = network_manager.poll_all(ctx.net)
     network_manager.step_rebind_watchdog(ctx.net, now)
@@ -288,6 +309,7 @@ function fcp_main.step_tick(ctx, dt, now_ms)
         ctx.lastTelemPayload = inbound.telemetry.payload
         state_propagator.on_telemetry(ctx.nav, inbound.telemetry.payload, now)
     end
+    update_core_telem_watchdog(ctx, now)
     if inbound.trajectory and inbound.trajectory.payload then
         local p = inbound.trajectory.payload
         p.lastRxMs = p.lastRxMs or now
@@ -314,7 +336,7 @@ function fcp_main.step_tick(ctx, dt, now_ms)
     handle_bumpless_ramp(ctx, events or {}, now)
 
     local posErr, velErr = compute_tracking_errors(ctx.nav, ctx.lastAmmSetpoint)
-    dispatch_outputs(ctx, d_t, posErr, velErr)
+    dispatch_outputs(ctx, d_t, posErr, velErr, events)
 
     ctx.tick = (ctx.tick or 0) + 1
     ctx.lastTickMs = now
@@ -325,13 +347,16 @@ function fcp_main.step_tick(ctx, dt, now_ms)
 end
 
 local function run_control_loop(ctx)
-    local timer_id = os.startTimer(0.05)
+    local sys = ctx.config and ctx.config.system
+    local hz = sys and tonumber(sys.loopFrequencyHz)
+    local interval = ctx.loopIntervalSec or ((hz and hz > 0) and (1.0 / hz) or 0.05)
+    local timer_id = os.startTimer(interval)
     while ctx.running do
         local event_data = { os.pullEventRaw() }
         local ev = event_data[1]
         if ev == "timer" and event_data[2] == timer_id then
-            fcp_main.step_tick(ctx, 0.05, os.epoch and os.epoch("utc") or 0)
-            timer_id = os.startTimer(0.05)
+            fcp_main.step_tick(ctx, interval, os.epoch and os.epoch("utc") or 0)
+            timer_id = os.startTimer(interval)
         elseif ev == "modem_message" then
             network_manager.ingest_modem_event(ctx.net, event_data[2], event_data[3], event_data[4], event_data[5], event_data[6], os.epoch and os.epoch("utc") or 0)
         elseif ev == "terminate" then
@@ -339,6 +364,7 @@ local function run_control_loop(ctx)
         end
     end
 end
+fcp_main._run_control_loop = run_control_loop
 
 local function run_ui_loop(ctx)
     local ui_timer = os.startTimer(0.20)

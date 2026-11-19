@@ -4,7 +4,6 @@
     "domainId": "AIRCRAFT_01",
     "hardwareUuid": "FCP-NODE-04-UUID",
     "airframeType": "VECTORED_VTOL",
-    "_airframeType_comment": "6대 표준: FIXED_WING | WINGED_VTOL | VECTORED_VTOL | ADVANCED_VTOL | QUADROTOR | HEXAROTOR",
     "loopFrequencyHz": 20,
     "primaryModemSide": "top",
     "debug": false

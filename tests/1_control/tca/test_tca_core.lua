@@ -67,6 +67,21 @@ describe("tca config and channel allocation", function()
         assert_true(config_manager.default_cfg.debug)
     end)
 
+    it("deeply isolates default_config() nested tables from default_cfg", function()
+        local cfg1 = config_manager.default_config()
+        cfg1.channels.thrustActuation = 99999
+        cfg1.ports.modemSide = "bottom"
+        cfg1.ports.apiSides[1] = "top"
+
+        local cfg2 = config_manager.default_config()
+        assert_eq(cfg2.channels.thrustActuation, 10010)
+        assert_eq(cfg2.ports.modemSide, "top")
+        assert_eq(cfg2.ports.apiSides[1], "left")
+        assert_eq(config_manager.default_cfg.channels.thrustActuation, 10010)
+        assert_eq(config_manager.default_cfg.ports.modemSide, "top")
+        assert_eq(config_manager.default_cfg.ports.apiSides[1], "left")
+    end)
+
 
     it("validates compute_base bounds without legacy 20-channel migration (Zero-Fallback)", function()
         assert_eq(config_manager.compute_base(1), 10000)
@@ -760,5 +775,108 @@ describe("tca mutation hardening invariants", function()
         })
         assert_false(rejWiggle)
         assert_eq(rejReason, "PBIT_REJECTED_IN_FLIGHT")
+    end)
+
+    it("validates safetyMaxTiltDeg (0..45) on non-pbitWiggle MSG_CALIB_PULSE (R3)", function()
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} },
+        }
+        local mockModem = mock.modem()
+        local daemon = tca_daemon.init(cfg, mockModem)
+        daemon.lastControlState = "CALIBRATION"
+
+        local function make_pulse(tilt)
+            return {
+                ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 20,
+                type = "MSG_CALIB_PULSE", time = 1000,
+                payload = {
+                    targetThrusterId = "THR_MAIN_L",
+                    stepIndex = 1, pulseLevel = 5, pulseDurationMs = 200,
+                    safetyMaxTiltDeg = tilt,
+                },
+            }
+        end
+
+        local okNil, errNil = tca_daemon.handle_calib_pulse(daemon, make_pulse(nil))
+        assert_false(okNil)
+        assert_eq(errNil, "INVALID_SAFETY_MAX_TILT")
+        for _, badTilt in ipairs({ 0, -5, 45.1, 90, "12" }) do
+            local okBad, errBad = tca_daemon.handle_calib_pulse(daemon, make_pulse(badTilt))
+            assert_false(okBad)
+            assert_eq(errBad, "INVALID_SAFETY_MAX_TILT")
+        end
+
+        local okGood = tca_daemon.handle_calib_pulse(daemon, make_pulse(12.0))
+        assert_true(okGood)
+        assert_near(daemon.lastSafetyMaxTiltDeg, 12.0, 1e-6)
+
+        local okMax = tca_daemon.handle_calib_pulse(daemon, make_pulse(45.0))
+        assert_true(okMax)
+        assert_near(daemon.lastSafetyMaxTiltDeg, 45.0, 1e-6)
+    end)
+
+    it("honors bayCalibrationTap/bayCalibrationCmd on MSG_CALIB_BAY_BIND and requestDomain on MSG_ACTUATOR_DISCOVER_REQ", function()
+        local mockModem = mock.modem()
+        local cfg = {
+            groupId = "THR_MAIN_L",
+            aircraftDomainId = "AIRCRAFT_01",
+            aircraftIndexN = 1,
+            baseChannel = 10000,
+            channels = { thrustActuation = 10010 },
+            watchdogTimeoutMs = 300,
+            nominalActuatorCount = 4,
+            interactionMode = "REDSTONE",
+            ports = { modemSide = "top", redstoneSide = "bottom", apiSides = {} },
+        }
+        local daemon = tca_daemon.init(cfg, mockModem)
+
+        local okOpen = daemon:dispatch_modem_message(10010, 10010, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIB_BAY_BIND",
+            payload = {
+                action = "OPEN", stationId = "BAY_02", bayId = 2,
+                baseHangarChannel = 111,
+                bayCalibrationCmd = 121,
+                bayCalibrationTap = 124,
+            },
+        })
+        assert_true(okOpen)
+        assert_eq(daemon.adapterState.hangarPulseChannel, 121)
+        assert_eq(daemon.adapterState.hangarBayChannel, 124)
+        assert_true(mockModem:isOpen(121))
+        assert_true(mockModem:isOpen(124))
+        assert_false(mockModem:isOpen(111))
+        assert_false(mockModem:isOpen(114))
+
+        -- Mismatched requestDomain must be rejected
+        local okWrongDom = daemon:dispatch_modem_message(124, 124, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_ACTUATOR_DISCOVER_REQ",
+            payload = { targetGroup = "ALL", requestDomain = "AIRCRAFT_99" },
+        })
+        assert_false(okWrongDom)
+
+        -- Matching requestDomain succeeds and records lastRequestDomain
+        local okMatchDom = daemon:dispatch_modem_message(124, 124, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3,
+            type = "MSG_ACTUATOR_DISCOVER_REQ",
+            payload = { targetGroup = "ALL", requestDomain = "AIRCRAFT_01" },
+        })
+        assert_true(okMatchDom)
+        assert_eq(daemon.adapterState.lastRequestDomain, "AIRCRAFT_01")
+
+        local okClose = daemon:dispatch_modem_message(10010, 10010, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 4,
+            type = "MSG_CALIB_BAY_BIND",
+            payload = { action = "CLOSE", baseHangarChannel = 111, bayCalibrationCmd = 121, bayCalibrationTap = 124 },
+        })
+        assert_true(okClose)
+        assert_false(mockModem:isOpen(121))
+        assert_false(mockModem:isOpen(124))
     end)
 end)

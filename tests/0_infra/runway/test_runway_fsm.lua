@@ -69,4 +69,51 @@ describe("Runway FSM & GAC Slot / Wave-Off Lifecycle", function()
         assert_eq(out[1].type, "MSG_ABORT_APPROACH")
         assert_eq(out[1].payload.reason, "DECK_UNSTABLE")
     end)
+
+    it("records touchdownSpeed, arrestedWire, and exitTaxiway from tactical messages", function()
+        local st = tactical_streamer.create(cfg)
+        local fsm = runway_fsm.create(cfg, st, true)
+        assert_nil(fsm:get_last_touchdown_speed())
+        assert_nil(fsm:get_last_arrested_wire())
+        assert_nil(fsm:get_last_exit_taxiway())
+
+        fsm:handle_backbone_message({
+            type = "MSG_ATC_SLOT_ASSIGN",
+            payload = { facilityId = "RWY_09L", aircraftId = "JET_01", airframeType = "FIXED_WING", slotDurationSec = 120 },
+        }, 10.0)
+
+        local tdOut = fsm:handle_tactical_message({
+            type = "MSG_RUNWAY_TOUCHDOWN",
+            domainId = "JET_01",
+            payload = { facilityId = "RWY_09L", touchdownSpeed = 26.4, arrestedWire = 3, craftState = "ROLLOUT" },
+        }, 20.0)
+        assert_eq(fsm:get_state(), "ROLLOUT")
+        assert_eq(tdOut[1].payload.status, "OCCUPIED")
+        assert_near(fsm:get_last_touchdown_speed(), 26.4, 1e-6)
+        assert_eq(fsm:get_last_arrested_wire(), 3)
+
+        local vacOut = fsm:handle_tactical_message({
+            type = "MSG_RUNWAY_VACATED",
+            domainId = "JET_01",
+            payload = { facilityId = "RWY_09L", runwayCleared = true, exitTaxiway = "TAXI_CHARLIE" },
+        }, 30.0)
+        assert_eq(fsm:get_state(), "IDLE")
+        assert_eq(vacOut[1].payload.status, "FREE")
+        assert_eq(fsm:get_last_exit_taxiway(), "TAXI_CHARLIE")
+        assert_near(fsm:get_last_touchdown_speed(), 26.4, 1e-6)
+        assert_eq(fsm:get_last_arrested_wire(), 3)
+
+        -- Subsequent non-arrested touchdown clears stale arrestedWire
+        fsm:handle_backbone_message({
+            type = "MSG_ATC_SLOT_ASSIGN",
+            payload = { facilityId = "RWY_09L", aircraftId = "JET_02", airframeType = "FIXED_WING", slotDurationSec = 120 },
+        }, 40.0)
+        fsm:handle_tactical_message({
+            type = "MSG_RUNWAY_TOUCHDOWN",
+            domainId = "JET_02",
+            payload = { facilityId = "RWY_09L", touchdownSpeed = 22.0 },
+        }, 50.0)
+        assert_near(fsm:get_last_touchdown_speed(), 22.0, 1e-6)
+        assert_nil(fsm:get_last_arrested_wire())
+    end)
 end)

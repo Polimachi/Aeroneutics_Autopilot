@@ -39,17 +39,19 @@ function channel_rebind_handler.handle_bay_bind(modem, pkt, state)
     local base = tonumber(p.baseHangarChannel) or 101
 
     if p.action == "OPEN" then
-        state.hangarBayChannel = base + 3
-        state.hangarPulseChannel = base + 0
+        state.hangarBayChannel = tonumber(p.bayCalibrationTap) or (base + 3)
+        state.hangarPulseChannel = tonumber(p.bayCalibrationCmd) or (base + 0)
         if modem and modem.open then
             pcall(modem.open, state.hangarPulseChannel)
             pcall(modem.open, state.hangarBayChannel)
         end
         return true, "BAY_OPENED"
     elseif p.action == "CLOSE" then
+        local pulseCh = state.hangarPulseChannel or tonumber(p.bayCalibrationCmd) or (p.baseHangarChannel and (base + 0))
+        local bayCh = state.hangarBayChannel or tonumber(p.bayCalibrationTap) or (p.baseHangarChannel and (base + 3))
         if modem and modem.close then
-            if state.hangarPulseChannel then pcall(modem.close, state.hangarPulseChannel) end
-            if state.hangarBayChannel then pcall(modem.close, state.hangarBayChannel) end
+            if pulseCh then pcall(modem.close, pulseCh) end
+            if bayCh then pcall(modem.close, bayCh) end
         end
         state.hangarPulseChannel = nil
         state.hangarBayChannel = nil

@@ -2,11 +2,11 @@
 # Create_Aeroneutics — Living Project Context
 
 ## 1. Current Phase & Active Handover
-- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-016`(제품 아키텍처 L1~L4 효율성·효용성 감사, E2E `--profile`/`--check-baseline` & `tools/audit/`·`config/audit_baselines.json` 편입, 보고서·후속 `TASK-017..021` 도출; 2026-11-18), `TASK-136`·`131`·`128`(컨트랩션 인터록·5단계 PBIT·GPS DR 가드), `TASK-405`·`406`(LAN Live·Inspection), `TASK-130`(공중 콜드부트). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드·프로토콜 계약/코드 정리 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
+- **직전 완료**: `TASK-017`·`018`(Zone 3 `30..39` 확장·계약/사문화 RX·필드 정합화·루트 `installer.lua` 단일 SSOT화·복제 분기 3건 및 미사용 함수 17/설정키 19 정리; 2026-11-19), `TASK-016`(제품 아키텍처 L1~L4 감사 및 `tools/audit/` 편입), `TASK-136`·`131`·`128`(컨트랩션 인터록·5단계 PBIT·GPS DR 가드), `TASK-405`·`406`(LAN Live·Inspection). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
   1. `TASK-302` (1순위): Pocket PDA 원격 관제 단말.
-  2. `TASK-017`·`018`·`019` / `TASK-140` / `TASK-015` (2순위): 프로토콜·복제·사양 경량화·저고도 착륙 감쇠·플레이북.
+  2. `TASK-019` / `TASK-140` / `TASK-015` (2순위): 사양 경량화·저고도 착륙 감쇠·플레이북.
   3. `TASK-020`·`021` / `TASK-135` / `TASK-214` / `TASK-105`↔`210` / `TASK-132` / `TASK-129` (3순위): 대형 분할·지상 TUI 분리·AMM 샌드박스·허브 대기 스택·ASA 본 구현·비상 활공·적응형 트림.
 
 ## 2. Confirmed Architecture & Paths
@@ -15,7 +15,7 @@
 - `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
 - `docs/superpowers/{plans,specs}/`: 태스크별 실행 계획서 및 설계 청사진.
-- `installer.lua` & `src/`: 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
+- `installer.lua` & `src/`: 루트 `/installer.lua` 단일 부트스트랩 SSOT 및 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `config/protocol_contracts.json`: 활성 사양서·코드베이스·E2E 패킷 교차 검증용 기계 판독형 SSOT 와이어 프로토콜 계약 명세.
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
 - `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_boot_smoke.py`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_mutation_tests.py`, `analyze_flight_log.py`, `gcs_live_bridge.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`, `audit/`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.6.0 Implemented`).
@@ -26,16 +26,16 @@
 
 ## 3. Standard Commands
 - **버전 관리 (PowerShell `PATH` 미등록 주의)**: `& "C:\Program Files\Git\cmd\git.exe" status -sb` (Worktree: `... worktree add .worktrees/<branch> -b <branch>`).
-- **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·145 코드/설정 린트, 0 errors).
+- **와이어 프로토콜 계약 검증**: `python tools/verify_contracts.py` (18 활성 사양서·144 코드/설정 린트, 0 errors).
 - **정적 배선 및 도달성 검증**: `python tools/verify_runtime_wiring.py` (13 활성 서브시스템 0 violations, 4 예외).
 - **실부팅 스모크 테스트**: `python tools/run_boot_smoke.py --clean-orphans` (13개 활성 `main.lua` 13/13 PASS).
-- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 629/629 PASS).
+- **Lua 단위 테스트**: `python tools/run_unit_tests.py --require-tests --clean-orphans` (15개 타겟 656/656 PASS).
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans [--profile <out.json> --check-baseline]` (10개 스위트 23/23 PASS, 566패킷 계약 0 violations).
-- **아키텍처 감사·가드**: `python -m tools.audit {registry|static|dupes|specs|split|guard|all}` (`guard`: `installer.lua` 미러 Fail, 신규 `>46KB`·미소비 필드 Warn; `config/audit_baselines.json`).
+- **아키텍처 감사·가드**: `python -m tools.audit {registry|static|dupes|specs|split|guard|all}` (`guard`: 루트 `installer.lua` 단일 SSOT·복제본 차단 Fail, 신규 `>46KB`·미소비 필드 Warn; `config/audit_baselines.json`).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (152/152 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (157/157 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
-- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py --strict-gdrive-packages` (0 Errors, 0 Warnings; 135 GDrive 엔트리), `python tools/verify_all_specs.py --check-readmes` (17대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (140 파일), `python tools/verify_spec_status.py` (18종 14 Implemented, 4 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (30/30 PASS).
+- **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py --strict-gdrive-packages` (0 Errors, 0 Warnings; 135 GDrive 엔트리), `python tools/verify_all_specs.py --check-readmes` (17대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (139 파일), `python tools/verify_spec_status.py` (18종 14 Implemented, 4 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (30/30 PASS).
 - **GDrive 배포 & Live Bridge**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행), `python tools/gcs_live_bridge.py --port 8765 [--lan]`.
 
 ## 4. Gotchas & Invariants

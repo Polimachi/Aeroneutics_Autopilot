@@ -2,7 +2,6 @@
   "schemaVersion": "1.1.0",
   "aircraftIndexN": 1,
   "baseChannel": 10000,
-  "bandwidth": 40,
   "domainId": "*",
   "modemSide": "top",
   "autoStartOnBoot": true,
@@ -36,8 +35,6 @@
     "webhookUrl": "",
     "gdriveFolderId": "1C3ZWMoXjsba1QE8ksgWG0LSfxzW_nMWI",
     "gdriveFolderName": "FDR_Reports",
-    "authToken": "",
-    "timeoutSec": 15
-  },
-  "debug": true
+    "authToken": ""
+  }
 }

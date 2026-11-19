@@ -124,37 +124,6 @@ function tui_view.create(termDevice)
         end
     end
 
-    function view:render_halt_warning(scanReport)
-        local rep = scanReport or {}
-        local lines = {}
-        lines[1] = separator_line()
-        lines[2] = pad_line("   LANDING PAD COMMISSIONING WIZARD (Step 3/5)")
-        lines[3] = pad_line("   * CRITICAL HARDWARE ERROR: SENSOR MISSING *")
-        lines[4] = separator_line()
-        lines[5] = pad_line(" Dynamic pad mode requires 3 physical sensors.")
-        lines[6] = pad_line(" Current peripheral scan results:")
-        lines[7] = pad_line("")
-        lines[8] = pad_line(string.format("   [%s] avionics:gimbal_sensor   : %s",
-            rep.gimbal and " OK " or "FAIL", rep.gimbal and "CONNECTED" or "NOT FOUND"))
-        lines[9] = pad_line(string.format("   [%s] avionics:altitude_sensor : %s",
-            rep.altitude and " OK " or "FAIL", rep.altitude and "CONNECTED" or "NOT FOUND"))
-        lines[10] = pad_line(string.format("   [%s] avionics:velocity_sensor : %s",
-            rep.velocity and " OK " or "FAIL", rep.velocity and "CONNECTED" or "NOT FOUND"))
-        lines[11] = pad_line("")
-        lines[12] = pad_line(" * CANNOT PROCEED WITH CURRENT HARDWARE SETUP *")
-        lines[13] = pad_line(" Configuration commit is locked to prevent crash.")
-        lines[14] = pad_line(" Check wired modem cables and sensor power.")
-        lines[15] = pad_line("")
-        lines[16] = pad_line(" Press [R] to Rescan      Press [Q] to Abort")
-        lines[17] = pad_line("")
-        lines[18] = separator_line()
-        lines[19] = pad_line(" Status: HALT_WITH_WARNING        [CANNOT SAVE]")
-
-        for y = 1, HEIGHT do
-            write_at(y, lines[y] or pad_line(""))
-        end
-    end
-
     return view
 end
 

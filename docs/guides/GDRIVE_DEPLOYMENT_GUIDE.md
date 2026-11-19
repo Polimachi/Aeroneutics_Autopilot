@@ -149,5 +149,5 @@ installer.lua --bootstrap-gdrive-map /disk/gdrive_mapping.json
    - `downloader.lua`는 Google Drive 바이러스 검사 건너뛰기 경고 페이지(`confirm=...`, `uuid=...`)를 감지하면 자동으로 확인 토큰을 추출하여 1회 재요청하는 복구 로직을 갖추고 있습니다.
 2. **권한 및 공유 설정**:
    - 대상 폴더는 링크를 가진 모든 사용자에게 "뷰어(Reader)" 권한이 부여되어 있어야 인게임 컴퓨터(User-Agent: CC:Tweaked)에서 무인증 HTTP 다운로드가 가능합니다.
-3. **바이트 패리티 불변 원칙**:
-   - `installer.lua`와 `src/0_development/installer/installer.lua`는 상시 100% 동일한 내용을 유지해야 하며, `tests/harness/test_installer_integrity.py` 검증을 통과해야 합니다.
+3. **루트 인스톨러 단일 원본 원칙 (`R4`)**:
+   - 저장소 루트의 `installer.lua`가 유일한 부트스트랩 및 `BOOTSTRAP_FILES` SSOT 원본입니다(`src/0_development/installer/installer.lua` 이중 사본은 제거됨). 수정 후 `tests/harness/test_installer_integrity.py` 및 `tools/verify_manifest_sync.py --strict-gdrive-packages` 검증을 통과해야 합니다.

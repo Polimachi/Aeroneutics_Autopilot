@@ -114,12 +114,24 @@ class TestAuditTools(unittest.TestCase):
             data = json.loads((out_dir / "registry.json").read_text(encoding="utf-8"))
             self.assertIn("subsystems", data)
 
-    def test_guard_fails_on_installer_mirror_drift_and_warns_on_new_oversize_file(self) -> None:
+    def test_guard_fails_on_forbidden_installer_duplicate_and_warns_on_new_oversize_file(self) -> None:
         from tools.audit.guard import run_guard
 
         baseline_res = run_guard(REPO_ROOT)
         self.assertEqual(baseline_res["status"], "PASS", f"Guard errors: {baseline_res}")
         self.assertEqual(baseline_res["errors"], [])
+        self.assertEqual(baseline_res["warnings"], [])
+
+        baseline_cfg = json.loads((REPO_ROOT / "config" / "audit_baselines.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            baseline_cfg.get("unconsumed_required_keys_baseline"),
+            [["MSG_SURFACE_DISCOVER_REQ", "targetPod"]],
+        )
+        self.assertNotIn("installer_mirror_pair", baseline_cfg)
+        self.assertEqual(
+            baseline_cfg.get("installer_forbidden_duplicates"),
+            ["src/0_development/installer/installer.lua"],
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -136,14 +148,30 @@ class TestAuditTools(unittest.TestCase):
                     "single_read_bytes": 46080,
                     "large_lua_exemptions": [],
                     "unconsumed_required_keys_baseline": [],
-                    "installer_mirror_pair": ["installer.lua", "src/0_development/installer/installer.lua"],
+                    "installer_forbidden_duplicates": ["src/0_development/installer/installer.lua"],
+                }),
+                encoding="utf-8",
+            )
+            res = run_guard(root)
+            self.assertEqual(res["status"], "FAIL")
+            self.assertTrue(any("src/0_development/installer/installer.lua" in e for e in res["errors"]))
+            self.assertTrue(any("big.lua" in w for w in res["warnings"]))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "config").mkdir(parents=True)
+            (root / "config" / "audit_baselines.json").write_text(
+                json.dumps({
+                    "single_read_bytes": 46080,
+                    "large_lua_exemptions": [],
+                    "unconsumed_required_keys_baseline": [],
+                    "installer_forbidden_duplicates": ["src/0_development/installer/installer.lua"],
                 }),
                 encoding="utf-8",
             )
             res = run_guard(root)
             self.assertEqual(res["status"], "FAIL")
             self.assertTrue(any("installer.lua" in e for e in res["errors"]))
-            self.assertTrue(any("big.lua" in w for w in res["warnings"]))
 
 
 if __name__ == "__main__":

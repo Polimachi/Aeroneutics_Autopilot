@@ -15,9 +15,13 @@ function facility_client.init(config)
         airframeType = sys.airframeType or cfg.airframeType or "VECTORED_VTOL",
         reqSeq = 0,
         beacons = {},
+        sectorSummaries = {},
+        facilitiesSummary = nil,
+        _sectorSummaryTimes = {},
         runways = {},
         activePadId = nil,
         gacChannel = nil,
+        divertChannel = nil,
         padMobility = "STATIC",
         padChannel = nil,
         atcStatus = "NONE",
@@ -52,6 +56,15 @@ function facility_client.update_beacons(state, beacon_payload, now_ms)
     if not state or not beacon_payload then return end
     local now = now_ms or 0
 
+    if type(beacon_payload.facilitiesSummary) == "table" then
+        state.sectorSummaries = state.sectorSummaries or {}
+        state._sectorSummaryTimes = state._sectorSummaryTimes or {}
+        local secId = beacon_payload.sectorId or state.sectorId or "UNKNOWN_SECTOR"
+        state.sectorSummaries[secId] = beacon_payload.facilitiesSummary
+        state._sectorSummaryTimes[secId] = now
+        state.facilitiesSummary = beacon_payload.facilitiesSummary
+    end
+
     if type(beacon_payload.facilities) == "table" then
         for _, fac in ipairs(beacon_payload.facilities) do
             if type(fac) == "table" and type(fac.facilityId) == "string" and fac.facilityId ~= "" then
@@ -73,6 +86,14 @@ function facility_client.update_beacons(state, beacon_payload, now_ms)
     for fid, b in pairs(state.beacons) do
         if b._receivedMs and b._receivedMs < expire_thresh then
             state.beacons[fid] = nil
+        end
+    end
+    if type(state._sectorSummaryTimes) == "table" and type(state.sectorSummaries) == "table" then
+        for secId, ts in pairs(state._sectorSummaryTimes) do
+            if ts < expire_thresh then
+                state._sectorSummaryTimes[secId] = nil
+                state.sectorSummaries[secId] = nil
+            end
         end
     end
 end
@@ -98,10 +119,6 @@ function facility_client.find_nearest_free_landing_facility(state, craft_pos, ty
         end
     end
     return best, best_dist
-end
-
-function facility_client.find_nearest_free_facility(state, craft_pos)
-    return facility_client.find_nearest_free_landing_facility(state, craft_pos)
 end
 
 local function next_envelope(state, pktType, now_ms, payload)
@@ -155,6 +172,14 @@ function facility_client.request_approach(state, pad_id, craft_cfg, fuel_pct, no
     })
 end
 
+local function reset_approach_retries(state)
+    state.approachRetryCount = 0
+    state.retryCount = 0
+    state.atcDeniedCount = 0
+    state.nextAtcRetryMs = 0
+    state.holdingTargetAlt = nil
+end
+
 function facility_client.on_atc_clearance(state, clrPayload, currentPos, now_ms)
     if not state or not clrPayload then return end
     local p = clrPayload.payload or clrPayload
@@ -163,6 +188,7 @@ function facility_client.on_atc_clearance(state, clrPayload, currentPos, now_ms)
     local now = now_ms or 0
     if p.gacChannel then state.gacChannel = p.gacChannel end
     if p.sectorId then state.sectorId = p.sectorId end
+    if p.divertChannel ~= nil then state.divertChannel = p.divertChannel end
 
     if status == "CLEARED" then
         state.activePadId = p.assignedFacilityId or p.targetFacilityId or state.activePadId
@@ -172,11 +198,12 @@ function facility_client.on_atc_clearance(state, clrPayload, currentPos, now_ms)
         else
             state.padChannel = p.assignedTacticalChannel or state.padChannel
         end
-        state.approachRetryCount = 0
-        state.retryCount = 0
-        state.atcDeniedCount = 0
-        state.nextAtcRetryMs = 0
-        state.holdingTargetAlt = nil
+        reset_approach_retries(state)
+    elseif status == "DIVERT" then
+        if type(p.divertChannel) == "number" and p.divertChannel > 0 then
+            state.gacChannel = p.divertChannel
+        end
+        reset_approach_retries(state)
     elseif status == "DENIED" or status == "HOLD" then
         state.atcDeniedCount = (state.atcDeniedCount or 0) + 1
         state.lastAtcDeniedMs = now
@@ -347,24 +374,6 @@ function facility_client.evaluate_guide_watchdog(state, now_ms)
     return res
 end
 
-function facility_client.evaluate_approach_safety(state, craft_pos, now_ms)
-    if not state then return "SAFE" end
-    if state.padMobility == "STATIC" then return "SAFE" end
-    local elapsed = (now_ms or 0) - (state.lastDynamicGuideMs or 0)
-    local timed_out = elapsed > (state.dynamicGuideTimeoutMs or 300)
-
-    if timed_out then
-        state.approachRetryCount = (state.approachRetryCount or 0) + 1
-        state.retryCount = state.approachRetryCount
-        if state.approachRetryCount > (state.maxApproachRetries or 3) then
-            state.touchdownAborted = true
-            return "ABORT_DIVERT"
-        end
-        return "GO_AROUND"
-    end
-    return "SAFE"
-end
-
 function facility_client.on_docking_status(state, payload, now_ms)
     if not state or not payload then return end
     local p = payload.payload or payload
@@ -385,25 +394,49 @@ function facility_client.on_docking_status(state, payload, now_ms)
     return stage, state.isHardLocked, state.dockingAborted
 end
 
-function facility_client.build_touchdown_complete(state, craftState)
-    local targetId = state and state.activePadId
-    local cState = "GROUND_IDLE"
-    if type(craftState) == "table" then
-        cState = craftState.craftState or "GROUND_IDLE"
-        targetId = craftState.facilityId or targetId
-    elseif type(craftState) == "string" and craftState ~= "" then
-        cState = craftState
-    end
-    local nowTime = (os.epoch and os.epoch("utc")) or (os.clock and math.floor(os.clock() * 1000)) or 0
-    return {
-        ver = "1.9.5",
-        type = "MSG_TOUCHDOWN_COMPLETE",
-        payload = {
-            facilityId = targetId,
-            touchdownTime = nowTime,
-            craftState = cState,
-        }
+local function resolve_builder_opts(state, arg, opts, now_ms)
+    local o = type(arg) == "table" and arg or (type(opts) == "table" and opts or {})
+    local scalar = (type(arg) ~= "table") and arg or nil
+    local facilityId = o.facilityId or (state and state.activePadId)
+    local t = now_ms or o.nowMs or o.now_ms or o.time
+    return o, scalar, facilityId, t
+end
+
+function facility_client.build_touchdown_complete(state, craftState, now_ms)
+    local o, scalar, facilityId, t = resolve_builder_opts(state, craftState, nil, now_ms)
+    local cState = o.craftState or ((type(scalar) == "string" and scalar ~= "") and scalar) or "GROUND_IDLE"
+    local env = next_envelope(state, "MSG_TOUCHDOWN_COMPLETE", t, {
+        facilityId = facilityId,
+        craftState = cState,
+    })
+    env.payload.touchdownTime = o.touchdownTime or env.time
+    return env
+end
+
+function facility_client.build_runway_touchdown(state, touchdownSpeed, opts)
+    local o, scalar, facilityId, t = resolve_builder_opts(state, touchdownSpeed, opts)
+    local rawSpeed = scalar ~= nil and scalar or o.touchdownSpeed
+    local speed = (type(rawSpeed) == "number") and rawSpeed or (tonumber(rawSpeed) or 0.0)
+    local payload = {
+        facilityId = facilityId,
+        touchdownSpeed = speed,
     }
+    if o.arrestedWire ~= nil then payload.arrestedWire = o.arrestedWire end
+    if o.craftState ~= nil then payload.craftState = o.craftState end
+    return next_envelope(state, "MSG_RUNWAY_TOUCHDOWN", t, payload)
+end
+
+function facility_client.build_runway_vacated(state, exitTaxiway, opts)
+    local o, scalar, facilityId, t = resolve_builder_opts(state, exitTaxiway, opts)
+    local taxiway = scalar ~= nil and scalar or o.exitTaxiway
+    local payload = {
+        facilityId = facilityId,
+        runwayCleared = (o.runwayCleared ~= false),
+    }
+    if type(taxiway) == "string" and taxiway ~= "" then
+        payload.exitTaxiway = taxiway
+    end
+    return next_envelope(state, "MSG_RUNWAY_VACATED", t, payload)
 end
 
 return facility_client

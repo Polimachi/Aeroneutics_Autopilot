@@ -114,8 +114,10 @@ describe("AMM v2.0.0 3-Tier Action Checkpoint Schema and Zero-Fallback Validatio
             { cp = { action = "ACT_NAV_CORRIDOR", params = {} }, err = "INVALID_CORRIDOR_BOUNDS" },
             { cp = { action = "ACT_PAT_POI_HOLD", params = { targetPos = { x = 0, z = 0 } } }, err = "MISSING_POI_POS" },
             { cp = { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 19, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
-            { cp = { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 30, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
+            { cp = { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 40, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
             { cp = { action = "ACT_PAY_BUS_CMD", params = { targetChannel = 10000, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
+            { cp = { action = "ACT_PAY_BUS_CMD", params = { targetChannel = 10019, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
+            { cp = { action = "ACT_PAY_BUS_CMD", params = { targetChannel = 10040, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
             { cp = { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 20.5, command = "DROP" } }, err = "INVALID_ZONE3_CHANNEL" },
             { cp = { action = "ACT_PAY_BUS_CMD", params = { channelOffset = 20, command = "" } }, err = "MISSING_PAYLOAD_COMMAND" },
             { cp = { action = "ACT_PAY_REDSTONE", params = { mode = "BLINK", side = "top" } }, err = "INVALID_REDSTONE_MODE" },
@@ -163,5 +165,55 @@ describe("AMM v2.0.0 3-Tier Action Checkpoint Schema and Zero-Fallback Validatio
         assert_true(ok2)
         assert_eq(#norm.checkpoints, 2)
         assert_eq(norm.checkpoints[1].params.targetAlt, 120.0)
+    end)
+
+    it("accepts Zone 3 offsets 20..39 (Base+20..39) and rejects 19, 40, Base+19, Base+40", function()
+        local defaults = { targetAlt = 120.0, cruiseSpeed = 16.0 }
+        local opts = { baseChannel = 10000 }
+
+        for _, off in ipairs({ 20, 30, 39 }) do
+            local cp, err = mission_engine.normalize_checkpoint({
+                action = "ACT_PAY_BUS_CMD",
+                params = { channelOffset = off, command = "SNAP" },
+            }, defaults, 1, opts)
+            assert_nil(err, "Expected channelOffset " .. tostring(off) .. " to be accepted")
+            assert_eq(cp.params.channelOffset, off)
+        end
+
+        for _, ch in ipairs({ 10020, 10030, 10039 }) do
+            local cp, err = mission_engine.normalize_checkpoint({
+                action = "ACT_PAY_BUS_CMD",
+                params = { targetChannel = ch, command = "SNAP" },
+            }, defaults, 1, opts)
+            assert_nil(err, "Expected targetChannel " .. tostring(ch) .. " to be accepted")
+            assert_eq(cp.params.targetChannel, ch)
+
+            local cp_nobase, err_nobase = mission_engine.normalize_checkpoint({
+                action = "ACT_PAY_BUS_CMD",
+                params = { targetChannel = ch, command = "SNAP" },
+            }, defaults, 1)
+            assert_nil(err_nobase, "Expected targetChannel " .. tostring(ch) .. " without baseChannel to be accepted")
+        end
+
+        for _, bad_params in ipairs({
+            { channelOffset = 19, command = "SNAP" },
+            { channelOffset = 40, command = "SNAP" },
+            { targetChannel = 10019, command = "SNAP" },
+            { targetChannel = 10040, command = "SNAP" },
+        }) do
+            local cp, err = mission_engine.normalize_checkpoint({
+                action = "ACT_PAY_BUS_CMD",
+                params = bad_params,
+            }, defaults, 1, opts)
+            assert_nil(cp)
+            assert_eq(err, "INVALID_ZONE3_CHANNEL")
+        end
+
+        local cp_nobase_bad, err_nobase_bad = mission_engine.normalize_checkpoint({
+            action = "ACT_PAY_BUS_CMD",
+            params = { targetChannel = 10040, command = "SNAP" },
+        }, defaults, 1)
+        assert_nil(cp_nobase_bad)
+        assert_eq(err_nobase_bad, "INVALID_ZONE3_CHANNEL")
     end)
 end)

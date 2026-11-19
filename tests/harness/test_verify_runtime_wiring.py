@@ -197,6 +197,32 @@ class TestVerifyRuntimeWiring(unittest.TestCase):
         broken = [v for v in violations if v.code == "BROKEN_REQUIRE"]
         self.assertEqual(broken, [])
 
+    def test_installer_resolves_root_installer_and_bootstrap_files(self) -> None:
+        sub_dir = self.temp_dir / "src" / "0_development" / "installer"
+        modules_dir = sub_dir / "modules"
+        modules_dir.mkdir(parents=True)
+
+        (self.temp_dir / "installer.lua").write_text(
+            'local bootstrapper = {}\n'
+            'bootstrapper.BOOTSTRAP_FILES = {\n'
+            '    { repoPath = "src/0_development/installer/installer_app.lua", cacheRelPath = "installer_app.lua", gdriveId = nil },\n'
+            '    { repoPath = "src/0_development/installer/modules/manifest.lua", cacheRelPath = "modules/manifest.lua", gdriveId = nil },\n'
+            '}\n'
+            'local okReq, appMod = pcall(require, "installer_app")\n'
+            'return bootstrapper\n',
+            encoding="utf-8",
+        )
+        (sub_dir / "main.lua").write_text(
+            'local bootstrapper = require("installer")\n'
+            'return bootstrapper.bootstrapAndRun()\n',
+            encoding="utf-8",
+        )
+        (sub_dir / "installer_app.lua").write_text("return { run = function() end }\n", encoding="utf-8")
+        (modules_dir / "manifest.lua").write_text("return {}\n", encoding="utf-8")
+
+        violations = analyze_subsystem_wiring(sub_dir, self.temp_dir)
+        self.assertEqual(violations, [], f"Expected 0 wiring violations for installer, got: {violations}")
+
     def test_cli_execution_and_json_output(self) -> None:
         cli_path = WORKSPACE_ROOT / "tools" / "verify_runtime_wiring.py"
         res = subprocess.run(

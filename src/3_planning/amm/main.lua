@@ -12,6 +12,12 @@ local facility_client = require("facility_client")
 local trajectory_generator = require("trajectory_generator")
 local chattering_guard = require("chattering_guard")
 
+local function resolve_interval(hz_val, default_hz)
+    local hz = tonumber(hz_val)
+    if hz and hz > 0 then return 1.0 / hz end
+    return 1.0 / default_hz
+end
+
 local function load_config(path)
     local cfg_path = path or "config/amm_config.json"
     local defaults = {
@@ -523,7 +529,8 @@ local function handle_timer_event(app, timer_id, now_ms)
     if timer_id ~= app.render_timer and app.render_timer ~= nil then return end
     local t_ms = now_ms or get_now_ms(app)
     if app.render_timer and os.startTimer then
-        app.render_timer = os.startTimer(0.2)
+        local ui_dt = app.uiIntervalSec or resolve_interval(app.config and app.config.system and app.config.system.uiFrequencyHz, 5)
+        app.render_timer = os.startTimer(ui_dt)
     end
     if app.engine and not app.coroutineActive then
         app.engine:tick(t_ms)
@@ -577,15 +584,17 @@ end
 local function handle_facility_rx(app, chan, pkt, now_ms)
     if not app.fac then return false end
     local pos = app.nav and app.nav.pos
-    if chan == 50001 then
-        if pkt.type == "MSG_ATC_APPROACH_CLEARANCE" or pkt.type == "MSG_ATC_SECTOR_HANDOFF" then
+    local atc_ch = (app.net and app.net.atcCommChannel) or 50001
+    local beacon_ch = (app.net and app.net.facilityBeaconChannel) or 50003
+    if chan == atc_ch then
+        if pkt.type == "MSG_ATC_APPROACH_CLEARANCE" then
             facility_client.on_atc_clearance(app.fac, pkt, pos, now_ms)
             open_fac_channels(app)
         elseif pkt.type == "MSG_FACILITY_BEACON" then
             facility_client.update_beacons(app.fac, pkt.payload, now_ms)
         end
         return true
-    elseif chan == 50003 and pkt.type == "MSG_FACILITY_BEACON" then
+    elseif chan == beacon_ch and pkt.type == "MSG_FACILITY_BEACON" then
         facility_client.update_beacons(app.fac, pkt.payload, now_ms)
         return true
     elseif app.fac.gacChannel and chan == app.fac.gacChannel then
@@ -597,7 +606,7 @@ local function handle_facility_rx(app, chan, pkt, now_ms)
         end
         return true
     elseif app.fac.padChannel and chan == app.fac.padChannel then
-        if pkt.type == "MSG_DOCKING_STATUS" then
+        if pkt.type == "MSG_DOCK_CAPTURE_STAGE" then
             facility_client.on_docking_status(app.fac, pkt, now_ms)
         else
             facility_client.on_tactical_guide(app.fac, pkt, now_ms)
@@ -613,28 +622,14 @@ local BASE_PLUS_5_INFRA_RESPONSES = {
     MSG_GPS_STATUS_RESP = true,
     -- I-5 Facility / GAC / Pad / Runway / Docking Arm replies
     MSG_FACILITY_BEACON = true,
-    MSG_FACILITY_LIST_ACK = true,
     MSG_FACILITY_STATIC_GUIDE = true,
     MSG_FACILITY_DYNAMIC_GUIDE = true,
     MSG_ATC_APPROACH_CLEARANCE = true,
-    MSG_ATC_HANDOFF_CLEARANCE = true,
-    MSG_ATC_SECTOR_HANDOFF = true,
     MSG_ATC_FACILITY_UPDATE = true,
-    MSG_ATC_DEPARTURE_CLEARANCE = true,
     MSG_GAC_APPROACH_CLEARANCE = true,
     MSG_GAC_DEPARTURE_CLEARANCE = true,
     MSG_GAC_ABORT_CLEAR = true,
     MSG_ABORT_APPROACH = true,
-    MSG_PAD_RESERVE_ACK = true,
-    MSG_PAD_TELEMETRY = true,
-    MSG_PAD_STATUS = true,
-    MSG_LANDING_STATUS = true,
-    MSG_LANDING_ACK = true,
-    MSG_RUNWAY_ACK = true,
-    MSG_ILS_BEACON = true,
-    MSG_DOCK_ACK = true,
-    MSG_DOCK_STATUS = true,
-    MSG_DOCKING_STATUS = true,
     MSG_DOCK_CAPTURE_STAGE = true,
     MSG_UMBILICAL_STATUS = true,
     MSG_TOUCHDOWN_COMPLETE = true,
@@ -682,11 +677,11 @@ local function handle_base5_rx(app, pkt, t_ms)
     end
     if not app.fac then return end
     local pt = pkt.type
-    if pt == "MSG_DOCKING_STATUS" or pt == "MSG_DOCK_CAPTURE_STAGE" or pt == "MSG_DOCK_STATUS" then
+    if pt == "MSG_DOCK_CAPTURE_STAGE" then
         facility_client.on_docking_status(app.fac, pkt, t_ms)
     elseif pt == "MSG_FACILITY_STATIC_GUIDE" or pt == "MSG_FACILITY_DYNAMIC_GUIDE" or pt == "MSG_ABORT_APPROACH" then
         facility_client.on_tactical_guide(app.fac, pkt, t_ms)
-    elseif pt == "MSG_GAC_APPROACH_CLEARANCE" or pt == "MSG_ATC_APPROACH_CLEARANCE" or pt == "MSG_ATC_SECTOR_HANDOFF" then
+    elseif pt == "MSG_GAC_APPROACH_CLEARANCE" or pt == "MSG_ATC_APPROACH_CLEARANCE" then
         facility_client.on_atc_clearance(app.fac, pkt, app.nav and app.nav.pos, t_ms)
         open_fac_channels(app)
     elseif pt == "MSG_GAC_ABORT_CLEAR" then
@@ -939,6 +934,9 @@ local function create_app(config, modems)
     local arbiter = c2_arbiter.new(queue, net, cfg, engine, guard)
     local input = input_handler.new()
     local screen_buf = (not cfg.headless) and ui_renderer.create_buffer(51, 19) or nil
+    local sys = (type(cfg.system) == "table") and cfg.system or {}
+    local loop_interval = resolve_interval(sys.loopFrequencyHz, 20)
+    local ui_interval = resolve_interval(sys.uiFrequencyHz, 5)
 
     bind_app_modems(net, modems, sentinel.baseChannel or cfg.baseChannel, cfg)
 
@@ -955,7 +953,9 @@ local function create_app(config, modems)
         guard = guard,
         input = input,
         screen_buf = screen_buf,
-        render_timer = os.startTimer(0.2),
+        loopIntervalSec = loop_interval,
+        uiIntervalSec = ui_interval,
+        render_timer = os.startTimer(ui_interval),
         clock_ms = cfg.clock_ms,
         tickCount = 0,
         ctrlHeld = false,
@@ -1135,7 +1135,7 @@ local function step_facility_watchdog_20hz(app, goal, now)
         local fuel_pct = (app.arbiter and app.arbiter.latest_telem and app.arbiter.latest_telem.fuel) or 1.0
         local ok_req, req = facility_client.request_approach(app.fac, pad_id, craft_cfg, fuel_pct, now)
         if ok_req and type(req) == "table" then
-            local tx_ch = app.fac.gacChannel or 50001
+            local tx_ch = app.fac.gacChannel or (app.net and app.net.atcCommChannel) or 50001
             app.net:send_infra_packet(tx_ch, req.type, req.payload)
         end
     end
@@ -1144,7 +1144,7 @@ end
 local function step_20hz_tick(app, dt, now_ms)
     app.tickCount = (app.tickCount or 0) + 1
     local now = now_ms or get_now_ms(app)
-    local step_dt = dt or 0.05
+    local step_dt = dt or (app and app.loopIntervalSec) or 0.05
 
     if app.arbiter and app.arbiter.check_timeouts then
         app.arbiter:check_timeouts(now)
@@ -1207,7 +1207,9 @@ end
 local function make_coroutine_a(app)
     return function()
         app.coroutineActive = true
-        local timer20 = os.startTimer(0.05)
+        local dt = (app and app.loopIntervalSec)
+            or resolve_interval(app and app.config and app.config.system and app.config.system.loopFrequencyHz, 20)
+        local timer20 = os.startTimer(dt)
         while app.running do
             local ev, p1, p2, p3, p4 = os.pullEventRaw()
             local now_ms = get_now_ms(app)
@@ -1215,8 +1217,8 @@ local function make_coroutine_a(app)
                 shutdown_app(app)
                 break
             elseif ev == "timer" and p1 == timer20 then
-                step_20hz_tick(app, 0.05, now_ms)
-                timer20 = os.startTimer(0.05)
+                step_20hz_tick(app, dt, now_ms)
+                timer20 = os.startTimer(dt)
             elseif ev == "modem_message" then
                 handle_modem_message(app, p2, p4, now_ms)
             end
@@ -1226,7 +1228,9 @@ end
 
 local function make_coroutine_b(app)
     return function()
-        app.render_timer = os.startTimer(0.2)
+        local ui_dt = (app and app.uiIntervalSec)
+            or resolve_interval(app and app.config and app.config.system and app.config.system.uiFrequencyHz, 5)
+        app.render_timer = os.startTimer(ui_dt)
         while app.running do
             local ev, p1, p2, p3, p4 = os.pullEventRaw()
             local now_ms = get_now_ms(app)
@@ -1235,7 +1239,7 @@ local function make_coroutine_b(app)
                 break
             elseif ev == "timer" and p1 == app.render_timer then
                 render_ui_frame(app, now_ms)
-                app.render_timer = os.startTimer(0.2)
+                app.render_timer = os.startTimer(ui_dt)
             else
                 handle_input_event(app, ev, p1, now_ms)
             end

@@ -108,20 +108,6 @@ function flight_dynamics_core.compute_attitude_wrench(state, targetQ, measQ, ang
     }
 end
 
-function flight_dynamics_core.compute_climb_wrench(state, targetVy, measVy, baseThrottle, dt, satStatus)
-    local satPos = (satStatus and satStatus.axisSaturatedPos) or {}
-    local satNeg = (satStatus and satStatus.axisSaturatedNeg) or {}
-    local eClimb = (tonumber(targetVy) or 0.0) - (tonumber(measVy) or 0.0)
-
-    local gC = state.gains.climb
-    local inC = update_axis_integrator(state.integrators.climb, eClimb, dt, gC.integralLimit, satPos.heave, satNeg.heave)
-    state.integrators.climb = inC
-
-    local baseT = tonumber(baseThrottle) or 0.0
-    local heaveEffort = baseT + gC.kp * eClimb + gC.ki * inC
-    return math.max(0.0, math.min(15.0, heaveEffort))
-end
-
 function flight_dynamics_core.compute(state, telem, guidance, dt, satStatus)
     local deltaT = math.max(0.005, math.min(0.2, dt or 0.05))
     local measQ = telem.orientation or quat.identity()

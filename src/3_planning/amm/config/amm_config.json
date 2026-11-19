@@ -45,9 +45,6 @@
     "emergencyDescentRateMps": -2.0,
     "docking": {
       "creepSpeedMps": 0.4,
-      "maxHorizToleranceM": 0.15,
-      "maxVertToleranceM": 0.15,
-      "maxHeadingToleranceDeg": 2.0,
       "abortThresholdM": 0.30,
       "abortHeadingThresholdDeg": 5.0,
       "abortSurgeBias": -0.8,

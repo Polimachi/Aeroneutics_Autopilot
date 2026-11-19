@@ -32,7 +32,8 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
         unstableStartSec = nil,
         goAroundStartSec = nil,
         seq = 10000,
-        faultCode = (initialState == "MAINTENANCE") and "SENSOR_UNAVAILABLE" or nil
+        faultCode = (initialState == "MAINTENANCE") and "SENSOR_UNAVAILABLE" or nil,
+        lastTouchdownTime = nil,
     }
 
     local fsm = {}
@@ -56,6 +57,10 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
 
     function fsm:get_fault_code()
         return state.faultCode
+    end
+
+    function fsm:get_last_touchdown_time()
+        return state.lastTouchdownTime
     end
 
     function fsm:get_slot_remaining_sec(nowSec)
@@ -176,6 +181,7 @@ function pad_fsm.create(config, streamer, initialSensorHealthy)
                 if state.currentState == "APPROACH_STATIC" or state.currentState == "APPROACH_DYNAMIC" or state.currentState == "RESERVED" then
                     state.currentState = "OCCUPIED"
                     state.unstableStartSec = nil
+                    state.lastTouchdownTime = tonumber(payload.touchdownTime)
                     local upd = streamer:build_facility_update(next_seq(), "OCCUPIED", state.currentCraft, nil)
                     table.insert(out, upd)
                 end

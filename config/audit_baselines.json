@@ -7,19 +7,10 @@
     "src/3_planning/amm/modules/mission_engine.lua",
     "src/0_development/installer/modules/manifest.lua"
   ],
-  "installer_mirror_pair": [
-    "installer.lua",
+  "installer_forbidden_duplicates": [
     "src/0_development/installer/installer.lua"
   ],
   "unconsumed_required_keys_baseline": [
-    ["MSG_PBIT_REPORT", "overallStatus"],
-    ["MSG_PBIT_REPORT", "checks"],
-    ["MSG_CALIB_PULSE", "safetyMaxTiltDeg"],
-    ["MSG_CALIB_START", "targetThruster"],
-    ["MSG_PROFILE_SYNC", "controllabilityStatus"],
-    ["MSG_FACILITY_BEACON", "facilitiesSummary"],
-    ["MSG_CHANNEL_PROBE_ACK", "existingDomain"],
-    ["MSG_RUNWAY_TOUCHDOWN", "touchdownSpeed"],
     ["MSG_SURFACE_DISCOVER_REQ", "targetPod"]
   ],
   "e2e_node_insns_tolerance_ratio": 1.25,

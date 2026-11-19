@@ -67,6 +67,41 @@ describe("test_fcp_main_v2: configuration loader and defaults", function()
         assert_eq(cfg.channels.telemetryOffset, 2, "telemetryOffset must be 2")
         assert_eq(cfg.channels.guidanceOffset, 1, "guidanceOffset must be 1")
         assert_eq(cfg.channels.emergencyOffset, 9, "emergencyOffset must be 9")
+        assert_eq(cfg.version, "2.1.0", "Default config version must be 2.1.0")
+        assert_nil(cfg._versionWarning, "Canonical version 2.1.0 must not emit _versionWarning")
+    end)
+
+    it("soft-validates cfg.version in load_config without aborting boot on mismatch", function()
+        local tmpOk = sdk.temp_path("fcp_ver_ok.json")
+        local tmpBad = sdk.temp_path("fcp_ver_bad.json")
+        local tmpNil = sdk.temp_path("fcp_ver_nil.json")
+
+        local function write_json(path, tbl)
+            local h = fs.open(path, "w")
+            h.write(textutils.serializeJSON(tbl))
+            h.close()
+        end
+
+        write_json(tmpOk, { version = "2.1.0", system = { loopFrequencyHz = 20 } })
+        write_json(tmpBad, { version = "1.9.0", system = { loopFrequencyHz = 10 } })
+        write_json(tmpNil, { system = { debug = false } })
+
+        local cOk = fcp_main.load_config(tmpOk)
+        assert_eq(cOk.version, "2.1.0")
+        assert_nil(cOk._versionWarning)
+
+        local cBad = fcp_main.load_config(tmpBad)
+        assert_not_nil(cBad._versionWarning, "Mismatched version must record soft _versionWarning")
+        assert_true(string.find(cBad._versionWarning, "CONFIG_VERSION_MISMATCH", 1, true) ~= nil)
+        assert_eq(cBad.system.loopFrequencyHz, 10)
+
+        local cNil = fcp_main.load_config(tmpNil)
+        assert_eq(cNil.version, "2.1.0")
+        assert_nil(cNil._versionWarning)
+
+        if fs.exists(tmpOk) then fs.delete(tmpOk) end
+        if fs.exists(tmpBad) then fs.delete(tmpBad) end
+        if fs.exists(tmpNil) then fs.delete(tmpNil) end
     end)
 end)
 
@@ -437,5 +472,119 @@ describe("test_fcp_main_v2: ui_renderer 51x19 character HUD matrix", function()
             rowCount = rowCount + 1
         end
         assert_eq(rowCount, 19, "Must render exactly 19 rows for 51x19 terminal")
+    end)
+end)
+
+describe("test_fcp_main_v2: R5 config wiring (loopFrequencyHz and coreTelemetryTimeoutMs)", function()
+    it("computes loopIntervalSec from system.loopFrequencyHz in create_context and run_control_loop", function()
+        local mock_modem = create_mock_modem()
+        local cfg = fcp_main.load_config("config/fcp_config.json")
+        cfg.system.loopFrequencyHz = 10
+        local ctx = fcp_main.create_context(cfg, function() return mock_modem end)
+        assert_near(ctx.loopIntervalSec, 0.1, 1e-6)
+
+        local timerDurations = {}
+        local nextId = 50
+        sdk.patch(os, "startTimer", function(sec)
+            nextId = nextId + 1
+            table.insert(timerDurations, sec)
+            return nextId
+        end)
+        local pulls = 0
+        sdk.patch(os, "pullEventRaw", function()
+            pulls = pulls + 1
+            if pulls == 1 then return "timer", nextId end
+            return "terminate"
+        end)
+
+        assert_eq(type(fcp_main._run_control_loop), "function")
+        fcp_main._run_control_loop(ctx)
+        assert_true(#timerDurations >= 2)
+        assert_near(timerDurations[1], 0.1, 1e-6)
+        assert_near(timerDurations[2], 0.1, 1e-6)
+    end)
+
+    it("wires safety.coreTelemetryTimeoutMs to freeze integrators and flag status without forcing EMERGENCY_HOLD", function()
+        local mock_modem = create_mock_modem()
+        local cfg = fcp_main.load_config("config/fcp_config.json")
+        cfg.safety = cfg.safety or {}
+        cfg.safety.coreTelemetryTimeoutMs = 250
+        cfg.safety.navStaleTimeoutMs = 1000
+        cfg.safety.ammSetpointTimeoutMs = 2000
+
+        local ctx = fcp_main.create_context(cfg, function() return mock_modem end)
+        assert_eq(ctx.nav.coreTelemetryTimeoutMs, 250)
+        ctx.fsm.currentState = "ACTIVE_TRACKING"
+        ctx.fsm.flightActive = true
+        ctx.fsm.arm = true
+
+        local function make_sp(nowMs)
+            return {
+                ver = "1.9.5",
+                domainId = "AIRCRAFT_01",
+                senderId = "AMM-03",
+                seq = nowMs,
+                type = "MSG_TRAJECTORY_SETPOINT",
+                payload = {
+                    arm = true,
+                    flightActive = true,
+                    flightMode = "CRUISE",
+                    targetPos = { x = 50, y = 64, z = 0 },
+                    targetVel = { vx = 5.0, vy = 0.0, vz = 0.0 },
+                    currentPos = { x = 0, y = 64, z = 0 },
+                    navValid = true,
+                    posEpoch = nowMs,
+                    lastRxMs = nowMs,
+                },
+            }
+        end
+        local function make_telem(seq)
+            return {
+                ver = "1.9.5",
+                domainId = "AIRCRAFT_01",
+                senderId = "VAS-01",
+                seq = seq,
+                type = "MSG_FLIGHT_TELEMETRY",
+                payload = {
+                    dynamics = { velocity = { vx = 0.0, vy = 0.0, vz = 0.0 } },
+                    attitude = { pitch = 0, roll = 0, yaw = 0 },
+                    angularRates = { pitchRate = 0, rollRate = 0, yawRate = 0 },
+                    activeSource = "FCP",
+                    controlState = "NORMAL",
+                    actuatorHealth = { tca = true, asa = true, tap = true, allOk = true },
+                    sensorOk = true,
+                },
+            }
+        end
+
+        -- Tick 1 at t=1000 with fresh telemetry: accumulates integrator
+        ctx.net.inbound.telemetry = make_telem(1)
+        ctx.net.inbound.trajectory = make_sp(1000)
+        fcp_main.step_tick(ctx, 0.05, 1000)
+        assert_false(ctx.nav.coreTelemetryTimedOut == true)
+        assert_false(ctx.freezeIntegrators == true)
+        assert_false(ctx.latestOuterLoopStatus.coreTelemetryTimedOut == true)
+        local intAfterFresh = ctx.ctrl.integrators.x
+        assert_true(intAfterFresh > 0, "Integrator X must grow on fresh telemetry")
+
+        -- Tick 2 at t=1250 (250ms elapsed >= coreTelemetryTimeoutMs=250, < navStaleTimeoutMs=1000): freezes integrators & flags status
+        ctx.net.inbound.telemetry = nil
+        ctx.net.inbound.trajectory = make_sp(1250)
+        mock_modem.transmitted = {}
+        fcp_main.step_tick(ctx, 0.05, 1250)
+        assert_eq(ctx.fsm.currentState, "ACTIVE_TRACKING", "Must NOT force EMERGENCY_HOLD on coreTelemetryTimeoutMs")
+        assert_true(ctx.nav.coreTelemetryTimedOut, "ctx.nav.coreTelemetryTimedOut must become true")
+        assert_true(ctx.freezeIntegrators, "ctx.freezeIntegrators must become true")
+        assert_near(ctx.ctrl.integrators.x, intAfterFresh, 1e-9, "Integrator X must remain frozen during core telemetry timeout")
+        assert_true(ctx.latestOuterLoopStatus.coreTelemetryTimedOut, "Status telemetry must expose coreTelemetryTimedOut=true")
+
+        -- Tick 3 at t=1300 with fresh telemetry: clears timeout and resumes integration
+        ctx.net.inbound.telemetry = make_telem(2)
+        ctx.net.inbound.trajectory = make_sp(1300)
+        fcp_main.step_tick(ctx, 0.05, 1300)
+        assert_false(ctx.nav.coreTelemetryTimedOut, "coreTelemetryTimedOut must clear on fresh telemetry")
+        assert_false(ctx.freezeIntegrators, "freezeIntegrators must clear on fresh telemetry")
+        assert_false(ctx.latestOuterLoopStatus.coreTelemetryTimedOut)
+        assert_true(ctx.ctrl.integrators.x > intAfterFresh, "Integrator X must resume after fresh telemetry")
     end)
 end)

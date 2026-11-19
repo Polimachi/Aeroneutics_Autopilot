@@ -34,6 +34,9 @@ function runway_fsm.create(config, streamer, initialSensorHealthy)
         unstableStartSec = nil,
         seq = 20000,
         faultCode = (initialState == "MAINTENANCE") and "SENSOR_UNAVAILABLE" or nil,
+        lastTouchdownSpeed = nil,
+        lastArrestedWire = nil,
+        lastExitTaxiway = nil,
     }
     local fsm = {}
     local function next_seq() state.seq = state.seq + 1; return state.seq end
@@ -42,6 +45,9 @@ function runway_fsm.create(config, streamer, initialSensorHealthy)
     function fsm:get_current_craft() return state.currentCraft end
     function fsm:get_current_airframe() return state.currentAirframe end
     function fsm:get_fault_code() return state.faultCode end
+    function fsm:get_last_touchdown_speed() return state.lastTouchdownSpeed end
+    function fsm:get_last_arrested_wire() return state.lastArrestedWire end
+    function fsm:get_last_exit_taxiway() return state.lastExitTaxiway end
 
     function fsm:get_slot_remaining_sec(nowSec)
         if not state.slotExpiresAt or state.slotExpiresAt <= 0 then return 0 end
@@ -99,10 +105,13 @@ function runway_fsm.create(config, streamer, initialSensorHealthy)
             if state.currentState == "APPROACH_STATIC" or state.currentState == "APPROACH_DYNAMIC" then
                 state.currentState = "ROLLOUT"
                 state.unstableStartSec = nil
+                state.lastTouchdownSpeed = tonumber(payload.touchdownSpeed)
+                state.lastArrestedWire = payload.arrestedWire
                 return { streamer:build_facility_update(next_seq(), "ROLLOUT", state.currentCraft, nil) }
             end
         elseif msg.type == "MSG_RUNWAY_VACATED" and (payload.facilityId == config.facilityId or msg.domainId == state.currentCraft) then
             if payload.runwayCleared ~= false then
+                state.lastExitTaxiway = payload.exitTaxiway
                 return { fsm:force_free() }
             end
         elseif msg.type == "MSG_ABORT_APPROACH" and (payload.facilityId == config.facilityId or payload.aircraftId == state.currentCraft) then

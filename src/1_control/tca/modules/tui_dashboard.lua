@@ -39,52 +39,6 @@ function tui_dashboard.render_bar(signal, maxSignal, width)
     return string.format("%s %2d/%d (%d%%)", bar, sig, maxSig, pct)
 end
 
---- Render mode and signal status line
-function tui_dashboard.render_status_line(mode, sig, boostedSig, devCount)
-    local m = tostring(mode or "REDSTONE")
-    local count = tonumber(devCount) or 0
-    local raw = tonumber(sig) or 0
-    local b = tonumber(boostedSig) or raw
-    if m == "API" then
-        local devTag = count == 0 and "NO DEV" or string.format("%d DEV", count)
-        return string.format("MODE: API (%s) | SIG: %d -> %d (BOOSTED)", devTag, raw, b)
-    else
-        return string.format("MODE: REDSTONE | SIG: %d (DIRECT PASS-THROUGH)", raw)
-    end
-end
-
---- Format single actuator row
-function tui_dashboard.format_actuator_row(idx, item, ratio)
-    if not item then
-        return string.format("#%-2d (None)       -         -", idx)
-    end
-    local name = tostring(item.name or "N/A"):sub(1, 10)
-    local meth = tostring(item.method or "N/A"):sub(1, 9)
-    local outStr
-    local r = tonumber(ratio) or 0.0
-    if meth == "setSpeed" or meth == "setTargetSpeed" then
-        outStr = string.format("%5.1f RPM (%3.0f%%)", r * 256, r * 100)
-    elseif meth == "setAnalogOutput" then
-        outStr = string.format("%2d RS (15 max)", math.floor(r * 15 + 0.5))
-    else
-        outStr = string.format("%4.2f Ratio (%3.0f%%)", r, r * 100)
-    end
-    return string.format("#%-2d %-10s %-9s %s", idx, name, meth, outStr)
-end
-
---- Render diagnostics summary lines
-function tui_dashboard.get_diagnostic_lines(groupId, busChannel, isOk)
-    local gId = tostring(groupId or "THR_MAIN_L")
-    local chan = tostring(busChannel or "top")
-    local stat = isOk and "OPERATIONAL" or "COMM_DEGRADED"
-    local wd = isOk and "300ms OK" or "TIMEOUT/ERR"
-    return {
-        string.format("PROTOCOL : ICD v1.9.5 (Raw)   BUS CHANNEL: %-8s", chan),
-        string.format("GROUP ID : %-16s  WATCHDOG   : %-10s", gId, wd),
-        string.format("STATUS   : %-16s  FAILSAFE   : READY (0 CUT)", stat)
-    }
-end
-
 --- Render full TUI dashboard with VAS link status and live log stream
 function tui_dashboard.render_full_screen(cfg, daemon, surfOrW, h)
     local surf = term

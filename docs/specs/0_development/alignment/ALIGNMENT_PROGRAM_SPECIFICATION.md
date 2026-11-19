@@ -821,6 +821,7 @@ VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)
 }
 
 -- 2. Core -> Align (Base_hangar+1)
+-- (구 currentFsmState [DEPRECATED])
 {
     ver = "1.9.5",
     domainId = "AIRCRAFT_01",
@@ -829,8 +830,7 @@ VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)
     time = 1729845095050,
     payload = {
         bayId = 1,
-        status = "CLOSED",
-        currentFsmState = "IDLE_ARMED"
+        status = "CLOSED"
     }
 }
 ```

@@ -18,6 +18,8 @@ local VALID_SIDES = { top = true, bottom = true, left = true, right = true, fron
 local VALID_EXEC_MODES = { SINGLE = true, REPEAT = true, LOOP = true }
 local VALID_FALLBACKS = { SKIP_NEXT = true, RTH = true, HOVER_HOLD = true, LOITER = true }
 local VALID_FACILITY_FILTERS = { ANY = true, LANDING_PAD = true, RUNWAY = true }
+local ZONE3_MIN_OFFSET = 20
+local ZONE3_MAX_OFFSET = 39
 
 local function is_finite(n)
     return type(n) == "number" and n == n and n ~= math.huge and n ~= -math.huge
@@ -117,14 +119,15 @@ end
 
 local function is_zone3_spec(p, base_channel)
     if p.channelOffset ~= nil then
-        return is_finite_int(p.channelOffset) and p.channelOffset >= 20 and p.channelOffset <= 29
+        return is_finite_int(p.channelOffset) and p.channelOffset >= ZONE3_MIN_OFFSET and p.channelOffset <= ZONE3_MAX_OFFSET
     end
     local ch = (p.targetChannel ~= nil) and p.targetChannel or p.channel
     if not is_finite_int(ch) then return false end
     if is_finite_int(base_channel) then
-        return ch >= base_channel + 20 and ch <= base_channel + 29
+        return ch >= base_channel + ZONE3_MIN_OFFSET and ch <= base_channel + ZONE3_MAX_OFFSET
     end
-    return ch >= 10000 and (ch % 40) >= 20 and (ch % 40) <= 29
+    local offset = ch % 40
+    return ch >= 10000 and offset >= ZONE3_MIN_OFFSET and offset <= ZONE3_MAX_OFFSET
 end
 
 local function validate_fly_over(p, defaults, opts)
@@ -1033,11 +1036,44 @@ function mission_engine:enter_checkpoint(index, now_ms, is_retry)
     end
     if type(cp.action) == "string" and string.sub(cp.action, 1, 15) == "ACT_TKL_TAKEOFF" then
         local rep = self.lastPbitReport
-        local blockedByReport = (type(rep) == "table" and rep.takeoffPermitted == false)
+        local hasCheckFail = false
+        if type(rep) == "table" and type(rep.checks) == "table" then
+            for _, chk in pairs(rep.checks) do
+                if type(chk) == "table" and chk.status == "FAIL" then
+                    hasCheckFail = true
+                    break
+                end
+            end
+        end
+        local blockedByReport = type(rep) == "table"
+            and (rep.takeoffPermitted == false or rep.overallStatus == "FAIL" or hasCheckFail)
         local blockedMissingRequired = (self.requirePbit == true and (type(rep) ~= "table" or rep.takeoffPermitted ~= true))
         if blockedByReport or blockedMissingRequired then
+            if type(rep) == "table" then
+                self.lastPbitFailure = {
+                    overallStatus = rep.overallStatus,
+                    summaryReason = rep.summaryReason,
+                    timestampMs = rep.timestampMs,
+                }
+            else
+                self.lastPbitFailure = {
+                    overallStatus = "MISSING",
+                    summaryReason = "PBIT_REPORT_MISSING",
+                    timestampMs = get_time_ms(now_ms),
+                }
+            end
             self.hook_runner:cleanup(); cp.status = "ABORTED"; self.state = "ABORTED"
             return false, "PBIT_TAKEOFF_INTERLOCK"
+        end
+        self.lastPbitFailure = nil
+        if type(rep) == "table" and rep.overallStatus == "WARN" then
+            self.lastPbitWarning = {
+                overallStatus = rep.overallStatus,
+                summaryReason = rep.summaryReason,
+                timestampMs = rep.timestampMs,
+            }
+        else
+            self.lastPbitWarning = nil
         end
     end
     local pre_ctx = build_precond_ctx(self)

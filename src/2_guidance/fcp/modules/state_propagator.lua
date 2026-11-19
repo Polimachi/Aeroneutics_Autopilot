@@ -49,6 +49,8 @@ function state_propagator.init(cfg)
         dtPropMaxSec = tonumber(ol.dtPropMaxSec) or 0.1,
         posMergeMaxStepM = tonumber(ol.posMergeMaxStepM) or 2.0,
         navStaleTimeoutMs = tonumber(safe.navStaleTimeoutMs) or 500,
+        coreTelemetryTimeoutMs = tonumber(safe.coreTelemetryTimeoutMs) or 500,
+        coreTelemetryTimedOut = false,
     }
 end
 
@@ -100,6 +102,7 @@ function state_propagator.on_telemetry(state, telemPayload, now_ms)
         state.sensorOk = telemPayload.sensorOk
     end
     state.lastTelemMs = now_ms or (os.epoch and os.epoch("utc") or 0)
+    state.coreTelemetryTimedOut = false
     if state.lastPropagateMs == 0 then
         state.lastPropagateMs = state.lastTelemMs
     end
@@ -216,6 +219,7 @@ function state_propagator.propagate(state, now_ms)
         airspeed = state.airspeed,
         posEpoch = state.posEpoch,
         lastTelemMs = state.lastTelemMs,
+        coreTelemetryTimedOut = state.coreTelemetryTimedOut,
         navStale = state.navStale,
         navQuality = state.navQuality,
         drHoldoverActive = state.drHoldoverActive,

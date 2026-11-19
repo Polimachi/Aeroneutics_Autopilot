@@ -64,12 +64,14 @@ local function euler_deg_to_quat(pitchDeg, rollDeg, yawDeg)
 end
 
 local function quat_to_euler_deg(q)
-    local sinp = clamp(2.0 * (q.w * q.y - q.z * q.x), -1.0, 1.0)
+    local qn = normalize_quat(q)
+    local sinp = clamp(2.0 * (qn.w * qn.y - qn.z * qn.x), -1.0, 1.0)
     local pitch = math.deg(math.asin(sinp))
-    local roll = math.deg(math.atan2(2.0 * (q.w * q.x + q.y * q.z), 1.0 - 2.0 * (q.x * q.x + q.y * q.y)))
-    local yaw = math.deg(math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z)))
+    local roll = math.deg(math.atan2(2.0 * (qn.w * qn.x + qn.y * qn.z), 1.0 - 2.0 * (qn.x * qn.x + qn.y * qn.y)))
+    local yaw = math.deg(math.atan2(2.0 * (qn.w * qn.z + qn.x * qn.y), 1.0 - 2.0 * (qn.y * qn.y + qn.z * qn.z)))
     return pitch, roll, yaw
 end
+outer_loop_controller._quat_to_euler_deg = quat_to_euler_deg
 
 local function quat_slerp(q1, q2, alpha)
     local dot = q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z
@@ -172,7 +174,9 @@ local function step_integrators(state, ex, ey, ez, ki, maxInt, d_t, satFlags)
     local ints = (state and state.integrators) or { x = 0.0, y = 0.0, z = 0.0 }
     local vSat = satFlags and satFlags.vasSat
     local actH = (satFlags and satFlags.actuatorHealth) or (vSat and vSat.actuatorHealth)
-    local freeze = (satFlags and satFlags.navStale) or (vSat and vSat.navStale) or (actH and actH.tap == false)
+    local freeze = (satFlags and (satFlags.navStale or satFlags.freezeIntegrators))
+        or (vSat and vSat.navStale)
+        or (actH and actH.tap == false)
     if not freeze and state then
         local spX, snX = check_sat_flags(satFlags, "x", "surge")
         local spY, snY = check_sat_flags(satFlags, "y", "heave")
@@ -311,7 +315,17 @@ local function project_fixed_wing(state, a_des, nav, sp, fsmCtx, dt, heading, ya
     local ol = (state.cfg and state.cfg.outerLoop) or {}
     local fw = ol.fixed_wing or {}
     local g = tonumber(ol.gravityMps2) or 11.0
-    local maxBank = (fsmCtx and fsmCtx.currentState == "AMM_TIMEOUT_HOLD") and 18.0 or (tonumber(fw.nominalMaxBankDeg) or 20.0)
+    local isTimeoutHold = (fsmCtx and fsmCtx.currentState == "AMM_TIMEOUT_HOLD")
+    local isEmergency = (sp and sp.constraintProfile == "EMERGENCY_MANEUVER")
+        or (fsmCtx and fsmCtx.currentState == "EMERGENCY_LAND")
+    local maxBank
+    if isTimeoutHold then
+        maxBank = 18.0
+    elseif isEmergency then
+        maxBank = tonumber(fw.emergencyMaxBankDeg) or 75.0
+    else
+        maxBank = tonumber(fw.nominalMaxBankDeg) or 20.0
+    end
     local _, sway_a = project_to_body(a_des.ax, a_des.az, heading)
     local maxRollStep = (tonumber(fw.bankSlewRateDegPerSec) or 45.0) * dt
     local roll = state.current_roll + clamp(clamp(math.deg(math.atan2(sway_a, g)), -maxBank, maxBank) - state.current_roll, -maxRollStep, maxRollStep)

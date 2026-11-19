@@ -172,6 +172,13 @@ end
 
 local function handle_calibration_init(state, fsm, payload)
     if not payload then return false end
+    if type(payload.targetCraftDomain) == "string" and payload.targetCraftDomain ~= ""
+        and state.aircraftDomainId and payload.targetCraftDomain ~= state.aircraftDomainId then
+        return false, "TARGET_CRAFT_DOMAIN_MISMATCH"
+    end
+    if payload.targetThruster ~= nil then
+        state.calibTargetThruster = payload.targetThruster
+    end
     local bayId = tonumber(payload.bayId) or 1
     local baseHangar = tonumber(payload.baseHangarChannel) or (101 + (bayId - 1) * 10)
     local cmdCh, telemCh, tapCh = baseHangar + 0, baseHangar + 1, baseHangar + 3
@@ -190,7 +197,8 @@ local function handle_calibration_init(state, fsm, payload)
 
     state.hangarChannels = {
         bayId = bayId, stationId = payload.stationId or "HANGAR_BAY_01",
-        base = baseHangar, cmd = cmdCh, telem = telemCh, tap = tapCh
+        base = baseHangar, cmd = cmdCh, telem = telemCh, tap = tapCh,
+        targetThruster = payload.targetThruster
     }
 
     if fsm and fsm.transition_to then fsm.transition_to(fsm, "CALIBRATION", "ALIGN_INIT") end
@@ -215,8 +223,44 @@ local function handle_calibration_init(state, fsm, payload)
     return true
 end
 
-local function handle_calib_close(state, fsm, rawPacket)
-    local bayId = (rawPacket.payload and rawPacket.payload.bayId) or (state.hangarChannels and state.hangarChannels.bayId) or 1
+function network_manager.snapshot_mixer(mixer)
+    if type(mixer) ~= "table" then return nil end
+    return {
+        coefficients = mixer.coefficients,
+        isStaticFallback = mixer.isStaticFallback,
+        pseudoInverseMatrix = mixer.pseudoInverseMatrix,
+        controlEffectivenessMatrix = mixer.controlEffectivenessMatrix,
+        isVectorVtol = mixer.isVectorVtol,
+        vectorGroupOrder = mixer.vectorGroupOrder,
+        axesOrder = mixer.axesOrder,
+    }
+end
+
+function network_manager.restore_mixer(mixer, snap)
+    if type(mixer) ~= "table" or type(snap) ~= "table" then return end
+    mixer.coefficients = snap.coefficients
+    mixer.isStaticFallback = snap.isStaticFallback
+    mixer.pseudoInverseMatrix = snap.pseudoInverseMatrix
+    mixer.controlEffectivenessMatrix = snap.controlEffectivenessMatrix
+    mixer.isVectorVtol = snap.isVectorVtol
+    mixer.vectorGroupOrder = snap.vectorGroupOrder
+    mixer.axesOrder = snap.axesOrder
+end
+
+local function handle_calib_close(state, fsm, mixer, rawPacket)
+    local closePayloadData = rawPacket and rawPacket.payload
+    local rollback = (type(closePayloadData) == "table" and closePayloadData.saveProfile == false)
+    if rollback and state._preSyncSnapshot then
+        local snap = state._preSyncSnapshot
+        state.lastProfileMeta = snap.lastProfileMeta
+        state.peripheralManifest = snap.peripheralManifest
+        network_manager.restore_mixer(mixer, snap.mixer)
+    end
+    state._preSyncSnapshot = nil
+    if type(state.on_calib_close) == "function" then
+        state.on_calib_close(closePayloadData)
+    end
+    local bayId = (closePayloadData and closePayloadData.bayId) or (state.hangarChannels and state.hangarChannels.bayId) or 1
     local closePayload = {
         action = "CLOSE", bayId = bayId,
         stationId = (state.hangarChannels and state.hangarChannels.stationId) or "UNKNOWN",
@@ -239,14 +283,27 @@ local function handle_calib_close(state, fsm, rawPacket)
         state.wirelessModem.close(state.hangarChannels.tap)
     end
     state.hangarChannels = nil
-    if fsm and fsm.transition_to then fsm.transition_to(fsm, "IDLE_ARMED", "CALIB_CLOSE") end
+    if rollback and fsm then
+        fsm.recalibrationRequired = true
+        fsm.topologyStatus = "RECALIBRATION_REQUIRED"
+    end
+    local needsRecalib = rollback or (fsm ~= nil and fsm.recalibrationRequired == true)
+    if fsm and fsm.transition_to then
+        local nextState = needsRecalib and "DISARMED" or "IDLE_ARMED"
+        local reason = rollback and "CALIB_ROLLBACK"
+            or (needsRecalib and "CALIB_CLOSE_LOCKED" or "CALIB_CLOSE")
+        fsm.transition_to(fsm, nextState, reason)
+    end
     return true
 end
 
 local function handle_calibration_packet(state, fsm, mixer, rawPacket)
     local msgType = rawPacket.type
     if msgType == "MSG_CALIB_START" then
-        if rawPacket.payload and rawPacket.payload.stationId then state.calibStationId = rawPacket.payload.stationId end
+        if rawPacket.payload then
+            if rawPacket.payload.stationId then state.calibStationId = rawPacket.payload.stationId end
+            if rawPacket.payload.targetThruster ~= nil then state.calibTargetThruster = rawPacket.payload.targetThruster end
+        end
         if fsm and fsm.transition_to then
             local act = rawPacket.payload and rawPacket.payload.action
             local isAbort = (act == "ABORT_CALIBRATION")
@@ -254,15 +311,49 @@ local function handle_calibration_packet(state, fsm, mixer, rawPacket)
         end
         return true
     elseif msgType == "MSG_PROFILE_SYNC" then
-        if mixer and mixer.reload_coefficients then mixer.reload_coefficients(mixer, rawPacket.payload, false) end
-        if fsm and fsm.transition_to then fsm.transition_to(fsm, "IDLE_ARMED", "CALIB_COMPLETE") end
-        if state.on_profile_sync then state.on_profile_sync(rawPacket.payload) end
-        local pid = (rawPacket.payload and rawPacket.payload.profileId) or "UNKNOWN"
+        local p = type(rawPacket.payload) == "table" and rawPacket.payload or {}
+        local pid = p.profileId or "UNKNOWN"
+        local cStatus = p.controllabilityStatus
+        local isAccepted = (cStatus == "FULL_6DOF_PASS" or cStatus == "AERO_ASSISTED_PASS")
         local replyCh = (state.hangarChannels and state.hangarChannels.telem) or (state.channels and state.channels.guidance) or 10001
+        if not isAccepted then
+            if fsm then
+                fsm.recalibrationRequired = true
+                fsm.topologyStatus = "RECALIBRATION_REQUIRED"
+                if fsm.currentState ~= "DISARMED" and fsm.currentState ~= "CALIBRATION" and fsm.currentState ~= "E_STOP" and fsm.transition_to then
+                    fsm.transition_to(fsm, "DISARMED", "CONTROLLABILITY_REJECTED")
+                end
+            end
+            network_manager.send_packet(state, replyCh, "MSG_CALIB_ACK", { profileId = pid, status = "REJECTED" })
+            return true
+        end
+        if not state._preSyncSnapshot then
+            state._preSyncSnapshot = {
+                lastProfileMeta = state.lastProfileMeta,
+                peripheralManifest = state.peripheralManifest,
+                mixer = network_manager.snapshot_mixer(mixer),
+            }
+        end
+        state.lastProfileMeta = {
+            profileId = pid,
+            calibratedBy = p.calibratedBy,
+            discoveredSurfaces = p.discoveredSurfaces,
+            controllabilityStatus = cStatus,
+        }
+        if type(p.peripheralManifest) == "table" then
+            state.peripheralManifest = p.peripheralManifest
+        end
+        if state.on_profile_sync then state.on_profile_sync(p) end
+        if mixer and mixer.reload_coefficients then mixer.reload_coefficients(mixer, p, false) end
+        if fsm then
+            fsm.recalibrationRequired = false
+            fsm.topologyStatus = "NOMINAL"
+            if fsm.transition_to then fsm.transition_to(fsm, "IDLE_ARMED", "CALIB_COMPLETE") end
+        end
         network_manager.send_packet(state, replyCh, "MSG_CALIB_ACK", { profileId = pid, status = "ACCEPTED" })
         return true
     elseif msgType == "MSG_CALIBRATION_CLOSE" then
-        return handle_calib_close(state, fsm, rawPacket)
+        return handle_calib_close(state, fsm, mixer, rawPacket)
     end
     return true
 end

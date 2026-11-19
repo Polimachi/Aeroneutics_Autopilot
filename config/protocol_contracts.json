@@ -754,9 +754,7 @@
             "bayId",
             "status"
           ],
-          "optionalKeys": [
-            "currentFsmState"
-          ],
+          "optionalKeys": [],
           "enums": {
             "status": [
               "CLOSED"
@@ -875,7 +873,10 @@
             "clearanceRadius",
             "safeDescentRate",
             "tiltAngleDeg",
-            "heaveRateMps"
+            "heaveRateMps",
+            "dockingCorridor",
+            "captureLatchReady",
+            "armState"
           ],
           "enums": {
             "approachDirection": [
@@ -925,7 +926,10 @@
             "clearanceRadius",
             "safeDescentRate",
             "tiltAngleDeg",
-            "heaveRateMps"
+            "heaveRateMps",
+            "dockingCorridor",
+            "captureLatchReady",
+            "armState"
           ],
           "enums": {
             "approachDirection": [
@@ -987,10 +991,8 @@
           ],
           "optionalKeys": [
             "assignedGuidanceChannel",
-            "glideSlope",
             "touchdownPoint",
-            "reason",
-            "retryAfterSec"
+            "reason"
           ],
           "enums": {
             "status": [
@@ -1012,8 +1014,7 @@
           ],
           "optionalKeys": [
             "grossWeight",
-            "clearanceRadius",
-            "estimatedArrivalTime"
+            "clearanceRadius"
           ],
           "specs": [
             "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
@@ -1041,6 +1042,14 @@
             "clearanceRadius",
             "divertChannel"
           ],
+          "enums": {
+            "status": [
+              "CLEARED",
+              "HOLD",
+              "DENIED",
+              "DIVERT"
+            ]
+          },
           "specs": [
             "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
             "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
@@ -1092,6 +1101,167 @@
             "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
             "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md"
           ]
+        },
+        "MSG_ATC_SLOT_ASSIGN": {
+          "requiredKeys": [
+            "facilityId",
+            "aircraftId",
+            "airframeType",
+            "slotDurationSec",
+            "tacticalChannel"
+          ],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_ATC_SLOT_ACK": {
+          "requiredKeys": [
+            "facilityId",
+            "aircraftId",
+            "status",
+            "tacticalChannel"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "status": [
+              "ACCEPTED",
+              "REJECTED"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_ABORT_APPROACH": {
+          "requiredKeys": [
+            "facilityId",
+            "reason"
+          ],
+          "optionalKeys": [
+            "aircraftId"
+          ],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_ATC_APPROACH_REQ": {
+          "requiredKeys": [
+            "aircraftId",
+            "targetFacilityId",
+            "facilityType"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "facilityType": [
+              "LANDING_PAD",
+              "RUNWAY",
+              "DOCKING_ARM"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_ATC_DEPARTURE_COMPLETE": {
+          "diagramRequired": false,
+          "requiredKeys": [
+            "facilityId",
+            "aircraftId"
+          ],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_ATC_SECTOR_HANDOFF_REQ": {
+          "requiredKeys": [
+            "sectorId",
+            "aircraftId",
+            "airframeType",
+            "craftWeight",
+            "craftRadius"
+          ],
+          "optionalKeys": [
+            "preferredFacilityId",
+            "isEmergency"
+          ],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_ATC_SECTOR_HANDOFF_ACK": {
+          "requiredKeys": [
+            "sectorId",
+            "aircraftId",
+            "status"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "status": [
+              "ACCEPTED",
+              "REJECTED"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_GAC_DEPARTURE_REQ": {
+          "requiredKeys": [
+            "facilityId",
+            "aircraftId"
+          ],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_GAC_DISPATCH": {
+          "diagramRequired": false,
+          "requiredKeys": [],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_GAC_SECTOR_STATUS": {
+          "diagramRequired": false,
+          "requiredKeys": [
+            "sectorId",
+            "sectorStatus"
+          ],
+          "optionalKeys": [],
+          "enums": {
+            "sectorStatus": [
+              "OPERATIONAL",
+              "DECK_DANGEROUS"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
         }
       },
       "timeoutsMs": {
@@ -1131,19 +1301,12 @@
           ],
           "optionalKeys": [
             "targetCraft",
-            "flightMode",
-            "emergencyAction"
+            "flightMode"
           ],
           "enums": {
             "authority": [
               "PILOT_PRIMARY",
               "GCS_OVERRIDE"
-            ],
-            "emergencyAction": [
-              "NONE",
-              "RTH",
-              "HOVER_HOLD",
-              "EMERGENCY_LAND"
             ]
           },
           "specs": [
@@ -1327,6 +1490,61 @@
             "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
             "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
             "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_GPS_NODE_REPORT": {
+          "requiredKeys": [
+            "targetClient",
+            "clientSeq",
+            "nodeId",
+            "nodePos",
+            "measuredDistance",
+            "clientAltitudeY",
+            "replyChannel"
+          ],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_GPS_STATUS_REQ": {
+          "requiredKeys": [
+            "queryType"
+          ],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_GPS_STATUS_RESP": {
+          "requiredKeys": [
+            "activeNodes",
+            "uptime",
+            "totalSolved",
+            "version"
+          ],
+          "optionalKeys": [],
+          "specs": [
+            "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+          ]
+        },
+        "MSG_GPS_NODE_HEARTBEAT": {
+          "diagramRequired": false,
+          "requiredKeys": [
+            "nodeId",
+            "pos",
+            "status"
+          ],
+          "optionalKeys": [
+            "computerId",
+            "uptime",
+            "reportsSent"
+          ],
+          "specs": [
+            "docs/specs/0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         }
       },
@@ -1749,7 +1967,9 @@
             "activeConstraintProfile",
             "commandedCollectiveThrust"
           ],
-          "optionalKeys": [],
+          "optionalKeys": [
+            "coreTelemetryTimedOut"
+          ],
           "enums": {
             "fsmState": [
               "BOOT",

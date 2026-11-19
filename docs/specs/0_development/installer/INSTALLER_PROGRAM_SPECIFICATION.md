@@ -6,14 +6,14 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.2.0` |
-| **최종 수정일 (Date)** | `2026-11-15` |
+| **문서 버전 (Version)** | `v1.3.0` |
+| **최종 수정일 (Date)** | `2026-11-19` |
 | **구현 코드 (Source)** | `src/0_development/installer/` |
 | **주관 도메인 (Domain)** | 통합 코드베이스 배포 및 계층형 패키지 매니저 (`0_development/installer`) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
 > - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 §9 통합 인스톨러 연계)
 > - [GDRIVE_DEPLOYMENT_GUIDE.md](../../../guides/GDRIVE_DEPLOYMENT_GUIDE.md) (Google Drive 배포 운영 가이드)
@@ -23,6 +23,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.3.0` | `2026-11-19` | **`TASK-018` 루트 `/installer.lua` 단일 SSOT화 및 중복 제거 (`Implemented` $\to$ `Approved`)**: ① 저장소 루트 [installer.lua](../../../../installer.lua)가 부트스트랩 런타임과 `BOOTSTRAP_FILES` 7종 정의를 단독 소유하도록 일원화하고 구 `src/0_development/installer/installer.lua` 바이트 미러 및 `manifest.BOOTSTRAP_FILES` 중복 테이블을 `[DEPRECATED]` 폐기, ② §6 정적 검증 규칙을 이중 바이트 동등성(`INSTALLER_BYTE_PARITY_MISMATCH`)에서 루트 단일 원본 불변성으로 갱신, ③ 마스터 ICD(`v1.39.0`) 및 전체 구조도(`v2.22.0`) 동기화 | `TASK-016` 감사(`E-L2-04`) 후속 `installer.lua` / `BOOTSTRAP_FILES` 이중화 제거 (`R4` 적용) |
 | `v1.2.0` | `2026-11-15` | **`startup_generator.lua` 2단계 OTA 부팅 커밋 워치독 및 자가 복구 후크 사양 신설 (`Implemented` $\to$ `Approved`)**: ① 생성된 `/startup.lua` 후크 내부에 `/.ota_pending.json` (`maxBootAttempts = 1`) 기반 로드 오류(`BOOT_LOAD_ERROR`), 런타임 크래시(`BOOT_RUNTIME_CRASH`), 조기 재부팅 루프(`BOOT_WATCHDOG_TIMEOUT`) 감지 및 `/ota_backup/<txId>/` + `/.version.json` 자동 복원·`/.ota_rollback.json` 기록 로직 명세(외부 `require()` 비의존), ② 온보드 모듈(`vas`, `tca`, `fcp`, `amm`) 파일 매니페스트의 `/lib/ota_agent.lua` 동반 등록 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 2단계 원자적 롤백 가드 지원 (`src/0_development/installer/` 구현 후 `Implemented` 재승격 예정) |
 | `v1.1.1` | 2026-11-14 | 연관 마스터 ICD(`v1.30.0`) 및 전체 구조도(`v2.15.0`) 버전 배지 동기화 (`Implemented` 유지, 코드 변경 없음) | Wave 1 전역 사양서 참조 배지 일괄 정합화 |
 | `v1.1.0` | 2026-11-10 | 역할/도메인별 2계층 TUI 폴더 탐색(`CATEGORY_MENU` $\leftrightarrow$ `MODULE_MENU`), 12행 뷰포트 스크롤링(`computeViewport`), `manifest.CATEGORY_ORDER`·`CATEGORIES`·조회 API(`getCategory`, `listCategories`, `listModulesByCategory`) 규격 추가 | 12개 이상 모듈 확장에 따른 `51x19` TUI 메뉴 행 포화 해소 (`TASK-116`) |
@@ -32,7 +33,7 @@
 
 ## 1. 프로그램 개요 및 3종 실행 컨텍스트 (Overview & Execution Contexts)
 
-**Unified Codebase Installer**는 UAFS 생태계의 모든 CC:Tweaked 컴퓨터 코드베이스를 단일 진입점(`installer.lua`)으로 설치, 업데이트, 설정 마이그레이션 및 제거하는 패키지 매니저입니다. 저장소 루트 [installer.lua](../../../../installer.lua)와 소스 미러(`src/0_development/installer/installer.lua`)는 바이트 단위로 동일해야 하며, 외부 의존성 없이 단독 부트스트래핑을 수행합니다.
+**Unified Codebase Installer**는 UAFS 생태계의 모든 CC:Tweaked 컴퓨터 코드베이스를 단일 진입점(`installer.lua`)으로 설치, 업데이트, 설정 마이그레이션 및 제거하는 패키지 매니저입니다. 저장소 루트 [installer.lua](../../../../installer.lua)를 단일 원본(SSOT)으로 유지하며(구 `src/0_development/installer/installer.lua` 중복 미러 `[DEPRECATED]` 제거), 외부 의존성 없이 단독 부트스트래핑을 수행합니다.
 
 ### 1.1 3종 배포 실행 모드 (`bootstrapper.detectContext`)
 
@@ -64,9 +65,9 @@
 - HTTP 다운로드 리다이렉트는 최대 `MAX_REDIRECTS = 5`회까지 대소문자 무관(`Location`/`location`) 추적하며, 중간 HTTP 핸들을 즉시 `close()` 합니다.
 - Google Drive 바이러스 경고 HTML 페이지(`<!DOCTYPE html` / `<html`) 수신 시 `confirm=`·`uuid=` 토큰을 1회 추출 재시도하며, 실패 시 `"GDRIVE_HTML_INTERSTITIAL"` 오류로 중단합니다.
 
-### 2.2 7종 핵심 부트스트랩 파일 (`BOOTSTRAP_FILES`)
+### 2.2 7종 핵심 부트스트랩 파일 (`BOOTSTRAP_FILES`, 루트 `/installer.lua` 단일 소유)
 
-로컬에 코어 모듈이 없는 환경에서는 실행 시작 시 아래 7개 파일을 `<targetRoot>/.installer_cache/`에 임시 다운로드하여 `package.path`에 적재하고, 종료(`pcall` 오류 포함) 시 캐시 디렉토리를 삭제합니다.
+로컬에 코어 모듈이 없는 환경에서는 실행 시작 시 루트 `/installer.lua`에 정의된 아래 7개 파일을 `<targetRoot>/.installer_cache/`에 임시 다운로드하여 `package.path`에 적재하고, 종료(`pcall` 오류 포함) 시 캐시 디렉토리를 삭제합니다 *(구 `manifest.BOOTSTRAP_FILES` 중복 테이블 `[DEPRECATED]` 제거)*.
 
 1. `src/0_development/installer/installer_app.lua` (`cacheRelPath = "installer_app.lua"`)
 2. `src/0_development/installer/modules/manifest.lua` (`cacheRelPath = "modules/manifest.lua"`)
@@ -171,7 +172,7 @@ stateDiagram-v2
 
 | 검증/장애 항목 | 감지 주체 | 기대 동작 및 페일세이프 |
 | :--- | :--- | :--- |
-| 루트·소스 `installer.lua` 불일치 | `verify_manifest_sync.py` / `test_installer_integrity.py` | `INSTALLER_BYTE_PARITY_MISMATCH` 오류 반환 (바이트 100% 일치 강제) |
+| 루트 `/installer.lua` 누락 또는 중복 미러 잔존 | `verify_manifest_sync.py` / `test_installer_integrity.py` | 루트 `/installer.lua` 단일 SSOT 강제 (`src/0_development/installer/installer.lua` 중복 금지; 구 `INSTALLER_BYTE_PARITY_MISMATCH` `[DEPRECATED]`) |
 | 미등록 `.lua`/`.json` 또는 누락 파일 | `verify_manifest_sync.py` | `ORPHAN_SRC_FILE` / `MISSING_DISK_FILE` 오류 반환 |
 | 카테고리 ID와 `src/<layer>/` 불일치 | `verify_manifest_sync.py` | `INVALID_MODULE_CATEGORY` 오류 반환 (`development`/`infra`/`control`/`guidance`/`planning`/`mission`) |
 | HTTP API 비활성화 (`http == nil`) | `downloader.checkHttpAvailable` | `"HTTP_DISABLED"` 반환 후 즉시 종료 (파일 시스템 무변경) |

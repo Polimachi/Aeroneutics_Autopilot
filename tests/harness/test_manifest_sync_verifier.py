@@ -30,9 +30,6 @@ def _build_minimal_workspace(root: Path) -> None:
 }
 '''
     (root / "installer.lua").write_text(bootstrap_block, encoding="utf-8")
-    (root / "src" / "0_development" / "installer" / "installer.lua").write_text(
-        bootstrap_block, encoding="utf-8"
-    )
     (root / "src" / "0_development" / "installer" / "main.lua").write_text(
         'return require("installer")\n', encoding="utf-8"
     )
@@ -53,10 +50,6 @@ def _build_minimal_workspace(root: Path) -> None:
     )
 
     manifest_lua = '''local manifest = {}
-manifest.BOOTSTRAP_FILES = {
-    { repoPath = "src/0_development/installer/installer_app.lua", cacheRelPath = "installer_app.lua", gdriveId = "ID_APP" },
-    { repoPath = "src/0_development/installer/modules/manifest.lua", cacheRelPath = "modules/manifest.lua", gdriveId = "ID_MAN" },
-}
 manifest.SHARED_LIBS = {
     avionics_sensors = {
         repoPath = "src/0_development/sensors/avionics_sensors.lua",
@@ -281,12 +274,14 @@ class TestManifestSyncVerifier(unittest.TestCase):
                 f"Expected ORPHAN_GDRIVE_MAPPING, got: {report.errors}",
             )
 
-    def test_detects_stale_deferred_exemption_and_installer_parity_mismatch(self) -> None:
+    def test_detects_stale_deferred_exemption_and_duplicate_installer_sources(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _build_minimal_workspace(root)
-            # Break installer parity
-            (root / "installer.lua").write_text("-- modified\n", encoding="utf-8")
+            # Reintroduce forbidden duplicate installer under src/
+            (root / "src" / "0_development" / "installer" / "installer.lua").write_text(
+                "-- duplicate\n", encoding="utf-8"
+            )
             # Register ASA inside manifest while src/1_control/asa is in DEFERRED_SUBSYSTEM_DIRS
             (root / "src" / "1_control" / "asa").mkdir(parents=True)
             (root / "src" / "1_control" / "asa" / "main.lua").write_text("return {}\n", encoding="utf-8")
@@ -314,12 +309,42 @@ return manifest''',
             report = verify_workspace(root)
             self.assertFalse(report.ok)
             self.assertTrue(
-                any("INSTALLER_BYTE_PARITY_MISMATCH" in e for e in report.errors),
-                f"Expected INSTALLER_BYTE_PARITY_MISMATCH, got: {report.errors}",
+                any("DUPLICATE_INSTALLER_SOURCE" in e for e in report.errors),
+                f"Expected DUPLICATE_INSTALLER_SOURCE, got: {report.errors}",
             )
             self.assertTrue(
                 any("STALE_DEFERRED_EXEMPTION" in e and "src/1_control/asa" in e for e in report.errors),
                 f"Expected STALE_DEFERRED_EXEMPTION, got: {report.errors}",
+            )
+
+    def test_rejects_manifest_bootstrap_files_and_missing_root_installer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_minimal_workspace(root)
+            man_path = root / "src" / "0_development" / "installer" / "modules" / "manifest.lua"
+            content = man_path.read_text(encoding="utf-8")
+            content = content.replace(
+                "manifest.SHARED_LIBS = {",
+                'manifest.BOOTSTRAP_FILES = {\n    { repoPath = "src/0_development/installer/installer_app.lua", cacheRelPath = "installer_app.lua", gdriveId = "ID_APP" },\n}\nmanifest.SHARED_LIBS = {',
+            )
+            man_path.write_text(content, encoding="utf-8")
+
+            report = verify_workspace(root)
+            self.assertFalse(report.ok)
+            self.assertTrue(
+                any("DUPLICATE_INSTALLER_SOURCE" in e and "BOOTSTRAP_FILES" in e for e in report.errors),
+                f"Expected DUPLICATE_INSTALLER_SOURCE for manifest.BOOTSTRAP_FILES, got: {report.errors}",
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _build_minimal_workspace(root)
+            (root / "installer.lua").unlink()
+            report = verify_workspace(root)
+            self.assertFalse(report.ok)
+            self.assertTrue(
+                any("MISSING_DISK_FILE" in e and "installer.lua" in e for e in report.errors),
+                f"Expected MISSING_DISK_FILE for missing root installer.lua, got: {report.errors}",
             )
 
     def test_detects_missing_shared_ota_agent_lib_on_mandated_modules(self) -> None:

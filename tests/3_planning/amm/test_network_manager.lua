@@ -138,7 +138,9 @@ describe("AMM Network Manager and Packet Protocol", function()
         local back_m = mock.modem({ wireless = true })
         net:bind_modems(top_m, back_m, 10000)
         net:open_payload_channel(20)
+        net:open_payload_channel(39)
         assert_true(top_m.isOpen(10020))
+        assert_true(top_m.isOpen(10039))
 
         local ok = net:send_rebind_command("PREPARE", "TX-01", 10000, 10040)
         assert_true(ok)
@@ -149,6 +151,10 @@ describe("AMM Network Manager and Packet Protocol", function()
         local reb_ok = net:apply_rebind(10040)
         assert_true(reb_ok)
         assert_eq(net.baseChannel, 10040)
+        assert_nil(net.openPayloadChannels[10020])
+        assert_nil(net.openPayloadChannels[10039])
+        assert_true(net.openPayloadChannels[10060])
+        assert_true(net.openPayloadChannels[10079])
         for offset = 0, 39 do
             assert_false(top_m.isOpen(10000 + offset), "Expected old channel closed: " .. tostring(10000 + offset))
             assert_true(top_m.isOpen(10040 + offset), "Expected new channel open: " .. tostring(10040 + offset))
@@ -200,7 +206,7 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(top_m._transmitted[1].tx, 10003)
     end)
 
-    it("enforces Zone 3 (Base+20..29) bounds and manages dynamic channel open/close without closing Base+0/+3", function()
+    it("enforces Zone 3 (Base+20..39) bounds and manages dynamic channel open/close without closing Base+0/+3", function()
         local net = network_manager.new({ domainId = "AIRCRAFT_01", baseChannel = 10000 })
         local m = mock.modem({ wireless = true })
         net:bind_modem(m)
@@ -209,7 +215,27 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_true(m.isOpen(10020))
         assert_nil(net.openPayloadChannels[10020])
 
-        local invalid_inputs = { -1, 0, 3, 19, 30, 20.5, 0 / 0, math.huge, 9999, 10000, 10010, 10030, "20" }
+        local valid_selectors = {
+            { sel = 20, expected = 10020 },
+            { sel = 30, expected = 10030 },
+            { sel = 39, expected = 10039 },
+            { sel = 10020, expected = 10020 },
+            { sel = 10030, expected = 10030 },
+            { sel = 10039, expected = 10039 },
+        }
+        for _, tc in ipairs(valid_selectors) do
+            local ch, err = net:resolve_payload_channel(tc.sel)
+            assert_nil(err, "Should accept Zone 3 selector: " .. tostring(tc.sel))
+            assert_eq(ch, tc.expected)
+            assert_true(net:is_payload_channel(tc.expected), "is_payload_channel should accept " .. tostring(tc.expected))
+        end
+
+        assert_false(net:is_payload_channel(10019))
+        assert_false(net:is_payload_channel(10040))
+        assert_false(net:is_payload_channel(19))
+        assert_false(net:is_payload_channel(40))
+
+        local invalid_inputs = { -1, 0, 3, 19, 40, 20.5, 0 / 0, math.huge, 9999, 10000, 10010, 10019, 10040, "20" }
         for _, bad in ipairs(invalid_inputs) do
             local ch, err = net:resolve_payload_channel(bad)
             assert_nil(ch, "Should reject invalid Zone 3 selector: " .. tostring(bad))
@@ -275,5 +301,36 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(m._transmitted[1].pkt.type, "MSG_MISSION_ACK")
         assert_eq(m._transmitted[1].pkt.payload.status, "ACCEPTED")
         assert_eq(m._transmitted[1].pkt.payload.missionId, "PATROL_ALPHA")
+    end)
+
+    it("wires custom cfg.channels.{facilityBeaconChannel, runwayDirectoryChannel, atcCommChannel, gpsServiceChannel, gpsPingChannel}", function()
+        local net = network_manager.new({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = {
+                bootstrapChannel = 50000,
+                facilityBeaconChannel = 50103,
+                runwayDirectoryChannel = 50104,
+                atcCommChannel = 50101,
+                gpsPingChannel = 60101,
+                gpsServiceChannel = 60102,
+            },
+        })
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        net:bind_modems(top_m, back_m, 10000)
+
+        assert_true(back_m.isOpen(50103), "custom facilityBeaconChannel must be opened")
+        assert_true(back_m.isOpen(50104), "custom runwayDirectoryChannel must be opened")
+        assert_true(back_m.isOpen(50101), "custom atcCommChannel must be opened")
+        assert_true(back_m.isOpen(60102), "custom gpsServiceChannel must be opened")
+        assert_false(back_m.isOpen(50003), "default 50003 must not open when overridden")
+        assert_false(back_m.isOpen(50004), "default 50004 must not open when overridden")
+        assert_false(back_m.isOpen(50001), "default 50001 must not open when overridden")
+        assert_false(back_m.isOpen(60002), "default 60002 must not open when overridden")
+
+        assert_true(net:send_gps_request({ pos = { x = 1, y = 2, z = 3 } }))
+        assert_eq(#back_m._transmitted, 1)
+        assert_eq(back_m._transmitted[1].tx, 60101, "send_gps_request must transmit on custom gpsPingChannel")
     end)
 end)

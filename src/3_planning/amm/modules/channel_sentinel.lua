@@ -214,6 +214,10 @@ function channel_sentinel.init(config, now_ms, lease_path)
         lastIntruderDomainId = nil,
         lastIntruderChannel = nil,
         lastAcquiredMs = nil,
+        lastReassignedFrom = nil,
+        reassignedEvent = false,
+        lastConflictDomain = nil,
+        lastResponderStatus = nil,
     }
 end
 
@@ -224,6 +228,7 @@ function channel_sentinel.start_bootstrap(state, now_ms)
     state.status = "GCS_WAIT"
     state.offlinePending = false
     state.offlineWarning = nil
+    state.reassignedEvent = false
     return {
         type = "MSG_BLOCK_REQUEST",
         payload = {
@@ -236,9 +241,18 @@ function channel_sentinel.start_bootstrap(state, now_ms)
     }
 end
 
+local INACTIVE_RESPONDER_STATUSES = { RELEASED = true, OFFLINE = true, CLEAR = true }
+
 function channel_sentinel.on_block_assign(state, payload, now_ms, rng)
     if not state or state.status ~= "GCS_WAIT" then
         return false
+    end
+    if type(payload) == "table" and payload.reassignedFrom ~= nil then
+        state.lastReassignedFrom = payload.reassignedFrom
+        state.reassignedEvent = true
+    else
+        state.lastReassignedFrom = nil
+        state.reassignedEvent = (type(payload) == "table" and payload.status == "REASSIGNED") or false
     end
     if type(payload) == "table" and (payload.status == "DENIED" or payload.status == "FAILED") then
         state.locked = true
@@ -286,10 +300,21 @@ function channel_sentinel.on_probe_ack(state, packet)
     if payload.responderUuid ~= nil and payload.responderUuid == state.hardwareUuid then
         return false
     end
-    if payload.conflict == true or payload.status == "CONFLICT_DETECTED" then
+    if payload.responderStatus ~= nil then
+        state.lastResponderStatus = payload.responderStatus
+        if INACTIVE_RESPONDER_STATUSES[payload.responderStatus] then
+            return false
+        end
+    end
+    local hasExistingDomain = (type(payload.existingDomain) == "string" and payload.existingDomain ~= "")
+    local domainConflict = hasExistingDomain and payload.existingDomain ~= state.domainId
+    if payload.conflict == true or payload.status == "CONFLICT_DETECTED" or domainConflict then
         state.reassignAttempts = (state.reassignAttempts or 0) + 1
         state.conflictBase = payload.occupiedBase or state.candidateBase
         state.conflictReason = "RF_CHANNEL_CONFLICT"
+        if hasExistingDomain then
+            state.lastConflictDomain = payload.existingDomain
+        end
         if state.reassignAttempts >= (state.maxReassignAttempts or DEFAULT_MAX_REASSIGN_ATTEMPTS) then
             state.locked = true
             state.status = "LOCKED_CONFLICT"
@@ -324,8 +349,7 @@ end
 
 local function step_probing(state, now_ms, inbound, rng)
     local p = inbound and inbound.probe
-    if p and p.payload and (p.payload.conflict == true or p.payload.status == "CONFLICT_DETECTED") then
-        channel_sentinel.on_probe_ack(state, p)
+    if p and channel_sentinel.on_probe_ack(state, p) then
         return state.status, nil
     end
     if (now_ms - state.probeStartMs) >= state.channelProbeWaitMs then

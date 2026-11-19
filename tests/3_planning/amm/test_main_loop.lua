@@ -1062,26 +1062,25 @@ describe("AMM Main Event Pump and Command Processing", function()
         }, { top = top_m, back = back_m })
         app.sentinel.status = "ACQUIRED"
 
-        -- 1. Valid Base+5 facility/pad/runway/dock/GPS responses from foreign domainIds must NOT trigger intrusion
+        -- 1. Valid Base+5 canonical facility/pad/runway/dock/GPS responses from foreign domainIds must NOT trigger intrusion
         local base5_valid = {
             { domainId = "GPS_BASE_NET", type = "MSG_GPS_STATUS_RESP", payload = { activeNodes = 4 } },
-            { domainId = "GAC_01", type = "MSG_FACILITY_LIST_ACK", payload = { facilities = {} } },
-            { domainId = "PAD_01", type = "MSG_PAD_RESERVE_ACK", payload = { status = "RESERVED" } },
-            { domainId = "PAD_01", type = "MSG_PAD_TELEMETRY", payload = { deckStatus = "STABLE" } },
-            { domainId = "PAD_01", type = "MSG_LANDING_STATUS", payload = { status = "CLEARED" } },
-            { domainId = "PAD_01", type = "MSG_LANDING_ACK", payload = { status = "OK" } },
-            { domainId = "PAD_01", type = "MSG_PAD_STATUS", payload = { status = "FREE" } },
-            { domainId = "RUNWAY_01", type = "MSG_RUNWAY_ACK", payload = { status = "CLEARED" } },
-            { domainId = "RUNWAY_01", type = "MSG_ILS_BEACON", payload = { heading = 90 } },
-            { domainId = "DOCK_01", type = "MSG_DOCK_ACK", payload = { status = "READY" } },
-            { domainId = "DOCK_01", type = "MSG_DOCK_STATUS", payload = { stage = "ALIGNING" } },
-            { domainId = "DOCK_01", type = "MSG_DOCKING_STATUS", payload = { stage = "ENGAGED" } },
+            { domainId = "GAC_01", type = "MSG_FACILITY_BEACON", payload = { facilityId = "PAD_01", pos = { x = 10, y = 64, z = 10 } } },
+            { domainId = "PAD_01", type = "MSG_FACILITY_STATIC_GUIDE", payload = { facilityId = "PAD_01", deckStatus = "STABLE", landingPermitted = true } },
+            { domainId = "PAD_01", type = "MSG_FACILITY_DYNAMIC_GUIDE", payload = { facilityId = "PAD_01", deckStatus = "STABLE", landingPermitted = true } },
+            { domainId = "ATC_01", type = "MSG_ATC_APPROACH_CLEARANCE", payload = { status = "CLEARED", assignedFacilityId = "PAD_01", assignedGuidanceChannel = 50212 } },
+            { domainId = "ATC_01", type = "MSG_ATC_FACILITY_UPDATE", payload = { facilityId = "PAD_01" } },
+            { domainId = "GAC_01", type = "MSG_GAC_APPROACH_CLEARANCE", payload = { status = "CLEARED", assignedFacilityId = "PAD_01", assignedTacticalChannel = 50212 } },
+            { domainId = "GAC_01", type = "MSG_GAC_DEPARTURE_CLEARANCE", payload = { status = "CLEARED" } },
+            { domainId = "PAD_01", type = "MSG_ABORT_APPROACH", payload = { facilityId = "PAD_01", abortAlert = true } },
+            { domainId = "GAC_01", type = "MSG_GAC_ABORT_CLEAR", payload = { assignedFacilityId = "PAD_01", assignedTacticalChannel = 50212 } },
             { domainId = "DOCK_01", type = "MSG_DOCK_CAPTURE_STAGE", payload = { stage = "CAPTURED" } },
             { domainId = "DOCK_01", type = "MSG_UMBILICAL_STATUS", payload = { connected = true } },
             { domainId = "PAD_01", type = "MSG_TOUCHDOWN_COMPLETE", payload = { facilityId = "PAD_01", craftState = "GROUND_IDLE" } },
+            { domainId = "GPS_BASE_NET", type = "MSG_NAV_QUALITY", payload = { hdop = 1.1, satelliteCount = 5, navQuality = "GOOD" } },
         }
         for i, item in ipairs(base5_valid) do
-            app.clock_ms = 1000 + i * 2500
+            app.clock_ms = 1000 + i * 2000
             main_mod.process_event(app, "modem_message", "back", 10005, 10005, {
                 ver = "1.9.5", domainId = item.domainId, seq = i, type = item.type, time = app.clock_ms,
                 payload = item.payload,
@@ -1089,6 +1088,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
         assert_eq(app.sentinel.intrusionCount, 0)
         assert_eq(app.fac.dockingStage, "CAPTURED")
+        assert_eq(app.fac.atcStatus, "CLEARED")
 
         -- 2. Valid Base+0 packets: GCS_OVERRIDE from non-"GCS*" domainId ("TOWER_CMD"), GCS MSG_MISSION_CMD, MSG_BLOCK_ASSIGN, probes
         app.clock_ms = 40000
@@ -1148,6 +1148,57 @@ describe("AMM Main Event Pump and Command Processing", function()
             payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "ROGUE" },
         })
         assert_eq(app.sentinel.intrusionCount, prev_count + 1)
+
+        -- 5. All 14 removed legacy packet types on Base+5 (foreign domainId) MUST be rejected as intrusions without side effects
+        local legacy_base5 = {
+            { domainId = "GAC_01", type = "MSG_FACILITY_LIST_ACK", payload = { facilities = {} } },
+            { domainId = "ATC_01", type = "MSG_ATC_HANDOFF_CLEARANCE", payload = { status = "DENIED" } },
+            { domainId = "ATC_01", type = "MSG_ATC_SECTOR_HANDOFF", payload = { status = "DENIED" } },
+            { domainId = "ATC_01", type = "MSG_ATC_DEPARTURE_CLEARANCE", payload = { status = "DENIED" } },
+            { domainId = "PAD_01", type = "MSG_PAD_RESERVE_ACK", payload = { status = "RESERVED" } },
+            { domainId = "PAD_01", type = "MSG_PAD_TELEMETRY", payload = { deckStatus = "DANGEROUS" } },
+            { domainId = "PAD_01", type = "MSG_PAD_STATUS", payload = { status = "FREE" } },
+            { domainId = "PAD_01", type = "MSG_LANDING_STATUS", payload = { status = "ABORT" } },
+            { domainId = "PAD_01", type = "MSG_LANDING_ACK", payload = { status = "OK" } },
+            { domainId = "RUNWAY_01", type = "MSG_RUNWAY_ACK", payload = { status = "CLEARED" } },
+            { domainId = "RUNWAY_01", type = "MSG_ILS_BEACON", payload = { heading = 90 } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_ACK", payload = { status = "READY" } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_STATUS", payload = { stage = "ABORTED" } },
+            { domainId = "DOCK_01", type = "MSG_DOCKING_STATUS", payload = { stage = "ABORTED" } },
+        }
+        local legacy_base_count = app.sentinel.intrusionCount
+        for i, item in ipairs(legacy_base5) do
+            app.clock_ms = 43000 + i * 50
+            main_mod.process_event(app, "modem_message", "back", 10005, 10005, {
+                ver = "1.9.5", domainId = item.domainId, seq = 80 + i, type = item.type, time = app.clock_ms,
+                payload = item.payload,
+            })
+            assert_eq(app.sentinel.intrusionCount, legacy_base_count + i)
+        end
+        assert_eq(app.sentinel.intrusionCount, legacy_base_count + 14)
+        assert_eq(app.fac.dockingStage, "CAPTURED")
+        assert_eq(app.fac.atcStatus, "CLEARED")
+
+        -- 6. Dead facility_rx branches (MSG_ATC_SECTOR_HANDOFF on CH 50001, MSG_DOCKING_STATUS on padChannel) are ignored,
+        --    while canonical MSG_DOCK_CAPTURE_STAGE on padChannel updates dockingStage
+        app.clock_ms = 44000
+        main_mod.process_event(app, "modem_message", "back", 50001, 50001, {
+            ver = "1.9.5", domainId = "ATC_01", seq = 95, type = "MSG_ATC_SECTOR_HANDOFF", time = 44000,
+            payload = { status = "DENIED" },
+        })
+        assert_eq(app.fac.atcStatus, "CLEARED")
+
+        main_mod.process_event(app, "modem_message", "back", 50212, 50212, {
+            ver = "1.9.5", domainId = "DOCK_01", seq = 96, type = "MSG_DOCKING_STATUS", time = 44100,
+            payload = { stage = "ABORTED" },
+        })
+        assert_eq(app.fac.dockingStage, "CAPTURED")
+
+        main_mod.process_event(app, "modem_message", "back", 50212, 50212, {
+            ver = "1.9.5", domainId = "DOCK_01", seq = 97, type = "MSG_DOCK_CAPTURE_STAGE", time = 44200,
+            payload = { stage = "HARD_LOCKED" },
+        })
+        assert_eq(app.fac.dockingStage, "HARD_LOCKED")
 
         if fs.exists(lease_path) then fs.delete(lease_path) end
     end)
@@ -1358,5 +1409,98 @@ describe("AMM Main Event Pump and Command Processing", function()
         if fs.exists(lease1) then fs.delete(lease1) end
         if fs.exists(lease2) then fs.delete(lease2) end
         if fs.exists(lease3) then fs.delete(lease3) end
+    end)
+
+    it("wires cfg.channels.{atcCommChannel, facilityBeaconChannel} and cfg.system.{loopFrequencyHz, uiFrequencyHz}", function()
+        local main_mod = require("main")
+        local timerDurations = {}
+        local nextId = 100
+        sdk.patch(os, "startTimer", function(sec)
+            nextId = nextId + 1
+            table.insert(timerDurations, sec)
+            return nextId
+        end)
+
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease = sdk.temp_path("amm_cfg_wire_lease.json")
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = false,
+            clock_ms = 1000,
+            leasePath = lease,
+            system = { loopFrequencyHz = 10, uiFrequencyHz = 2 },
+            channels = {
+                bootstrapChannel = 50000,
+                facilityBeaconChannel = 50103,
+                runwayDirectoryChannel = 50104,
+                atcCommChannel = 50101,
+                gpsPingChannel = 60101,
+                gpsServiceChannel = 60102,
+            },
+        }, { top = top_m, back = back_m })
+
+        assert_near(app.loopIntervalSec, 0.1, 1e-6)
+        assert_near(app.uiIntervalSec, 0.5, 1e-6)
+        assert_near(timerDurations[1], 0.5, 1e-6)
+
+        app.term_obj = { setCursorPos = function() end, blit = function() end }
+
+        -- 1. Custom facilityBeaconChannel & atcCommChannel RX routing
+        main_mod.process_event(app, "modem_message", "back", 50103, 50103, {
+            ver = "1.9.5",
+            type = "MSG_FACILITY_BEACON",
+            payload = { facilityId = "PAD_CUSTOM", facilityType = "LANDING_PAD", status = "FREE", position = { x = 10, y = 64, z = 20 } },
+        }, 1050)
+        assert_not_nil(app.fac.beacons["PAD_CUSTOM"], "custom facilityBeaconChannel must update beacons")
+
+        -- 2. Custom atcCommChannel TX fallback when gacChannel is unset
+        app.fac.activePadId = "PAD_CUSTOM"
+        app.fac.gacChannel = nil
+        app.fac.atcStatus = "DENIED"
+        app.fac.atcDeniedCount = 1
+        app.fac.nextAtcRetryMs = 1060
+        main_mod.step_20hz_tick(app, nil, 1100)
+        local retryOnCustom = false
+        for _, tx in ipairs(back_m._transmitted) do
+            if tx.tx == 50101 and tx.pkt and tx.pkt.type == "MSG_ATC_APPROACH_REQ" then
+                retryOnCustom = true
+            end
+        end
+        assert_true(retryOnCustom, "ATC retry must transmit on custom atcCommChannel when gacChannel is nil")
+
+        main_mod.process_event(app, "modem_message", "back", 50101, 50101, {
+            ver = "1.9.5",
+            type = "MSG_ATC_APPROACH_CLEARANCE",
+            payload = { status = "CLEARED", assignedFacilityId = "PAD_CUSTOM", gacChannel = 51100, assignedGuidanceChannel = 51110, padMobility = "STATIC" },
+        }, 1150)
+        assert_eq(app.fac.activePadId, "PAD_CUSTOM")
+        assert_true(app.net.openInfraChannels[51100] == true, "custom atcCommChannel clearance must open gacChannel")
+
+        -- 3. Coroutine A and B use 1 / loopFrequencyHz (0.1s) and 1 / uiFrequencyHz (0.5s)
+        timerDurations = {}
+        local pullStep = 0
+        sdk.patch(os, "pullEventRaw", function()
+            pullStep = pullStep + 1
+            if pullStep == 1 then
+                return "timer", nextId
+            end
+            return "terminate"
+        end)
+        main_mod.make_coroutine_a(app)()
+        assert_true(#timerDurations >= 2)
+        assert_near(timerDurations[1], 0.1, 1e-6)
+        assert_near(timerDurations[2], 0.1, 1e-6)
+
+        app.running = true
+        timerDurations = {}
+        pullStep = 0
+        main_mod.make_coroutine_b(app)()
+        assert_true(#timerDurations >= 2)
+        assert_near(timerDurations[1], 0.5, 1e-6)
+        assert_near(timerDurations[2], 0.5, 1e-6)
+
+        if fs.exists(lease) then fs.delete(lease) end
     end)
 end)

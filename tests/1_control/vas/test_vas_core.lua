@@ -29,6 +29,40 @@ describe("vas quaternion math invariants", function()
         assert_near(err.y, 0.0, 1e-6)
         assert_near(err.z, 0.0, 1e-6)
     end)
+
+    it("converts quaternions to euler with [0, 360) yaw wrap, gimbal lock clamp, and non-unit normalization", function()
+        -- 4 quadrants + negative atan2 wrap into [0, 360)
+        local cases = {
+            { deg = 45.0, expected = 45.0 },
+            { deg = 135.0, expected = 135.0 },
+            { deg = -45.0, expected = 315.0 },
+            { deg = -90.0, expected = 270.0 },
+            { deg = -135.0, expected = 225.0 },
+        }
+        for _, c in ipairs(cases) do
+            local e = quat.to_euler(quat.from_euler(0.0, 0.0, c.deg))
+            assert_true(e.yaw >= 0.0 and e.yaw < 360.0, "VAS yaw must lie in [0, 360), got: " .. tostring(e.yaw))
+            assert_near(e.yaw, c.expected, 1e-3)
+        end
+
+        -- Gimbal lock +90 / -90 deg stays finite and clamped
+        local ePlus90 = quat.to_euler(quat.from_euler(90.0, 0.0, 0.0))
+        assert_true(ePlus90.pitch == ePlus90.pitch and ePlus90.roll == ePlus90.roll and ePlus90.yaw == ePlus90.yaw)
+        assert_near(ePlus90.pitch, 90.0, 1e-3)
+
+        local eMinus90 = quat.to_euler(quat.from_euler(-90.0, 0.0, 0.0))
+        assert_true(eMinus90.pitch == eMinus90.pitch and eMinus90.roll == eMinus90.roll and eMinus90.yaw == eMinus90.yaw)
+        assert_near(eMinus90.pitch, -90.0, 1e-3)
+
+        -- Non-unit quaternion normalization
+        local eNonUnitYaw = quat.to_euler({ w = 3.0, x = 0.0, y = 0.0, z = -3.0 })
+        assert_near(eNonUnitYaw.pitch, 0.0, 1e-3)
+        assert_near(eNonUnitYaw.roll, 0.0, 1e-3)
+        assert_near(eNonUnitYaw.yaw, 270.0, 1e-3)
+
+        local eNonUnitPitch = quat.to_euler({ w = 2.0, x = 0.0, y = 2.0, z = 0.0 })
+        assert_near(eNonUnitPitch.pitch, 90.0, 1e-3)
+    end)
 end)
 
 describe("vas flight dynamics core and integrators", function()
@@ -1350,7 +1384,13 @@ describe("vas TASK-130 airborne cold-boot recovery and /.flight_state.json persi
         local snapPath = sdk.temp_path("vas_flight_state.json")
         if fs.exists(snapPath) then fs.delete(snapPath) end
 
-        assert_true(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE", {
+        -- Zero-Fallback: legacy non-table 2nd arg and invalid enum must be rejected
+        assert_false(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE"), "Legacy string 2nd arg must be rejected")
+        assert_false(state_machine.save_flight_state(snapPath, nil), "Nil 2nd arg must be rejected")
+        assert_false(state_machine.save_flight_state(snapPath, { armedState = "DISARMED" }), "Invalid armedState enum must be rejected")
+
+        assert_true(state_machine.save_flight_state(snapPath, {
+            armedState = "AIRBORNE_ACTIVE",
             missionId = "SORTIE_09",
             currentCpIdx = 4,
             homePadId = "PAD_ALPHA",
@@ -1385,7 +1425,7 @@ describe("vas TASK-130 airborne cold-boot recovery and /.flight_state.json persi
     it("boots immediately into AIRBORNE_RECOVERY_HOLD <= 500ms from snapshot or airborne sensors and stabilizes", function()
         local snapPath = sdk.temp_path("vas_coldboot_snap.json")
         if fs.exists(snapPath) then fs.delete(snapPath) end
-        assert_true(state_machine.save_flight_state(snapPath, "AIRBORNE_ACTIVE", { savedAtEpoch = 1000 }))
+        assert_true(state_machine.save_flight_state(snapPath, { armedState = "AIRBORNE_ACTIVE", savedAtEpoch = 1000 }))
 
         local wirelessModem = mock.modem({ wireless = true })
         mock.peripheral_registry({
@@ -1694,5 +1734,254 @@ describe("VAS GPS DR Hold-over, Chunk-Border Blending & HOLD_LEVEL (TASK-128)", 
         local s3 = sensor_pipeline.step_gps_dr(sensors, { navQuality = "GOOD", status = "FIX_OK", position = { x = preRecX + 20.0, z = 200.0 } }, comVel, 0.05, 2650)
         assert_false(s3.holdLevelActive)
         assert_true(math.abs(s3.pos.x - preRecX) < 10.0, "Recovery from chunk-border spike must blend rather than snap")
+    end)
+end)
+
+describe("VAS Calibration Domain, Controllability Gate (R2) & saveProfile Rollback (R3)", function()
+    local core_daemon = require("core_daemon")
+    local actuator_adapter_tca = require("actuator_adapter_tca")
+
+    it("rejects mismatched targetCraftDomain on MSG_CALIBRATION_INIT and records targetThruster across INIT and MSG_CALIB_START", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, false)
+
+        local okWrong, errWrong = network_manager.dispatch(net, fsm, nil, {}, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIBRATION_INIT", time = 1000,
+            payload = {
+                stationId = "BAY_01", bayId = 1, baseHangarChannel = 101,
+                targetCraftDomain = "AIRCRAFT_99", targetThruster = "THR_MAIN_L",
+            },
+        })
+        assert_false(okWrong)
+        assert_eq(errWrong, "TARGET_CRAFT_DOMAIN_MISMATCH")
+        assert_eq(fsm.currentState, "DISARMED")
+
+        local okRight = network_manager.dispatch(net, fsm, nil, {}, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_CALIBRATION_INIT", time = 1010,
+            payload = {
+                stationId = "BAY_01", bayId = 1, baseHangarChannel = 101,
+                targetCraftDomain = "AIRCRAFT_01", targetThruster = "THR_MAIN_L",
+            },
+        })
+        assert_true(okRight)
+        assert_eq(net.calibTargetThruster, "THR_MAIN_L")
+
+        local okStart = network_manager.dispatch(net, fsm, nil, {}, 101, 101, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3,
+            type = "MSG_CALIB_START", time = 1020,
+            payload = { action = "ENTER_CALIBRATION", targetThruster = "THR_MAIN_R", timeoutSec = 120 },
+        })
+        assert_true(okStart)
+        assert_eq(net.calibTargetThruster, "THR_MAIN_R")
+    end)
+
+    it("gates MSG_PROFILE_SYNC on controllabilityStatus (R2) and records calibratedBy/discoveredSurfaces", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, false)
+        local adapter = actuator_adapter_tca.init({ THR_OLD = { heave = 1.0, deadband = 1.0, maxThrust = 15 } })
+
+        assert_true(network_manager.dispatch(net, fsm, nil, adapter, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIBRATION_INIT", time = 1000,
+            payload = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101, targetCraftDomain = "AIRCRAFT_01" },
+        }))
+
+        -- Invalid/rejected controllabilityStatus values keep recalibrationRequired = true and emit REJECTED
+        local badStatuses = { "PARTIAL_RESTRICTED", "FAIL_INSUFFICIENT_AUTHORITY", "UNKNOWN" }
+        for idx = 1, 4 do
+            local badStatus = badStatuses[idx]
+            wirelessModem._transmitted = {}
+            fsm.recalibrationRequired = false
+            network_manager.dispatch(net, fsm, nil, adapter, 101, 102, {
+                ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 10 + idx,
+                type = "MSG_PROFILE_SYNC", time = 1100 + idx,
+                payload = {
+                    profileId = "PROF-BAD-" .. tostring(idx),
+                    controllabilityStatus = badStatus,
+                    thrusterCoefficients = { THR_NEW = { heave = 2.0, deadband = 1.0, maxThrust = 15 } },
+                },
+            })
+            assert_true(fsm.recalibrationRequired, "Rejected status must set recalibrationRequired = true")
+            assert_not_nil(adapter.coefficients.THR_OLD, "Rejected sync must NOT reload mixer coefficients")
+            assert_nil(adapter.coefficients.THR_NEW)
+            local ack = wirelessModem._transmitted[#wirelessModem._transmitted]
+            assert_not_nil(ack)
+            assert_eq(ack.pkt.type, "MSG_CALIB_ACK")
+            assert_eq(ack.pkt.payload.status, "REJECTED")
+        end
+
+        -- AERO_ASSISTED_PASS and FULL_6DOF_PASS clear recalibrationRequired, reload mixer, record metadata, emit ACCEPTED
+        for idx, okStatus in ipairs({ "AERO_ASSISTED_PASS", "FULL_6DOF_PASS" }) do
+            wirelessModem._transmitted = {}
+            fsm.recalibrationRequired = true
+            local surfaces = { AIL_L = { podId = "ASA_L", type = "aileron" } }
+            network_manager.dispatch(net, fsm, nil, adapter, 101, 102, {
+                ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 20 + idx,
+                type = "MSG_PROFILE_SYNC", time = 1200 + idx,
+                payload = {
+                    profileId = "PROF-OK-" .. tostring(idx),
+                    controllabilityStatus = okStatus,
+                    calibratedBy = "ALIGN_BAY_01",
+                    discoveredSurfaces = surfaces,
+                    thrusterCoefficients = { THR_NEW = { heave = 2.0, deadband = 1.0, maxThrust = 15 } },
+                },
+            })
+            assert_false(fsm.recalibrationRequired)
+            assert_not_nil(adapter.coefficients.THR_NEW)
+            assert_not_nil(net.lastProfileMeta)
+            assert_eq(net.lastProfileMeta.calibratedBy, "ALIGN_BAY_01")
+            assert_not_nil(net.lastProfileMeta.discoveredSurfaces.AIL_L)
+            local ack = wirelessModem._transmitted[#wirelessModem._transmitted]
+            assert_not_nil(ack)
+            assert_eq(ack.pkt.type, "MSG_CALIB_ACK")
+            assert_eq(ack.pkt.payload.status, "ACCEPTED")
+        end
+    end)
+
+    it("transitions CALIBRATION to DISARMED on MSG_CALIBRATION_CLOSE after rejected MSG_PROFILE_SYNC", function()
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
+        local net = network_manager.init({ aircraftDomainId = "AIRCRAFT_01" })
+        local fsm = state_machine.init({}, false)
+
+        assert_true(network_manager.dispatch(net, fsm, nil, {}, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIBRATION_INIT", time = 1000,
+            payload = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101, targetCraftDomain = "AIRCRAFT_01" },
+        }))
+        assert_eq(fsm.currentState, "CALIBRATION")
+
+        assert_true(network_manager.dispatch(net, fsm, nil, {}, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_PROFILE_SYNC", time = 1010,
+            payload = { profileId = "PROF-REJ", controllabilityStatus = "FAIL_INSUFFICIENT_AUTHORITY" },
+        }))
+        assert_true(fsm.recalibrationRequired)
+        assert_eq(fsm.currentState, "CALIBRATION")
+
+        assert_true(network_manager.dispatch(net, fsm, nil, {}, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3,
+            type = "MSG_CALIBRATION_CLOSE", time = 1020,
+            payload = { bayId = 1, action = "CLOSE_SESSION", reason = "COMPLETE", saveProfile = true },
+        }))
+        assert_true(fsm.recalibrationRequired)
+        assert_eq(fsm.currentState, "DISARMED")
+    end)
+
+    it("rolls back disk thrusters.json, peripheralManifest, mixer coefficients, and recalibrationRequired when saveProfile == false (R3)", function()
+        local tmpDir = sdk.temp_path("vas_rollback_dir")
+        fs.makeDir(tmpDir)
+        local origThrusters = { THR_ORIG = { heave = 1.0, deadband = 1.0, maxThrust = 15 } }
+        local origManifest = { schemaVersion = 1, domainId = "AIRCRAFT_01", totalDryMass = 9500.0, thrusterCount = 1 }
+        local h1 = fs.open(tmpDir .. "/thrusters.json", "w")
+        h1.write(textutils.serializeJSON(origThrusters)); h1.close()
+        local h2 = fs.open(tmpDir .. "/peripheral_manifest.json", "w")
+        h2.write(textutils.serializeJSON(origManifest)); h2.close()
+        local h3 = fs.open(tmpDir .. "/system.json", "w")
+        h3.write(textutils.serializeJSON({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000, bootRecovery = { enabled = false } })); h3.close()
+
+        local wirelessModem = mock.modem({ wireless = true })
+        mock.peripheral_registry({ top = { type = "modem", dev = wirelessModem } })
+        local daemon = core_daemon.init(tmpDir)
+        assert_not_nil(daemon.adapter.coefficients.THR_ORIG)
+        assert_eq(daemon.peripheralManifest.totalDryMass, 9500.0)
+
+        -- Direct core_daemon.net.on_profile_sync rejects PARTIAL_RESTRICTED
+        local okBad, errBad = daemon.net.on_profile_sync({
+            profileId = "PROF-PARTIAL",
+            controllabilityStatus = "PARTIAL_RESTRICTED",
+            thrusterCoefficients = { THR_BAD = { heave = 9.0 } },
+        })
+        assert_false(okBad)
+        assert_eq(errBad, "CONTROLLABILITY_REJECTED")
+        assert_true(daemon.fsm.recalibrationRequired)
+        assert_eq(daemon.fsm.currentState, "DISARMED")
+        assert_not_nil(daemon.adapter.coefficients.THR_ORIG)
+        assert_nil(daemon.adapter.coefficients.THR_BAD)
+
+        -- Enter calibration, sync temporary profile, then close with saveProfile = false
+        assert_true(network_manager.dispatch(daemon.net, daemon.fsm, daemon.controller, daemon.mixer, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1,
+            type = "MSG_CALIBRATION_INIT", time = 2000,
+            payload = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101, targetCraftDomain = "AIRCRAFT_01" },
+        }))
+        local newManifest = { schemaVersion = 1, domainId = "AIRCRAFT_01", totalDryMass = 12000.0, thrusterCount = 2 }
+        assert_true(network_manager.dispatch(daemon.net, daemon.fsm, daemon.controller, daemon.mixer, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 2,
+            type = "MSG_PROFILE_SYNC", time = 2010,
+            payload = {
+                profileId = "PROF-TEMP",
+                controllabilityStatus = "FULL_6DOF_PASS",
+                calibratedBy = "BAY_01",
+                discoveredSurfaces = { RUDD = { podId = "ASA_T", type = "rudder" } },
+                peripheralManifest = newManifest,
+                thrusterCoefficients = { THR_TEMP = { heave = 3.0, deadband = 1.0, maxThrust = 15 } },
+            },
+        }))
+        assert_false(daemon.fsm.recalibrationRequired)
+        assert_not_nil(daemon.adapter.coefficients.THR_TEMP)
+        assert_eq(daemon.peripheralManifest.totalDryMass, 12000.0)
+
+        -- Close with saveProfile = false -> rolls back disk + in-memory + recalibrationRequired
+        assert_true(network_manager.dispatch(daemon.net, daemon.fsm, daemon.controller, daemon.mixer, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3,
+            type = "MSG_CALIBRATION_CLOSE", time = 2020,
+            payload = { bayId = 1, action = "CLOSE_SESSION", reason = "MANUAL", saveProfile = false },
+        }))
+        assert_true(daemon.fsm.recalibrationRequired)
+        assert_eq(daemon.fsm.currentState, "DISARMED")
+        assert_not_nil(daemon.adapter.coefficients.THR_ORIG)
+        assert_nil(daemon.adapter.coefficients.THR_TEMP)
+        assert_not_nil(daemon.peripheralManifest)
+        assert_eq(daemon.peripheralManifest.totalDryMass, 9500.0)
+
+        local rThr = fs.open(tmpDir .. "/thrusters.json", "r")
+        local diskThr = textutils.unserializeJSON(rThr.readAll()); rThr.close()
+        assert_not_nil(diskThr.THR_ORIG)
+        assert_nil(diskThr.THR_TEMP)
+
+        local rMan = fs.open(tmpDir .. "/peripheral_manifest.json", "r")
+        local diskMan = textutils.unserializeJSON(rMan.readAll()); rMan.close()
+        assert_eq(diskMan.totalDryMass, 9500.0)
+
+        fs.delete(tmpDir)
+
+        -- Also verify rollback deletes newly created thrusters.json when none existed before sync
+        local freshDir = sdk.temp_path("vas_rollback_fresh")
+        fs.makeDir(freshDir)
+        local hf = fs.open(freshDir .. "/system.json", "w")
+        hf.write(textutils.serializeJSON({ aircraftDomainId = "AIRCRAFT_01", baseChannel = 10000, bootRecovery = { enabled = false } })); hf.close()
+        local freshDaemon = core_daemon.init(freshDir)
+        assert_false(fs.exists(freshDir .. "/thrusters.json"))
+        assert_true(network_manager.dispatch(freshDaemon.net, freshDaemon.fsm, freshDaemon.controller, freshDaemon.mixer, 10008, 10008, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 10,
+            type = "MSG_CALIBRATION_INIT", time = 3000,
+            payload = { stationId = "BAY_01", bayId = 1, baseHangarChannel = 101, targetCraftDomain = "AIRCRAFT_01" },
+        }))
+        assert_true(network_manager.dispatch(freshDaemon.net, freshDaemon.fsm, freshDaemon.controller, freshDaemon.mixer, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 11,
+            type = "MSG_PROFILE_SYNC", time = 3010,
+            payload = {
+                profileId = "PROF-FRESH",
+                controllabilityStatus = "FULL_6DOF_PASS",
+                thrusterCoefficients = { THR_TEMP = { heave = 2.0, deadband = 1.0, maxThrust = 15 } },
+            },
+        }))
+        assert_true(fs.exists(freshDir .. "/thrusters.json"))
+        assert_true(network_manager.dispatch(freshDaemon.net, freshDaemon.fsm, freshDaemon.controller, freshDaemon.mixer, 101, 102, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 12,
+            type = "MSG_CALIBRATION_CLOSE", time = 3020,
+            payload = { bayId = 1, action = "CLOSE_SESSION", reason = "MANUAL", saveProfile = false },
+        }))
+        assert_false(fs.exists(freshDir .. "/thrusters.json"))
+        assert_true(freshDaemon.fsm.recalibrationRequired)
+        assert_eq(freshDaemon.fsm.currentState, "DISARMED")
+        fs.delete(freshDir)
     end)
 end)

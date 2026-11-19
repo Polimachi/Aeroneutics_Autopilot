@@ -602,6 +602,8 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
 
         local rwy_streamer = rwy:require("tactical_streamer")
         local rwy_fsm_mod = rwy:require("runway_fsm")
+        local facility_client = amm:require("facility_client")
+        local amm_fc = facility_client.init({ domainId = "JET_01" })
         local rwy_cfg = {
             facilityId = "RWY_09L",
             sectorId = 1,
@@ -673,32 +675,31 @@ describe("Scenario 6: 3-Tier Facility Tactical Landing", function()
         assert_eq(amm_guide[1].payload.payload.endPoint.x, -1150.0)
 
         -- 3. Touchdown -> ROLLOUT (OCCUPIED), then Vacated -> IDLE (FREE)
-        amm.modem:transmit(50211, 50211, {
-            ver = "1.9.5",
-            domainId = "JET_01",
-            seq = 12,
-            type = "MSG_RUNWAY_TOUCHDOWN",
-            time = 3200,
-            payload = { facilityId = "RWY_09L", touchdownSpeed = 24.5 },
+        local rwy_td_pkt = facility_client.build_runway_touchdown(amm_fc, 24.5, {
+            facilityId = "RWY_09L",
+            arrestedWire = 3,
+            craftState = "ROLLOUT",
+            nowMs = 3200,
         })
+        amm.modem:transmit(50211, 50211, rwy_td_pkt)
         bus:step(0.05)
         local rwy_td = rwy.modem:drain()
         local tdUpds = r_fsm:handle_tactical_message(rwy_td[1].payload, 3.2)
         assert_eq(r_fsm:get_state(), "ROLLOUT")
+        assert_near(r_fsm:get_last_touchdown_speed(), 24.5, 1e-6)
+        assert_eq(r_fsm:get_last_arrested_wire(), 3)
         assert_eq(tdUpds[1].payload.status, "OCCUPIED")
 
-        amm.modem:transmit(50211, 50211, {
-            ver = "1.9.5",
-            domainId = "JET_01",
-            seq = 13,
-            type = "MSG_RUNWAY_VACATED",
-            time = 3300,
-            payload = { facilityId = "RWY_09L", exitTaxiway = "TAXI_A", runwayCleared = true },
+        local rwy_vac_pkt = facility_client.build_runway_vacated(amm_fc, "TAXI_A", {
+            facilityId = "RWY_09L",
+            nowMs = 3300,
         })
+        amm.modem:transmit(50211, 50211, rwy_vac_pkt)
         bus:step(0.05)
         local rwy_vac = rwy.modem:drain()
         local vacUpds = r_fsm:handle_tactical_message(rwy_vac[1].payload, 3.3)
         assert_eq(r_fsm:get_state(), "IDLE")
+        assert_eq(r_fsm:get_last_exit_taxiway(), "TAXI_A")
         assert_eq(vacUpds[1].payload.status, "FREE")
     end)
 end)
