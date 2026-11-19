@@ -278,21 +278,4 @@ function flight_fsm.step(state, ctx, now_ms)
     return s, events
 end
 
-function flight_fsm.is_flight_active(state)
-    if not state then return false end
-    local s = state.currentState
-    return s == "ACTIVE_TRACKING" or s == "PASSIVE_TRACKING" or s == "AMM_TIMEOUT_HOLD" or s == "EMERGENCY_LAND"
-end
-
-function flight_fsm.is_armed(state)
-    if not state then return false end
-    local s = state.currentState
-    return s ~= "BOOT"
-end
-
-function flight_fsm.is_vtol(airframe_type)
-    local af = airframe_type or "VECTORED_VTOL"
-    return (af == "VECTORED_VTOL" or af == "ADVANCED_VTOL" or af == "QUADROTOR" or af == "HEXAROTOR" or af == "WINGED_VTOL")
-end
-
 return flight_fsm

@@ -227,13 +227,6 @@ function state_machine.arbitrate_c2(state, cmd)
     return cmd
 end
 
-function state_machine.on_actuators_ready(state)
-    if state.currentState == "ARMING" then
-        return state_machine.transition_to(state, "IDLE_ARMED", "ACTUATOR_READY")
-    end
-    return false
-end
-
 local AIRBORNE_DISASSEMBLY_STATES = {
     NORMAL = true, FAILSAFE_HOLD = true, EMERGENCY_LAND = true, AIRBORNE_RECOVERY_HOLD = true,
 }

@@ -185,17 +185,4 @@ function vehicle_policy.post_process_wrench(policy, baseWrench, _telem, _conditi
     return wrench
 end
 
-function vehicle_policy.transition_blend(hoverWrench, cruiseWrench, alpha)
-    local a = math.max(0.0, math.min(1.0, tonumber(alpha) or 0.0))
-    local invA = 1.0 - a
-    return {
-        surge = invA * (hoverWrench.surge or 0) + a * (cruiseWrench.surge or 0),
-        sway = invA * (hoverWrench.sway or 0) + a * (cruiseWrench.sway or 0),
-        heave = invA * (hoverWrench.heave or 0) + a * (cruiseWrench.heave or 0),
-        rollTorque = invA * (hoverWrench.rollTorque or 0) + a * (cruiseWrench.rollTorque or 0),
-        pitchTorque = invA * (hoverWrench.pitchTorque or 0) + a * (cruiseWrench.pitchTorque or 0),
-        yawTorque = invA * (hoverWrench.yawTorque or 0) + a * (cruiseWrench.yawTorque or 0)
-    }
-end
-
 return vehicle_policy

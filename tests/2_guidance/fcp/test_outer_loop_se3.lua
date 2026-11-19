@@ -554,4 +554,63 @@ describe("test_outer_loop_se3: FCP v2.0.0 SE(3) Outer Loop Controller", function
         assert_near(pn3, 90.0, 1e-3)
     end)
 
+    it("freezes integrators when satFlags.freezeIntegrators is true", function()
+        local cfg = make_base_cfg("VECTORED_VTOL")
+        local state = outer_loop_controller.init(cfg)
+        local nav = make_nav(0, 64, 0, 0, 0, 0, 0, 0, 0)
+        local sp = make_setpoint(20, 64, 0, 5, 0, 0, 0, "CRUISE", "STRICT_LEVEL")
+
+        outer_loop_controller.compute_desired_accel(state, nav, sp, 0.05, { freezeIntegrators = true })
+        assert_eq(state.integrators.x, 0.0, "Integrator X must remain 0 when satFlags.freezeIntegrators is true")
+        assert_eq(state.integrators.y, 0.0, "Integrator Y must remain 0 when satFlags.freezeIntegrators is true")
+        assert_eq(state.integrators.z, 0.0, "Integrator Z must remain 0 when satFlags.freezeIntegrators is true")
+    end)
+
+    it("enforces FIXED_WING emergencyMaxBankDeg on EMERGENCY_MANEUVER and EMERGENCY_LAND while holding AMM_TIMEOUT_HOLD at 18.0 deg", function()
+        local to_euler = outer_loop_controller._quat_to_euler_deg
+
+        -- 1. EMERGENCY_MANEUVER allows bank up to configured emergencyMaxBankDeg (75.0 deg)
+        local cfg = make_base_cfg("FIXED_WING")
+        cfg.outerLoop.maxAccelMps2 = 50.0
+        cfg.outerLoop.fixed_wing.bankSlewRateDegPerSec = 500.0
+        local st_emg_man = outer_loop_controller.init(cfg)
+        local nav_man = make_nav(0, 100, 0, 0, 0, -15, 0, 0, 0)
+        local sp_man = make_setpoint(200, 100, -50, 0, 0, -15, 0, "CRUISE", "EMERGENCY_MANEUVER")
+        local cmd_man = outer_loop_controller.compute(st_emg_man, nav_man, sp_man, { currentState = "ACTIVE_TRACKING", rampAlpha = 1.0 }, 0.2)
+        local _, roll_man, _ = to_euler(cmd_man.targetQuaternion)
+        assert_true(math.abs(roll_man) > 20.0, "EMERGENCY_MANEUVER must exceed nominal 20 deg bank")
+        assert_near(math.abs(roll_man), 75.0, 0.5)
+
+        -- Custom emergencyMaxBankDeg = 60.0 overrides 75.0 default
+        local cfg_60 = make_base_cfg("FIXED_WING")
+        cfg_60.outerLoop.maxAccelMps2 = 50.0
+        cfg_60.outerLoop.fixed_wing.bankSlewRateDegPerSec = 500.0
+        cfg_60.outerLoop.fixed_wing.emergencyMaxBankDeg = 60.0
+        local st_60 = outer_loop_controller.init(cfg_60)
+        local cmd_60 = outer_loop_controller.compute(st_60, nav_man, sp_man, { currentState = "ACTIVE_TRACKING", rampAlpha = 1.0 }, 0.2)
+        local _, roll_60, _ = to_euler(cmd_60.targetQuaternion)
+        assert_near(math.abs(roll_60), 60.0, 0.5)
+
+        -- 2. EMERGENCY_LAND applies emergencyMaxBankDeg even though prepare_fsm_setpoint uses STRICT_LEVEL
+        local st_land = outer_loop_controller.init(cfg)
+        local nav_land = make_nav(0, 100, 0, -80, 0, -15, 0, 0, 0)
+        local sp_land = make_setpoint(0, 100, 0, 0, 0, -15, 0, "CRUISE", "FIXED_WING_NOMINAL")
+        local cmd_land = outer_loop_controller.compute(st_land, nav_land, sp_land, { currentState = "EMERGENCY_LAND", rampAlpha = 1.0 }, 0.2)
+        local _, roll_land, _ = to_euler(cmd_land.targetQuaternion)
+        assert_near(math.abs(roll_land), 75.0, 0.5)
+
+        -- 3. AMM_TIMEOUT_HOLD remains strictly clamped at 18.0 deg
+        local st_hold = outer_loop_controller.init(cfg)
+        local cmd_hold = outer_loop_controller.compute(st_hold, nav_land, sp_man, { currentState = "AMM_TIMEOUT_HOLD", rampAlpha = 1.0 }, 0.2)
+        local _, roll_hold, _ = to_euler(cmd_hold.targetQuaternion)
+        assert_near(math.abs(roll_hold), 18.0, 0.1)
+
+        -- 4. Nominal FIXED_WING_NOMINAL remains clamped at 20.0 deg
+        local st_nom = outer_loop_controller.init(cfg)
+        local sp_nom = make_setpoint(200, 100, -50, 0, 0, -15, 0, "CRUISE", "FIXED_WING_NOMINAL")
+        local cmd_nom = outer_loop_controller.compute(st_nom, nav_man, sp_nom, { currentState = "ACTIVE_TRACKING", rampAlpha = 1.0 }, 0.2)
+        local _, roll_nom, _ = to_euler(cmd_nom.targetQuaternion)
+        assert_near(math.abs(roll_nom), 20.0, 0.1)
+    end)
+
 end)

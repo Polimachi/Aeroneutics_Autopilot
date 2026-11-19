@@ -324,4 +324,30 @@ describe("test_fcp_network_and_rebind|test_state_propagator: FCP 4-Layer MSG_CHA
         assert_eq(net.baseChannel, 10000)
         assert_true(mock_modem.isOpen(10004))
     end)
+
+    it("honors custom cfg.safety.rebindAckTimeoutMs in step_rebind_watchdog", function()
+        local mock_modem = mock.modem({ wireless = true })
+        local net = network_manager.init({
+            system = { domainId = "AIRCRAFT_01" },
+            channels = { baseChannel = 10000 },
+            safety = { rebindAckTimeoutMs = 200 },
+        }, function() return mock_modem end)
+        assert_eq(net.rebindAckTimeoutMs, 200)
+
+        local rebind_prepare = {
+            ver = "1.9.5",
+            domainId = "AIRCRAFT_01",
+            type = "MSG_CHANNEL_REBIND",
+            payload = {
+                transactionId = "TX-CUSTOM-TIMEOUT",
+                action = "PREPARE",
+                oldBaseChannel = 10000,
+                newBaseChannel = 10040,
+                bandwidth = 40,
+            },
+        }
+        network_manager.ingest_modem_event(net, "top", 10004, 10004, rebind_prepare, 0, 1000)
+        assert_eq(network_manager.step_rebind_watchdog(net, 1150), "PREPARE")
+        assert_eq(network_manager.step_rebind_watchdog(net, 1201), "ROLLED_BACK")
+    end)
 end)

@@ -121,10 +121,6 @@ function facility_client.find_nearest_free_landing_facility(state, craft_pos, ty
     return best, best_dist
 end
 
-function facility_client.find_nearest_free_facility(state, craft_pos)
-    return facility_client.find_nearest_free_landing_facility(state, craft_pos)
-end
-
 local function next_envelope(state, pktType, now_ms, payload)
     local seq = 1
     if state then
@@ -376,24 +372,6 @@ function facility_client.evaluate_guide_watchdog(state, now_ms)
         end
     end
     return res
-end
-
-function facility_client.evaluate_approach_safety(state, craft_pos, now_ms)
-    if not state then return "SAFE" end
-    if state.padMobility == "STATIC" then return "SAFE" end
-    local elapsed = (now_ms or 0) - (state.lastDynamicGuideMs or 0)
-    local timed_out = elapsed > (state.dynamicGuideTimeoutMs or 300)
-
-    if timed_out then
-        state.approachRetryCount = (state.approachRetryCount or 0) + 1
-        state.retryCount = state.approachRetryCount
-        if state.approachRetryCount > (state.maxApproachRetries or 3) then
-            state.touchdownAborted = true
-            return "ABORT_DIVERT"
-        end
-        return "GO_AROUND"
-    end
-    return "SAFE"
 end
 
 function facility_client.on_docking_status(state, payload, now_ms)

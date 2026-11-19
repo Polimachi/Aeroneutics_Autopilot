@@ -64,6 +64,7 @@ function network_manager.init(config, modem_lookup_fn)
     local cfg = config or {}
     local sys = cfg.system or {}
     local chs = cfg.channels or {}
+    local safe = cfg.safety or {}
     local base_ch = chs.baseChannel or 10000
     local primarySide = sys.primaryModemSide or "top"
     local m = resolve_modem(primarySide, modem_lookup_fn)
@@ -91,6 +92,7 @@ function network_manager.init(config, modem_lookup_fn)
         primarySide = primarySide,
         configPath = cfg.configPath or "config/fcp_config.json",
         config = cfg,
+        rebindAckTimeoutMs = tonumber(safe.rebindAckTimeoutMs) or 500,
         seq = 0,
         rebindTx = nil,
         inbound = { trajectory = nil, telemetry = nil, emergencyAlert = nil, rebindAck = nil },
@@ -339,7 +341,8 @@ function network_manager.step_rebind_watchdog(ctx, now_ms)
     local tx = ctx.rebindTx
     if tx.status == "PREPARE" then
         local now = now_ms or (os.epoch and os.epoch("utc") or 0)
-        if (now - tx.startMs) > 500 then
+        local ackTimeoutMs = tonumber(ctx.rebindAckTimeoutMs) or 500
+        if (now - tx.startMs) > ackTimeoutMs then
             local failAck = {
                 transactionId = tx.txId,
                 nodeId = "FCP",
@@ -364,17 +367,8 @@ function network_manager.send_attitude_cmd(ctx, payload)
     return transmit_packet(ctx, ctx.channels.guidance, ctx.channels.guidance, "MSG_ATTITUDE_CMD", payload)
 end
 
-function network_manager.send_guidance_cmd(ctx, payload)
-    return network_manager.send_attitude_cmd(ctx, payload)
-end
-
 function network_manager.send_outer_loop_status(ctx, payload)
     return transmit_packet(ctx, ctx.channels.trajectory, ctx.channels.trajectory, "MSG_OUTER_LOOP_STATUS", payload)
-end
-
-function network_manager.send_channel_rebind(ctx, payload)
-    local ch = (ctx.channels and ctx.channels.guidance) or (ctx.baseChannel + 1)
-    return transmit_packet(ctx, ch, ch, "MSG_CHANNEL_REBIND", payload)
 end
 
 function network_manager.bind_aircraft_channels(ctx, base_ch)
@@ -388,18 +382,6 @@ function network_manager.bind_aircraft_channels(ctx, base_ch)
         m.open(ctx.channels.guidance)
         m.open(ctx.channels.emergency)
     end
-end
-
-function network_manager.rebind_aircraft_channels(ctx, new_base)
-    local old_b = ctx.baseChannel
-    local m = ctx.modem
-    if m and m.close then
-        m.close(old_b + 4)
-        m.close(old_b + 2)
-        m.close(old_b + 1)
-        m.close(old_b + 9)
-    end
-    network_manager.bind_aircraft_channels(ctx, new_base)
 end
 
 return network_manager

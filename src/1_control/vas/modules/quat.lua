@@ -57,26 +57,6 @@ function quat.multiply(a, b)
     }
 end
 
-function quat.rotate_vector(q, v)
-    local qn = quat.normalize(q)
-    local qx, qy, qz = qn.x, qn.y, qn.z
-    local vx, vy, vz = v.x or 0.0, v.y or 0.0, v.z or 0.0
-
-    local tx = 2.0 * (qy * vz - qz * vy)
-    local ty = 2.0 * (qz * vx - qx * vz)
-    local tz = 2.0 * (qx * vy - qy * vx)
-
-    local cx = qy * tz - qz * ty
-    local cy = qz * tx - qx * tz
-    local cz = qx * ty - qy * tx
-
-    return {
-        x = vx + qn.w * tx + cx,
-        y = vy + qn.w * ty + cy,
-        z = vz + qn.w * tz + cz
-    }
-end
-
 function quat.error_quaternion(targetQ, measQ)
     local t = quat.normalize(targetQ)
     local mInv = quat.conjugate(quat.normalize(measQ))

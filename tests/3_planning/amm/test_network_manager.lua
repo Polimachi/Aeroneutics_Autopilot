@@ -302,4 +302,35 @@ describe("AMM Network Manager and Packet Protocol", function()
         assert_eq(m._transmitted[1].pkt.payload.status, "ACCEPTED")
         assert_eq(m._transmitted[1].pkt.payload.missionId, "PATROL_ALPHA")
     end)
+
+    it("wires custom cfg.channels.{facilityBeaconChannel, runwayDirectoryChannel, atcCommChannel, gpsServiceChannel, gpsPingChannel}", function()
+        local net = network_manager.new({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            channels = {
+                bootstrapChannel = 50000,
+                facilityBeaconChannel = 50103,
+                runwayDirectoryChannel = 50104,
+                atcCommChannel = 50101,
+                gpsPingChannel = 60101,
+                gpsServiceChannel = 60102,
+            },
+        })
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        net:bind_modems(top_m, back_m, 10000)
+
+        assert_true(back_m.isOpen(50103), "custom facilityBeaconChannel must be opened")
+        assert_true(back_m.isOpen(50104), "custom runwayDirectoryChannel must be opened")
+        assert_true(back_m.isOpen(50101), "custom atcCommChannel must be opened")
+        assert_true(back_m.isOpen(60102), "custom gpsServiceChannel must be opened")
+        assert_false(back_m.isOpen(50003), "default 50003 must not open when overridden")
+        assert_false(back_m.isOpen(50004), "default 50004 must not open when overridden")
+        assert_false(back_m.isOpen(50001), "default 50001 must not open when overridden")
+        assert_false(back_m.isOpen(60002), "default 60002 must not open when overridden")
+
+        assert_true(net:send_gps_request({ pos = { x = 1, y = 2, z = 3 } }))
+        assert_eq(#back_m._transmitted, 1)
+        assert_eq(back_m._transmitted[1].tx, 60101, "send_gps_request must transmit on custom gpsPingChannel")
+    end)
 end)

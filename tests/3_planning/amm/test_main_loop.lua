@@ -1410,4 +1410,97 @@ describe("AMM Main Event Pump and Command Processing", function()
         if fs.exists(lease2) then fs.delete(lease2) end
         if fs.exists(lease3) then fs.delete(lease3) end
     end)
+
+    it("wires cfg.channels.{atcCommChannel, facilityBeaconChannel} and cfg.system.{loopFrequencyHz, uiFrequencyHz}", function()
+        local main_mod = require("main")
+        local timerDurations = {}
+        local nextId = 100
+        sdk.patch(os, "startTimer", function(sec)
+            nextId = nextId + 1
+            table.insert(timerDurations, sec)
+            return nextId
+        end)
+
+        local top_m = mock.modem({ wireless = true })
+        local back_m = mock.modem({ wireless = true })
+        local lease = sdk.temp_path("amm_cfg_wire_lease.json")
+        local app = main_mod.create_app({
+            domainId = "AIRCRAFT_01",
+            baseChannel = 10000,
+            headless = false,
+            clock_ms = 1000,
+            leasePath = lease,
+            system = { loopFrequencyHz = 10, uiFrequencyHz = 2 },
+            channels = {
+                bootstrapChannel = 50000,
+                facilityBeaconChannel = 50103,
+                runwayDirectoryChannel = 50104,
+                atcCommChannel = 50101,
+                gpsPingChannel = 60101,
+                gpsServiceChannel = 60102,
+            },
+        }, { top = top_m, back = back_m })
+
+        assert_near(app.loopIntervalSec, 0.1, 1e-6)
+        assert_near(app.uiIntervalSec, 0.5, 1e-6)
+        assert_near(timerDurations[1], 0.5, 1e-6)
+
+        app.term_obj = { setCursorPos = function() end, blit = function() end }
+
+        -- 1. Custom facilityBeaconChannel & atcCommChannel RX routing
+        main_mod.process_event(app, "modem_message", "back", 50103, 50103, {
+            ver = "1.9.5",
+            type = "MSG_FACILITY_BEACON",
+            payload = { facilityId = "PAD_CUSTOM", facilityType = "LANDING_PAD", status = "FREE", position = { x = 10, y = 64, z = 20 } },
+        }, 1050)
+        assert_not_nil(app.fac.beacons["PAD_CUSTOM"], "custom facilityBeaconChannel must update beacons")
+
+        -- 2. Custom atcCommChannel TX fallback when gacChannel is unset
+        app.fac.activePadId = "PAD_CUSTOM"
+        app.fac.gacChannel = nil
+        app.fac.atcStatus = "DENIED"
+        app.fac.atcDeniedCount = 1
+        app.fac.nextAtcRetryMs = 1060
+        main_mod.step_20hz_tick(app, nil, 1100)
+        local retryOnCustom = false
+        for _, tx in ipairs(back_m._transmitted) do
+            if tx.tx == 50101 and tx.pkt and tx.pkt.type == "MSG_ATC_APPROACH_REQ" then
+                retryOnCustom = true
+            end
+        end
+        assert_true(retryOnCustom, "ATC retry must transmit on custom atcCommChannel when gacChannel is nil")
+
+        main_mod.process_event(app, "modem_message", "back", 50101, 50101, {
+            ver = "1.9.5",
+            type = "MSG_ATC_APPROACH_CLEARANCE",
+            payload = { status = "CLEARED", assignedFacilityId = "PAD_CUSTOM", gacChannel = 51100, assignedGuidanceChannel = 51110, padMobility = "STATIC" },
+        }, 1150)
+        assert_eq(app.fac.activePadId, "PAD_CUSTOM")
+        assert_true(app.net.openInfraChannels[51100] == true, "custom atcCommChannel clearance must open gacChannel")
+
+        -- 3. Coroutine A and B use 1 / loopFrequencyHz (0.1s) and 1 / uiFrequencyHz (0.5s)
+        timerDurations = {}
+        local pullStep = 0
+        sdk.patch(os, "pullEventRaw", function()
+            pullStep = pullStep + 1
+            if pullStep == 1 then
+                return "timer", nextId
+            end
+            return "terminate"
+        end)
+        main_mod.make_coroutine_a(app)()
+        assert_true(#timerDurations >= 2)
+        assert_near(timerDurations[1], 0.1, 1e-6)
+        assert_near(timerDurations[2], 0.1, 1e-6)
+
+        app.running = true
+        timerDurations = {}
+        pullStep = 0
+        main_mod.make_coroutine_b(app)()
+        assert_true(#timerDurations >= 2)
+        assert_near(timerDurations[1], 0.5, 1e-6)
+        assert_near(timerDurations[2], 0.5, 1e-6)
+
+        if fs.exists(lease) then fs.delete(lease) end
+    end)
 end)
