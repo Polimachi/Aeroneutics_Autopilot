@@ -1062,26 +1062,25 @@ describe("AMM Main Event Pump and Command Processing", function()
         }, { top = top_m, back = back_m })
         app.sentinel.status = "ACQUIRED"
 
-        -- 1. Valid Base+5 facility/pad/runway/dock/GPS responses from foreign domainIds must NOT trigger intrusion
+        -- 1. Valid Base+5 canonical facility/pad/runway/dock/GPS responses from foreign domainIds must NOT trigger intrusion
         local base5_valid = {
             { domainId = "GPS_BASE_NET", type = "MSG_GPS_STATUS_RESP", payload = { activeNodes = 4 } },
-            { domainId = "GAC_01", type = "MSG_FACILITY_LIST_ACK", payload = { facilities = {} } },
-            { domainId = "PAD_01", type = "MSG_PAD_RESERVE_ACK", payload = { status = "RESERVED" } },
-            { domainId = "PAD_01", type = "MSG_PAD_TELEMETRY", payload = { deckStatus = "STABLE" } },
-            { domainId = "PAD_01", type = "MSG_LANDING_STATUS", payload = { status = "CLEARED" } },
-            { domainId = "PAD_01", type = "MSG_LANDING_ACK", payload = { status = "OK" } },
-            { domainId = "PAD_01", type = "MSG_PAD_STATUS", payload = { status = "FREE" } },
-            { domainId = "RUNWAY_01", type = "MSG_RUNWAY_ACK", payload = { status = "CLEARED" } },
-            { domainId = "RUNWAY_01", type = "MSG_ILS_BEACON", payload = { heading = 90 } },
-            { domainId = "DOCK_01", type = "MSG_DOCK_ACK", payload = { status = "READY" } },
-            { domainId = "DOCK_01", type = "MSG_DOCK_STATUS", payload = { stage = "ALIGNING" } },
-            { domainId = "DOCK_01", type = "MSG_DOCKING_STATUS", payload = { stage = "ENGAGED" } },
+            { domainId = "GAC_01", type = "MSG_FACILITY_BEACON", payload = { facilityId = "PAD_01", pos = { x = 10, y = 64, z = 10 } } },
+            { domainId = "PAD_01", type = "MSG_FACILITY_STATIC_GUIDE", payload = { facilityId = "PAD_01", deckStatus = "STABLE", landingPermitted = true } },
+            { domainId = "PAD_01", type = "MSG_FACILITY_DYNAMIC_GUIDE", payload = { facilityId = "PAD_01", deckStatus = "STABLE", landingPermitted = true } },
+            { domainId = "ATC_01", type = "MSG_ATC_APPROACH_CLEARANCE", payload = { status = "CLEARED", assignedFacilityId = "PAD_01", assignedGuidanceChannel = 50212 } },
+            { domainId = "ATC_01", type = "MSG_ATC_FACILITY_UPDATE", payload = { facilityId = "PAD_01" } },
+            { domainId = "GAC_01", type = "MSG_GAC_APPROACH_CLEARANCE", payload = { status = "CLEARED", assignedFacilityId = "PAD_01", assignedTacticalChannel = 50212 } },
+            { domainId = "GAC_01", type = "MSG_GAC_DEPARTURE_CLEARANCE", payload = { status = "CLEARED" } },
+            { domainId = "PAD_01", type = "MSG_ABORT_APPROACH", payload = { facilityId = "PAD_01", abortAlert = true } },
+            { domainId = "GAC_01", type = "MSG_GAC_ABORT_CLEAR", payload = { assignedFacilityId = "PAD_01", assignedTacticalChannel = 50212 } },
             { domainId = "DOCK_01", type = "MSG_DOCK_CAPTURE_STAGE", payload = { stage = "CAPTURED" } },
             { domainId = "DOCK_01", type = "MSG_UMBILICAL_STATUS", payload = { connected = true } },
             { domainId = "PAD_01", type = "MSG_TOUCHDOWN_COMPLETE", payload = { facilityId = "PAD_01", craftState = "GROUND_IDLE" } },
+            { domainId = "GPS_BASE_NET", type = "MSG_NAV_QUALITY", payload = { hdop = 1.1, satelliteCount = 5, navQuality = "GOOD" } },
         }
         for i, item in ipairs(base5_valid) do
-            app.clock_ms = 1000 + i * 2500
+            app.clock_ms = 1000 + i * 2000
             main_mod.process_event(app, "modem_message", "back", 10005, 10005, {
                 ver = "1.9.5", domainId = item.domainId, seq = i, type = item.type, time = app.clock_ms,
                 payload = item.payload,
@@ -1089,6 +1088,7 @@ describe("AMM Main Event Pump and Command Processing", function()
         end
         assert_eq(app.sentinel.intrusionCount, 0)
         assert_eq(app.fac.dockingStage, "CAPTURED")
+        assert_eq(app.fac.atcStatus, "CLEARED")
 
         -- 2. Valid Base+0 packets: GCS_OVERRIDE from non-"GCS*" domainId ("TOWER_CMD"), GCS MSG_MISSION_CMD, MSG_BLOCK_ASSIGN, probes
         app.clock_ms = 40000
@@ -1148,6 +1148,57 @@ describe("AMM Main Event Pump and Command Processing", function()
             payload = { action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "ROGUE" },
         })
         assert_eq(app.sentinel.intrusionCount, prev_count + 1)
+
+        -- 5. All 14 removed legacy packet types on Base+5 (foreign domainId) MUST be rejected as intrusions without side effects
+        local legacy_base5 = {
+            { domainId = "GAC_01", type = "MSG_FACILITY_LIST_ACK", payload = { facilities = {} } },
+            { domainId = "ATC_01", type = "MSG_ATC_HANDOFF_CLEARANCE", payload = { status = "DENIED" } },
+            { domainId = "ATC_01", type = "MSG_ATC_SECTOR_HANDOFF", payload = { status = "DENIED" } },
+            { domainId = "ATC_01", type = "MSG_ATC_DEPARTURE_CLEARANCE", payload = { status = "DENIED" } },
+            { domainId = "PAD_01", type = "MSG_PAD_RESERVE_ACK", payload = { status = "RESERVED" } },
+            { domainId = "PAD_01", type = "MSG_PAD_TELEMETRY", payload = { deckStatus = "DANGEROUS" } },
+            { domainId = "PAD_01", type = "MSG_PAD_STATUS", payload = { status = "FREE" } },
+            { domainId = "PAD_01", type = "MSG_LANDING_STATUS", payload = { status = "ABORT" } },
+            { domainId = "PAD_01", type = "MSG_LANDING_ACK", payload = { status = "OK" } },
+            { domainId = "RUNWAY_01", type = "MSG_RUNWAY_ACK", payload = { status = "CLEARED" } },
+            { domainId = "RUNWAY_01", type = "MSG_ILS_BEACON", payload = { heading = 90 } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_ACK", payload = { status = "READY" } },
+            { domainId = "DOCK_01", type = "MSG_DOCK_STATUS", payload = { stage = "ABORTED" } },
+            { domainId = "DOCK_01", type = "MSG_DOCKING_STATUS", payload = { stage = "ABORTED" } },
+        }
+        local legacy_base_count = app.sentinel.intrusionCount
+        for i, item in ipairs(legacy_base5) do
+            app.clock_ms = 43000 + i * 50
+            main_mod.process_event(app, "modem_message", "back", 10005, 10005, {
+                ver = "1.9.5", domainId = item.domainId, seq = 80 + i, type = item.type, time = app.clock_ms,
+                payload = item.payload,
+            })
+            assert_eq(app.sentinel.intrusionCount, legacy_base_count + i)
+        end
+        assert_eq(app.sentinel.intrusionCount, legacy_base_count + 14)
+        assert_eq(app.fac.dockingStage, "CAPTURED")
+        assert_eq(app.fac.atcStatus, "CLEARED")
+
+        -- 6. Dead facility_rx branches (MSG_ATC_SECTOR_HANDOFF on CH 50001, MSG_DOCKING_STATUS on padChannel) are ignored,
+        --    while canonical MSG_DOCK_CAPTURE_STAGE on padChannel updates dockingStage
+        app.clock_ms = 44000
+        main_mod.process_event(app, "modem_message", "back", 50001, 50001, {
+            ver = "1.9.5", domainId = "ATC_01", seq = 95, type = "MSG_ATC_SECTOR_HANDOFF", time = 44000,
+            payload = { status = "DENIED" },
+        })
+        assert_eq(app.fac.atcStatus, "CLEARED")
+
+        main_mod.process_event(app, "modem_message", "back", 50212, 50212, {
+            ver = "1.9.5", domainId = "DOCK_01", seq = 96, type = "MSG_DOCKING_STATUS", time = 44100,
+            payload = { stage = "ABORTED" },
+        })
+        assert_eq(app.fac.dockingStage, "CAPTURED")
+
+        main_mod.process_event(app, "modem_message", "back", 50212, 50212, {
+            ver = "1.9.5", domainId = "DOCK_01", seq = 97, type = "MSG_DOCK_CAPTURE_STAGE", time = 44200,
+            payload = { stage = "HARD_LOCKED" },
+        })
+        assert_eq(app.fac.dockingStage, "HARD_LOCKED")
 
         if fs.exists(lease_path) then fs.delete(lease_path) end
     end)

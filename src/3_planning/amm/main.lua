@@ -578,7 +578,7 @@ local function handle_facility_rx(app, chan, pkt, now_ms)
     if not app.fac then return false end
     local pos = app.nav and app.nav.pos
     if chan == 50001 then
-        if pkt.type == "MSG_ATC_APPROACH_CLEARANCE" or pkt.type == "MSG_ATC_SECTOR_HANDOFF" then
+        if pkt.type == "MSG_ATC_APPROACH_CLEARANCE" then
             facility_client.on_atc_clearance(app.fac, pkt, pos, now_ms)
             open_fac_channels(app)
         elseif pkt.type == "MSG_FACILITY_BEACON" then
@@ -597,7 +597,7 @@ local function handle_facility_rx(app, chan, pkt, now_ms)
         end
         return true
     elseif app.fac.padChannel and chan == app.fac.padChannel then
-        if pkt.type == "MSG_DOCKING_STATUS" then
+        if pkt.type == "MSG_DOCK_CAPTURE_STAGE" then
             facility_client.on_docking_status(app.fac, pkt, now_ms)
         else
             facility_client.on_tactical_guide(app.fac, pkt, now_ms)
@@ -613,28 +613,14 @@ local BASE_PLUS_5_INFRA_RESPONSES = {
     MSG_GPS_STATUS_RESP = true,
     -- I-5 Facility / GAC / Pad / Runway / Docking Arm replies
     MSG_FACILITY_BEACON = true,
-    MSG_FACILITY_LIST_ACK = true,
     MSG_FACILITY_STATIC_GUIDE = true,
     MSG_FACILITY_DYNAMIC_GUIDE = true,
     MSG_ATC_APPROACH_CLEARANCE = true,
-    MSG_ATC_HANDOFF_CLEARANCE = true,
-    MSG_ATC_SECTOR_HANDOFF = true,
     MSG_ATC_FACILITY_UPDATE = true,
-    MSG_ATC_DEPARTURE_CLEARANCE = true,
     MSG_GAC_APPROACH_CLEARANCE = true,
     MSG_GAC_DEPARTURE_CLEARANCE = true,
     MSG_GAC_ABORT_CLEAR = true,
     MSG_ABORT_APPROACH = true,
-    MSG_PAD_RESERVE_ACK = true,
-    MSG_PAD_TELEMETRY = true,
-    MSG_PAD_STATUS = true,
-    MSG_LANDING_STATUS = true,
-    MSG_LANDING_ACK = true,
-    MSG_RUNWAY_ACK = true,
-    MSG_ILS_BEACON = true,
-    MSG_DOCK_ACK = true,
-    MSG_DOCK_STATUS = true,
-    MSG_DOCKING_STATUS = true,
     MSG_DOCK_CAPTURE_STAGE = true,
     MSG_UMBILICAL_STATUS = true,
     MSG_TOUCHDOWN_COMPLETE = true,
@@ -682,11 +668,11 @@ local function handle_base5_rx(app, pkt, t_ms)
     end
     if not app.fac then return end
     local pt = pkt.type
-    if pt == "MSG_DOCKING_STATUS" or pt == "MSG_DOCK_CAPTURE_STAGE" or pt == "MSG_DOCK_STATUS" then
+    if pt == "MSG_DOCK_CAPTURE_STAGE" then
         facility_client.on_docking_status(app.fac, pkt, t_ms)
     elseif pt == "MSG_FACILITY_STATIC_GUIDE" or pt == "MSG_FACILITY_DYNAMIC_GUIDE" or pt == "MSG_ABORT_APPROACH" then
         facility_client.on_tactical_guide(app.fac, pkt, t_ms)
-    elseif pt == "MSG_GAC_APPROACH_CLEARANCE" or pt == "MSG_ATC_APPROACH_CLEARANCE" or pt == "MSG_ATC_SECTOR_HANDOFF" then
+    elseif pt == "MSG_GAC_APPROACH_CLEARANCE" or pt == "MSG_ATC_APPROACH_CLEARANCE" then
         facility_client.on_atc_clearance(app.fac, pkt, app.nav and app.nav.pos, t_ms)
         open_fac_channels(app)
     elseif pt == "MSG_GAC_ABORT_CLEAR" then
