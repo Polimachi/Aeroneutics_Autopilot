@@ -6,27 +6,28 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.15.0` |
-| **최종 수정일 (Date)** | `2026-11-19` |
+| **문서 버전 (Version)** | `v1.15.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/1_control/tca/` |
 | **주관 도메인 (Domain)** | 6-DoF 추진기 분산 클러스터 제어 어댑터 (TCA / Node 05-xx) |
 
 > **연관 문서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
-> - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.7.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.26.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.6.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러 v2.9.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.4.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [OTA_PROGRAM_SPECIFICATION.md](../../0_development/ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서)
+> - [VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 상주형 동역학 프로파일러)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.15.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연관 문서` 및 하단 푸터의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v1.15.0` | `2026-11-19` | **`TASK-017`·`TASK-018` 교정 펄스 안전 경계(`safetyMaxTiltDeg`) 및 바인딩·탐색·설정 복제 정합 (`Implemented` $\to$ `Approved`)**: ① 일반(비-PBIT) `MSG_CALIB_PULSE` 수신 시 `0 < safetyMaxTiltDeg <= 45` 범위 검증 추가(`R3`), ② `MSG_CALIB_BAY_BIND`의 `bayCalibrationTap`/`bayCalibrationCmd` 채널 바인딩 소비 및 `MSG_ACTUATOR_DISCOVER_REQ.requestDomain` 일치 검증 추가, ③ `config_manager` 재귀 `deep_copy` 정합화, ④ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `AMM v2.7.0`, `VAS v1.26.0`, `FCP v2.6.0`) 동기화 | `TASK-016` 감사 후속 `[I-4]` 미소비 필드 소비 정합 및 설정 복제 안전성 확보 (`src/1_control/tca/` 반영 후 `Implemented` 승격 예정) |
 | `v1.14.0` | `2026-11-18` | **`TASK-136` 동적 페리페럴 리바인딩 및 `TASK-131` PBIT `< 5%` Wiggle 테스트 응답 추가 (`Implemented` $\to$ `Approved`)**: ① `scan_api_peripherals()`에서 재조립 시 변경된 페리페럴 ID(`thruster_2` $\to$ `thruster_5`)를 순번 기반 `logicalBindingMap`으로 동적 리바인딩, ② `MSG_CALIB_PULSE` (`pbitWiggle = true`, `pulseRatio <= 0.04`) 수신 시 `DISARMED`/`IDLE_ARMED` 상태에서도 `< 5%` 미소 시험 추력을 인가하고 즉시 `cut_thrust()` 복원 후 `MSG_ACTUATOR_STATUS` (`force = true`) 회신 (`MSG_PBIT_REQ`/`MSG_PBIT_REPORT` 연계), ③ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `VAS v1.25.0`, `Alignment v2.9.0`, `AMM v2.6.0`) 동기화 | `TASK-136` 재조립 어댑터 ID 매핑 유지 및 `TASK-131` PBIT 액추에이터 응답성 점검 지원 (`src/1_control/tca/` 반영 후 `Implemented` 승격 예정) |
 | `v1.13.0` | `2026-11-15` | **`[I-13]` 무선 OTA 슬레이브 에이전트(`/lib/ota_agent.lua`) 및 2단계 부팅 커밋 연동 (`Implemented` $\to$ `Approved`)**: ① `tca_daemon` 초기화 시 `ota.bayId` (기본 `1` $\rightarrow$ `Base_hangar + 4 = 105`) 및 선택 `ota.bayIds` 개방·`Base_hangar + 5` (`106`) 응답, ② `controlState = inst.lastControlState or "DISARMED"` 및 `isAirborne = (inst.adapterState.lastSignal or 0) > 0` 안전 게이트 연동, ③ `step_event` 정상 틱 `tick_boot_commit()` (`20` 틱 커밋) 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 온보드 슬레이브 연동 (`src/1_control/tca/` 반영 후 `Implemented` 재승격 예정) |
@@ -682,4 +683,4 @@ end
 
 ---
 
-*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) v1.30.0), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) v2.0.1), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md) v1.20.0), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) v2.1.0), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) v1.8.0), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) v2.7.0), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) v2.3.3) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) v2.15.0)와 정합성을 유지합니다.*
+*본 규격서는 Universal Autonomous Flight Stack의 최하위 구동계(TCA) 구현 표준으로 기능하며, 관련 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md)), AMM 규격서([AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md)), VAS 규격서([VAS_PROGRAM_SPECIFICATION.md](../vas/VAS_PROGRAM_SPECIFICATION.md)), FCP 규격서([FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md)), ASA 규격서([ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md)), Alignment 규격서([ALIGNMENT_PROGRAM_SPECIFICATION.md](../../0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md)), GPS 규격서([GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md)) 및 전체 구조도([SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md))와 정합성을 유지합니다.*

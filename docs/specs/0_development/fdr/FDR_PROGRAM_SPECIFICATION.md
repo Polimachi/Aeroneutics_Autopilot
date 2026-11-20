@@ -7,20 +7,20 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v0.5.0` |
-| **최종 수정일 (Date)** | `2026-11-19` |
+| **문서 버전 (Version)** | `v0.5.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/0_development/fdr/ & tools/analyze_flight_log.py` |
 | **주관 도메인 (Domain)** | 지상 상주형 실환경 비행 동역학 식별·계측 및 PID/트림 프로파일 튜닝 콘솔 (FDR / In-Flight Aligner) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔 v2.9.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.26.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.15.0)
-> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서 v1.8.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 외루프 유도 규격서 v2.6.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무·궤적 규격서 v2.7.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서)
+> - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 외루프 유도 규격서)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무·궤적 규격서)
 > - [GDRIVE_DEPLOYMENT_GUIDE.md](../../../guides/GDRIVE_DEPLOYMENT_GUIDE.md) (Google Drive 배포 가이드)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
@@ -28,6 +28,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.5.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연관 문서` 목록의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v0.5.0` | `2026-11-19` | **`TASK-018` 미소비 설정 키 3종 스키마 제거 (`Implemented` $\to$ `Approved`)**: ① `config/fdr_config.json`에서 런타임 미소비 유령 설정 키(`bandwidth`, `export.timeoutSec`, `debug`)를 제거하고 Zero-Fallback `[DEPRECATED]` 주석 추가, ② §7.2 헤드리스 구동 기준을 CLI `--headless` 인자 중심으로 정정, ③ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `VAS v1.26.0`, `TCA v1.15.0`, `FCP v2.6.0`, `AMM v2.7.0`) 동기화 | `TASK-016` 감사(`E-L3-04`) 후속 미소비 설정 키 정리 (`src/0_development/fdr/config/fdr_config.json` 반영 후 `Implemented` 승격 예정) |
 | `v0.4.0` | 2026-11-16 | **`TASK-125` 40채널 비상 코어(`Base+9`) 패시브 감청 추가 (`Implemented` $\to$ `Approved`)**: ① 패시브 감청 채널 목록에 `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT`) 필수 추가, ② `Base+1` (`CH_FLIGHT_GUIDANCE`)을 순수 `MSG_ATTITUDE_CMD` 전용으로 갱신, ③ 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `Alignment v2.8.0`, `VAS v1.23.0`, `FCP v2.3.0`, `AMM v2.2.0`) 동기화 | `TASK-125` 유도/비상 버스 분리에 따른 FDR 비상 엣지 감청 정합화 (`src/0_development/fdr/` 반영 후 `Implemented` 승격 예정) |
 | `v0.3.0` | 2026-11-14 | **`Draft` $\to$ `Approved` 승격 및 사용자 결정 확정**: ① `VAS` Opt-in `telemetryDiag` 포함 확정 (`VAS v1.21.0` 및 `ICD v1.31.0` 양방향 동기화), ② `config/fdr_config.json`의 `export.mode` 기본값을 `"GDRIVE_WEBHOOK"`으로 전환하고 대상 Google Drive 폴더 `FDR_Reports` (`gdriveFolderId = "1C3ZWMoXjsba1QE8ksgWG0LSfxzW_nMWI"`) 지정 및 `webhookUrl` 미설정 시 안내 가드 명문화 | 사용자 설계 리뷰 승인 (`TASK-120` 구현 착수) |

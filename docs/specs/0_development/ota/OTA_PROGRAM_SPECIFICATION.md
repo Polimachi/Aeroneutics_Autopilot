@@ -7,27 +7,28 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v0.1.0` |
+| **문서 버전 (Version)** | `v0.1.1` |
 | **작성일 (Created)** | `2026-11-15` |
-| **최종 수정일 (Date)** | `2026-11-15` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/0_development/ota/ & /lib/ota_agent.lua` |
 | **주관 도메인 (Domain)** | 격납고 무선 OTA 배포 서버 및 온보드 원자적 롤백 에이전트 (`0_development/ota` / Interface `I-13`) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.32.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.16.0)
-> - [INSTALLER_PROGRAM_SPECIFICATION.md](../installer/INSTALLER_PROGRAM_SPECIFICATION.md) (통합 인스톨러 & 2단계 부팅 워치독 v1.2.0)
-> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔 v2.7.1)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.22.0)
-> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서 v1.13.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 외루프 유도 규격서 v2.2.0)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무·궤적 규격서 v2.1.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [INSTALLER_PROGRAM_SPECIFICATION.md](../installer/INSTALLER_PROGRAM_SPECIFICATION.md) (통합 인스톨러 & 2단계 부팅 워치독)
+> - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
+> - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 외루프 유도 규격서)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무·궤적 규격서)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 규칙 및 가이드라인)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.1.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연관 문서` 목록의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v0.1.0` | 2026-11-15 | **초기 `Approved` 규격 제정**: `[I-13]` 무선 OTA 와이어 프로토콜 10종 패킷(`ver = "1.9.5"`), 격납고 채널 할당(`Base_hangar + 4` `CH_OTA_CMD` / `Base_hangar + 5` `CH_OTA_ACK`), 슬레이브 안전 게이트(`DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true`), 설정 보존 및 고아 `.lua` 백업·정리, 2단계 부팅 커밋 워치독(`maxBootAttempts = 1`, `20` 틱 커밋) 및 `/ota_packages/` 원격 동기화 규격 수립 | `TASK-117-1` 무선 OTA 배포 서버 및 슬레이브 원자적 롤백 가드 사양 확정 |
 
 ---

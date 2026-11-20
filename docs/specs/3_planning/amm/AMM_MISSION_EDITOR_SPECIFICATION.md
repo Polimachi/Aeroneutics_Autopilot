@@ -8,22 +8,23 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v0.6.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 버전 (Version)** | `v0.6.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `tools/amm_mission_editor.html` |
 | **주관 도메인 (Domain)** | 임무 계획 외부 웹 GUI 미션 에디터 (AMM Companion Tool / Host PC) |
 
 > **연관 문서**:
-> - [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) (AMM 항공 임무 관리자 v2.5.0 Implemented)
-> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 실시간 브리지 v1.4.0 Implemented)
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0 Approved)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.20.1 Approved)
+> - [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) (AMM 항공 임무 관리자)
+> - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 실시간 브리지)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 컨텍스트 및 규칙)
 
 ### Revision History
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.6.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, HTML·스키마 무변경)**: 상단 `연관 문서` 및 §1.1의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v0.6.0` | `2026-11-18` | **`TASK-405` LAN 사설 IP/mDNS 접속 지원 및 `TASK-406` 광역 줌·실시간 노드 자동등록/1분 TTL·대상 필터·`Inspection` 모드 규격 신설 (`Implemented` $\to$ `Approved`)**: ① `LiveBridge.isAllowedLocalUrl`을 루프백 + RFC 1918 사설 IPv4(`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) + `*.local` `ws://`로 확장(공인 IP·`wss://` 차단 유지) 및 `#liveBridgeUrlInput` + `localStorage`(`uafs_amm_live_bridge_url_v1`) 영속화, ② 줌 하한 `0.01 .. 4.0 px/m` (`1% .. 400%`) 및 10단계 동적 그리드(`10..10000m`) 확장, ③ `WorldStore` 시설 타입 7종(`LANDING_PAD`, `RUNWAY`, `HANGAR`, `DOCKING_ARM`, `GPS`, `GAC`, `WAYPOINT`)·`WORLD_PRESET_SYNC.gacNode`(명시 좌표 또는 시설 무게중심)·`GPS_NODES_SYNC` 자동 등록 및 `60,000ms` 무신호 시 자동 삭제 없이 `OFFLINE`/`STALE` 반투명 표시 + 수동 `Purge Offline` 정리(`!fac.liveAuto` 수동 시설 보존), ④ 기체/시설 타입 필터링 UI(`ui.filters`), ⑤ 읽기 전용 `Inspection` 모드(미션 편집 잠금, 기체 카메라 자동 추적 `Follow` 및 `'Push to Aircraft'` 허용, 상세 텔레메트리·시설·GPS HUD) 정의 및 `GCS v1.4.0` 동기화 | `TASK-405` 분리 호스트 LAN Live Bridge 접속 지원 및 `TASK-406` 광역 공역 관제·실시간 노드 관리·비편집 관전 모드 고도화 |
 | `v0.5.0` | `2026-11-16` | **`TASK-404` localhost WebSocket Live Mode (`LiveBridge`), 다중 기체 전술 궤적 및 `'Push to Aircraft'` 원클릭 무선 전송 규격 추가 (`Implemented` $\to$ `Approved`)**: ① `LiveBridge` 모듈 (`ws://127.0.0.1:8765`, 사용자 `'Connect Live'` 클릭 시에만 연결; 외부 URL/`fetch`/`XMLHttpRequest`/비로컬 `ws://`·`wss://`는 영구 차단), ② `WORLD_PRESET_SYNC` 수신 시 `WorldStore` 자동 생성·병합 및 `#liveFleetBadge` 상태 표시, ③ `FLEET_TELEMETRY_SYNC` 수신 시 2D 캔버스 위 다중 기체 실시간 위치·기수 삼각 마커·궤적 폴리라인(`Trail`) 오버레이, ④ `'Push to Aircraft'` 인페이지 모달(`LOAD` vs `RUN`, 대상 기체 선택, `saveToDisk` 옵션)로 `MISSION_PUSH_CMD` 송출 및 `MISSION_PUSH_ACK` 토스트 수신, ⑤ `AMM v2.3.0`, `GCS v1.2.0`, `ICD v1.34.0`, `Diagram v2.18.0` 동기화 | `TASK-404` WebUI 에디터-`GCS`-`AMM` 실시간 양방향 전술 지도 및 무선 미션 푸시 지원 |
 | `v0.4.0` | `2026-11-16` | **`TASK-403` 멀티-월드 지상 시설 프리셋(`WorldStore`), `ACT_TKL_LAND_NEAREST` (`37`종) 및 2D 좌표 눈금자 규격 추가 (`Implemented` $\to$ `Approved`)**: ① `WorldStore` (`localStorage` 키 `uafs_amm_world_presets_v1`, 멀티 월드 스위칭/CRUD, 시설 스키마 `{ facilityId, label, type, x, z, y, headingDeg, notes }`, Export/Import World JSON), ② 상단 `World` 선택기·`#worldPresetDrawer`·`PICK_FACILITY` 도구 및 캔버스 4변 `(X, Z)` 눈금 라벨 + 배경 시설 핀 레이어, ③ 인스펙터 시설 호환 드롭다운·미등록 `facilityId` `WARNING`(`UNREGISTERED_FACILITY_ID`) + `'Register to Current World'` 버튼·`'From World…'`/`'Save as Facility'`(스마트 Y 매핑), ④ `ACT_TKL_LAND_NEAREST` (`37`종 활성 `ACT_*`) 추가 및 검증·라운드트립 확장 | `TASK-403` 서버별/월드별 지상 시설 좌표 프리셋·체크포인트 원클릭 연동·`ACT_TKL_LAND_NEAREST` 지원 |
@@ -40,7 +41,9 @@
 ### 1.1 목적 및 기능 범위
 `tools/amm_mission_editor.html`은 마인크래프트 CC:Tweaked 인게임 `51x19` 터미널의 해상도 한계 밖에서, 호스트 PC 브라우저를 통해 `AMM (Node 03)`의 `v2.0.0` 다중 체크포인트 미션 JSON 파일을 시각적으로 설계·검증·입출력하는 **독립형 오프라인 웹 GUI 컴패니언 도구**입니다.
 
-1. **AMM `v2.0.0` 미션 스키마 동등성**: `AMM_PROGRAM_SPECIFICATION.md` (`v2.5.0 Implemented`) §6·§9가 정의한 **3계층 `ACT_*`(활성 37종 + 예약 19종 + `TASK-401`) / `DEC_*`(7종) / `MAC_*`(5종) 매크로 전개**, **4대 범주 `preconditions`**, **14종 `completeWhen`/`abortWhen` 조건(`settleTicks` 포함)**, **4종 `onEnter`/`onExit`/`onAbort` 라이프사이클 훅**을 지원합니다. 구 `v1.0.0` `items[]` 및 구 13종 액션(`FLY_OVER` 등 `[DEPRECATED - v2.0.0]`)은 Zero-Fallback 정책에 따라 오류(`ERROR`)로 거부합니다.
+1. **AMM `v2.0.0` 미션 스키마 동등성**:
+   [AMM_PROGRAM_SPECIFICATION.md](AMM_PROGRAM_SPECIFICATION.md) §6·§9가 정의한 **3계층 `ACT_*`(활성 37종 + 예약 19종 + `TASK-401`) / `DEC_*`(7종) / `MAC_*`(5종) 매크로 전개**, **4대 범주 `preconditions`**, **14종 `completeWhen`/`abortWhen` 조건(`settleTicks` 포함)**, **4종 `onEnter`/`onExit`/`onAbort` 라이프사이클 훅**을 지원합니다.
+   구 `v1.0.0` `items[]` 및 구 13종 액션(`FLY_OVER` 등 `[DEPRECATED - v2.0.0]`)은 Zero-Fallback 정책에 따라 오류(`ERROR`)로 거부합니다.
 2. **2D `(X, Z)` 전술 경로 시각화 및 실시간 오버레이 (`Mission Edit` / `Inspection`)**: 마인크래프트 수평 좌표계($+X$ 동쪽, $-Z$ 북쪽) 위에서 `1%..400%`(`0.01..4.0 px/m`) 광역 줌과 10단계 동적 그리드(`10..10000m`)로 웨이포인트, 도달 허용 반경(`acceptanceRadius`), `ACT_PAT_LOITER_*` 선회 원, `ACT_NAV_GOTO_WP` 접선 진입 오프셋(`tangentEntryOffsetM`), `ACT_NAV_CORRIDOR` 회랑선, `ACT_PAT_POI_HOLD` 조준선을 실시간 렌더링합니다. Live Mode 연결 시 다중 기체 실시간 위치·기수각·비행 궤적(`Trail`), `GAC`·`GPS`·예하 지상시설(`Landing Pad`, `Runway`, `Hangar`, `Docking Arm`) 자동 등록 및 `60s` 무신호 `OFFLINE`/`STALE` 상태 전이, 대상 필터링, 읽기 전용 `Inspection` 모드(카메라 `Follow` 포함)를 제공합니다.
 3. **실시간 프리플라이트 검증 및 원클릭 무선 미션 푸시**: 온보드 `mission_engine.validate_mission_table` 및 `action_registry` 규칙과 동등한 정적 검증(`validateMission()`)을 편집 즉시 실행해, 인게임 투입 전 `CP#idx` 단위 오류(`SCHEMA_INVALID`)와 예약(`DEFERRED_ACTION_UNSUPPORTED`) 경고를 사전 검출하며, Live Mode 연결 시 `'Push to Aircraft'` 모달을 통해 `GCS` 브리지 경유 `MSG_MISSION_CMD` (`LOAD` / `RUN`)를 무선 전송합니다.
 

@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.7.0` |
-| **최종 수정일 (Date)** | `2026-11-18` |
+| **문서 버전 (Version)** | `v1.7.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/0_infra/gac/` |
 | **주관 도메인 (Domain)** | 국지 에이프런 총괄 관제사 (Ground Apron Controller / GAC) |
 
@@ -15,6 +15,7 @@
 
 | 버전 | 일자 | 개정 요약 | 개정 사유 |
 | :--- | :--- | :--- | :--- |
+| `v1.7.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 및 `R4` 사양 정합 (문서 전용, 코드 무변경)**: 상단 `연관 규격서` 버전 배지 제거·버전 SSOT를 본 문서 헤더 및 마스터 ICD `§5.1`로 일원화, `MSG_GAC_SECTOR_STATUS.sectorStatus` 열거형(`"OPERATIONAL" \| "DECK_DANGEROUS"`) 정합, `recommendedClimbAltitude` `[DEPRECATED]` 명시 및 미구현 Tower ATC 패킷(`MSG_ATC_HANDOFF_CLEARANCE`, `MSG_ATC_ENROUTE_CHECKIN`/`ACK`, `MSG_ATC_EMERGENCY_ALERT`) `[DEFERRED: TASK-108]` 태깅 | `TASK-019` 버전 SSOT 일원화 및 `R4` 드리프트·이관 표기 (`Implemented` 유지) |
 | `v1.7.0` | `2026-11-18` | **`TASK-406` 연계 `[I-5]` `GAC` 관제소 본체 좌표(`position = { x, y, z }`) 명시화 및 `MSG_FACILITY_BEACON` 확장 (`Implemented` $\to$ `Approved`)**: ① `/gac/config.json`(`config.lua`) 섹터 루트 설정 및 TUI `[S]` 섹터 환경 설정에 GAC 관제소 본체 3D 좌표 `position = { x, y, z }` 명시 규격 신설, ② `CH 50003` / `Base_sec+2` `MSG_FACILITY_BEACON` 페이로드에 GAC 본체 좌표 `position = { x, y, z }` 필드 추가(설정 미지정 레거시 환경에서는 관할 `facilities[]` 좌표의 무게중심 Centroid 자동 산출 폴백 허용), ③ 연관 문서 배지(`ICD v1.37.0`, `Diagram v2.20.1`, `AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`) 동기화 | `TASK-406` Live Mode 2D 전술 지도 내 `GAC` 본체 노드 정밀 위치 표시 및 관제소 좌표 SSOT 명시화 |
 | `v1.6.0` | `2026-11-16` | **`TASK-403` `[I-5]` `MSG_FACILITY_BEACON` 선택적 `facilities[]` 스냅샷 배열 확장 (`Implemented` $\to$ `Approved`)**: ① `CH 50003` / `Base_sec+2` 비콘 페이로드에 선택 배열 `facilities[]` (`facilityId`, `facilityType`, `status`, `position = { x, y, z }`, `heading`, `endPoint`, `tacticalChannel`, `dedicated`) 추가(미설정 시 생략 가능), ② 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `AMM v2.2.0`) 동기화 | `AMM` `ACT_TKL_LAND_NEAREST` 및 지상 월드 프리셋 시설 자동 발견 지원 |
 | `v1.5.0` | 2026-11-14 | Wave 1 전역 사양 동기화 (`Implemented` $\to$ `Approved`): `CH 50003` / `Base_sec+2` `MSG_FACILITY_BEACON` 집약 송출 내 `facilitiesSummary`(`totalDockingArms`, `freeDockingArms`) 통합 및 `clearanceRadius` 필드명 정렬, 이륙 허가 패킷 역할 분리(`GAC` `Base_sec+0` `MSG_GAC_DEPARTURE_CLEARANCE` vs `Tower ATC` `CH 50001` `MSG_ATC_DEPARTURE_CLEARANCE`) 명시 및 연관 문서 버전(`ICD v1.30.0`, `Diagram v2.15.0`, `AMM v2.0.1`, `FCP v2.1.0`, `VAS v1.20.0`, `Landing Pad v2.5.0`, `Runway v1.11.0`, `Docking Arm v1.12.0`, `GPS v2.3.3`) 동기화 | 마스터 ICD v1.30.0 `[I-5]` 섹터 비콘/출발 관제 및 시설물 공통 스키마 정렬 |
@@ -26,15 +27,15 @@
 | `v1.1.4` | 2026-11-07 | 40채널 규격 및 영구 단일 경로 반영 | 지상 인프라 및 전역 통신 규격 일원화 |
 
 > **연관 규격서**: 
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.37.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도 v2.20.1)
-> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서 v2.5.0)
-> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서 v2.4.0)
-> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어 v1.24.0)
-> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서 v2.5.0)
-> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서 v1.12.0)
-> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서 v1.12.0)
-> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 v2.3.3)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 관계도)
+> - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (AMM 임무 관리자 및 조종석 단말 규격서)
+> - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서)
+> - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
+> - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서)
+> - [RUNWAY_SPECIFICATION_AND_ICD.md](../runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서)
+> - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서)
+> - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서)
 
 ---
 
@@ -119,7 +120,7 @@ flowchart TD
 ### 2.1 마스터 채널 할당 표
 | 채널 번호 | 채널 식별자 | 송신자 | 수신자 | 전송 주기 | 통신 목적 및 내용 |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`50001`** | `CH_ATC_COMM` | AMM / Tower ATC | Tower ATC / AMM | 이벤트 | 광역 접근 요청(`MSG_ATC_APPROACH_REQ`), 섹터 핸드오프 인가(`MSG_ATC_HANDOFF_CLEARANCE`), 광역 이탈 관제 |
+| **`50001`** | `CH_ATC_COMM` | AMM / Tower ATC | Tower ATC / AMM | 이벤트 | 광역 접근 요청(`MSG_ATC_APPROACH_REQ`), 섹터 핸드오프 인가(`MSG_ATC_HANDOFF_CLEARANCE` `[DEFERRED: TASK-108]`), 광역 이탈 관제 |
 | **`50002`** | `CH_ATC_FACILITY` | Tower ATC / GAC | GAC / Tower ATC | 이벤트 / 1Hz | 광역 관제탑과 GAC 간 섹터 관제 이양 협상(`MSG_ATC_SECTOR_HANDOFF_REQ/ACK`), 광역 상태 동기화 |
 | **`50003`** | `CH_FACILITY_BEACON` | GAC Node (대표) | All (AMM, GCS) | 1Hz | **Sector 0 대표 집약 비콘**: 섹터 ID, 가용 패드 수, 최대 스펙, 국지풍, GAC 관제 채널 |
 | **`50004`** | `CH_GAC_DISPATCH` | GAC Node | All (AMM, GCS) | 1Hz | 공용 지상 관제 안내 디스패치 (섹터 목록 및 활성 채널 디렉터리 브로드캐스트) |
@@ -245,14 +246,14 @@ GAC가 관할 구역 내 시설물 점유 변동 또는 주기적 동기화 시 
         freePads = 2,
         occupiedPads = 2,
         maintenancePads = 0,
-        sectorStatus = "OPERATIONAL"         -- "OPERATIONAL", "DECK_DANGEROUS", "MAINTENANCE"
+        sectorStatus = "OPERATIONAL"         -- "OPERATIONAL" | "DECK_DANGEROUS"
     }
 }
 ```
 
 ---
 
-### 3.3 Tower ATC $\to$ 기체 핸드오프 인가 (`MSG_ATC_HANDOFF_CLEARANCE`, CH 50001 / Base+5)
+### 3.3 Tower ATC $\to$ 기체 핸드오프 인가 (`MSG_ATC_HANDOFF_CLEARANCE`, CH 50001 / Base+5) `[DEFERRED: TASK-108]`
 Tower ATC가 기체에게 관제 이양을 지시하며 전환할 GAC 주파수를 하달합니다.
 ```lua
 {
@@ -410,7 +411,7 @@ GAC가 낙점된 개별 패드 노드에 슬롯을 배정합니다.
         facilityId = "PAD_BRAVO_01",
         aircraftId = "AIRCRAFT_01",
         reason = "DECK_UNSTABLE",            -- "DECK_UNSTABLE", "OBSTACLE_DETECTED", "GAC_ORDER"
-        recommendedClimbAltitude = 100.0
+        recommendedClimbAltitude = 100.0     -- [DEPRECATED] 안전 복행 권장 고도 (m)
     }
 }
 ```
@@ -495,7 +496,7 @@ GAC가 낙점된 개별 패드 노드에 슬롯을 배정합니다.
 }
 ```
 
-#### 4. 기지 이탈 확인 및 관제 인수 (`MSG_ATC_ENROUTE_CHECKIN`, AMM $\to$ Tower ATC, CH 50001)
+#### 4. 기지 이탈 확인 및 관제 인수 (`MSG_ATC_ENROUTE_CHECKIN`, AMM $\to$ Tower ATC, CH 50001) `[DEFERRED: TASK-108]`
 기체가 기지 공역 경계를 통과하며 Tower ATC로 체크인하여 광역 항법 관제로 복귀합니다.
 ```lua
 {
@@ -560,14 +561,14 @@ sequenceDiagram
     U->>T: MSG_ATC_APPROACH_REQ (CH 50001)<br/>[targetSectorId: BASE_ALPHA, craftWeight, radius]
     T->>G: MSG_ATC_SECTOR_HANDOFF_REQ (CH 50002)<br/>[aircraftId, airframeType, craftWeight, radius]
     G-->>T: MSG_ATC_SECTOR_HANDOFF_ACK (CH 50002)<br/>[ACCEPTED, gacChannel: 50201]
-    T->>U: MSG_ATC_HANDOFF_CLEARANCE (CH 50001)<br/>[status: CLEARED, gacChannel: 50201]
+    T->>U: MSG_ATC_HANDOFF_CLEARANCE (CH 50001) [DEFERRED: TASK-108]<br/>[status: CLEARED, gacChannel: 50201]
 
     Note over U,G: GAC 주파수 (CH 50201) 핸드오버
     U->>G: MSG_GAC_CHECKIN_REQ (CH 50201)<br/>[aircraftId: AIRCRAFT_01, preferredPad: nil]
     Note over G: 다속성 알고리즘 실행 -> PAD_01 낙점
     G->>P: MSG_ATC_SLOT_ASSIGN (CH 50202 로컬 백본)<br/>[aircraftId: AIRCRAFT_01, slotSec: 120]
     P-->>G: MSG_ATC_SLOT_ACK (CH 50202) [ACCEPTED, tacticalChannel: 50211]
-    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_01, tacticalChannel: 50211]
+    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_01, assignedTacticalChannel: 50211]
 
     Note over U,P: 전술 채널 (CH 50211) 핸드오버
     loop 20Hz 동역학 스트리밍 (AMM 궤적 생성 -> Base+4 FCP 추종)
@@ -602,7 +603,7 @@ sequenceDiagram
     Note over G: 로컬 LOITER 지시 및 대체 패드 탐색 -> PAD_02 선정
     G->>P2: MSG_ATC_SLOT_ASSIGN (CH 50202) [aircraftId: AIRCRAFT_01, slotSec: 120]
     P2-->>G: MSG_ATC_SLOT_ACK (CH 50202) [ACCEPTED, tacticalChannel: 50212]
-    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_02, tacticalChannel: 50212]
+    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_02, assignedTacticalChannel: 50212]
     Note over U,P2: PAD_02 전술 채널 (CH 50212)로 재진입 완료
 ```
 
@@ -629,8 +630,8 @@ sequenceDiagram
     Note over P: 패드 IDLE 복귀 (status: FREE)
 
     Note over U,T: 기지 공역 경계 통과 후 Tower ATC (CH 50001)로 상향 핸드오버
-    U->>T: MSG_ATC_ENROUTE_CHECKIN (CH 50001)
-    T-->>U: MSG_ATC_ENROUTE_ACK (CH 50001) [순항 인가]
+    U->>T: MSG_ATC_ENROUTE_CHECKIN (CH 50001) [DEFERRED: TASK-108]
+    T-->>U: MSG_ATC_ENROUTE_ACK (CH 50001) [순항 인가] [DEFERRED: TASK-108]
 ```
 
 ---
@@ -690,7 +691,7 @@ $$J(P_i) = w_1 \cos(\psi_{wind} - \psi_{approach}(P_i)) - w_2 \frac{\|\vec{p}_{c
 | **패드 슬롯 만료** | 패드 접근 인가 후 $120\text{초}$ 동안 접지 미보고 | GAC / Pad | 패드 `GO_AROUND` 격리 후 GAC에 슬롯 만료 보고, 패드 `FREE` 리셋 |
 | **섹터 전 패드 만석** | 접근 요청 시 $\mathcal{P}_{valid} == \emptyset$ | GAC | 기체에 로컬 $+30\text{m}$ LOITER 지시, 15초 주기 재탐색, 10회 실패 시 Tower ATC 회항 이양 |
 | **동적 갑판 위험 요동** | $\theta_{deck\_fleet} > 10.0^\circ$ 또는 Heave $> 2.5\text{ m/s}$ | GAC | 전 접근 기체에 즉시 `MSG_ABORT_APPROACH` 발령, 대기 선회 지시 |
-| **광역 비상 기체 진입** | Tower ATC `MSG_ATC_EMERGENCY_ALERT` 수신 또는 `isEmergency == true` | GAC | 일반 접근 기체 전원 로컬 LOITER/복행 명령, 비상 기체에 최적 공용 패드 우선 징발. 관할 내 전 공용 패드 불가 시 최후의 수단으로 비어 있는 전용 패드 제한적 징발 |
+| **광역 비상 기체 진입** | Tower ATC `MSG_ATC_EMERGENCY_ALERT` `[DEFERRED: TASK-108]` 수신 또는 `isEmergency == true` | GAC | 일반 접근 기체 전원 로컬 LOITER/복행 명령, 비상 기체에 최적 공용 패드 우선 징발. 관할 내 전 공용 패드 불가 시 최후의 수단으로 비어 있는 전용 패드 제한적 징발 |
 
 ---
 

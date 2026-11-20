@@ -6,15 +6,15 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.3.0` |
-| **최종 수정일 (Date)** | `2026-11-19` |
+| **문서 버전 (Version)** | `v1.3.1` |
+| **최종 수정일 (Date)** | `2026-11-20` |
 | **구현 코드 (Source)** | `src/0_development/installer/` |
 | **주관 도메인 (Domain)** | 통합 코드베이스 배포 및 계층형 패키지 매니저 (`0_development/installer`) |
 
 > **연관 문서**:
-> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD v1.39.0)
-> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도 v2.22.0)
-> - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드 v0.1.0)
+> - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
+> - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 및 슬레이브 롤백 가드)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (GPS 규격서 §9 통합 인스톨러 연계)
 > - [GDRIVE_DEPLOYMENT_GUIDE.md](../../../guides/GDRIVE_DEPLOYMENT_GUIDE.md) (Google Drive 배포 운영 가이드)
 > - [GEMINI.md](../../../../GEMINI.md) (전역 프로젝트 컨텍스트 및 불변 규칙)
@@ -23,6 +23,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.3.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연관 문서` 목록의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v1.3.0` | `2026-11-19` | **`TASK-018` 루트 `/installer.lua` 단일 SSOT화 및 중복 제거 (`Implemented` $\to$ `Approved`)**: ① 저장소 루트 [installer.lua](../../../../installer.lua)가 부트스트랩 런타임과 `BOOTSTRAP_FILES` 7종 정의를 단독 소유하도록 일원화하고 구 `src/0_development/installer/installer.lua` 바이트 미러 및 `manifest.BOOTSTRAP_FILES` 중복 테이블을 `[DEPRECATED]` 폐기, ② §6 정적 검증 규칙을 이중 바이트 동등성(`INSTALLER_BYTE_PARITY_MISMATCH`)에서 루트 단일 원본 불변성으로 갱신, ③ 마스터 ICD(`v1.39.0`) 및 전체 구조도(`v2.22.0`) 동기화 | `TASK-016` 감사(`E-L2-04`) 후속 `installer.lua` / `BOOTSTRAP_FILES` 이중화 제거 (`R4` 적용) |
 | `v1.2.0` | `2026-11-15` | **`startup_generator.lua` 2단계 OTA 부팅 커밋 워치독 및 자가 복구 후크 사양 신설 (`Implemented` $\to$ `Approved`)**: ① 생성된 `/startup.lua` 후크 내부에 `/.ota_pending.json` (`maxBootAttempts = 1`) 기반 로드 오류(`BOOT_LOAD_ERROR`), 런타임 크래시(`BOOT_RUNTIME_CRASH`), 조기 재부팅 루프(`BOOT_WATCHDOG_TIMEOUT`) 감지 및 `/ota_backup/<txId>/` + `/.version.json` 자동 복원·`/.ota_rollback.json` 기록 로직 명세(외부 `require()` 비의존), ② 온보드 모듈(`vas`, `tca`, `fcp`, `amm`) 파일 매니페스트의 `/lib/ota_agent.lua` 동반 등록 및 연관 문서 배지(`ICD v1.32.0`, `Diagram v2.16.0`, `OTA v0.1.0`) 동기화 | `TASK-117-1` 무선 OTA 2단계 원자적 롤백 가드 지원 (`src/0_development/installer/` 구현 후 `Implemented` 재승격 예정) |
 | `v1.1.1` | 2026-11-14 | 연관 마스터 ICD(`v1.30.0`) 및 전체 구조도(`v2.15.0`) 버전 배지 동기화 (`Implemented` 유지, 코드 변경 없음) | Wave 1 전역 사양서 참조 배지 일괄 정합화 |

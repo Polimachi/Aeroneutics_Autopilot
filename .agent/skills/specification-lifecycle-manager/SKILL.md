@@ -64,7 +64,7 @@ Maintain strict consistency across the three active specification tiers in `Crea
 - **Active Scan Boundary**: Scan and synchronize ONLY `docs/system/*.md` and `docs/specs/**/*.md` whose top metadata table status is `Approved`, `Implemented`, or `Deprecated`. Specs marked with Status: `Draft` are completely excluded from SSOT cross-synchronization.
 - **Runtime-Impact In-Document Status Transition (`Implemented` → `Approved`)**:
   - Update a Tier 3 spec's metadata table from `Implemented` to `Approved` **ONLY WHEN** changes to its requirements, packet schemas, channels, FSM states, or control parameters require runtime code modifications in `src/`.
-  - Keep peer specs at Status: `Implemented` when they ONLY receive relative-link updates, typographical fixes, or cross-referenced version bumps with zero runtime code impact on that component.
+  - Keep active specs at Status: `Implemented` when they ONLY receive relative-link updates, typographical/doc-only fixes, or Master ICD `§5.1` version-summary alignment with zero runtime code impact on that component.
   - Whenever updating any specification, always update its **`최종 수정일 (Date)`** to the current date (`YYYY-MM-DD`).
 
 ### 2.3 Zero-Fallback & Explicit Deprecation Policy (`Sender-Immediate-Patch`)
@@ -95,10 +95,11 @@ Verify alignment across all modified and peer active specifications on all six d
      | **주관 도메인 (Domain)** | ... |
      ```
      - Valid Status values: `Draft` | `Approved` | `Implemented` | `Deprecated`.
-     - `Patch (+0.0.1)`: Cross-sync link/badge alignment, wording clarifications, typo fixes, or `[DEPRECATED]` badge formatting.
+     - `Patch (+0.0.1)`: Master ICD `§5.1` status-summary alignment, relative-link updates, wording clarifications, typo fixes, or `[DEPRECATED]` badge formatting.
      - `Minor (+0.1.0)`: New/renamed packets, added payload fields, FSM state additions, or non-breaking interface extensions.
      - `Major (+1.0.0)`: Breaking top-level envelope changes or fundamental architectural restructuring.
-   - **Conditional `Revision History` Table**: Add or append a `Revision History` table row (버전, 개정 일자, 개정 요약, 개정 사유) directly below the top metadata table **ONLY** on specs undergoing substantive functional/schema/parameter revisions (`Approved` transition targets). Do NOT add revision history rows to peer specs that only receive link or version-badge updates.
+   - **Single-SSOT Versioning & Peer-Badge Prohibition**: Each specification's authoritative version resides strictly in its own top metadata table and Master ICD `§5.1` (`docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md`). Inline peer version badges (e.g., `[PEER.md](...) (vX.Y.Z)` or `` `PEER.md` (`vX.Y.Z`) ``) are **prohibited** anywhere outside `### Revision History` and Master ICD `§5.1` (enforced by `tools/verify_all_specs.py` Rule 10).
+   - **Conditional `Revision History` Table**: Add or append a `Revision History` table row (버전, 개정 일자, 개정 요약, 개정 사유) directly below the top metadata table **ONLY** on specs undergoing direct functional/schema/parameter revisions (`Approved` transition targets) or direct doc-only edits to that spec. Peer specs only update relative links or schemas when actually affected by an interface change—do NOT edit unaffected peer specs or add `Revision History` / version-badge sync churn to them (only Master ICD `§5.1` updates the peer version summary row).
    - Verify all relative markdown links (`../../../system/...`, `../../<domain>/...`) and section anchors. Ensure zero broken links and zero stale lifecycle path segments (`approved/`, `implemented/`, `drafts/`, `archived/`).
 5. **FSM & Algorithmic Parameters**: Exact FSM state identifiers, state transition conditions, control loop frequencies (20Hz / 50ms), watchdog timeouts, filter coefficients, and safety thresholds.
 6. **Deprecation Hygiene**: Consistent `[DEPRECATED]` badges across Master ICD, diagrams, and active subsystem specs, with zero dual-key fallback logic.
@@ -128,11 +129,11 @@ flowchart TD
     Impact --> Scan["2. Scan docs/system/*.md & active docs/specs/**/*.md"]
     Scan --> Conflict{"3. Design Conflict?"}
     Conflict -- "Yes" --> StopConflict["HALT: Report Conflict Safety Gate"]
-    Conflict -- "No" --> Sync["4. Sync Active Specs & Transition Impacted Specs to Approved"]
-    Sync --> Meta["5. Update Metadata Table (Status, Version, Date) + Revision History"]
+    Conflict -- "No" --> Sync["4. Sync Directly Impacted Specs & ICD §5.1; Transition Code-Impacted Specs"]
+    Sync --> Meta["5. Update Metadata Table (Status, Version, Date) + Conditional Revision History"]
     Meta --> Report["6. Output Sync Summary & Spec-to-Code Impact Report"]
 ```
 
 Upon completing specification updates, always conclude with two structured summaries:
-1. **Specification Synchronization Summary**: Table listing every modified `.md` specification, Status (`Draft` / `Approved` / `Implemented` / `Deprecated`), version bump (`vOld -> vNew`), date (`YYYY-MM-DD`), and key synchronized items.
+1. **Specification Synchronization Summary**: Table listing every directly modified `.md` specification (unaffected peer specs are NOT edited; Master ICD `§5.1` receives peer version summary updates), Status (`Draft` / `Approved` / `Implemented` / `Deprecated`), version bump (`vOld -> vNew`), date (`YYYY-MM-DD`), and key synchronized items.
 2. **Spec-to-Code Impact Report**: Read-only inventory of production source files in `src/`, structs/interfaces, and sender/receiver handlers that will require updates (highlighting any `Sender-Immediate-Patch` targets created by newly `[DEPRECATED]` identifiers).
