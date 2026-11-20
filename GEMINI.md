@@ -3,7 +3,7 @@
 
 ## 1. Current Phase & Active Handover
 - **현재 단계**: **Phase 1 & 2** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드·프로토콜 계약/코드 정리 완료 후 후속 확장 진행 중 (활성·백로그 SSOT: `TASK.md`).
-- **직전 완료**: `TASK-019`(18사양서 피어 배지 `178->0`·Rule 10 가드·`VAS/AMM/FCP` 제자리 `Extract`·6메시지 드리프트 해소·`18대` 검증 확장; 2026-11-20), `TASK-017`·`018`(Zone 3 `30..39` 확장·계약/사문화 RX·필드 정합화·루트 `installer.lua` 단일 SSOT화·복제 분기 3건 및 미사용 함수 17/설정키 19 정리; 2026-11-19), `TASK-016`(제품 아키텍처 L1~L4 감사 및 `tools/audit/` 편입), `TASK-136`·`131`·`128`(컨트랩션 인터록·5단계 PBIT·GPS DR 가드). 이전 이력: `TASK.md` §3, `.agent/memory/workspace-root.md`.
+- **직전 완료**: `TASK-019`(사양 경량화·인라인 피어 버전 배지 폐지; 2026-11-20), `TASK-017`·`018`(프로토콜 계약 정합화·코드 복제/사문화 정리; 2026-11-19), `TASK-016`(L1~L4 아키텍처 감사·`tools/audit/`), `TASK-136`·`131`·`128`(인터록·PBIT·GPS DR 가드). 상세: `TASK.md` §3, `.agent/memory/workspace-root.md`.
 - **다음 액션**:
   1. `TASK-302` (1순위): Pocket PDA 원격 관제 단말.
   2. `TASK-140` / `TASK-015` (2순위): 저고도 착륙 감쇠·플레이북.
@@ -15,7 +15,7 @@
 - `GEMINI.md`: 작업 간 동적 컨텍스트 스냅샷 (4개 고정 섹션 덮어쓰기, **80줄 상한**).
 - `docs/system/` & `docs/specs/`: 마스터 ICD·전역 구조도 및 기능 도메인 단일 계층 사양서 (`docs/specs/<domain>/<subsystem>/`).
 - `docs/superpowers/{plans,specs}/`: 태스크별 실행 계획서 및 설계 청사진.
-- `installer.lua` & `src/`: 루트 `/installer.lua` 단일 부트스트랩 SSOT 및 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gac,gcs,docking_arm,landing_pad,runway}`, `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
+- `installer.lua` & `src/`: 루트 `/installer.lua` 단일 부트스트랩 SSOT 및 독립 완결형 멀티 Lua 코드베이스 (`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gac,gcs,landing_pad,runway}` + `docking_arm` 플레이스홀더(TASK-104 연기), `1_control/{vas,tca,asa}`, `2_guidance/fcp`, `3_planning/amm`, `4_mission/`).
 - `config/protocol_contracts.json`: 활성 사양서·코드베이스·E2E 패킷 교차 검증용 기계 판독형 SSOT 와이어 프로토콜 계약 명세.
 - `harness/` & `tests/`: CraftOS-PC 헤드리스 기반 단위/통합 테스트 하네스(`harness/{unit,simulation}/`) 및 테스트 슈트(`tests/{0_development,0_infra,1_control,2_guidance,3_planning,e2e,harness}/`).
 - `tools/`: 개발·검증 CLI (`run_unit_tests.py`, `run_e2e_tests.py`, `run_boot_smoke.py`, `verify_contracts.py`, `verify_runtime_wiring.py`, `run_mutation_tests.py`, `analyze_flight_log.py`, `gcs_live_bridge.py`, `sync_gdrive.py`, `validate_lua_syntax.py`, `verify_all_specs.py`, `verify_spec_status.py`, `verify_manifest_sync.py`, `verify_context_docs.py`, `audit/`) 및 WebUI 에디터(`amm_mission_editor.html`, `v0.6.1 Implemented`).
