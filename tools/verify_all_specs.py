@@ -64,7 +64,7 @@ _ICD_REGISTRY_EXIT_RE = re.compile(r'^#{2,3}(?:\s|$)')
 _DEPRECATED_TAG_RE = re.compile(r'\[DEPRECATED[^\]]*\]', re.IGNORECASE)
 _PEER_MD_LINK_RE = re.compile(r'\[[^\]]+\]\([^)]*\.md(?:#[^)]*)?\)')
 _PEER_MD_BACKTICK_RE = re.compile(r'`[A-Za-z0-9_./-]+\.md`')
-_SEMVER_BADGE_RE = re.compile(r'\bv\d+\.\d+\.\d+\b')
+_SEMVER_BADGE_RE = re.compile(r'(?<![A-Za-z0-9_])v\d+\.\d+\.\d+(?![A-Za-z0-9_])')
 
 
 def find_inline_peer_version_badges(content: str, rel_path: str) -> list[tuple[int, str]]:

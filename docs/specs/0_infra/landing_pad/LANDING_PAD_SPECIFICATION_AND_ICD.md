@@ -493,7 +493,7 @@ sequenceDiagram
     Note over GAC: 다속성 최적 패드 분배 알고리즘 J(P_i) 실행 -> PAD_BRAVO_01 낙점
     GAC->>P: MSG_ATC_SLOT_ASSIGN (CH 50202)<br/>[facilityId: PAD_BRAVO_01, aircraftId: AIRCRAFT_01, slotSec: 120]
     P-->>GAC: MSG_ATC_SLOT_ACK (CH 50202) [ACCEPTED, tacticalChannel: 50211]
-    GAC->>A: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[facilityId: PAD_BRAVO_01, tacticalChannel: 50211, mobility: DYNAMIC]
+    GAC->>A: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[facilityId: PAD_BRAVO_01, assignedTacticalChannel: 50211, mobility: DYNAMIC]
 
     Note over A,P: 3단계: 전술 채널 (CH 50211) 핸드오버 및 정밀 착륙
     alt 정적 패드 (STATIC)

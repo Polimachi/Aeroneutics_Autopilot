@@ -493,7 +493,7 @@ stateDiagram-v2
 
 `FCP` 와이어 스키마 상세 필드·예시는 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) §3)를 단일 SSOT로 참조합니다. 전 패킷은 공통 엔벨로프(`ver = "1.9.5"`, `domainId`, `seq`, `type`, `time`, `payload`) 및 `Zero-Fallback`(이중 키 폴백 금지, 송신 노드 즉시 패치)을 준수하며, 단일 `top` 모뎀으로 비행 4채널(`Base+4`, `Base+2`, `Base+1`, `Base+9`)과 `[I-13]` OTA 채널($Base_{\text{hangar}}+4/+5$)만 개방합니다.
 
-### 8.1 FCP 와이어 인터페이스 매트릭스 (§8.1~§8.3)
+### 8.1 FCP 와이어 인터페이스 매트릭스
 
 | 인터페이스 | 채널 | 방향 / 주기 | 정본 패킷 (`MSG_*`) | 폐기 식별자 (`[DEPRECATED]`) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -523,7 +523,7 @@ stateDiagram-v2
 | `[I-6]` C2·MFD (`[DEPRECATED]`) | `Base+0` `MSG_OPERATOR_CMD`, `Base+3` `MSG_MFD_STATE` | `AMM` 전담 (`FCP`는 `Base+4` `[I-12]`만 소비) |
 | `[I-7]` 외부 GPS (`[DEPRECATED]`) | `CH 60001`(구 `30004`), `Base+5` `MSG_GPS_REQUEST`, `MSG_GPS_RESPONSE` | `AMM` `nav_engine` 전담 (`Base+4` 전달) |
 | `[I-8]`/`[I-9]` 프로브 (`[DEPRECATED]`) | `CH 50000` `MSG_BLOCK_REQUEST`, `MSG_BLOCK_ASSIGN`, `Base+0` `MSG_CHANNEL_PROBE` / `MSG_CHANNEL_PROBE_ACK` | `AMM` `channel_sentinel` 이관 (구 `MSG_REBIND_ACK` `[DEPRECATED]`) |
-| `[I-10]` ASA 직결 (`[DEPRECATED]`) | `Base+7 [DEPRECATED]` (`MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, `MSG_SURFACE_DISCOVER_REQ`, `MSG_SURFACE_DISCOVER_ACK`), `Base+6 [DEPRECATED]` | [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) `Base+10`/`+11` 이관 (`FCP`는 `flapTarget`만 전달) |
+| `[I-10]` ASA 직결 (`[DEPRECATED]`) | `Base+7 [DEPRECATED]` (`MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, 구 `MSG_AERO_DISCOVER_*`), `Base+6 [DEPRECATED]` | [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) `Base+10`/`+11` 이관 (`MSG_SURFACE_DISCOVER_REQ`/`MSG_SURFACE_DISCOVER_ACK`는 현행 `Base+11` 사용; 구 `MSG_AERO_DISCOVER_*` 폐기; `FCP`는 `flapTarget`만 전달) |
 | `[I-2]` 구 `ATTITUDE_CMD` (`[DEPRECATED]`) | `"ATTITUDE_ANGLE"`, `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave` `[DEPRECATED]` | `QUATERNION_RATE` 단일 채택 (Zero-Fallback) |
 
 ---

@@ -216,7 +216,7 @@ AMM은 기체 전용 40채널 블록(Zone 1/3)과 외부 인프라 대역을 모
 ([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) §3)를 단일 SSOT로 참조합니다.
 전 패킷은 공통 엔벨로프(`ver = "1.9.5"`, `domainId`, `seq`, `type`, `time`, `payload`) 및 `Zero-Fallback`(이중 키 폴백 금지, 송신 노드 즉시 패치) 원칙을 준수합니다.
 
-### 4.1 AMM 와이어 인터페이스 매트릭스 (`§4.1`~`§4.7`)
+### 4.1 AMM 와이어 인터페이스 매트릭스
 
 | 인터페이스 | 채널 | 방향 / 주기 | 정본 패킷 (`MSG_*`) | 폐기 식별자 (`[DEPRECATED]`) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -241,7 +241,7 @@ AMM은 기체 전용 40채널 블록(Zone 1/3)과 외부 인프라 대역을 모
 - **`[I-4]`/`[I-2]` PBIT 인터록 (`R2`) 및 `Base+8`/`Base+9`**: `Base+8` `MSG_PBIT_REQ` 송출 후 `Base+2`/`Base+8` `MSG_PBIT_REPORT`에서 `overallStatus == "FAIL"`·`checks[*].status == "FAIL"` 또는 `takeoffPermitted == false`이면 `ACT_TKL_*` 이륙을 `PBIT_TAKEOFF_INTERLOCK`으로 차단합니다(`overallStatus == "WARN"`은 허용). `E_STOP`(`authKey = "ESTOP_CONFIRM_KEY"`) 및 `MSG_EMERGENCY_ALERT`는 `Base+9`에 직결합니다.
 - **`[I-5]` `DIVERT` 자동 전환 (`R3`) 및 전술 유도**: `CH 50003` `MSG_FACILITY_BEACON.facilitiesSummary`/`facilities[]` 및 `CH 50004`를 상시 색인하고, `MSG_GAC_APPROACH_CLEARANCE` `status == "DIVERT"` + `divertChannel` 수신 시 `gacChannel`을 전환합니다. $Base_{\text{sec}}+10+\text{Idx}$(`MSG_FACILITY_STATIC_GUIDE`/`DYNAMIC_GUIDE`) 소비 및 `MSG_TOUCHDOWN_COMPLETE`·`MSG_RUNWAY_TOUCHDOWN`·`MSG_RUNWAY_VACATED` 송출을 수행합니다.
 - **`[I-6]` `Base+3` 5Hz 양보 (`300ms`)**: 평시 5Hz `MSG_MFD_STATE`를 송출하되 `activeSource == "MFD_ACRO"` 또는 `controlState` `"FAILSAFE_HOLD"`/`"EMERGENCY_LAND"`/`"AIRBORNE_RECOVERY_HOLD"` 시 즉시 양보하며, `"FCP"` 복귀 후 `acroRecoveryHoldMs = 300ms` 유지 뒤 재개합니다.
-- **`[I-7]`/`[I-8]`/`[I-9]` GPS 위상 분산·DR·부트스트랩·재바인딩**: `nav_engine`은 `offsetMs = (computerId % slots) * 50` 위상 분산으로 `CH 60001` `MSG_GPS_REQUEST`(`altitudeY` 주입, `replyChannel = Base+5`)를 송출하고, 상보 필터($\alpha = 0.35$/$\le 0.10$)·기구학 게이트($8.0\text{m}$, 3연속 스냅)·`5,000ms` 타임아웃·`MSG_NAV_QUALITY`(`consecutiveFailures >= 3` 시 `"LOST"`)로 DR 경계를 제어합니다. `channel_sentinel`은 `CH 50000`(`channel_lease.json`, `2,000ms`, `[NO_GCS_LEASE]`/`LOCKED_NO_GCS`), `Base+0` 개방·`0~100ms` 지터·`2×200ms` 프로브(`existingDomain`/`responderStatus`/`reassignedFrom`, `3`회 초과 시 `LOCKED_CONFLICT`), `Base+0..39` `30s` 감시 및 `Base+4` `MSG_CHANNEL_REBIND`(`500ms`)를 실행합니다.
+- **`[I-7]`/`[I-8]`/`[I-9]` GPS 위상 분산·DR·부트스트랩·재바인딩**: `nav_engine`은 `offsetMs = (computerId % slots) * 50` 위상 분산으로 `CH 60001` `MSG_GPS_REQUEST`(`altitudeY` 주입, `replyChannel = Base+5`)를 송출하고, 상보 필터($\alpha = 0.35$/$\le 0.10$)·기구학 게이트($8.0\text{m}$, 3연속 스냅)·`5,000ms` 타임아웃·`MSG_NAV_QUALITY`(`consecutiveFailures >= 3` 시 `"LOST"`)로 DR 경계를 제어합니다. `channel_sentinel`은 `CH 50000`(`channel_lease.json`, `2,000ms`, `[NO_GCS_LEASE]`/`LOCKED_NO_GCS`), `Base+0` 개방·`0~100ms` 지터·`2×200ms` 프로브(`existingDomain`/`responderStatus`/`reassignedFrom`, `3`회 이상 충돌(`>= 3`) 시 `LOCKED_CONFLICT`), `Base+0..39` `30s` 감시 및 `Base+4` `MSG_CHANNEL_REBIND`(`500ms`)를 실행합니다.
 
 ---
 
@@ -720,7 +720,7 @@ CC:Tweaked 인게임 51x19 터미널의 제한된 해상도 밖에서 사용자�
 | **연료/배터리 복합 비상 (`Base+2`)** | **<= 20% / <= 10%** | `nav_engine` / `c2_arbiter` | `fuel <= 0.20` 시 `FAILSAFE_RTH` 자동 강제 전환(ATC 거절 대기 중 포함); `fuel <= 0.10` 시 `EMERGENCY_LAND` ($-2.0\text{ m/s}$ 정속 강하) 전환 |
 | **FCP 외루프 상태 (`Base+4`, `[I-12]`)** | **500ms** (`fcpStatusTimeoutMs`) | `network_manager` / `c2_arbiter` | TUI 17행 및 GCS로 `FCP_STATUS_TIMEOUT` 경보, 미션 시퀀서 `SUSPENDED` 보호, 하위 `FCP`(`AMM_TIMEOUT_HOLD`) 및 `VAS`(`FCP_TIMEOUT` 1,500ms) 격리 감시 |
 | **VAS 비행 텔레메트리 (`Base+2`, `[I-1]`)** | **500ms** (`vasTelemetryTimeoutMs`) | `nav_engine` / `network_manager` | DR 적분 정지(`navValid = false`), TUI/GCS `VAS_TELEMETRY_TIMEOUT` 경보 표출 및 미션 시퀀서 `SUSPENDED` |
-| **GCS 부트스트랩 (`50000`) & 충돌 프로브 (`Base+0`)** | **2,000ms** / **200ms × 2회** | `channel_sentinel` | `CH 50000` `preferredBase` 재검증 및 `config/channel_lease.json` 저장; `2,000ms` 무응답 시 로컬 리스+프로브 통과 기체는 `[NO_GCS_LEASE]` 경고로 허용, 미보유 시 `LOCKED_NO_GCS`; 프로브 충돌(`Base+0`) 시 `conflictBase` 재할당(`maxReassignAttempts = 3`) 후 `3`회 초과 시 `LOCKED_CONFLICT` (`Base+4` `arm = false` 고정) |
+| **GCS 부트스트랩 (`50000`) & 충돌 프로브 (`Base+0`)** | **2,000ms** / **200ms × 2회** | `channel_sentinel` | `CH 50000` `preferredBase` 재검증 및 `config/channel_lease.json` 저장; `2,000ms` 무응답 시 로컬 리스+프로브 통과 기체는 `[NO_GCS_LEASE]` 경고로 허용, 미보유 시 `LOCKED_NO_GCS`; 프로브 충돌(`Base+0`) 시 `conflictBase` 재할당(`maxReassignAttempts = 3`) 기준 `3`회 이상 충돌(`>= 3`) 시 `LOCKED_CONFLICT` (`Base+4` `arm = false` 고정) |
 | **비행 중 블록 침범 감시 (`Base+0..39`)** | **30,000ms** (`intrusionAlertWindowMs`) | `channel_sentinel` / `network_manager` | Zone 1~3 전 블록(`Base+0..39`)에서 미등록 타 기체 `domainId` 유입 시 즉시 드롭·GCS 경고 및 30초 지속 시 `HOVER_HOLD` 또는 `RTH` 트리거 |
 | **공중 콜드부트 복구 (`/.flight_state.json`)** | 부팅 즉시 / **5,000ms** (`syncTimeoutMs`) | `main.lua` / `mission_engine` / `c2_arbiter` | `armedState == "AIRBORNE_ACTIVE"` 또는 `VAS` `controlState == "AIRBORNE_RECOVERY_HOLD"` 감지 시 `recovery.coldBootPolicy`에 따라 `RESUME`(`currentCpIdx` 재개) 또는 `RTB`(`homePadId`/`homePos` 귀환) 개시 및 `Base+4` `arm=true, flightActive=true` 인계 |
 

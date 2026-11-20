@@ -33,7 +33,7 @@
 - **Lua E2E 시뮬레이션 테스트**: `python tools/run_e2e_tests.py --clean-orphans [--profile <out.json> --check-baseline]` (10개 스위트 23/23 PASS, 566패킷 계약 0 violations).
 - **아키텍처 감사·가드**: `python -m tools.audit {registry|static|dupes|specs|split|guard|all}` (`guard`: 루트 `installer.lua` 단일 SSOT·복제본 차단 Fail, 신규 `>46KB`·미소비 필드 Warn; `config/audit_baselines.json`).
 - **돌연변이 살상 테스트**: `python tools/run_mutation_tests.py` (25/25 KILLED, 100.0% 살상률, 기준 90.0%).
-- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (168/168 PASS).
+- **하네스 자체 회귀**: `python -m unittest discover -s tests/harness -p "test_*.py"` (169/169 PASS).
 - **컨텍스트 문서 정합성**: `python tools/verify_context_docs.py` (0 findings, 규칙 R1~R9).
 - **사양서·문법·매니페스트 정적 검사**: `python tools/verify_manifest_sync.py --strict-gdrive-packages` (0 Errors, 0 Warnings; 135 GDrive 엔트리), `python tools/verify_all_specs.py --check-readmes` (18대 사양서 0 Errors, 0 Warnings), `python tools/validate_lua_syntax.py` (139 파일), `python tools/verify_spec_status.py` (18종 14 Implemented, 4 Approved PASS), `python -m unittest tests/3_planning/amm/test_amm_mission_editor.py` (30/30 PASS).
 - **GDrive 배포 & Live Bridge**: `python tools/sync_gdrive.py {stage|sync|status|verify}` (`sync --dry-run` 선행), `python tools/gcs_live_bridge.py --port 8765 [--lan]`.

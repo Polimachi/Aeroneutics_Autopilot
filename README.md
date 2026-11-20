@@ -89,7 +89,7 @@ Create_Aeroneutics/
 │   └── harness/                           # 하네스 엔진·러너 Python 단위 테스트
 │
 ├── tools/                                 # 개발·검증 CLI 도구
-│   ├── amm_mission_editor.html            # 호스트 PC WebUI 미션 에디터 (`v0.6.0 Implemented`, LAN Live·Inspection 지원)
+│   ├── amm_mission_editor.html            # 호스트 PC WebUI 미션 에디터 (`v0.6.1 Implemented`, LAN Live·Inspection 지원)
 │   ├── analyze_flight_log.py              # FDR JSONL 오프라인 분석·튜닝 CLI
 │   ├── gcs_live_bridge.py                 # localhost/LAN(`--lan`) RFC 6455 GCS ↔ WebUI 실시간 WebSocket 브리지
 │   ├── run_boot_smoke.py                  # 전체 활성 서브시스템 부트 스모크 및 채널·예외 검증기

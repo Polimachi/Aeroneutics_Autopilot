@@ -396,7 +396,7 @@ sequenceDiagram
     Note over R,L: 접근 활성화 등화 제어
     R->>L: 유선 모뎀 신호 인가 (top: PAPI_ON, east: HOLD_SHORT_ON)
     
-    G->>A: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: RWY_09L, tacticalChannel: 50220]
+    G->>A: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: RWY_09L, assignedTacticalChannel: 50220]
 
     Note over A,R: 전술 채널 (CH 50220) 핸드오버
     alt 동적 비행갑판 (DYNAMIC)

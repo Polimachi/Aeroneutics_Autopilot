@@ -82,6 +82,16 @@ class TestRule10InlinePeerVersionBadges(unittest.TestCase):
         )
         self.assertEqual([line_no for line_no, _ in findings], [1, 2])
 
+    def test_flags_semver_adjacent_to_hangul_particles(self) -> None:
+        link_findings = vas.find_inline_peer_version_badges(
+            "[VAS.md](VAS.md) v1.26.1에서", "x.md"
+        )
+        self.assertEqual(len(link_findings), 1)
+        prose_findings = vas.find_inline_peer_version_badges(
+            "`VAS.md` v1.26.1의", "x.md"
+        )
+        self.assertEqual(len(prose_findings), 1)
+
     def test_ignores_revision_history_table_and_resumes_immediately_after_table(self) -> None:
         content = (
             "### Revision History\n"

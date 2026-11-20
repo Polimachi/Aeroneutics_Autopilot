@@ -568,7 +568,7 @@ sequenceDiagram
     Note over G: 다속성 알고리즘 실행 -> PAD_01 낙점
     G->>P: MSG_ATC_SLOT_ASSIGN (CH 50202 로컬 백본)<br/>[aircraftId: AIRCRAFT_01, slotSec: 120]
     P-->>G: MSG_ATC_SLOT_ACK (CH 50202) [ACCEPTED, tacticalChannel: 50211]
-    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_01, tacticalChannel: 50211]
+    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_01, assignedTacticalChannel: 50211]
 
     Note over U,P: 전술 채널 (CH 50211) 핸드오버
     loop 20Hz 동역학 스트리밍 (AMM 궤적 생성 -> Base+4 FCP 추종)
@@ -603,7 +603,7 @@ sequenceDiagram
     Note over G: 로컬 LOITER 지시 및 대체 패드 탐색 -> PAD_02 선정
     G->>P2: MSG_ATC_SLOT_ASSIGN (CH 50202) [aircraftId: AIRCRAFT_01, slotSec: 120]
     P2-->>G: MSG_ATC_SLOT_ACK (CH 50202) [ACCEPTED, tacticalChannel: 50212]
-    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_02, tacticalChannel: 50212]
+    G->>U: MSG_GAC_APPROACH_CLEARANCE (CH 50201)<br/>[assignedFacilityId: PAD_02, assignedTacticalChannel: 50212]
     Note over U,P2: PAD_02 전술 채널 (CH 50212)로 재진입 완료
 ```
 

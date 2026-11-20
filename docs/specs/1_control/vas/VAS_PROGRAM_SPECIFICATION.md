@@ -355,7 +355,7 @@ flowchart TD
   function core_daemon.run(configDir) -> daemonStateTable
   function core_daemon.shutdown(state, reason) -> nil
   ```
-- **실행 파이프라인 (`src/1_control/vas/modules/core_daemon.lua`)**: `core_daemon.tick(state)`는 `step_kinematics`(0-tick 센서 수집·레버암·20틱 재연결·워치독) $\to$ `step_actuation`(선점 중재·L2A·TCA/ASA 통합 포화 비트맵 `satCombined` 합성·L1·L2B·L3 기종별 ASA 분기·출력 마스킹) $\to$ 20Hz 브로드캐스트(`Base+10` `MSG_THRUST_CMD`, 공력 기종 `Base+11` `MSG_AERO_CMD`, `Base+2`/`+3` `telemetry_feeder.tick`) 순서로 1틱을 완결합니다(상세 흐름은 §4 참조).
+- **실행 파이프라인 (`src/1_control/vas/modules/core_daemon.lua`)**: `core_daemon.tick(state)`는 `step_kinematics`(0-tick 센서 수집·레버암·컨트랩션 해제/재조립 `verify_and_rebind_topology`·`20`틱 재연결·`step_gps_dr`·워치독) $\to$ `step_actuation`(선점 중재 $\to$ L2A $\to$ L1[직전 틱 `saturationStatus` 피드백 항와인드업] $\to$ L2B $\to$ L3[TCA + 공력 기종 `ASA` 분기] $\to$ `combSat` 합성 및 `apply_gimbal_saturation` 짐벌 포화 마스킹 $\to$ 출력 마스킹) $\to$ 20Hz 브로드캐스트(`Base+10` `MSG_THRUST_CMD`, 공력 기종 `Base+11` `MSG_AERO_CMD`, `Base+2`/`+3` `telemetry_feeder.tick`) $\to$ `tick_boot_commit` 순서로 1틱을 완결합니다(상세 흐름은 §4 참조).
 
 ### 5.2 모듈 2: `sensor_pipeline` (센서 수집, 3D 레버암 기하 보정 및 쿼터니언 합성)
 - **역할**: 하단 유선 모뎀망의 센서 4종을 전역 공용 표준 라이브러리 `/lib/avionics_sensors.lua` (`require("avionics_sensors")`) 기반으로 0-tick 논블로킹 수집하고, 3D 레버암 기하 보정, 단위 쿼터니언 합성 및 5종 유효성 플래그 헬스 평가를 완결합니다.
@@ -743,19 +743,19 @@ stateDiagram-v2
 
 `VAS` 와이어 스키마 상세 필드·예시는 마스터 ICD([AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) §3)를 단일 SSOT로 참조합니다. 전 패킷은 공통 엔벨로프(`ver = "1.9.5"`, `domainId`, `seq`, `type`, `time`, `payload`) 및 `Zero-Fallback`(이중 키 폴백 금지, 송신 노드 즉시 패치) 원칙을 따릅니다.
 
-### 8.1 VAS 와이어 인터페이스 매트릭스 (`§8.1`~`§8.10`)
+### 8.1 VAS 와이어 인터페이스 매트릭스
 
-| 절 / 인터페이스 | 채널 | 방향 / 주기 | 정본 패킷 (`MSG_*`) | 폐기 식별자 (`[DEPRECATED]`) |
+| 인터페이스 | 채널 | 방향 / 주기 | 정본 패킷 (`MSG_*`) | 폐기 식별자 (`[DEPRECATED]`) |
 | :--- | :--- | :--- | :--- | :--- |
-| §8.1 `[I-1]` 텔레메트리·PBIT | `Base+2` ($Base_{\text{hangar}}+1$) / `Base+8` | `VAS -> FCP, AMM, Alignment` (20Hz / 응답) | `MSG_FLIGHT_TELEMETRY`, `MSG_PBIT_REPORT` | — |
-| §8.2 `[I-2]` 유도 지령 | `Base+1` (`CH_FLIGHT_GUIDANCE`) | `FCP / MFD -> VAS` (20Hz) | `MSG_ATTITUDE_CMD` (`QUATERNION_RATE` \| `RATE_COMMAND`) | `"ATTITUDE_ANGLE"`, `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave` `[DEPRECATED]` |
-| §8.8 `[I-2]` 비상 정지 | `Base+9` (`CH_EMERGENCY_CORE`) | `AMM/MFD/GCS <-> VAS` (이벤트) | `MSG_EMERGENCY_OVERRIDE` (`E_STOP`), `MSG_EMERGENCY_ALERT` | 구 `Base+1` 직결, `descentRate`, `targetOrientation` `[DEPRECATED]` |
-| §8.3·§8.6 `[I-3]` 추진기 | `Base+10` (`CH_THRUST_ACTUATION`) | `VAS <-> TCA` (20Hz / 이벤트 / 시동 / PBIT) | `MSG_THRUST_CMD`, `MSG_ACTUATOR_STATUS`, `MSG_ACTUATOR_DISCOVER_REQ`, `MSG_ACTUATOR_DISCOVER_ACK`, `MSG_CALIB_PULSE` | `Base+6`, `mode` (`interactionMode` 단일화) `[DEPRECATED]` |
-| §8.4·§8.6 `[I-10]` 공력면 | `Base+11` (`CH_SURFACE_ACTUATION`) | `VAS <-> ASA` (`FIXED_WING`/`WINGED_VTOL`, 20Hz / 이벤트 / 시동) | `MSG_AERO_CMD`, `MSG_AERO_STATUS`, `MSG_SURFACE_DISCOVER_REQ`, `MSG_SURFACE_DISCOVER_ACK` | `Base+7`, `MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, `MSG_AERO_DISCOVER_REQ`, `MSG_AERO_DISCOVER_ACK`, `mode`, `appliedDeg` `[DEPRECATED]` |
-| §8.5·§8.9 `[I-4]` 교정·PBIT | `Base+8`, `Base+1`, `Base+2`, `Base+10`/`+11`, $Base_{\text{hangar}}+0/+1/+3$ | `Alignment / AMM <-> VAS (-> TCA/ASA)` (이벤트) | `MSG_CALIBRATION_INIT`, `MSG_CALIBRATION_INIT_ACK`, `MSG_CALIB_BAY_BIND`, `MSG_CALIB_START`, `MSG_PROFILE_SYNC`, `MSG_PBIT_REQ`, `MSG_PBIT_REPORT`, `MSG_CALIB_ACK`, `MSG_CALIBRATION_CLOSE`, `MSG_CALIBRATION_CLOSE_ACK` | `Base+0` 직결, `1001`, `1002`, `Base+4`/`Base+2` 구 교정 채널, `Base+6/7`, `currentFsmState` `[DEPRECATED]` |
-| §8.7 `[I-6]` MFD 피드 | `Base+3` (`CH_MFD_STATE`) | `VAS -> MFD` (ACRO 20Hz / 비상·복구 5Hz) | `MSG_MFD_STATE` | — |
-| `[I-7]` 항법 품질 | `Base+5` / `Base+2` / `CH 60002` | `GPS / AMM -> VAS` (이벤트/주기) | `MSG_NAV_QUALITY` | — |
-| §8.10 `[I-9]` 채널 재바인딩 | `Base+1` -> `Base+10`/`+11` | `FCP <-> VAS <-> TCA/ASA` (`Option A` 2PC) | `MSG_CHANNEL_REBIND`, `MSG_CHANNEL_REBIND_ACK` | `MSG_REBIND_ACK`, `phase`, `oldBase`, `newBase`, `switchTimeoutMs`, `Base+6/7` `[DEPRECATED]` |
+| `[I-1]` 텔레메트리·PBIT | `Base+2` ($Base_{\text{hangar}}+1$) / `Base+8` | `VAS -> FCP, AMM, Alignment` (20Hz / 응답) | `MSG_FLIGHT_TELEMETRY`, `MSG_PBIT_REPORT` | — |
+| `[I-2]` 유도 지령 | `Base+1` (`CH_FLIGHT_GUIDANCE`) | `FCP / MFD -> VAS` (20Hz) | `MSG_ATTITUDE_CMD` (`QUATERNION_RATE` \| `RATE_COMMAND`) | `"ATTITUDE_ANGLE"`, `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave` `[DEPRECATED]` |
+| `[I-2]` 비상 정지 | `Base+9` (`CH_EMERGENCY_CORE`) | `AMM/MFD/GCS <-> VAS` (이벤트) | `MSG_EMERGENCY_OVERRIDE` (`E_STOP`), `MSG_EMERGENCY_ALERT` | 구 `Base+1` 직결, `descentRate`, `targetOrientation` `[DEPRECATED]` |
+| `[I-3]` 추진기 | `Base+10` (`CH_THRUST_ACTUATION`) | `VAS <-> TCA` (20Hz / 이벤트 / 시동 / PBIT) | `MSG_THRUST_CMD`, `MSG_ACTUATOR_STATUS`, `MSG_ACTUATOR_DISCOVER_REQ`, `MSG_ACTUATOR_DISCOVER_ACK`, `MSG_CALIB_PULSE` | `Base+6`, `mode` (`interactionMode` 단일화) `[DEPRECATED]` |
+| `[I-10]` 공력면 | `Base+11` (`CH_SURFACE_ACTUATION`) | `VAS <-> ASA` (`FIXED_WING`/`WINGED_VTOL`, 20Hz / 이벤트 / 시동) | `MSG_AERO_CMD`, `MSG_AERO_STATUS`, `MSG_SURFACE_DISCOVER_REQ`, `MSG_SURFACE_DISCOVER_ACK` | `Base+7`, `MSG_SURFACE_CMD`, `MSG_SURFACE_STATUS`, `MSG_AERO_DISCOVER_REQ`, `MSG_AERO_DISCOVER_ACK`, `mode`, `appliedDeg` `[DEPRECATED]` |
+| `[I-4]` 교정·PBIT | `Base+8`, `Base+1`, `Base+2`, `Base+10`/`+11`, $Base_{\text{hangar}}+0/+1/+3$ | `Alignment / AMM <-> VAS (-> TCA/ASA)` (이벤트) | `MSG_CALIBRATION_INIT`, `MSG_CALIBRATION_INIT_ACK`, `MSG_CALIB_BAY_BIND`, `MSG_CALIB_START`, `MSG_PROFILE_SYNC`, `MSG_PBIT_REQ`, `MSG_PBIT_REPORT`, `MSG_CALIB_ACK`, `MSG_CALIBRATION_CLOSE`, `MSG_CALIBRATION_CLOSE_ACK` | `Base+0` 직결, `1001`, `1002`, `Base+4`/`Base+2` 구 교정 채널, `Base+6/7`, `currentFsmState` `[DEPRECATED]` |
+| `[I-6]` MFD 피드 | `Base+3` (`CH_MFD_STATE`) | `VAS -> MFD` (ACRO 20Hz / 비상·복구 5Hz) | `MSG_MFD_STATE` | — |
+| `[I-7]` 항법 품질 | `Base+5`/`CH 60002` (상위 `AMM`), `Base+1` (`FCP` 유도 폴백) | `GPS -> AMM` (`VAS` RF 미직수신; `Base+1/8/9/10/11`만 개방) | `MSG_NAV_QUALITY` (상위 `AMM` 소비; `VAS`는 로컬 `step_gps_dr` 및 `FCP` `Base+1` `HOLD_LEVEL` `1,500ms` 폴백 처리, §8.2) | — |
+| `[I-9]` 채널 재바인딩 | `Base+1` -> `Base+10`/`+11` | `FCP <-> VAS <-> TCA/ASA` (`Option A` 2PC) | `MSG_CHANNEL_REBIND`, `MSG_CHANNEL_REBIND_ACK` | `MSG_REBIND_ACK`, `phase`, `oldBase`, `newBase`, `switchTimeoutMs`, `Base+6/7` `[DEPRECATED]` |
 | `[I-13]` 무선 OTA | $Base_{\text{hangar}}+4/+5$ (`105`/`106`) | `OTA Server <-> VAS` (이벤트) | `MSG_OTA_DISCOVER_REQ`, `MSG_OTA_DISCOVER_ACK`, `MSG_OTA_BEGIN`, `MSG_OTA_CHUNK`, `MSG_OTA_COMMIT`, `MSG_OTA_ABORT`, `MSG_OTA_REBOOT`, `MSG_OTA_ACK`, `MSG_OTA_NACK`, `MSG_OTA_BOOT_STATUS` | — |
 
 ### 8.2 VAS 전용 런타임·계약 규칙 (VAS-Specific Runtime Rules)
@@ -764,7 +764,7 @@ stateDiagram-v2
 - **`[I-2]`/`[I-6]` 선점 중재 및 `Base+3` 인계**: `E_STOP` (`Base+9`, `authKey = "ESTOP_CONFIRM_KEY"`) > `MFD_ACRO` (`Base+1` `RATE_COMMAND`, `acroActive = true`) > `FCP` (`Base+1` `QUATERNION_RATE`, `FCP_TIMEOUT = 1,500ms`) 순으로 선점합니다. `MFD_ACRO` 활성 시 `activeSource = "MFD_ACRO"` 통보(`FCP` `PASSIVE_TRACKING`, `AMM` `Base+3` 양보) 후 `VAS`가 `Base+3` `MSG_MFD_STATE` 20Hz를 직접 인계하며 `acroTimeoutMs = 250ms` 초과 시 `"FCP"`로 복귀합니다. `AIRBORNE_RECOVERY_HOLD`·`FAILSAFE_HOLD`·`EMERGENCY_LAND`에서는 `VAS`가 `Base+3` 5Hz 폴백 HUD를 점유합니다.
 - **`[I-3]`/`[I-10]` 구동계 다형성·게이팅**: `ADVANCED_VTOL`은 `MSG_THRUST_CMD` `outputs[groupId] = { thrust, gimbalX, gimbalY }`를 사용하며 `ASA`(`Base+11`)는 `FIXED_WING`·`WINGED_VTOL` 전용입니다. `MSG_ACTUATOR_STATUS`/`MSG_AERO_STATUS`는 `interactionMode` 단일 파싱 및 `isSaturated`/`gimbalSaturated` 안티와인드업 역피드백을 수행합니다.
 - **`[I-4]` 교정 바인딩·검증·롤백 (`R2`/`R3`)**: `VAS`는 `Base+0`을 미개방하고 `Base+8` `MSG_CALIBRATION_INIT`으로만 개시하며 `targetCraftDomain` 일치 검증 및 `targetThruster` 보존(`MSG_CALIB_START` 추적), `Base+10`/`+11` `MSG_CALIB_BAY_BIND`(`OPEN`/`CLOSE`), $Base_{\text{hangar}}+0/+1/+3$ 동적 개폐(`120s` 타임아웃)를 수행합니다. `MSG_PROFILE_SYNC` 적용 전 스냅샷 백업 후 `controllabilityStatus`가 `"FULL_6DOF_PASS"` 또는 `"AERO_ASSISTED_PASS"`일 때만 `"ACCEPTED"`(그 외 `"REJECTED"`)를 회신합니다. `MSG_CALIBRATION_CLOSE(saveProfile=false)` 시 백업 복원 후 `DISARMED`로 복귀하며(정상 저장 시 `IDLE_ARMED`), `MSG_CALIBRATION_CLOSE_ACK`는 `{ bayId, status = "CLOSED" }`만 송출합니다.
-- **`[I-4]`/`[I-7]` PBIT·토폴로지·DR 가드**: `evaluate_pbit` 5단계(`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`)는 `MSG_PBIT_REQ`(`Base+8`/`Base+1`)에 응답해 `MSG_CALIB_PULSE`(`pbitWiggle = true`, `pulseRatio <= 0.04`) 후 `Base+2`/`Base+8`로 `MSG_PBIT_REPORT`를 회신합니다. `peripheralManifest` >5% 질량·수량 불일치 시 `recalibrationRequired`를 래치하며 `MSG_NAV_QUALITY` 두절 1,500ms 초과 시 `HOLD_LEVEL`로 전환합니다(§11.3).
+- **`[I-4]`/`[I-7]` PBIT·토폴로지·DR 가드**: `evaluate_pbit` 5단계(`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`)는 `MSG_PBIT_REQ`(`Base+8`/`Base+1`)에 응답해 `MSG_CALIB_PULSE`(`pbitWiggle = true`, `pulseRatio <= 0.04`) 후 `Base+2`/`Base+8`로 `MSG_PBIT_REPORT`를 회신합니다. `peripheralManifest` >5% 질량·수량 불일치 시 `recalibrationRequired`를 래치하며 로컬 `step_gps_dr`·`FCP` `Base+1` 폴백 기반 1,500ms 초과 시 `HOLD_LEVEL`로 전환합니다(§11.3).
 - **`[I-9]` 채널 재바인딩 (`Option A`, `500ms`)**: `Base+1` `MSG_CHANNEL_REBIND` (`transactionId`, `action`, `oldBaseChannel`, `newBaseChannel`, `bandwidth = 40`)를 `Base+10`/`+11`로 전파하고 `subNodesReady` (`{ tap, asa }`)를 취합해 `Base_old+1`로 `MSG_CHANNEL_REBIND_ACK` (`status = "READY" | "COMMITTED" | "ROLLED_BACK" | "FAILED"`)를 회신하며 `500ms` 초과 시 롤백합니다.
 - **`[I-13]` 무선 OTA 게이트**: `Base_hangar+4`/`+5`에서 `DISARMED`/`BOOT`/`IDLE_ARMED` & `isAirborne ~= true`일 때만 허용(`MSG_OTA_NACK` `NOT_DISARMED`), 부팅 후 `tick_boot_commit()` `20`틱 유지 시 커밋합니다(§11.2).
 
@@ -1046,7 +1046,7 @@ src/1_control/vas/
      5) `channelConflict`: 채널 충돌·침범 상태 점검
 
 3. **GPS DR 홀드오버 및 `HOLD_LEVEL` 가드 (`TASK-128`, `[I-7]` `MSG_NAV_QUALITY`)**:
-   - `MSG_NAV_QUALITY` (`navQuality = "GOOD" | "DEGRADED" | "POOR" | "LOST"`) 및 GPS 두절 경과 시간을 추적합니다.
+   - 상위 `AMM` `MSG_NAV_QUALITY`·로컬 `step_gps_dr`(`navQuality = "GOOD" | "DEGRADED" | "POOR" | "LOST"`) 및 `FCP` `Base+1` 폴백으로 GPS 두절 경과 시간을 추적합니다.
    - 두절 `<= 1,500ms` 동안은 속도 적분 DR 홀드오버로 급격한 자세 변동을 억제하며, 두절 `> 1,500ms` 지속 시 `HOLD_LEVEL` (`navHoldLevel = true`) 수평 자세·고도 유지 모드로 자동 전환합니다. 청크 경계 GPS 스파이크는 스냅 없이 완만히 보간합니다.
 
 ---
