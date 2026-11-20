@@ -98,7 +98,7 @@ Create_Aeroneutics/
 │   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
 │   ├── sync_gdrive.py                     # GDrive 스테이징·동기화·검증 CLI
 │   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
-│   ├── verify_all_specs.py                # 17대 사양서 전수 무결성 검증기
+│   ├── verify_all_specs.py                # 18대 사양서 전수 무결성 검증기
 │   ├── verify_context_docs.py             # 루트 컨텍스트 문서 드리프트 정적 검사기 (R1~R9)
 │   ├── verify_contracts.py                # 사양서-코드 계층 간 와이어·채널·스키마 SSOT 계약 검증기
 │   ├── verify_manifest_sync.py            # manifest.lua·GDrive 맵·src/ 3자 정합성 검증기
@@ -182,7 +182,7 @@ python -m unittest discover -s tests/harness -p "test_*.py"
 ```
 
 ### 5. 사양서 전수 무결성 검증
-17대 활성 사양서(`AMM_MISSION_EDITOR_SPECIFICATION.md` 제외 — 에디터는 `test_amm_mission_editor.py`로 검증)의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지 및 40채널 수식을 검사합니다:
+18대 활성 사양서 전수의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지, 인라인 피어 버전 배지 금지 및 40채널 수식을 검사합니다:
 ```bash
 python tools/verify_all_specs.py
 ```

@@ -31,6 +31,7 @@ SPEC_FILES = [
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
     'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
     'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
+    'docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md',
 ]
 
 REVISION_HISTORY_SPECS = [
@@ -41,6 +42,7 @@ REVISION_HISTORY_SPECS = [
     'docs/specs/1_control/asa/ASA_PROGRAM_SPECIFICATION.md',
     'docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md',
     'docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md',
+    'docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md',
     'docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md',
     'docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md',
@@ -54,6 +56,62 @@ REVISION_HISTORY_SPECS = [
 ]
 
 VALID_STATUSES = ['Draft', 'Approved', 'Implemented', 'Deprecated']
+
+_MASTER_ICD_REL_PATH = 'docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md'
+_REV_HISTORY_HEADING_RE = re.compile(r'^###\s+Revision History\b')
+_ICD_REGISTRY_HEADING_RE = re.compile(r'^###\s+5\.1\b')
+_ICD_REGISTRY_EXIT_RE = re.compile(r'^#{2,3}(?:\s|$)')
+_DEPRECATED_TAG_RE = re.compile(r'\[DEPRECATED[^\]]*\]', re.IGNORECASE)
+_PEER_MD_LINK_RE = re.compile(r'\[[^\]]+\]\([^)]*\.md(?:#[^)]*)?\)')
+_PEER_MD_BACKTICK_RE = re.compile(r'`[A-Za-z0-9_./-]+\.md`')
+_SEMVER_BADGE_RE = re.compile(r'\bv\d+\.\d+\.\d+\b')
+
+
+def find_inline_peer_version_badges(content: str, rel_path: str) -> list[tuple[int, str]]:
+    """Return (line_no, stripped_line) pairs violating Rule 10 (inline peer version badges)."""
+    norm_path = rel_path.replace("\\", "/")
+    is_master_icd = norm_path == _MASTER_ICD_REL_PATH
+
+    violations: list[tuple[int, str]] = []
+    in_rev = False
+    rev_saw_table = False
+    in_icd_registry = False
+
+    for line_no, raw_line in enumerate(content.splitlines(), 1):
+        stripped = raw_line.strip()
+
+        if _REV_HISTORY_HEADING_RE.match(stripped):
+            in_rev = True
+            rev_saw_table = False
+            in_icd_registry = False
+            continue
+
+        if in_rev:
+            if stripped.startswith("|"):
+                rev_saw_table = True
+                continue
+            if (rev_saw_table and stripped) or stripped.startswith("---") or stripped.startswith("##"):
+                in_rev = False
+                rev_saw_table = False
+            else:
+                continue
+
+        if is_master_icd:
+            if _ICD_REGISTRY_HEADING_RE.match(stripped):
+                in_icd_registry = True
+                continue
+            if in_icd_registry:
+                if _ICD_REGISTRY_EXIT_RE.match(stripped) or stripped.startswith("---"):
+                    in_icd_registry = False
+                else:
+                    continue
+
+        cleaned = _DEPRECATED_TAG_RE.sub("", raw_line)
+        has_peer_ref = bool(_PEER_MD_LINK_RE.search(cleaned) or _PEER_MD_BACKTICK_RE.search(cleaned))
+        if has_peer_ref and _SEMVER_BADGE_RE.search(cleaned):
+            violations.append((line_no, stripped))
+
+    return violations
 
 
 def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
@@ -253,6 +311,16 @@ def verify_all(repo_root: Path, check_readmes: bool = False) -> int:
             total_errors += len(term_violations)
         else:
             print(f"   [PASS] Legacy terminology hygiene clean (zero legacy terminology)")
+
+        # 10. Rule 10: Inline peer version badge ban
+        peer_badges = find_inline_peer_version_badges(content, rel_path)
+        if peer_badges:
+            print(f"   [FAIL] [Rule 10: Inline peer version badge] Found {len(peer_badges)} inline peer version badge(s) in {rel_path}:")
+            for lno, text in peer_badges:
+                print(f"      {rel_path}:L{lno}: {text[:80]}")
+            total_errors += len(peer_badges)
+        else:
+            print(f"   [PASS] Inline peer version badge ban clean (Rule 10)")
 
         print("")
 
