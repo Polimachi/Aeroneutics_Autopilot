@@ -6,7 +6,7 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드(`TASK-136`·`131`·`128`)·아키텍처 감사(`TASK-016`)·프로토콜/코드 정리(`TASK-017`·`018`)·사양 경량화(`TASK-019`) 완료. 다음 1순위는 `TASK-302`(Pocket PDA 원격 관제 단말), 2순위는 `TASK-140`·`TASK-015`입니다 (사양서 버전 SSOT: 각 사양서 헤더 및 마스터 ICD §5.1, 활성 백로그: [TASK.md](TASK.md), 최신 검증 수치: [GEMINI.md](GEMINI.md) §3, 이전 이력: `.agent/memory/workspace-root.md`).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드(`TASK-136`·`131`·`128`)·아키텍처 감사(`TASK-016`)·프로토콜/코드 정리(`TASK-017`·`018`)·사양 경량화(`TASK-019`)·전 계층 통합 플레이북 체계(`TASK-015`) 완료. 다음 1순위는 `TASK-302`(Pocket PDA 원격 관제 단말), 2순위는 `TASK-140`입니다 (사양서 버전 SSOT: 각 사양서 헤더 및 마스터 ICD §5.1, 활성 백로그: [TASK.md](TASK.md), 최신 검증 수치: [GEMINI.md](GEMINI.md) §3, 이전 이력: `.agent/memory/workspace-root.md`).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
   - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `FDR`(`TASK-120`), 무선 `OTA`(`TASK-117`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
@@ -103,8 +103,17 @@ Create_Aeroneutics/
 │   ├── verify_context_docs.py             # 루트 컨텍스트 문서 드리프트 정적 검사기 (R1~R9)
 │   ├── verify_contracts.py                # 사양서-코드 계층 간 와이어·채널·스키마 SSOT 계약 검증기
 │   ├── verify_manifest_sync.py            # manifest.lua·GDrive 맵·src/ 3자 정합성 검증기
+│   ├── verify_playbooks.py                # 인게임 운용 플레이북 15종 구조·링크·인가 검증기
 │   ├── verify_runtime_wiring.py           # 런타임 엔트리·채널·디스패치 미배선 정적/동적 검사기
 │   └── verify_spec_status.py              # 사양서 상태 분포 검증기
+│
+├── playbook/                              # 전 계층 인게임 실전 운용 매뉴얼 (15종 + README)
+│   ├── README.md                          # 플레이북 표준 7대 섹션 템플릿 및 전체 인덱스
+│   ├── 0_development/                     # 개발·교정·배포·센서 (alignment, fdr, installer, ota, sensors)
+│   ├── 0_infra/                           # 지상 관제 및 비행장 인프라 (gps, gcs, gac, landing_pad, runway)
+│   ├── 1_control/                         # 온보드 비행 제어 (vas, tca)
+│   ├── 2_guidance/                        # 외루프 비행 유도 (fcp)
+│   └── 3_planning/                        # 임무 관리 및 WebUI 에디터 (amm, amm_mission_editor)
 │
 ├── reports/                               # 정적 분석 및 리팩토링 검토 보고서
 │   ├── underReview/                       # 검토 진행 중 보고서
@@ -146,11 +155,11 @@ $$\text{Base} = 10000 + (N - 1) \times 40 \quad (N: \text{기체 블록 번호, 
 ### 0. 전체 파이프라인 통합 일괄 검증 (One-Liner)
 Windows PowerShell 5.1 (`&&` 미지원):
 ```powershell
-python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/run_boot_smoke.py --clean-orphans }; if ($?) { python -m unittest discover -s tests/harness -p "test_*.py" }; if ($?) { python -m unittest tests/3_planning/amm/test_amm_mission_editor.py }; if ($?) { python tools/verify_contracts.py }; if ($?) { python tools/verify_runtime_wiring.py }; if ($?) { python tools/verify_manifest_sync.py --strict-gdrive-packages }; if ($?) { python tools/verify_all_specs.py --check-readmes }; if ($?) { python tools/verify_spec_status.py }; if ($?) { python tools/verify_context_docs.py }; if ($?) { python tools/validate_lua_syntax.py }; if ($?) { python -m tools.audit guard }
+python tools/run_unit_tests.py --require-tests --clean-orphans; if ($?) { python tools/run_e2e_tests.py --clean-orphans }; if ($?) { python tools/run_boot_smoke.py --clean-orphans }; if ($?) { python -m unittest discover -s tests/harness -p "test_*.py" }; if ($?) { python -m unittest tests/3_planning/amm/test_amm_mission_editor.py }; if ($?) { python tools/verify_contracts.py }; if ($?) { python tools/verify_runtime_wiring.py }; if ($?) { python tools/verify_manifest_sync.py --strict-gdrive-packages }; if ($?) { python tools/verify_all_specs.py --check-readmes }; if ($?) { python tools/verify_spec_status.py }; if ($?) { python tools/verify_playbooks.py }; if ($?) { python tools/verify_context_docs.py }; if ($?) { python tools/validate_lua_syntax.py }; if ($?) { python -m tools.audit guard }
 ```
 bash / PowerShell 7+:
 ```bash
-python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/run_boot_smoke.py --clean-orphans && python -m unittest discover -s tests/harness -p "test_*.py" && python -m unittest tests/3_planning/amm/test_amm_mission_editor.py && python tools/verify_contracts.py && python tools/verify_runtime_wiring.py && python tools/verify_manifest_sync.py --strict-gdrive-packages && python tools/verify_all_specs.py --check-readmes && python tools/verify_spec_status.py && python tools/verify_context_docs.py && python tools/validate_lua_syntax.py && python -m tools.audit guard
+python tools/run_unit_tests.py --require-tests --clean-orphans && python tools/run_e2e_tests.py --clean-orphans && python tools/run_boot_smoke.py --clean-orphans && python -m unittest discover -s tests/harness -p "test_*.py" && python -m unittest tests/3_planning/amm/test_amm_mission_editor.py && python tools/verify_contracts.py && python tools/verify_runtime_wiring.py && python tools/verify_manifest_sync.py --strict-gdrive-packages && python tools/verify_all_specs.py --check-readmes && python tools/verify_spec_status.py && python tools/verify_playbooks.py && python tools/verify_context_docs.py && python tools/validate_lua_syntax.py && python -m tools.audit guard
 ```
 
 ### 1. Lua 멀티 코드베이스 단위 테스트 실행
@@ -238,6 +247,12 @@ CC:Tweaked 컴퓨터에서 아래 3가지 경로 중 하나로 통합 인스톨�
 - **플로피 디스크**: `/disk/installer.lua`
 - **원격 다운로드**: `wget run <url>`
 - 상세 규격: [INSTALLER_PROGRAM_SPECIFICATION.md](docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md)
+
+### 13. 통합 인게임 플레이북 무결성 검증
+`playbook/` 내 15종 인가 플레이북 및 `playbook/README.md`의 7대 고정 섹션, 상대 링크, 미인가 파일 차단, Rule 10 준수 여부를 정적 검사합니다:
+```bash
+python tools/verify_playbooks.py
+```
 
 ---
 

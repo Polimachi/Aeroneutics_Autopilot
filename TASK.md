@@ -2,7 +2,7 @@
 
 > **문서 상태**: 활성 (Living Roadmap)  
 > **최종 갱신일**: 2026-11-20  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-019, TASK-018, TASK-017, TASK-016, TASK-128, TASK-131, TASK-136, TASK-406, TASK-405, TASK-130 / 활성 대기: TASK-302, 140, 015, 020, 021, 135, 214, 105, 210, 132, 129)
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-015, TASK-019, TASK-018, TASK-017, TASK-016, TASK-128, TASK-131, TASK-136, TASK-406, TASK-405 / 활성 대기: TASK-302, 140, 020, 021, 135, 214, 105, 210, 132, 129)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) → **2순위** `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) · `TASK-015` (전 계층 모듈·신규 프로그램 통합 플레이북 체계) → **3순위** `TASK-020` (`46KB` 초과 Lua 3종 분할/추출) · `TASK-021` (지상 3종 20Hz TUI 분리·클로저 팩토리 분해) · `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
+> **권장 실행 우선순위**: **1순위** `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) → **2순위** `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) → **3순위** `TASK-020` (`46KB` 초과 Lua 3종 분할/추출) · `TASK-021` (지상 3종 20Hz TUI 분리·클로저 팩토리 분해) · `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
 - [ ] **TASK-302: [1순위 / 현장 운용 HMI] CC:Tweaked 포켓 컴퓨터(Pocket PDA) 휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말** (`src/0_infra/pocket_pda/`)
   - **권장 착수 순위**: **1순위** (선행 `TASK-125`·`TASK-120` 완료 — 40채널 분리 규격 및 FDR 동적 바인딩·원격 덤프 트리거 연동 가능)
   - **사양서 상태**: 미작성 (`docs/specs/0_infra/pocket_pda/`에 `Draft` 신규 작성 필요)
@@ -45,18 +45,6 @@
     - [ ] **TASK-140-1**: `VAS` · `FCP` · `AMM` 사양서 개정 — `AGL_Estimator` 센서 융합 가중치, 음/양 양방향 `GROUND_EFFECT_COMP` 보상 곡선, 최종 플레어 침하율 및 개선된 터치다운 프로토콜 단계별 전이 규격 정의
     - [ ] **TASK-140-2**: `VAS` 저고도 상보 고도 필터·양방향 지면 효과 추력 보상 모듈(`src/1_control/vas/agl_flare_controller.lua`) 및 `FCP`/`AMM` 터치다운 프로토콜 시퀀스 개선 구현
     - [ ] **TASK-140-3**: 정밀 착륙 시나리오(음/양 지면 효과 외란 포함) 접지 위치·수직 속도 정밀도 및 바운싱 0회 검증 단위·E2E 테스트 통과 후 사양서 `Implemented` 승격
-
-- [ ] **TASK-015: [2순위 / 운용 매뉴얼] 전 계층 코드베이스·신규 추가 모듈/프로그램 통합 플레이북 체계 구축 (`TASK-010` + `TASK-011` 통합 확장)** (`playbook/README.md`, `tools/verify_playbooks.py`, `playbook/0_development/{alignment,fdr,installer,ota,sensors}.md`, `playbook/0_infra/{gps,gcs,gac,landing_pad,runway}.md`, `playbook/1_control/{vas,tca}.md`, `playbook/2_guidance/fcp.md`, `playbook/3_planning/{amm,amm_mission_editor}.md`)
-  - **권장 착수 순위**: **2순위** (`TASK-302` Pocket PDA 반영 후 일괄 마감)
-  - **기존 계획서 참조**: `docs/superpowers/plans/2026-11-08-task-010-playbook-framework.md` (기존 `TASK-010`·`TASK-011`을 단일 과제 `TASK-015`로 통합하고, 이후 추가된 `installer`·`ota`·`sensors`·`runway`·`gcs_live_bridge` 등 신규 모듈·프로그램까지 포함하도록 확장)
-  - **배경 및 목적**: 기존 `TASK-010`(핵심 5종: `GPS`, `VAS`, `TCA`, `FCP`, `AMM`)과 `TASK-011`(2차 확장 6종: `Alignment`, `GCS`, `GAC`, `Landing Pad`, `Mission Editor`, `FDR`/분석기)으로 이원화되어 있던 플레이북 과제를 단일 체계로 통합하고, 이후 구현 완료·추가된 신규 모듈 및 프로그램(`installer`, `ota` 무선 배포·2단계 부트 워치독, `sensors` 공용 센서 라이브러리, `runway` 활주로 제어기 `TASK-103`, `TASK-403`/`404` 에디터 World Preset·`tools/gcs_live_bridge.py` 등)까지 누락 없이 인게임 실전 운용 매뉴얼로 구축함.
-  - **주요 작업**:
-    - [ ] **TASK-015-1**: 플레이북 프레임워크 및 정적 검증 도구 구축 (`tools/verify_playbooks.py`, `playbook/README.md`) — 표준 7대 섹션 템플릿, 전체 인가 파일 목록(활성 13+ 서브시스템 + 공용 센서 + 에디터/브리지/분석기 + `TASK-302` Pocket PDA 등 확장 슬롯), 미인가 파일 생성 차단 및 링크/섹션 정적 검증기 구현
-    - [ ] **TASK-015-2**: 개발·배포·진단 도메인 플레이북 작성 (`playbook/0_development/{alignment,fdr,installer,ota,sensors}.md`) — 격납고 동역학 캘리브레이션(`Alignment`), 지상 블랙박스 `FDR`·다중 디스크 VFS·`tools/analyze_flight_log.py` 오프라인 프로파일러(`TASK-120`), 통합 인스톨러(`installer.lua`·`manifest.lua`·GitHub/GDrive 이중 배포), 무선 OTA 서버·`/lib/ota_agent.lua`·2단계 부트 워치독 롤백(`TASK-117`), `avionics_sensors` 공용 센서 부착·배선 가이드 작성
-    - [ ] **TASK-015-3**: 인프라 도메인 플레이북 작성 (`playbook/0_infra/{gps,gcs,gac,landing_pad,runway}.md`) — GPS 위성군 구축(`GPS`), 중앙 지상 관제소 및 Live Bridge 연동(`GCS` + `TASK-404` `tools/gcs_live_bridge.py` GAC/시설물 자동 수집), 섹터 관제·전용 패드/징발(`GAC`), 착륙패드(`Landing Pad`), 활주로 제어기(`Runway`, `TASK-103`) 운용 매뉴얼 작성 (`TASK-302` `pocket_pda` 구현 반영 시 `pocket_pda.md` 연동)
-    - [ ] **TASK-015-4**: 온보드 제어·유도 도메인 플레이북 작성 (`playbook/1_control/{vas,tca}.md`, `playbook/2_guidance/fcp.md`) — `VAS`(`QUATERNION_RATE`·`Base+3` `MFD_ACRO`·`system.json`·`telemetryDiag`·`TASK-125` 채널 개편(비상·교정 채널 분리)), `TCA`(짐벌/벡터 추력기·진단), `FCP`(3채널 순수 `SE(3)` 외루프) 실전 세팅·튜닝 매뉴얼 작성
-    - [ ] **TASK-015-5**: 임무 계획·WebUI 에디터 플레이북 작성 (`playbook/3_planning/{amm,amm_mission_editor}.md`) — `AMM`(듀얼 모뎀·`nav_engine`·`trajectory_generator`·`ACT_*`/`DEC_*`/`MAC_*` 3계층 시퀀서·`chattering_guard`·`ACT_TKL_LAND_NEAREST`) 및 오프라인 WebUI 에디터(`tools/amm_mission_editor.html`, `TASK-403` World Preset·`TASK-404` Live Mode/원클릭 무선 푸시 포함) 양방향 워크플로우 작성
-    - [ ] **TASK-015-6**: 프로젝트 규칙·컨텍스트 동기화 및 전수 검증 — `playbook/README.md` 인덱스·`tools/verify_playbooks.py` 전수 PASS, `tests/harness/test_tools_integrity.py` 도구 등록 및 `verify_context_docs.py` 통과 확인
 
 - [ ] **TASK-135: [3순위 / 온보드 런타임 격리] AMM 임무 계층(4_mission) 샌드박스 격리 및 무응답(Yield) 워치독 가드** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
   - **권장 착수 순위**: **3순위** (Phase 2 `4_mission` 임무 패키지 도입 전 필수 런타임 보호 게이트 — 2순위→3순위 조정)
@@ -176,6 +164,10 @@
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
 
+- [x] **TASK-015: 전 계층 코드베이스·신규 추가 모듈/프로그램 통합 플레이북 체계 구축 (`TASK-015-1..6`)** (완료일: 2026-11-20)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-20-task-015-unified-playbook-suite.md`
+  - **결과**: `playbook/README.md` 및 15종 인게임 운용 매뉴얼(`0_development/{alignment,fdr,installer,ota,sensors}`, `0_infra/{gps,gcs,gac,landing_pad,runway}`, `1_control/{vas,tca}`, `2_guidance/fcp`, `3_planning/{amm,amm_mission_editor}`) 구축, `tools/verify_playbooks.py` + `tests/harness/test_verify_playbooks.py` (`8/8 PASS`) 및 `test_tools_integrity.py` 등록, `README.md`·`GEMINI.md`·`skill-workflows.md` 동기화; `src/**`·`docs/specs/**`·`config/*.json` `0 diff` 유지.
+
 - [x] **TASK-019: 사양 경량화·인라인 피어 버전 배지 폐지·18종 검증 보완 (`TASK-019-1..2`)** (완료일: 2026-11-20)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-20-task-019-spec-lightweighting-and-sync-cost.md`
   - **결과**: 18종 사양서 인라인 피어 버전 배지 `178 → 0`(버전 SSOT = 사양서 헤더 + 마스터 ICD `§5.1`), `verify_all_specs.py` 18종 확장·`Rule 10` 가드, `VAS`·`AMM`·`FCP` 제자리 `Extract`(5종 합계 `-110,317 B`), `Implemented` 사양 6메시지 드리프트 해소; 전 18종 `+0.0.1`(`14 Implemented, 4 Approved`), 단위 `656/656`·E2E `23/23`·부트 `13/13`·하네스 `169/169` PASS.
@@ -211,6 +203,3 @@
 - [x] **TASK-405: AMM Mission Editor `Connect Live` LAN 사설 IP 접속 및 서버 URL 입력 지원 (`TASK-405-1..3`)** (완료일: 2026-11-18)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-18-task-405-406-amm-editor-live-lan-and-inspection.md`
   - **결과**: `gcs_live_bridge.py --lan`(`0.0.0.0`), WebUI `LiveBridge.isAllowedLocalUrl`(루프백·RFC 1918·`*.local` 허용, 공인 IP/`wss://` 차단)·URL 입력 영속화; `AMM_MISSION_EDITOR v0.6.0`·`GCS v1.4.0` 승격, 에디터 `30/30`·브리지 `4/4` PASS.
-
-- [x] **TASK-130: 서버 재시작·청크 언로드 대응 공중 콜드부트 복구 (`TASK-130-1..4`)** (완료일: 2026-11-18)
-  - **결과**: `VAS` `/.flight_state.json` 원자적 스냅샷·`AIRBORNE_RECOVERY_HOLD`, `FCP` 조기 disarm 억제·2.0초 bumpless 핸드오프, `AMM` `RESUME`/`RTB` 복구 정책·체크포인트; `VAS v1.24.0`·`FCP v2.4.0`·`AMM v2.5.0` 승격, 단위 `613/613`·E2E `21/21` PASS, 돌연변이 `25/25 KILLED`.

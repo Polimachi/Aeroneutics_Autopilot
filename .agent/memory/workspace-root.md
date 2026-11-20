@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-20 — 전 계층 통합 운용 플레이북 체계(15종) 및 정적 검증기 구축 (TASK-015)
+
+- **배경 및 통합 설계**: 기존 `TASK-010`(핵심 5종)과 `TASK-011`(2차 확장 6종)을 통합하고, 이후 구축된 신규 프로그램·기능(`installer` 이중 소스, `ota` 2단계 롤백, `sensors` 공용 래퍼, `runway`, `gcs_live_bridge`, `analyze_flight_log`, WebUI World Preset/LAN Live/Inspection)을 모두 포괄하는 인게임 실전 운용 매뉴얼 체계를 구축함(`src/**`·`docs/specs/**`·`docs/system/**`·`config/*.json` `0 diff` 유지, 실행 계획서: `docs/superpowers/plans/2026-11-20-task-015-unified-playbook-suite.md`).
+- **플레이북 프레임워크 및 정적 검증기 (`TASK-015-1`)**:
+  - `tests/harness/test_verify_playbooks.py`(TDD `8/8 PASS`) 및 `tools/verify_playbooks.py` 구현: 15종 `REQUIRED_PLAYBOOKS`와 4종 `RESERVED_EXPANSION_SLOTS`(`pocket_pda.md` `TASK-302`, `asa.md` `TASK-105`/`210`, `docking_arm.md` `TASK-104`, `tower_atc.md` `TASK-108`) 분리, 표준 7대 섹션(`## 1.` ~ `## 7.`) 순서 검사, 상대 링크, `check_overclaim`, Rule 10 인라인 버전 배지 금지, 금지 모드 토큰 검사, `--allow-reserved`/`--json` 옵션 지원.
+  - `playbook/README.md`: 표준 7대 섹션 템플릿, 5단계 인게임 구축 순서, 15종 인덱스 및 예약 확장 슬롯 안내 작성.
+- **전 계층 15종 플레이북 작성 (`TASK-015-2..5`)**:
+  - `playbook/0_development/`: `alignment.md`(OLS·토폴로지 해시·베이 `101..104`), `fdr.md`(수신 전용 다중 디스크 VFS·`tools/analyze_flight_log.py` `--json/--csv/--emit-profile`), `installer.md`(3대 설치 경로·GitHub/GDrive·`sync_gdrive.py`), `ota.md`(`Base_hangar+4/+5`·`is_safe_for_ota`·2단계 부트 롤백), `sensors.md`(4종 센서·유선 모뎀 활성화·`read_vector3`·1틱 병렬 `assembler.read`).
+  - `playbook/0_infra/`: `gps.md`(4기+ 비공면 배치·`60001..60004`·`MSG_NAV_QUALITY`), `gcs.md`(`CH 50000` 부트스트랩·`60003` 60s TTL·`gcs_live_bridge.py --lan`), `gac.md`(`Base_sec`·전용 패드·`EMERGENCY_REQUISITION`·3탭 TUI), `landing_pad.md`(`STATIC`/`DYNAMIC`·`tilt <= 10.0°`/`|vy| <= 2.5`), `runway.md`(`touchdownOffset`/`endOffset`·유선 `redstone_integrator_0`·`lighting_controller`).
+  - `playbook/1_control/` & `2_guidance/`: `vas.md`(헤드리스·5단계 PBIT·조립 인터록·콜드부트 `AIRBORNE_RECOVERY_HOLD`·1.5s DR), `tca.md`(`REDSTONE`/`API`·`300ms` 워치독·`tca_setup.lua`·PBIT 위글), `fcp.md`(3+1 채널 격리·5대 기종 드라이버·2.0s bumpless).
+  - `playbook/3_planning/`: `amm.md`(듀얼 모뎀·3계층 시퀀서·`NAV`/`CLI` 명령·`PBIT_TAKEOFF_INTERLOCK`), `amm_mission_editor.md`(무설치 단일 HTML·`LiveBridge.isAllowedLocalUrl`·광역 줌·`Inspection`·37종 활성 `ACT_*`).
+- **규칙·도구·컨텍스트 동기화 (`TASK-015-6`)**: `tests/harness/test_tools_integrity.py`에 `verify_playbooks.py` 등록 및 실행 테스트 추가, `README.md` 트리·명령어 동기화, `.agent/rules/skill-workflows.md`에 `playbook/**` 검증 규칙 반영, `TASK.md` 아카이브 정리(10건 상한 유지), `GEMINI.md` 갱신.
+- **검증**: `verify_playbooks.py` `15 playbooks & README (0 Errors, 0 Warnings)`, `tests/harness` `178/178 PASS`, `test_amm_mission_editor.py` `30/30 PASS`, `verify_context_docs.py` `0 findings`, `verify_contracts.py` `0 errors`, `verify_runtime_wiring.py` `0 violations (4 exemptions)`, `verify_manifest_sync.py --strict-gdrive-packages` `0 Errors, 0 Warnings`, `verify_all_specs.py --check-readmes` `18 specs / 8 READMEs (0 Errors, 0 Warnings)`, `verify_spec_status.py` `18 specs (14 Implemented, 4 Approved) PASS`, `validate_lua_syntax.py` `139/139 PASS`, `audit guard` `PASS (errors=0, warnings=0)`, `run_boot_smoke.py` `13/13 PASS`, `run_unit_tests.py` `15 targets / 656/656 PASS`, `run_e2e_tests.py` `10 suites / 23/23 PASS (566 packets 0 violations)`.
+
 ## 2026-11-20 — 사양 경량화·인라인 피어 버전 배지 폐지·18종 검증 확장 (TASK-019)
 
 - **배경 및 확정 설계 결정(`R1~R5`)**: `TASK-016` 감사(`Architecture_Efficiency_Audit_1_11182026.md`)에서 도출된 `TASK-019`를 격리 워크트리(`.worktrees/feat-task-019-spec-hygiene`, `feat/task-019-spec-hygiene`)에서 실행 계획서(`docs/superpowers/plans/2026-11-20-task-019-spec-lightweighting-and-sync-cost.md`)에 따라 수행함 (`src/**`·Lua 단위/E2E 테스트·`config/*.json`·`tools/amm_mission_editor.html` `0 diff` 유지):

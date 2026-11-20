@@ -18,7 +18,7 @@ description: 작업 단계별 스킬 발동·오발동 차단 게이트 및 파�
   - `domain-aeronautics.md`(금지 모드 체크)만 참조. 구현 승인 전까지 `specification-lifecycle-manager`, `test-driven-development`, `lua`, `computercraft-lua`, `code-simplifier`, `pr-review-toolkit`, `verification-before-completion`, `md-management` **호출 금지** (`/plan`·`walkthrough` 아티팩트 작성 시에도 `specification-lifecycle-manager` 비발동).
 - **문서 유형별 관할 스킬 분리 (Markdown & Config Dispatch)**:
   - **활성 사양서·ICD 편집 및 명시적 감사** (`docs/system/*.md`, 활성 `docs/specs/**/*.md` — Status: `Draft` 및 `README.md` 제외): `specification-lifecycle-manager` **단독 호출** (`md-management`, `writing-changelogs`, `test-driven-development`, `lua`, `computercraft-lua` 호출 금지; 사양서 내 실행 코드 작성 금지).
-  - **초안 사양서, 분석 보고서 및 일반 설정·메타 문서 편집** (Status: `Draft` 사양서, `docs/specs/README.md`, `reports/**`, `.agent/**` — `.agent/memory/*.md` 제외, 루트/하위 `README.md`, `.json`, `.gitignore`): `specification-lifecycle-manager`, `md-management`, `test-driven-development`, `lua`, `computercraft-lua` **호출 금지**.
+  - **초안 사양서, 분석 보고서, 운용 플레이북 및 일반 설정·메타 문서 편집** (Status: `Draft` 사양서, `docs/specs/README.md`, `playbook/**`, `reports/**`, `.agent/**` — `.agent/memory/*.md` 제외, 루트/하위 `README.md`, `.json`, `.gitignore`): `specification-lifecycle-manager`, `md-management`, `test-driven-development`, `lua`, `computercraft-lua` **호출 금지** (`playbook/**` 변경 시 `python tools/verify_playbooks.py` 실행으로 7대 섹션·링크·인가 목록 무결성 확인).
   - **프로젝트 컨텍스트·메모리 관리** (`AGENTS.md`, `GEMINI.md`, `.agent/memory/*.md`): `TASK-ID` 완료, 마일스톤 인계 또는 명시적 감사 요청 시 `md-management` **단독 관할**.
   - **배포 릴리스 노트** (`CHANGELOG.md`): 버전 릴리스 시 `writing-changelogs` **단독 관할**.
 - **활성 사양서와 코드베이스 동시 수정 요청 인입 시 (Mixed-Scope)**:
