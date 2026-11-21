@@ -1218,6 +1218,69 @@
       "sizeBytes": 35698,
       "sha256": "6068f75bd968697ef81f66f9a38e58bb1719e9377f02225ac9b1dbe7f0ced851",
       "downloadUrl": "https://drive.usercontent.google.com/download?id=1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/main.lua": {
+      "id": "1Pda30da59942047e2455bfa5dba0ab19",
+      "name": "pocket_pda__main.lua",
+      "repoPath": "src/0_infra/pocket_pda/main.lua",
+      "category": "packages",
+      "sizeBytes": 14620,
+      "sha256": "3a578c08c0301a2005bb8a103bf9da77a925dd9701a250007e59528f1815b4d2",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pda30da59942047e2455bfa5dba0ab19&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/config/pda_config.json": {
+      "id": "1Pda13e059ff54567af1e8427088a22d8",
+      "name": "pocket_pda__config__pda_config.json",
+      "repoPath": "src/0_infra/pocket_pda/config/pda_config.json",
+      "category": "packages",
+      "sizeBytes": 753,
+      "sha256": "1aada2c2f04a2c3b918108e5478b0f84c250c32f38b20c4468620e3de1390e78",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pda13e059ff54567af1e8427088a22d8&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/modules/pda_network.lua": {
+      "id": "1Pda3a4163e62386211a7a001c8ec767a",
+      "name": "pocket_pda__modules__pda_network.lua",
+      "repoPath": "src/0_infra/pocket_pda/modules/pda_network.lua",
+      "category": "packages",
+      "sizeBytes": 12648,
+      "sha256": "36aedde17e3eab6fc8ab28a5a4c273bac54869cba33f9259a0df97904c550b2c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pda3a4163e62386211a7a001c8ec767a&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/modules/telemetry_hud_state.lua": {
+      "id": "1Pdae4c87cf201e0a1584c3df809d6682",
+      "name": "pocket_pda__modules__telemetry_hud_state.lua",
+      "repoPath": "src/0_infra/pocket_pda/modules/telemetry_hud_state.lua",
+      "category": "packages",
+      "sizeBytes": 13884,
+      "sha256": "38f8b57656c2c10f5d639133e9d9689c64bc0b0ca3a2ba9639f56b3a395ed38c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pdae4c87cf201e0a1584c3df809d6682&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/modules/emergency_c2_controller.lua": {
+      "id": "1Pda0711fe04b362169a2a63768dc6226",
+      "name": "pocket_pda__modules__emergency_c2_controller.lua",
+      "repoPath": "src/0_infra/pocket_pda/modules/emergency_c2_controller.lua",
+      "category": "packages",
+      "sizeBytes": 4490,
+      "sha256": "db380119aa6f18710268ae418a38ded484fd7b4d56350ff260e6fdc9d81b56d0",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pda0711fe04b362169a2a63768dc6226&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/modules/remote_link_controller.lua": {
+      "id": "1Pdac7e3ba0939f0713616a47d85d790f",
+      "name": "pocket_pda__modules__remote_link_controller.lua",
+      "repoPath": "src/0_infra/pocket_pda/modules/remote_link_controller.lua",
+      "category": "packages",
+      "sizeBytes": 13592,
+      "sha256": "9b79e3b3c82dd51f98ed078edc2d8a2f0e2eb0f1752d33f6e77d211320ee328d",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pdac7e3ba0939f0713616a47d85d790f&export=download&confirm=t"
+    },
+    "src/0_infra/pocket_pda/modules/pocket_tui.lua": {
+      "id": "1Pda305e11af9d645d768258c46295e08",
+      "name": "pocket_pda__modules__pocket_tui.lua",
+      "repoPath": "src/0_infra/pocket_pda/modules/pocket_tui.lua",
+      "category": "packages",
+      "sizeBytes": 11381,
+      "sha256": "07d6943c0bf628c7e49ed4e286d2c04c6ada57d29eaa09e33219da84c071949c",
+      "downloadUrl": "https://drive.usercontent.google.com/download?id=1Pda305e11af9d645d768258c46295e08&export=download&confirm=t"
     }
   },
   "bootstrapMap": {
@@ -1355,6 +1418,13 @@
     "src/0_development/ota/modules/ota_ui.lua": "18aenQSFUx1BdgjUx5X2mmQssnlXOpYz6",
     "src/0_development/ota/config/ota_config.json": "1-ItvHsoMBO-5EgG14EMvK_TdYg4_H3Xq",
     "src/0_development/ota/modules/ota_protocol.lua": "1W_g1JN5cdfSoI5Itgs9vvCWoNDS3C8XT",
-    "src/0_development/ota/modules/ota_server.lua": "1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG"
+    "src/0_development/ota/modules/ota_server.lua": "1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG",
+    "src/0_infra/pocket_pda/main.lua": "1Pda30da59942047e2455bfa5dba0ab19",
+    "src/0_infra/pocket_pda/config/pda_config.json": "1Pda13e059ff54567af1e8427088a22d8",
+    "src/0_infra/pocket_pda/modules/pda_network.lua": "1Pda3a4163e62386211a7a001c8ec767a",
+    "src/0_infra/pocket_pda/modules/telemetry_hud_state.lua": "1Pdae4c87cf201e0a1584c3df809d6682",
+    "src/0_infra/pocket_pda/modules/emergency_c2_controller.lua": "1Pda0711fe04b362169a2a63768dc6226",
+    "src/0_infra/pocket_pda/modules/remote_link_controller.lua": "1Pdac7e3ba0939f0713616a47d85d790f",
+    "src/0_infra/pocket_pda/modules/pocket_tui.lua": "1Pda305e11af9d645d768258c46295e08"
   }
 }

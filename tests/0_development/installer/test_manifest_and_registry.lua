@@ -3,9 +3,9 @@ local manifest = require("manifest")
 local version_registry = require("version_registry")
 
 describe("manifest dual-source module definitions", function()
-    it("registers all 15 modules in deterministic order with shared /lib/avionics_sensors.lua bundling", function()
+    it("registers all 16 modules in deterministic order with shared /lib/avionics_sensors.lua bundling", function()
         local list = manifest.listModules()
-        assert_eq(#list, 15)
+        assert_eq(#list, 16)
         assert_eq(list[1].id, "vas")
         assert_eq(list[2].id, "tca")
         assert_eq(list[3].id, "fcp")
@@ -21,6 +21,7 @@ describe("manifest dual-source module definitions", function()
         assert_eq(list[13].id, "amm")
         assert_eq(list[14].id, "gcs")
         assert_eq(list[15].id, "runway")
+        assert_eq(list[16].id, "pocket_pda")
 
         assert_not_nil(manifest.SHARED_LIBS)
         assert_not_nil(manifest.SHARED_LIBS.avionics_sensors)
@@ -50,6 +51,38 @@ describe("manifest dual-source module definitions", function()
 
         local sensorsMod = manifest.getModule("sensors")
         assert_false(sensorsMod.startup.enabled)
+
+        local pda = manifest.getModule("pocket_pda")
+        assert_not_nil(pda)
+        assert_eq(pda.id, "pocket_pda")
+        assert_eq(pda.name, "Pocket PDA")
+        assert_eq(pda.category, "infra")
+        assert_eq(pda.version, "1.0.0")
+        assert_eq(pda.installDir, "/")
+        assert_true(pda.startup.enabled)
+        assert_eq(pda.startup.path, "/startup/00_pocket_pda.lua")
+        assert_eq(pda.startup.target, "/main.lua")
+        assert_eq(pda.startup.name, "Pocket PDA")
+        assert_eq(#pda.files, 8)
+        local expectedPdaFiles = {
+            ["src/0_infra/pocket_pda/main.lua"] = "/main.lua",
+            ["src/0_infra/pocket_pda/config/pda_config.json"] = "/config/pda_config.json",
+            ["src/0_infra/pocket_pda/modules/pda_network.lua"] = "/modules/pda_network.lua",
+            ["src/0_infra/pocket_pda/modules/telemetry_hud_state.lua"] = "/modules/telemetry_hud_state.lua",
+            ["src/0_infra/pocket_pda/modules/emergency_c2_controller.lua"] = "/modules/emergency_c2_controller.lua",
+            ["src/0_infra/pocket_pda/modules/remote_link_controller.lua"] = "/modules/remote_link_controller.lua",
+            ["src/0_infra/pocket_pda/modules/pocket_tui.lua"] = "/modules/pocket_tui.lua",
+            ["src/0_development/sensors/avionics_sensors.lua"] = "/lib/avionics_sensors.lua",
+        }
+        local seenPda = {}
+        for _, f in ipairs(pda.files) do
+            assert_eq(expectedPdaFiles[f.repoPath], f.dest, "Unexpected dest for " .. tostring(f.repoPath))
+            assert_not_nil(f.gdriveId, "Missing gdriveId for " .. tostring(f.repoPath))
+            seenPda[f.repoPath] = true
+        end
+        for rp, _ in pairs(expectedPdaFiles) do
+            assert_true(seenPda[rp] == true, "Missing pocket_pda file in manifest: " .. rp)
+        end
     end)
 
     it("resolves GitHub raw URLs and handles configured vs unconfigured Google Drive IDs", function()
@@ -106,10 +139,11 @@ describe("manifest dual-source module definitions", function()
         assert_eq(activeCats[1].modules[4].id, "sensors")
 
         assert_eq(activeCats[2].id, "infra")
-        assert_eq(activeCats[2].moduleCount, 7)
+        assert_eq(activeCats[2].moduleCount, 8)
         assert_eq(activeCats[2].modules[1].id, "gps_server")
         assert_eq(activeCats[2].modules[6].id, "gcs")
         assert_eq(activeCats[2].modules[7].id, "runway")
+        assert_eq(activeCats[2].modules[8].id, "pocket_pda")
 
         assert_eq(activeCats[3].id, "control")
         assert_eq(activeCats[3].moduleCount, 2)

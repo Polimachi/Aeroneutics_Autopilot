@@ -52,7 +52,7 @@ class TargetSmokeReport:
 def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) -> list[SmokeTarget]:
     """
     Constructs the standard list of boot smoke targets.
-    Active subsystems (13): alignment, fdr, installer, ota, gps, gac, gcs, landing_pad, runway, tca, vas, fcp, amm.
+    Active subsystems (14): alignment, fdr, installer, ota, gps, gac, gcs, landing_pad, pocket_pda, runway, tca, vas, fcp, amm.
     Deferred subsystems (1): asa (TASK-105).
     """
     root = workspace_root.resolve()
@@ -119,6 +119,14 @@ def build_smoke_targets(workspace_root: Path, include_deferred: bool = False) ->
             target_id="0_infra/landing_pad",
             source_dir=src / "0_infra" / "landing_pad",
             expected_channels=[50202, 50206, 50211],
+            cli_args=[],
+            deferred=False,
+            workspace_root=root,
+        ),
+        SmokeTarget(
+            target_id="0_infra/pocket_pda",
+            source_dir=src / "0_infra" / "pocket_pda",
+            expected_channels=[102, 10000, 10002, 10003, 10008, 10009, 50000, 50004],
             cli_args=[],
             deferred=False,
             workspace_root=root,
@@ -341,6 +349,45 @@ def _stage_minimal_configs(computer_dir: Path) -> None:
         },
     }
     (config_dir / "ota_config.json").write_text(json.dumps(ota_cfg, indent=2), encoding="utf-8")
+
+    # 10. Pocket PDA config
+    pda_cfg = {
+        "schemaVersion": "1.0.0",
+        "system": {
+            "id": "PDA_01",
+            "domainId": "POCKET_PDA_01",
+            "modemSide": "back",
+            "loopFrequencyHz": 20,
+            "uiRefreshRateHz": 5,
+        },
+        "defaults": {
+            "aircraftIndexN": 1,
+            "targetDomainId": "AIRCRAFT_01",
+            "hangarBayId": 1,
+            "fdrBoundIndexN": 1,
+        },
+        "channels": {
+            "gcsBootstrapChannel": 50000,
+            "missionAckChannel": 50004,
+            "aircraftBaseMin": 10000,
+            "aircraftBandwidth": 40,
+            "maxAircraft": 1000,
+            "hangarBaseMin": 101,
+            "hangarBandwidth": 10,
+            "maxHangarBays": 10,
+        },
+        "linkQuality": {
+            "telemetryTimeoutMs": 2000,
+            "nodeStaleMs": 3000,
+            "strongMaxDistM": 80.0,
+            "goodMaxDistM": 200.0,
+        },
+        "ui": {
+            "screenWidth": 26,
+            "screenHeight": 20,
+        },
+    }
+    (config_dir / "pda_config.json").write_text(json.dumps(pda_cfg, indent=2), encoding="utf-8")
 
 
 def _build_guest_startup_lua() -> str:

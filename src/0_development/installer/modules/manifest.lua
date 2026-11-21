@@ -93,6 +93,7 @@ manifest.MODULE_ORDER = {
     "amm",
     "gcs",
     "runway",
+    "pocket_pda",
 }
 
 manifest.MODULES = {
@@ -764,6 +765,70 @@ manifest.MODULES = {
             { repoPath = "src/0_development/ota/modules/ota_server.lua", dest = "/ota/modules/ota_server.lua", gdriveId = "1XZ72aBMoYXP3dwh1p0GSImHIDtge_ZeG" },
             { repoPath = "src/0_development/ota/modules/ota_ui.lua", dest = "/ota/modules/ota_ui.lua", gdriveId = "18aenQSFUx1BdgjUx5X2mmQssnlXOpYz6" },
             { repoPath = "src/0_development/ota/ota_agent.lua", dest = "/lib/ota_agent.lua", gdriveId = "1av9t1QqFdiSUBSlkQ_RMMEmqriY44uqX" },
+            { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = "1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL" },
+        },
+    },
+
+    pocket_pda = {
+        id = "pocket_pda",
+        name = "Pocket PDA",
+        category = "infra",
+        version = "1.0.0",
+        installDir = "/",
+        startup = {
+            enabled = true,
+            path = "/startup/00_pocket_pda.lua",
+            target = "/main.lua",
+            name = "Pocket PDA",
+        },
+        description = "Pocket Computer 26x20 Remote C2, Telemetry HUD, Alignment & FDR Console",
+        roles = { "Pocket Console", "Remote C2", "Infra Layer 0" },
+        defaultConfigs = {
+            ["/config/pda_config.json"] = {
+                schemaVersion = "1.0.0",
+                system = {
+                    id = "PDA_01",
+                    domainId = "POCKET_PDA_01",
+                    modemSide = "back",
+                    loopFrequencyHz = 20,
+                    uiRefreshRateHz = 5,
+                },
+                defaults = {
+                    aircraftIndexN = 1,
+                    targetDomainId = "AIRCRAFT_01",
+                    hangarBayId = 1,
+                    fdrBoundIndexN = 1,
+                },
+                channels = {
+                    gcsBootstrapChannel = 50000,
+                    missionAckChannel = 50004,
+                    aircraftBaseMin = 10000,
+                    aircraftBandwidth = 40,
+                    maxAircraft = 1000,
+                    hangarBaseMin = 101,
+                    hangarBandwidth = 10,
+                    maxHangarBays = 10,
+                },
+                linkQuality = {
+                    telemetryTimeoutMs = 2000,
+                    nodeStaleMs = 3000,
+                    strongMaxDistM = 80.0,
+                    goodMaxDistM = 200.0,
+                },
+                ui = {
+                    screenWidth = 26,
+                    screenHeight = 20,
+                },
+            },
+        },
+        files = {
+            { repoPath = "src/0_infra/pocket_pda/main.lua", dest = "/main.lua", gdriveId = "1Pda30da59942047e2455bfa5dba0ab19" },
+            { repoPath = "src/0_infra/pocket_pda/config/pda_config.json", dest = "/config/pda_config.json", gdriveId = "1Pda13e059ff54567af1e8427088a22d8" },
+            { repoPath = "src/0_infra/pocket_pda/modules/pda_network.lua", dest = "/modules/pda_network.lua", gdriveId = "1Pda3a4163e62386211a7a001c8ec767a" },
+            { repoPath = "src/0_infra/pocket_pda/modules/telemetry_hud_state.lua", dest = "/modules/telemetry_hud_state.lua", gdriveId = "1Pdae4c87cf201e0a1584c3df809d6682" },
+            { repoPath = "src/0_infra/pocket_pda/modules/emergency_c2_controller.lua", dest = "/modules/emergency_c2_controller.lua", gdriveId = "1Pda0711fe04b362169a2a63768dc6226" },
+            { repoPath = "src/0_infra/pocket_pda/modules/remote_link_controller.lua", dest = "/modules/remote_link_controller.lua", gdriveId = "1Pdac7e3ba0939f0713616a47d85d790f" },
+            { repoPath = "src/0_infra/pocket_pda/modules/pocket_tui.lua", dest = "/modules/pocket_tui.lua", gdriveId = "1Pda305e11af9d645d768258c46295e08" },
             { repoPath = "src/0_development/sensors/avionics_sensors.lua", dest = "/lib/avionics_sensors.lua", gdriveId = "1um2uK-ZT0IaxCSQhorkeyTE7dUYlLXCL" },
         },
     },

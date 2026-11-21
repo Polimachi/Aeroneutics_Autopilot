@@ -26,6 +26,7 @@ REQUIRED_PLAYBOOKS: tuple[str, ...] = (
     "playbook/0_infra/gcs.md",
     "playbook/0_infra/gac.md",
     "playbook/0_infra/landing_pad.md",
+    "playbook/0_infra/pocket_pda.md",
     "playbook/0_infra/runway.md",
     "playbook/1_control/vas.md",
     "playbook/1_control/tca.md",
@@ -35,7 +36,6 @@ REQUIRED_PLAYBOOKS: tuple[str, ...] = (
 )
 
 RESERVED_EXPANSION_SLOTS: dict[str, str] = {
-    "playbook/0_infra/pocket_pda.md": "TASK-302",
     "playbook/1_control/asa.md": "TASK-105 / TASK-210",
     "playbook/0_infra/docking_arm.md": "TASK-104",
     "playbook/0_infra/tower_atc.md": "TASK-108",

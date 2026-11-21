@@ -30,7 +30,7 @@
 
 ---
 
-## 3. 도메인별 인가 플레이북 인덱스 (15종 Active Playbooks)
+## 3. 도메인별 인가 플레이북 인덱스 (16종 Active Playbooks)
 
 ### 0_development — 개발 · 교정 · 배포 · 센서
 
@@ -50,6 +50,7 @@
 | **GCS & Live Bridge** | [gcs.md](0_infra/gcs.md) | [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) | `src/0_infra/gcs/main.lua`, `tools/gcs_live_bridge.py` |
 | **GAC (Sector ATC)** | [gac.md](0_infra/gac.md) | [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) | `src/0_infra/gac/main.lua` |
 | **Landing Pad** | [landing_pad.md](0_infra/landing_pad.md) | [LANDING_PAD_SPECIFICATION_AND_ICD.md](../docs/specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) | `src/0_infra/landing_pad/main.lua` |
+| **Pocket PDA** | [pocket_pda.md](0_infra/pocket_pda.md) | [POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) | `src/0_infra/pocket_pda/main.lua` |
 | **Runway** | [runway.md](0_infra/runway.md) | [RUNWAY_SPECIFICATION_AND_ICD.md](../docs/specs/0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) | `src/0_infra/runway/main.lua` |
 
 ### 1_control & 2_guidance — 온보드 비행 제어 및 외루프 유도
@@ -73,7 +74,6 @@
 
 `tools/verify_playbooks.py`는 아래 예약 슬롯에 대한 구현이 완료되어 인가 목록(`REQUIRED_PLAYBOOKS`)에 정식 편입되기 전까지 미등록 `.md` 파일 생성을 실패로 차단합니다:
 
-- `playbook/0_infra/pocket_pda.md` — `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) 구현 완료 후 편입 예정
 - `playbook/1_control/asa.md` — `TASK-105` / `TASK-210` (ASA 공력 조종면 구동기 본 구현) 완료 후 편입 예정
 - `playbook/0_infra/docking_arm.md` — `TASK-104` (Docking Arm, 일정 연기) 구현 완료 후 편입 예정
 - `playbook/0_infra/tower_atc.md` — `TASK-108` (Tower ATC, 일정 연기) 구현 완료 후 편입 예정

@@ -22,6 +22,7 @@ EXPECTED_REQUIRED_PLAYBOOKS = (
     "playbook/0_infra/gcs.md",
     "playbook/0_infra/gac.md",
     "playbook/0_infra/landing_pad.md",
+    "playbook/0_infra/pocket_pda.md",
     "playbook/0_infra/runway.md",
     "playbook/1_control/vas.md",
     "playbook/1_control/tca.md",
@@ -84,7 +85,7 @@ def _run_cli(root: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
 
 
 class TestVerifyPlaybooks(unittest.TestCase):
-    def test_valid_15_playbooks_and_readme_pass(self) -> None:
+    def test_valid_16_playbooks_and_readme_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _build_synthetic_playbooks(root)
@@ -106,7 +107,7 @@ class TestVerifyPlaybooks(unittest.TestCase):
             root = Path(tmp)
             _build_synthetic_playbooks(root)
 
-            reserved = root / "playbook" / "0_infra" / "pocket_pda.md"
+            reserved = root / "playbook" / "1_control" / "asa.md"
             reserved.write_text(MINIMAL_PLAYBOOK_BODY, encoding="utf-8")
             res_default = _run_cli(root)
             self.assertNotEqual(res_default.returncode, 0)
@@ -187,7 +188,7 @@ class TestVerifyPlaybooks(unittest.TestCase):
             payload = json.loads(res.stdout)
             self.assertEqual(payload["errors"], 0)
             self.assertEqual(payload["warnings"], 0)
-            self.assertEqual(payload["requiredCount"], 15)
+            self.assertEqual(payload["requiredCount"], 16)
 
 
 if __name__ == "__main__":

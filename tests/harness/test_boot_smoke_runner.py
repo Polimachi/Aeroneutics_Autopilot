@@ -26,9 +26,9 @@ from tools.run_boot_smoke import (
 
 
 class TestBootSmokeRunner(unittest.TestCase):
-    def test_build_smoke_targets_covers_13_active_subsystems_and_skips_deferred_asa(self) -> None:
+    def test_build_smoke_targets_covers_14_active_subsystems_and_skips_deferred_asa(self) -> None:
         targets = build_smoke_targets(WORKSPACE_ROOT, include_deferred=False)
-        self.assertEqual(len(targets), 13, f"Expected 13 active targets, got {len(targets)}")
+        self.assertEqual(len(targets), 14, f"Expected 14 active targets, got {len(targets)}")
 
         target_ids = [t.target_id for t in targets]
         self.assertNotIn("1_control/asa", target_ids)
@@ -42,6 +42,7 @@ class TestBootSmokeRunner(unittest.TestCase):
             "0_infra/gac",
             "0_infra/gcs",
             "0_infra/landing_pad",
+            "0_infra/pocket_pda",
             "0_infra/runway",
             "1_control/tca",
             "1_control/vas",
@@ -50,6 +51,12 @@ class TestBootSmokeRunner(unittest.TestCase):
         ]
         for exp_id in expected_ids:
             self.assertIn(exp_id, target_ids)
+
+        target_map = {t.target_id: t for t in targets}
+        self.assertEqual(
+            target_map["0_infra/pocket_pda"].expected_channels,
+            [102, 10000, 10002, 10003, 10008, 10009, 50000, 50004],
+        )
 
         for target in targets:
             self.assertTrue(target.source_dir.is_dir(), f"Source dir missing: {target.source_dir}")
@@ -62,7 +69,7 @@ class TestBootSmokeRunner(unittest.TestCase):
 
     def test_build_smoke_targets_includes_asa_when_include_deferred(self) -> None:
         targets = build_smoke_targets(WORKSPACE_ROOT, include_deferred=True)
-        self.assertEqual(len(targets), 14, f"Expected 14 targets, got {len(targets)}")
+        self.assertEqual(len(targets), 15, f"Expected 15 targets, got {len(targets)}")
 
         target_map = {t.target_id: t for t in targets}
         self.assertIn("1_control/asa", target_map)
@@ -256,6 +263,7 @@ class TestBootSmokeRunner(unittest.TestCase):
                 comp_dir / "config" / "sensors.json",
                 comp_dir / "config" / "system.json",
                 comp_dir / "config" / "ota_config.json",
+                comp_dir / "config" / "pda_config.json",
             ]
             for cfg_path in expected_json_files:
                 self.assertTrue(cfg_path.is_file(), f"Expected config file missing: {cfg_path}")
