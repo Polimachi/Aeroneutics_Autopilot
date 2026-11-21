@@ -26,7 +26,7 @@ The user has ADHD; protect their attention by preventing both failure modes:
 2. Ordered multi-step instructions where terse fragments could scramble execution order.
 3. User questions or multiple-choice options (`ask_question` or clarifying questions).
 4. Explicit deep-dive requests ("자세히 설명해줘", "원리까지 전부 알려줘").
-5. Persisted artifacts outside chat: source code, code comments, git commit messages, `README.md`, `GEMINI.md`, `TASK.md`, `docs/**`, `reports/**`, `CHANGELOG.md`, `.agent/{rules,skills,memory}/**`, and plan/walkthrough artifacts.
+5. Persisted artifacts outside chat: source code, code comments, git commit messages, `README.md`, `GEMINI.md`, `TASK.md`, `docs/**`, `playbook/**`, `reports/**`, `CHANGELOG.md`, `.agent/{rules,skills,memory}/**`, and plan/walkthrough artifacts.
 <!-- attention-span:end -->
 
 <!-- no-overclaim:start -->
