@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "system": {
+    "id": "PDA_01",
+    "domainId": "POCKET_PDA_01",
+    "modemSide": "back",
+    "loopFrequencyHz": 20,
+    "uiRefreshRateHz": 5
+  },
+  "defaults": {
+    "aircraftIndexN": 1,
+    "targetDomainId": "AIRCRAFT_01",
+    "hangarBayId": 1,
+    "fdrBoundIndexN": 1
+  },
+  "channels": {
+    "gcsBootstrapChannel": 50000,
+    "missionAckChannel": 50004,
+    "aircraftBaseMin": 10000,
+    "aircraftBandwidth": 40,
+    "maxAircraft": 1000,
+    "hangarBaseMin": 101,
+    "hangarBandwidth": 10,
+    "maxHangarBays": 10
+  },
+  "linkQuality": {
+    "telemetryTimeoutMs": 2000,
+    "nodeStaleMs": 3000,
+    "strongMaxDistM": 80.0,
+    "goodMaxDistM": 200.0
+  },
+  "ui": {
+    "screenWidth": 26,
+    "screenHeight": 20
+  }
+}
