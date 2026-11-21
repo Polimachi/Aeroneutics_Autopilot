@@ -6,10 +6,10 @@
 
 ## 📌 현재 단계 및 로드맵 (Current Phase & Roadmap)
 
-- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드(`TASK-136`·`131`·`128`)·아키텍처 감사(`TASK-016`)·프로토콜/코드 정리(`TASK-017`·`018`)·사양 경량화(`TASK-019`)·전 계층 통합 플레이북 체계(`TASK-015`) 완료. 다음 1순위는 `TASK-302`(Pocket PDA 원격 관제 단말), 2순위는 `TASK-140`입니다 (사양서 버전 SSOT: 각 사양서 헤더 및 마스터 ICD §5.1, 활성 백로그: [TASK.md](TASK.md), 최신 검증 수치: [GEMINI.md](GEMINI.md) §3, 이전 이력: `.agent/memory/workspace-root.md`).
+- **현재 단계**: **Phase 1 & 2 (진행 중)** — 지상 인프라·WebUI LAN Live·GDrive 배포·40채널 정합·공중 콜드부트·안전 인터록/PBIT/GPS DR 가드(`TASK-136`·`131`·`128`)·아키텍처 감사(`TASK-016`)·프로토콜/코드 정리(`TASK-017`·`018`)·사양 경량화(`TASK-019`)·전 계층 통합 플레이북 체계(`TASK-015`)·Pocket PDA 원격 관제/E_STOP 단말(`TASK-302`) 완료. 다음 1순위는 `TASK-140`(저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상)입니다 (사양서 버전 SSOT: 각 사양서 헤더 및 마스터 ICD §5.1, 활성 백로그: [TASK.md](TASK.md), 최신 검증 수치: [GEMINI.md](GEMINI.md) §3, 이전 이력: `.agent/memory/workspace-root.md`).
 - **단계별 이정표 요약**:
   - **Phase 0 (기반 구축 및 코어 동기화)**: 40채널 마스터 ICD·12대 사양서 개편, 단위 테스트 하네스 구축, 코어 모듈(`VAS`, `TCA`, `FCP`, `Alignment`, `GPS`) 런타임 동기화, 사양서 상태 전이(`Approved` → `Implemented`) 및 통합 인스톨러 구축
-  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `FDR`(`TASK-120`), 무선 `OTA`(`TASK-117`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
+  - **Phase 1 (지상 관제 및 온보드 확장)**: `GAC`, `Landing Pad`, `Runway`(`TASK-103`), `GCS`+Live Bridge(`TASK-107`, `TASK-404`), `Pocket PDA`(`TASK-302`), `FDR`(`TASK-120`), 무선 `OTA`(`TASK-117`), `VAS` 센서 파이프라인(`TASK-112`), 온보드 제어기 헤드리스 개편(`TASK-113`), Cockpit MFD 통합 단말(`AMM`, `TASK-200`) 및 `FCP` VTOL 고도화(`TASK-110`) 구축 완료 (`Tower ATC`·`Docking Arm` 일정 보류; `ASA`는 `TASK-105`↔`TASK-210` 3순위 구현 대기)
   - **Phase 2 (고등 항법 및 편대 임무)**: 3차원 경로 계획(`3_planning/`) 및 다중 기체 편대 미션 오케스트레이터(`4_mission/`) 구축
   - **Phase 3 (물리 하드웨어 및 수동 급기동)**: Create/Avionics 아날로그 스틱 및 물리 컨트롤러 연동, `Base+1` 20Hz 직접 3축 각속도(`RATE_COMMAND`) 직결 ACRO 수동 조종(`TASK-301`)
 - **실시간 작업 진행 현황 및 상세 백로그 (SSOT)**: [TASK.md](TASK.md)
@@ -40,6 +40,7 @@ Create_Aeroneutics/
 ├── GEMINI.md                              # 작업 간 동적 컨텍스트 스냅샷 (<= 80줄)
 ├── AGENTS.md                              # 에이전트 불변 행동 헌장
 ├── installer.lua                          # 통합 코드베이스 설치 프로그램 (화면 직접 업로드/플로피/wget)
+├── config/audit_baselines.json            # 아키텍처 감사·E2E 프로파일 회귀 기준선
 ├── config/gdrive_mapping.json             # GDrive 배포 파일 ID 매핑 (SSOT)
 ├── config/protocol_contracts.json         # 와이어 프로토콜·채널·스키마 SSOT 계약 명세
 ├── dist_gdrive/                           # GDrive 업로드 격리 스테이징 (sync_gdrive.py 생성)
@@ -53,7 +54,7 @@ Create_Aeroneutics/
 │   │   └── SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md
 │   └── specs/                             # 기능 도메인별 프로그램 사양서 (영구 단일 계층)
 │       ├── 0_development/                 # 개발·교정·배포 사양서 (alignment, fdr, installer, ota)
-│       ├── 0_infra/                       # 기지 인프라 및 지상 설비 사양서 (docking_arm, gac, gcs, gps, landing_pad, runway)
+│       ├── 0_infra/                       # 기지 인프라 및 지상 설비 사양서 (docking_arm, gac, gcs, gps, landing_pad, pocket_pda, runway)
 │       ├── 1_control/                     # 온보드 제어 사양서 (asa, tca, vas)
 │       ├── 2_guidance/fcp/                # 비행 제어 프로그램 및 외루프 유도 사양서 (FCP)
 │       ├── 3_planning/amm/                # 항공기 임무 관리자(AMM) 및 WebUI 미션 에디터 사양서
@@ -65,7 +66,7 @@ Create_Aeroneutics/
 │   ├── 0_development/installer/           # 통합 인스톨러 코어 및 선언적 매니페스트
 │   ├── 0_development/ota/                 # 격납고 무선 OTA 배포 서버 및 슬레이브 에이전트 (`/lib/ota_agent.lua`)
 │   ├── 0_development/sensors/             # CC:Avionics 4종 센서 공용 표준 라이브러리 (SSOT)
-│   ├── 0_infra/                           # 기지 인프라 및 지상 관제 시설 (docking_arm, gac, gcs, gps, landing_pad, runway) — docking_arm은 TASK-104 연기 플레이스홀더(README만 존재)
+│   ├── 0_infra/                           # 기지 인프라 및 지상 관제 시설 (docking_arm, gac, gcs, gps, landing_pad, pocket_pda, runway) — docking_arm은 TASK-104 연기 플레이스홀더(README만 존재)
 │   ├── 1_control/                         # 실시간 온보드 제어 (asa, tca, vas)
 │   ├── 2_guidance/fcp/                    # 비행 제어 프로그램 및 외루프 유도 (FCP)
 │   ├── 3_planning/amm/                    # 항공기 임무 관리자 및 Cockpit MFD 통합 단말 (AMM)
@@ -81,7 +82,7 @@ Create_Aeroneutics/
 │   ├── 0_development/installer/           # 통합 인스톨러 단위 테스트
 │   ├── 0_development/ota/                 # 무선 OTA 서버 및 에이전트 단위 테스트
 │   ├── 0_development/sensors/             # 센서 표준 라이브러리 단위 테스트
-│   ├── 0_infra/{gac, gcs, gps, landing_pad, runway}/ # 기지 인프라 단위 테스트 (GAC, GCS, GPS, Landing Pad, Runway)
+│   ├── 0_infra/{gac, gcs, gps, landing_pad, pocket_pda, runway}/ # 기지 인프라 단위 테스트 (GAC, GCS, GPS, Landing Pad, Pocket PDA, Runway)
 │   ├── 1_control/{asa, tca, vas}/         # 온보드 제어기 단위 테스트
 │   ├── 2_guidance/fcp/                    # FCP 단위 테스트
 │   ├── 3_planning/amm/                    # AMM 및 WebUI 에디터(`test_amm_mission_editor.py`) 단위 테스트
@@ -99,23 +100,24 @@ Create_Aeroneutics/
 │   ├── run_unit_tests.py                  # 멀티 코드베이스 단위 테스트 러너
 │   ├── sync_gdrive.py                     # GDrive 스테이징·동기화·검증 CLI
 │   ├── validate_lua_syntax.py             # Lua 5.2 문법/금지 모드 정적 검사기
-│   ├── verify_all_specs.py                # 18대 사양서 전수 무결성 검증기
+│   ├── verify_all_specs.py                # 19대 사양서 전수 무결성 검증기
 │   ├── verify_context_docs.py             # 루트 컨텍스트 문서 드리프트 정적 검사기 (R1~R9)
 │   ├── verify_contracts.py                # 사양서-코드 계층 간 와이어·채널·스키마 SSOT 계약 검증기
 │   ├── verify_manifest_sync.py            # manifest.lua·GDrive 맵·src/ 3자 정합성 검증기
-│   ├── verify_playbooks.py                # 인게임 운용 플레이북 15종 구조·링크·인가 검증기
-│   ├── verify_runtime_wiring.py           # 런타임 엔트리·채널·디스패치 미배선 정적/동적 검사기
+│   ├── verify_playbooks.py                # 인게임 운용 플레이북 16종 구조·링크·인가 검증기
+│   ├── verify_runtime_wiring.py           # 런타임 엔트리·도달성·고아 모듈 정적 배선 검사기
 │   └── verify_spec_status.py              # 사양서 상태 분포 검증기
 │
-├── playbook/                              # 전 계층 인게임 실전 운용 매뉴얼 (15종 + README)
+├── playbook/                              # 전 계층 인게임 실전 운용 매뉴얼 (16종 + README)
 │   ├── README.md                          # 플레이북 표준 7대 섹션 템플릿 및 전체 인덱스
 │   ├── 0_development/                     # 개발·교정·배포·센서 (alignment, fdr, installer, ota, sensors)
-│   ├── 0_infra/                           # 지상 관제 및 비행장 인프라 (gps, gcs, gac, landing_pad, runway)
+│   ├── 0_infra/                           # 지상 관제 및 비행장 인프라 (gps, gcs, gac, landing_pad, pocket_pda, runway)
 │   ├── 1_control/                         # 온보드 비행 제어 (vas, tca)
 │   ├── 2_guidance/                        # 외루프 비행 유도 (fcp)
 │   └── 3_planning/                        # 임무 관리 및 WebUI 에디터 (amm, amm_mission_editor)
 │
 ├── reports/                               # 정적 분석 및 리팩토링 검토 보고서
+│   ├── audit_data/                        # 아키텍처 감사 계측 원자료 (JSON)
 │   ├── underReview/                       # 검토 진행 중 보고서
 │   └── reviewCompleted/                   # 검토 완료 보고서
 │
@@ -174,7 +176,7 @@ python tools/run_unit_tests.py --require-tests --clean-orphans
   ```
 
 ### 2. 멀티노드 종단간(E2E) 시뮬레이션 테스트 실행
-다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 10개 통합 시뮬레이션 스위트(23개 케이스)를 실행합니다:
+다중 노드 격리 가상 버스 및 게스트 샌드박스 환경에서 11개 통합 시뮬레이션 스위트(25개 케이스)를 실행합니다:
 ```bash
 python tools/run_e2e_tests.py --clean-orphans
 ```
@@ -192,7 +194,7 @@ python -m unittest discover -s tests/harness -p "test_*.py"
 ```
 
 ### 5. 사양서 전수 무결성 검증
-18대 활성 사양서 전수의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지, 인라인 피어 버전 배지 금지 및 40채널 수식을 검사합니다:
+19대 활성 사양서 전수의 상대 링크, 메타데이터 표, Mermaid 구문, 폐기 배지, 인라인 피어 버전 배지 금지 및 40채널 수식을 검사합니다:
 ```bash
 python tools/verify_all_specs.py
 ```
@@ -202,7 +204,7 @@ python tools/verify_all_specs.py
   ```
 
 ### 6. 사양서 상태 분포 검증
-활성 사양서 18종의 상태 분포(`Implemented` / `Approved`)를 검사합니다 (현재 `14 Implemented, 4 Approved`):
+활성 사양서 19종의 상태 분포(`Implemented` / `Approved`)를 검사합니다 (현재 `15 Implemented, 4 Approved`):
 ```bash
 python tools/verify_spec_status.py
 ```
@@ -216,7 +218,7 @@ python tools/validate_lua_syntax.py
 ### 8. 인스톨러 매니페스트 · GDrive · 소스 트리 3자 정합성 검증
 `src/` 실제 런타임 파일, `manifest.lua` 등록 목록, `config/gdrive_mapping.json` 간의 누락·고아 파일·카테고리 불일치를 정적 검사합니다:
 ```bash
-python tools/verify_manifest_sync.py
+python tools/verify_manifest_sync.py --strict-gdrive-packages
 ```
 
 ### 9. 컨텍스트 문서 정합성 검증
@@ -249,7 +251,7 @@ CC:Tweaked 컴퓨터에서 아래 3가지 경로 중 하나로 통합 인스톨�
 - 상세 규격: [INSTALLER_PROGRAM_SPECIFICATION.md](docs/specs/0_development/installer/INSTALLER_PROGRAM_SPECIFICATION.md)
 
 ### 13. 통합 인게임 플레이북 무결성 검증
-`playbook/` 내 15종 인가 플레이북 및 `playbook/README.md`의 7대 고정 섹션, 상대 링크, 미인가 파일 차단, Rule 10 준수 여부를 정적 검사합니다:
+`playbook/` 내 16종 인가 플레이북 및 `playbook/README.md`의 7대 고정 섹션, 상대 링크, 미인가 파일 차단, Rule 10 준수 여부를 정적 검사합니다:
 ```bash
 python tools/verify_playbooks.py
 ```

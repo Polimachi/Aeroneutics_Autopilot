@@ -1,8 +1,8 @@
 ﻿# Create_Aeroneutics — Task Management & Implementation Roadmap
 
 > **문서 상태**: 활성 (Living Roadmap)  
-> **최종 갱신일**: 2026-11-20  
-> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-015, TASK-019, TASK-018, TASK-017, TASK-016, TASK-128, TASK-131, TASK-136, TASK-406, TASK-405 / 활성 대기: TASK-302, 140, 020, 021, 135, 214, 105, 210, 132, 129)
+> **최종 갱신일**: 2026-11-21  
+> **현재 단계**: **Phase 1 & 2** (직전 완료: TASK-302, TASK-015, TASK-019, TASK-018, TASK-017, TASK-016, TASK-128, TASK-131, TASK-136, TASK-406 / 활성 대기: TASK-140, 020, 021, 135, 214, 105, 210, 132, 129)
 
 ---
 
@@ -22,19 +22,9 @@
 
 ## 🚀 1. 활성 당면 과제 (Active Immediate Tasks — Phase 1 & 2)
 
-> **권장 실행 우선순위**: **1순위** `TASK-302` (포켓 PDA 원격 관제·E_STOP 단말) → **2순위** `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) → **3순위** `TASK-020` (`46KB` 초과 Lua 3종 분할/추출) · `TASK-021` (지상 3종 20Hz TUI 분리·클로저 팩토리 분해) · `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
-- [ ] **TASK-302: [1순위 / 현장 운용 HMI] CC:Tweaked 포켓 컴퓨터(Pocket PDA) 휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말** (`src/0_infra/pocket_pda/`)
-  - **권장 착수 순위**: **1순위** (선행 `TASK-125`·`TASK-120` 완료 — 40채널 분리 규격 및 FDR 동적 바인딩·원격 덤프 트리거 연동 가능)
-  - **사양서 상태**: 미작성 (`docs/specs/0_infra/pocket_pda/`에 `Draft` 신규 작성 필요)
-  - **배경 및 필요성**: 인게임 시험 비행·정비 중 기체 이상 진동이나 경로 이탈 시 고정형 GCS·Alignment·FDR 콘솔까지 이동할 시간적 여유가 없음. 플레이어가 인벤토리에서 꺼내 즉시 기체 비상 제어뿐 아니라 `Alignment`, `FDR` 등 지상/온보드 시스템과의 무선 링크(기체 바인딩·세션 제어)까지 수행할 수 있는 무선 휴대 단말(`src/0_infra/pocket_pda/`)이 필요함.
-  - **주요 작업**:
-    - [ ] **TASK-302-1**: Pocket Computer 전용 경량 TUI 구현 — 소형 화면(26×20)에 최적화된 기체 선택기, 고도·속도·자세·연료 HUD, 링크 품질(RSSI/거리) 및 연결 대상(`Alignment`/`FDR`/`GCS`/`AMM`) 상태 표시
-    - [ ] **TASK-302-2**: 원격 비상 제어 및 FDR 연동 — 단일 키 입력으로 무선 `E_STOP` 송출 + `TASK-120` 블랙박스 로그 즉시 JSONL 덤프 트리거, `HOLD` / `RTB` / `LAND_NEAREST` 단축 명령 지원
-    - [ ] **TASK-302-3**: `Alignment`·`FDR` 등 원격 링크 및 세션 제어 연동 — Pocket PDA에서 기체 인덱스 $N$을 지정해 `Alignment`(격납고 베이 바인딩·교정 세션 개시/중단/해제)·`FDR`(`STANDBY`↔`LOGGING` 동적 기체 $N$ 바인딩 전환·로그 반출 트리거) 등 주요 노드 간 원격 링크·해제 수행 지원
-    - [ ] **TASK-302-4**: 사양서/계약 및 배포·가드레일 통합 — Pocket PDA 사양서(`Draft` → `Approved` → `Implemented`), `config/protocol_contracts.json`, `manifest.lua`, `config/gdrive_mapping.json`, `tools/run_boot_smoke.py` 등록 및 `verify_contracts.py`·`verify_runtime_wiring.py`·단위/E2E 검증 완료
-
-- [ ] **TASK-140: [2순위 / 정밀 착륙 제어] 저고도 센서 융합 고도계, 양방향 지면 효과 착륙 보상 및 터치다운 프로토콜 개선** (`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`, `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md`, `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/1_control/vas/`, `src/2_guidance/fcp/`, `tests/1_control/vas/`)
-  - **권장 착수 순위**: **2순위** (`TASK-403`의 `ACT_TKL_LAND_NORM` / `ACT_TKL_LAND_PREC` / `ACT_TKL_LAND_NEAREST` 착륙 정밀도 향상 연계)
+> **권장 실행 우선순위**: **1순위** `TASK-140` (저고도 센서 융합 고도계 및 지면 효과 착륙 감쇠 보상) → **2순위** `TASK-020` (`46KB` 초과 Lua 3종 분할/추출) · `TASK-021` (지상 3종 20Hz TUI 분리·클로저 팩토리 분해) · `TASK-135` (AMM 임무 계층 샌드박스·Yield 워치독) · `TASK-214` (허브 공항 대기 스택·착륙 슬롯 스케줄러) · `TASK-105` ↔ `TASK-210` (ASA 본 구현 및 실노드 연동 연계) · `TASK-132` (추력 상실 비상 활공·오토로테이션 가드) · `TASK-129` (적응형 트림 보정) / **연기(§2)** `TASK-104`·`TASK-108`·`TASK-401`·`TASK-301`
+- [ ] **TASK-140: [1순위 / 정밀 착륙 제어] 저고도 센서 융합 고도계, 양방향 지면 효과 착륙 보상 및 터치다운 프로토콜 개선** (`docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md`, `docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md`, `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/1_control/vas/`, `src/2_guidance/fcp/`, `tests/1_control/vas/`)
+  - **권장 착수 순위**: **1순위** (`TASK-403`의 `ACT_TKL_LAND_NORM` / `ACT_TKL_LAND_PREC` / `ACT_TKL_LAND_NEAREST` 착륙 정밀도 향상 연계)
   - **사양서 상태**: 미개정 (`VAS` · `FCP` · `AMM` 사양서 개정 필요)
   - **배경 및 필요성**: 20Hz GPS 위치 측정은 수직 방향 양자화 오차와 미세 지연을 포함하고 있어, 지상 `15m` 이하의 최종 착륙 접근(Final Flare) 구간에서 지면 표고 오판이나 로터·하향 추력기의 지면 효과(Ground Effect)로 인한 양력 변동(양의 양력 증가뿐 아니라 음의 방향 흡입·양력 감소 포함)으로 인해 접지 직전 기체가 튀어 오르는 바운싱(Porpoising) 또는 급침하가 발생함. 다중 센서 융합 대지 고도(AGL) 필터, 음/양 양방향 지면 효과 추력 보상, 지수 감쇠 플레어 프로파일 및 단계별 터치다운 프로토콜 개선으로 안정적이고 정밀한 소프트 터치다운을 구현해야 함.
   - **핵심 기술 규격**:
@@ -43,8 +33,20 @@
     - 착륙 정밀도 향상을 위한 터치다운 프로토콜 과정 개선: 최종 접근 → 수평 위치/자세 정렬 안정화 게이트 → 플레어 하강 → 다중 조건 접지 판정(AGL·침하율·수직 가속도 변화량 조합) → 바운싱 억제 접지 래치(수직 오차 적분항 `Ki` 즉시 리셋 및 하향 홀드 바이어스 인가) → 추력 단계 감축 및 `AMM`/`Landing Pad` 착륙 완료 핸드셰이크로 이어지는 터치다운 시퀀스를 정밀화함.
   - **주요 작업**:
     - [ ] **TASK-140-1**: `VAS` · `FCP` · `AMM` 사양서 개정 — `AGL_Estimator` 센서 융합 가중치, 음/양 양방향 `GROUND_EFFECT_COMP` 보상 곡선, 최종 플레어 침하율 및 개선된 터치다운 프로토콜 단계별 전이 규격 정의
-    - [ ] **TASK-140-2**: `VAS` 저고도 상보 고도 필터·양방향 지면 효과 추력 보상 모듈(`src/1_control/vas/agl_flare_controller.lua`) 및 `FCP`/`AMM` 터치다운 프로토콜 시퀀스 개선 구현
+    - [ ] **TASK-140-2**: `VAS` 저고도 상보 고도 필터·양방향 지면 효과 추력 보상 모듈(`src/1_control/vas/modules/agl_flare_controller.lua`) 및 `FCP`/`AMM` 터치다운 프로토콜 시퀀스 개선 구현
     - [ ] **TASK-140-3**: 정밀 착륙 시나리오(음/양 지면 효과 외란 포함) 접지 위치·수직 속도 정밀도 및 바운싱 0회 검증 단위·E2E 테스트 통과 후 사양서 `Implemented` 승격
+
+- [ ] **TASK-020: [3순위 / 대형 모듈 분할·추출] `46,080 B` 초과 Lua 3종(`amm/main.lua`·`amm/mission_engine.lua`·`installer/manifest.lua`) 분할 및 데이터 분리 (`TASK-016` 도출)** (`src/3_planning/amm/`, `src/0_development/installer/`, `config/audit_baselines.json`)
+  - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §4.2 (`E-S-02`·`03`·`04`).
+  - **주요 작업**:
+    - [ ] **TASK-020-1**: `amm/main.lua` (`53,820 B`, 2026-11-20 실측) → `amm_cli.lua`·`cold_boot_recovery.lua`·`infra_rx_router.lua` 추출, `amm/modules/mission_engine.lua` (`53,334 B`) → `mission_validator.lua`·`mission_dispatchers.lua` 분할 (`manifest.lua`·`gdrive_mapping.json`·단위/E2E 동기화)
+    - [ ] **TASK-020-2**: `installer/modules/manifest.lua` (`47,202 B`) → `manifest_catalog.lua` 데이터 카탈로그 분리 및 `ota_server.sync_remote` 동기화 후 `config/audit_baselines.json` `large_lua_exemptions` 제거
+
+- [ ] **TASK-021: [3순위 / 지상 인프라 20Hz TUI 분리·구조 정제] `0_infra/{gac,landing_pad,runway}` 20Hz 루프 TUI 격리 및 200줄+ 클로저 팩토리 분해 (`TASK-016` 도출)** (`src/0_infra/gac/`, `src/0_infra/landing_pad/`, `src/0_infra/runway/`)
+  - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §3 (`E-L1-04`, `E-L3-05`).
+  - **주요 작업**:
+    - [ ] **TASK-021-1**: `gac`/`landing_pad`/`runway` `0.05s` 루프 내 동기 `tui:render*`를 5Hz(`0.2s`) 코루틴·`headless` 옵션으로 분리 (`E-L1-04`)
+    - [ ] **TASK-021-2**: `gac_fsm.create`(356 L)·`tui_view.create`(249 L)·`pad_fsm.create`(239 L) 내부 메서드 분해
 
 - [ ] **TASK-135: [3순위 / 온보드 런타임 격리] AMM 임무 계층(4_mission) 샌드박스 격리 및 무응답(Yield) 워치독 가드** (`docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/3_planning/amm/`, `tests/3_planning/amm/`)
   - **권장 착수 순위**: **3순위** (Phase 2 `4_mission` 임무 패키지 도입 전 필수 런타임 보호 게이트 — 2순위→3순위 조정)
@@ -56,7 +58,7 @@
     - 코어 생존 및 자동 폴백: 임무 스크립트 오류나 타임아웃 발생 시 `AMM` 코어 데몬은 예외를 포착해 해당 `4_mission` 태스크만 안전 언로드하고, 기체를 즉시 제자리 호버(`HOLD_POSITION`) 또는 홈 패드 귀환(`RTB`) 상태로 보호함.
   - **주요 작업**:
     - [ ] **TASK-135-1**: `AMM_PROGRAM_SPECIFICATION.md` 개정 — `4_mission` 샌드박스 화이트리스트 API, 명령어 할당량 임계치, 스크립트 크래시 시 `HOLD`/`RTB` 복구 규격 정의
-    - [ ] **TASK-135-2**: `AMM` 코어 내 샌드박스 로더 및 `debug.sethook` 워치독 가드 구현 (`src/3_planning/amm/mission_sandbox.lua`)
+    - [ ] **TASK-135-2**: `AMM` 코어 내 샌드박스 로더 및 `debug.sethook` 워치독 가드 구현 (`src/3_planning/amm/modules/mission_sandbox.lua`)
     - [ ] **TASK-135-3**: 무한 루프·메모리 초과·런타임 `nil` 참조 결함 스크립트 주입 테스트 통과 후 사양서 `Implemented` 승격
 
 - [ ] **TASK-214: [3순위 / 다중 기체 관제] 허브 공항 터미널 접근 대기 스택(Holding Stack) 및 착륙 슬롯 스케줄러** (`docs/specs/0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md`, `docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md`, `src/0_infra/gac/`, `src/3_planning/amm/`, `tests/0_infra/gac/`)
@@ -69,7 +71,7 @@
     - 순차 강하 및 패드 해제 연동: 선행 기체가 착륙 후 격납고 인입 또는 이륙으로 패드를 비우면(`PAD_RELEASED`), `GAC`가 다음 순번 기체에 최종 접근 허가를 발행하고 상위 대기 기체들의 고도 레벨을 한 단계씩 하강 재배치함.
   - **주요 작업**:
     - [ ] **TASK-214-1**: `GAC` · `AMM` 사양서 개정 — 터미널 관제 반경, 수직 대기 스택 고도 배분 규칙, 비상 우선순위 큐 및 메시지 스키마 정의
-    - [ ] **TASK-214-2**: `GAC` 터미널 착륙 슬롯 스케줄러 및 대기 고도 관리 모듈 구현 (`src/0_infra/gac/approach_scheduler.lua`)
+    - [ ] **TASK-214-2**: `GAC` 터미널 착륙 슬롯 스케줄러 및 대기 고도 관리 모듈 구현 (`src/0_infra/gac/modules/approach_scheduler.lua`)
     - [ ] **TASK-214-3**: `AMM` 터미널 접근 대기 선회(Holding Orbit) 및 허가 수신 강하 전이 로직 구현
     - [ ] **TASK-214-4**: 3기 동시 귀환 및 1기 `BINGO_FUEL` 긴급 추월 시나리오 E2E 테스트 통과 후 사양서 `Implemented` 승격
 
@@ -109,18 +111,6 @@
     - [ ] **TASK-129-1**: VAS 수평 정속 비행 구간 감지 및 지속 편향 PID 적분항을 정적 트림 오프셋으로 이관하는 적응형 트림 학습기(Adaptive Trim Estimator) 구현 (비정상 급기동 시 학습 동결 가드 포함)
     - [ ] **TASK-129-2**: TCA 구동기 상태(DEGRADED / TOTAL_LOSS) 피드백 수신 시 잔여 정상 추진기의 추력 배분 행렬(Control Allocation Matrix) 실시간 재가중치 계산
 
-- [ ] **TASK-020: [3순위 / 대형 모듈 분할·추출] `46,080 B` 초과 Lua 3종(`amm/main.lua`·`amm/mission_engine.lua`·`installer/manifest.lua`) 분할 및 데이터 분리 (`TASK-016` 도출)** (`src/3_planning/amm/`, `src/0_development/installer/`, `config/audit_baselines.json`)
-  - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §4.2 (`E-S-02`·`03`·`04`).
-  - **주요 작업**:
-    - [ ] **TASK-020-1**: `amm/main.lua` (`53,820 B`, 2026-11-20 실측) → `amm_cli.lua`·`cold_boot_recovery.lua`·`infra_rx_router.lua` 추출, `amm/modules/mission_engine.lua` (`53,334 B`) → `mission_validator.lua`·`mission_dispatchers.lua` 분할 (`manifest.lua`·`gdrive_mapping.json`·단위/E2E 동기화)
-    - [ ] **TASK-020-2**: `installer/modules/manifest.lua` (`47,202 B`) → `manifest_catalog.lua` 데이터 카탈로그 분리 및 `ota_server.sync_remote` 동기화 후 `config/audit_baselines.json` `large_lua_exemptions` 제거
-
-- [ ] **TASK-021: [3순위 / 지상 인프라 20Hz TUI 분리·구조 정제] `0_infra/{gac,landing_pad,runway}` 20Hz 루프 TUI 격리 및 200줄+ 클로저 팩토리 분해 (`TASK-016` 도출)** (`src/0_infra/gac/`, `src/0_infra/landing_pad/`, `src/0_infra/runway/`)
-  - **근거**: [Architecture_Efficiency_Audit_1_11182026.md](reports/underReview/Architecture_Efficiency_Audit_1_11182026.md) §3 (`E-L1-04`, `E-L3-05`).
-  - **주요 작업**:
-    - [ ] **TASK-021-1**: `gac`/`landing_pad`/`runway` `0.05s` 루프 내 동기 `tui:render*`를 5Hz(`0.2s`) 코루틴·`headless` 옵션으로 분리 (`E-L1-04`)
-    - [ ] **TASK-021-2**: `gac_fsm.create`(356 L)·`tui_view.create`(249 L)·`pad_fsm.create`(239 L) 내부 메서드 분해
-
 ---
 
 ## 📋 2. 예정 백로그 (Planned Backlog — Phase 1 & 2)
@@ -129,7 +119,7 @@
 
 - [ ] **[연기] TASK-104: Docking Arm 결합 암 제어기 구현** (`src/0_infra/docking_arm/`)
   - **사양서 상태**: `docs/specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md` (`Approved`)
-  - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (`AMM (Node 03)` 주도 4단계 랑데부 연동; 일정 연기 — **착수 전 `TASK-016` 도출 선행 조건**: `§4.2` `CH 50002` ATC 직접 제어 제거 및 `GAC Base_sec+1` 경유 통일, `Base+5` 기체별 바인딩을 `Base_sec+10+Idx`로 일원화, `§3.4` `seq`·`"ABORTED"` stage 보완; 구현 시 `manifest.lua`·`verify_spec_status.py`·`config/protocol_contracts.json`·`tools/run_boot_smoke.py` 등록 필요)
+  - 2축 로봇 암 포획·인입 및 엄빌리컬 보급 시퀀스 (`AMM (Node 03)` 주도 4단계 랑데부 연동; 일정 연기 — **착수 전 `TASK-016` 도출 선행 조건**: `§4.2` `CH 50002` ATC 직접 제어 제거 및 `GAC Base_sec+1` 경유 통일, `Base+5` 기체별 바인딩을 `Base_sec+10+Idx`로 일원화, `§3.4` `seq`·`"ABORTED"` stage 보완; 구현 시 `manifest.lua`·`verify_spec_status.py`(`Implemented` 전이)·`config/protocol_contracts.json`·`tools/run_boot_smoke.py` 등록 필요)
 - [ ] **[연기] TASK-108: Tower ATC (Sector 0, `CH 50001/50002`) 광역 항공교통 관제 노드 구현**
   - **사양서 상태**: 별도 사양서 미작성 (마스터 ICD `docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md` Interface I-5 기반 `AMM (Node 03)` 교신 규격; 착수 전 사양서 Draft → Approved 또는 ICD 연계 필요)
   - 광역 공역 진입/이탈 스케줄링 및 섹터 `GAC` 핸드오프 프로토콜 구현 (일정 연기)
@@ -163,6 +153,10 @@
 ---
 
 ## ✅ 3. 완료된 작업 이력 (Completed Tasks Archive — 최근 10개 요약; 상세 결정·검증 원문은 `.agent/memory/workspace-root.md`)
+
+- [x] **TASK-302: CC:Tweaked 포켓 컴퓨터(Pocket PDA) 휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말 구축 (`TASK-302-1..4`)** (완료일: 2026-11-21)
+  - **실행 계획서**: `docs/superpowers/plans/2026-11-21-task-302-pocket-pda.md`
+  - **결과**: `src/0_infra/pocket_pda/` (`26×20` 3-탭 TUI·RSSI 분류·듀얼 기체 선택·단일키 `[X]` `E_STOP`+`DUMP_NOW`·`[L]` `LAND_NEAREST`·`Alignment`/`FDR` 원격 제어) 및 `AMM`/`FDR`(`0 tx`)/`Alignment` 연동 구현, `POCKET_PDA v1.0.0`·`ALIGNMENT v2.10.0`·`FDR v0.6.0`·`AMM v2.8.0`·`GCS v1.5.0` `Implemented` 승격(`19종: 15 Implemented, 4 Approved`), `manifest.lua`(`16`모듈)·`gdrive_mapping.json`(`142`파일)·`playbook/0_infra/pocket_pda.md`(`16`종)·`test_e2e_pocket_pda_remote.lua`(`11`스위트 `25`케이스) 통합.
 
 - [x] **TASK-015: 전 계층 코드베이스·신규 추가 모듈/프로그램 통합 플레이북 체계 구축 (`TASK-015-1..6`)** (완료일: 2026-11-20)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-20-task-015-unified-playbook-suite.md`
@@ -199,7 +193,3 @@
 - [x] **TASK-406: AMM Mission Editor 광역 줌·실시간 노드 자동등록/1분 TTL·대상 필터·Inspection 모드 (`TASK-406-1..5`)** (완료일: 2026-11-18)
   - **실행 계획서**: `docs/superpowers/plans/2026-11-18-task-405-406-amm-editor-live-lan-and-inspection.md`
   - **결과**: `GAC` `position`·Centroid 폴백, `GCS` `60003` `MSG_GPS_NODE_HEARTBEAT`·`60s` TTL, WebUI 광역 줌(`0.01..4.0`)·노드 자동 등록·필터·`Inspection` 모드; `AMM_MISSION_EDITOR v0.6.0`·`GCS v1.4.0`·`GAC v1.7.0` 승격, 에디터 `30/30`·브리지 `4/4` PASS.
-
-- [x] **TASK-405: AMM Mission Editor `Connect Live` LAN 사설 IP 접속 및 서버 URL 입력 지원 (`TASK-405-1..3`)** (완료일: 2026-11-18)
-  - **실행 계획서**: `docs/superpowers/plans/2026-11-18-task-405-406-amm-editor-live-lan-and-inspection.md`
-  - **결과**: `gcs_live_bridge.py --lan`(`0.0.0.0`), WebUI `LiveBridge.isAllowedLocalUrl`(루프백·RFC 1918·`*.local` 허용, 공인 IP/`wss://` 차단)·URL 입력 영속화; `AMM_MISSION_EDITOR v0.6.0`·`GCS v1.4.0` 승격, 에디터 `30/30`·브리지 `4/4` PASS.

@@ -6,7 +6,7 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v1.0.0` |
 | **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/0_infra/pocket_pda/` |
@@ -95,18 +95,18 @@
 
 | 등급 (`tier`) | 조건 (`age_ms`, `distance_m`) | `rssiPct` 범위 | `distanceStr` 표기 | 운용 의미 |
 | :---: | :--- | :---: | :---: | :--- |
-| **`LOST`** | `lastRxMs == nil` 또는 `age_ms > telemetryTimeoutMs` (`2500ms`) | `0` | `"---"` | 텔레메트리 두절 상태 (기체 미가동 또는 RF 범위 이탈) |
+| **`LOST`** | `lastRxMs == nil` 또는 `age_ms > linkQuality.telemetryTimeoutMs` (`2000ms`) | `0` | `"---"` | 텔레메트리 두절 상태 (기체 미가동 또는 RF 범위 이탈) |
 | **`STRONG`** | `age_ms <= timeout` 및 `distance_m == nil` (차원 간 Ender 전송) | `100` | `"ENDER"` | Ender Modem 교차 차원/장거리 링크 또는 거리 무제한 연결 |
-| **`STRONG`** | `age_ms <= timeout` 및 `distance_m <= rssiThresholds.strongMaxM` (`64m`) | `75 ~ 100` | `string.format("%.1fm", d)` | 근거리 강신호 |
-| **`GOOD`** | `age_ms <= timeout` 및 `strongMaxM < distance_m <= goodMaxM` (`192m`) | `40 ~ 74` | `string.format("%.1fm", d)` | 중거리 양호 링크 |
-| **`WEAK`** | `age_ms <= timeout` 및 `distance_m > goodMaxM` (`> 192m`) | `10 ~ 39` | `string.format("%.1fm", d)` | 원거리 약신호 (접근 또는 복귀 권고) |
+| **`STRONG`** | `age_ms <= timeout` 및 `distance_m <= linkQuality.strongMaxDistM` (`80.0m`) | `75 ~ 100` | `string.format("%.1fm", d)` | 근거리 강신호 |
+| **`GOOD`** | `age_ms <= timeout` 및 `strongMaxDistM < distance_m <= linkQuality.goodMaxDistM` (`200.0m`) | `40 ~ 74` | `string.format("%.1fm", d)` | 중거리 양호 링크 |
+| **`WEAK`** | `age_ms <= timeout` 및 `distance_m > linkQuality.goodMaxDistM` (`> 200.0m`) | `10 ~ 39` | `string.format("%.1fm", d)` | 원거리 약신호 (접근 또는 복귀 권고) |
 
 ### 3.2 쿼터니언-오일러 변환 및 텔레메트리 병합 (`ingest_packet`)
-- **`Base + 3` (`MSG_MFD_STATE`)**: `fsmState`, `flightMode`, `controlState`, `attitude`, `dynamics`, `fuel`, `actuatorHealth`, `source`를 갱신하며, `source == "AMM_INTEGRATED"` 시 `AMM` 온라인 플래그를, `"CORE_ACRO_TAKEOVER"` 시 `VAS` 직결 활성 플래그를 설정합니다.
-- **`Base + 2` (`MSG_FLIGHT_TELEMETRY`)**: `attitude`가 `{ w, x, y, z }` 쿼터니언이면 `VAS` `quat.lua` 동일 축 규약(`sinp = clamp(2*(w*y - z*x), -1, 1)`, `pitch = deg(asin(sinp))`, `roll = deg(atan2(...))`, `yaw = deg(atan2(...)) % 360`)으로 오일러각을 변환하고, `dynamics`, `fuel`, `controlState`, `actuatorHealth`를 갱신합니다.
+- **`Base + 3` (`MSG_MFD_STATE`)**: `fsmState`/`controlState`, `flightMode`, `activeSource`/`source`, `attitude`, `dynamics`, `fuel`, `sensorOk`, `actuatorHealth`를 갱신하며, `source == "AMM_INTEGRATED"` 시 `AMM` 온라인 플래그를, 그 외(`"CORE_ACRO_TAKEOVER"` 등) 시 `VAS` 온라인 플래그를 설정합니다.
+- **`Base + 2` (`MSG_FLIGHT_TELEMETRY`)**: `attitude`가 `{ w, x, y, z }` 쿼터니언이면 `VAS` `quat.lua` 동일 축 규약(`sinp = clamp(2*(w*y - z*x), -1, 1)`, `pitch = deg(asin(sinp))`, `roll = deg(atan2(...))`, `yaw = deg(atan2(...)) % 360`)으로 오일러각을 변환하고, `dynamics`, `fuel`, `controlState`, `activeSource`, `sensorOk`, `actuatorHealth`를 갱신합니다.
 - **`Base + 9` (`MSG_EMERGENCY_ALERT`)**: 공중 비상 경보 수신 시 `lastAlert` 배너를 즉시 갱신합니다.
-- **`CH 50000` (`MSG_BLOCK_ASSIGN`)**: `status`가 `"ASSIGNED"` 또는 `"REASSIGNED"`이고 유효 `blockId`/`baseChannel`이 포함되면 `discoveredCrafts[blockId]`를 등록하고, 현재 선택 기체의 `targetDomainId`가 미확정(`"*"`)인 경우 자동 잠금합니다.
-- **노드 온라인 판정 (`update_link_timeouts`)**: `AMM`, `VAS`, `GCS`, `ALN`, `FDR` 노드의 마지막 수신(또는 낙관적 확인) 시각을 `nodeTimeoutMs` (`5000ms`) 기준으로 점검하여 HUD 상태 매트릭스를 갱신합니다.
+- **`CH 50000` (`MSG_BLOCK_ASSIGN`)**: `status`가 `nil`이거나 `"ASSIGNED"`/`"REASSIGNED"`이고 유효 `baseChannel`(`10000 ~ 49960`, `40` 단위 정렬)이 포함되면 `discoveredCrafts[n]`를 등록하고 `GCS` 온라인 상태를 갱신합니다(`autoDomain == true`인 경우 `Base+2`/`Base+3`/`Base+8`/`Base+9` 수신 시 `targetDomainId` 자동 잠금).
+- **노드 온라인 판정 (`update_link_timeouts`)**: `AMM`, `VAS`, `GCS`, `ALN`, `FDR` 노드의 마지막 수신(또는 낙관적 확인) 시각을 `linkQuality.nodeStaleMs` (`3000ms`) 기준으로 점검하여 HUD 상태 매트릭스를 갱신합니다.
 
 ---
 
@@ -116,7 +116,8 @@
 어느 탭(`HUD`, `ALIGN`, `FDR`)에 있든 사용자가 `[X]`를 누르면 확인 절차로 인한 지연 없이 두 패킷을 즉시 연쇄 송출합니다:
 1. **기체 비상 정지 (`Base + 9`, `CH_EMERGENCY_CORE`)**:
    - 패킷: `MSG_EMERGENCY_OVERRIDE`
-   - 페이로드: `{ action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "POCKET_PDA", targetCraft = ctx.targetDomainId, reason = "PDA_OPERATOR_ESTOP" }`
+   - 계약 필수 필드(`config/protocol_contracts.json` `[I-2]`): `{ action = "E_STOP", authKey = "ESTOP_CONFIRM_KEY", source = "POCKET_PDA" }`
+   - 단말 부가 메타데이터(비필수): `{ targetCraft = ctx.targetDomainId, reason = "PDA_OPERATOR_ESTOP" }` (`VAS`는 엔벨로프 `domainId` 및 `action`/`authKey`를 검증하여 `E_STOP` 전환을 수행)
 2. **FDR 즉시 JSONL 덤프 (`Base + 9`, `CH_EMERGENCY_CORE`)**:
    - 패킷: `MSG_FDR_REMOTE_CMD`
    - 페이로드: `{ action = "DUMP_NOW", targetAircraftIndexN = ctx.aircraftIndexN, targetDomainId = ctx.targetDomainId, source = "POCKET_PDA", reason = "PDA_ESTOP_DUMP" }`
@@ -253,21 +254,21 @@ Pocket PDA는 `[2]ALIGN` 탭에서 격납고 베이 $B \in [1, 10]$을 선택한
 ```text
 +--------------------------+
 |N:001 CH10000 AIRCRAFT_01 | Row 1: 선택 기체 N, Base, domainId
-|FSM:CRUISE   LNK:STRG 38m | Row 2: FSM, 링크 등급 + 거리/ENDER
+|FSM:CRUISE   STRONG 38.0m | Row 2: FSM, 링크 등급 + 거리/ENDER
 |TAB:[1]HUD  [2]ALN [3]FDR | Row 3: 3-탭 전환 바
 |--------------------------| Row 4: 본문 시작 (Rows 4~17, 14행)
-|ALT: 125.4m  VSPD: +0.2m/s| Row 5 (Tab 1 HUD 예시)
-|SPD:  18.5m/s FUEL:[|||.] | Row 6
-|PIT:+2.1  ROL:-4.5 Y:092.4| Row 7
-|MOD:AUTO_NAV SRC:AMM_INT  | Row 8
+|ALT: 125.4m VSPD: +0.2m/s | Row 5 (Tab 1 HUD 예시)
+|SPD: 18.5m/s FUEL:[|||..] | Row 6
+|P: +2.1 R: -4.5 Y:092.4   | Row 7
+|MOD:AUTO_NAV  SRC:AMM_INT | Row 8
 |ACT:OK  SEN:OK  PBIT:PASS | Row 9
 |FLEET:03 DISCOVERED       | Row 10
-|NOD: AMM* VAS* GCS* ALN.  | Row 11
-|FDR: LOGGING N:001        | Row 12
-|ALN: BAY01 STANDBY        | Row 13
-|LAST: PBIT_OK (1.2s)      | Row 14
-|                          | Row 15
-|                          | Row 16
+|AMM* VAS* GCS* ALN. FDR.  | Row 11
+|FDR:LOGGING  N:001        | Row 12
+|ALN:BAY01 STANDBY         | Row 13
+|STS:NOMINAL               | Row 14
+|ACK:ACCEPTED              | Row 15
+|CMD:HOLD                  | Row 16
 |HUD:[A]RM [T]KOF [P]BIT   | Row 17: 탭 전용 핫키 안내
 |--------------------------| Row 18: 글로벌 하단 바 시작 (Rows 18~20)
 |[X]ESTP+DMP [H]LD [R]RTB  | Row 19
@@ -275,8 +276,8 @@ Pocket PDA는 `[2]ALIGN` 탭에서 격납고 베이 $B \in [1, 10]$을 선택한
 +--------------------------+
 ```
 
-- **Tab 2 (`[2]ALIGN`) 본문**: 격납고 베이 번호(`BAY:01` `CH:101`), 대상 기체(`N`), `Alignment` FSM 상태, 원격 상태(`SESSION_STARTED`/`PAUSED`/`SYNCING` 등), 현재 추진기, $R^2$/권능 판정(`FULL_6DOF_PASS`), 탭 전용 핫키(`[-]Bay [+] [B]ind [G]o [P]au [Y]Sync [A]bt [K]Rel`).
-- **Tab 3 (`[3]FDR`) 본문**: 현재 PDA 바인딩 기체(`N`) vs `FDR` 바인딩 기체(`fdrBoundIndexN`), `FDR` 모드(`LOGGING`/`STANDBY`/`PAUSED`), 마지막 원격 명령(`DUMP_NOW`/`EXPORT_NOW`/`ROLLOVER_NOW`/`CLEAR_BUFFER`), 무송신(`0 tx`) 안내, 탭 전용 핫키(`[B]ind [M]ode [D]ump [U]p [S]plit [C]lr`).
+- **Tab 2 (`[2]ALIGN`) 본문**: 격납고 베이 번호(`BAY:01 CH:101`), 대상 기체(`CRAFT:N:001 AIRCRAFT_01`), `Alignment` FSM 상태, 원격 상태(`SESSION_STARTED`/`PAUSED`/`SYNCING` 등), 현재 추진기(`THR:`), $R^2$/권능 판정(`R2 :`, `CTL:FULL_6DOF_PASS`), 명령·사유·상태(`CMD:`/`RSN:`/`MSG:`), 2행 탭 전용 핫키(`Row 16: [-]Bay [+] [B]ind [G]o`, `Row 17: [P]au [T]Rty [Y]Syn [A][K]`).
+- **Tab 3 (`[3]FDR`) 본문**: 현재 PDA 바인딩 기체(`PDA N:001  CH:10009`) vs `FDR` 바인딩 기체(`FDR N:001  CH:10009`), `FDR` 모드(`MODE:`/`REC :`/`DOM :`), 마지막 원격 명령(`CMD :`), 무송신 안내(`LINK: PASSIVE 0 tx`), 상태/경고(`STS :`, `[X] -> E_STOP + DUMP_NOW`), 2행 탭 전용 핫키(`Row 16: FDR:[B]ind [M]ode [D]ump`, `Row 17: [U]Exp [S]Roll [C]lear`).
 
 ### 6.2 전역 및 탭별 키바인딩 매트릭스
 
@@ -292,8 +293,8 @@ Pocket PDA는 `[2]ALIGN` 탭에서 격납고 베이 $B \in [1, 10]$을 선택한
 | **전역** | `Tab` | `CH 50000` 발견 편대 기체 순환 선택 | 동적 채널 재바인딩 |
 | **전역** | `q` | 모든 개방 채널 닫기 및 안전 종료 | `modem.close()` |
 | **Tab 1 (`HUD`)** | `a` / `t` / `p` | `ARM` / `TAKEOFF` / `PBIT` 요청 | `MSG_OPERATOR_CMD` (`Base+0`) / `MSG_PBIT_REQ` (`Base+8`) |
-| **Tab 2 (`ALIGN`)** | `-` / `=` | 격납고 베이 번호 $B \pm 1$ ($1 \dots 10$) | `Base_hangar+1` 재바인딩 |
-| **Tab 2 (`ALIGN`)** | `b`/`g`/`p`/`y`/`a`/`k` | `BIND_SESSION`/`START_PULSE`/`PAUSE_SESSION`/`APPROVE_SYNC`/`ABORT_SESSION`/`RELEASE_SESSION` (추가 `RETRY_STEP`) | `MSG_ALIGN_REMOTE_CMD` ($Base_{\text{hangar}}+0$) |
+| **Tab 2 (`ALIGN`)** | `-` / `=` / `+` | 격납고 베이 번호 $B \pm 1$ ($1 \dots 10$, `=`·`+` 모두 증가 별칭) | `Base_hangar+1` 재바인딩 |
+| **Tab 2 (`ALIGN`)** | `b`/`g`/`p`/`t`/`y`/`a`/`k` | `BIND_SESSION`/`START_PULSE`/`PAUSE_SESSION`/`RETRY_STEP`/`APPROVE_SYNC`/`ABORT_SESSION`/`RELEASE_SESSION` (`t`로 `RETRY_STEP` 할당해 전역 `r` `RTB`와 충돌 회피) | `MSG_ALIGN_REMOTE_CMD` ($Base_{\text{hangar}}+0$) |
 | **Tab 3 (`FDR`)** | `b`/`m`/`d`/`u`/`s`/`c` | `BIND_AIRCRAFT`/`SET_MODE`(`LOGGING`↔`STANDBY`)/`DUMP_NOW`/`EXPORT_NOW`/`ROLLOVER_NOW`/`CLEAR_BUFFER` | `MSG_FDR_REMOTE_CMD` (`fdrBoundBase+9` / `Base+9`) |
 
 ### 6.3 설정 파일 스키마 (`src/0_infra/pocket_pda/config/pda_config.json`)
@@ -301,19 +302,38 @@ Pocket PDA는 `[2]ALIGN` 탭에서 격납고 베이 $B \in [1, 10]$을 선택한
 ```json
 {
   "schemaVersion": "1.0.0",
-  "terminalId": "POCKET_PDA_01",
-  "modemSide": "back",
-  "defaultAircraftIndexN": 1,
-  "defaultTargetDomainId": "AIRCRAFT_01",
-  "defaultHangarBayId": 1,
-  "defaultFdrBoundIndexN": 1,
-  "stationIdPrefix": "HANGAR_BAY_",
-  "uiRefreshRateHz": 5,
-  "telemetryTimeoutMs": 2500,
-  "nodeTimeoutMs": 5000,
-  "rssiThresholds": {
-    "strongMaxM": 64,
-    "goodMaxM": 192
+  "system": {
+    "id": "PDA_01",
+    "domainId": "POCKET_PDA_01",
+    "modemSide": "back",
+    "loopFrequencyHz": 20,
+    "uiRefreshRateHz": 5
+  },
+  "defaults": {
+    "aircraftIndexN": 1,
+    "targetDomainId": "AIRCRAFT_01",
+    "hangarBayId": 1,
+    "fdrBoundIndexN": 1
+  },
+  "channels": {
+    "gcsBootstrapChannel": 50000,
+    "missionAckChannel": 50004,
+    "aircraftBaseMin": 10000,
+    "aircraftBandwidth": 40,
+    "maxAircraft": 1000,
+    "hangarBaseMin": 101,
+    "hangarBandwidth": 10,
+    "maxHangarBays": 10
+  },
+  "linkQuality": {
+    "telemetryTimeoutMs": 2000,
+    "nodeStaleMs": 3000,
+    "strongMaxDistM": 80.0,
+    "goodMaxDistM": 200.0
+  },
+  "ui": {
+    "screenWidth": 26,
+    "screenHeight": 20
   }
 }
 ```

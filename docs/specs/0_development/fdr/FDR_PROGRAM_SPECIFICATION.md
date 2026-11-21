@@ -6,7 +6,7 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Approved` |
+| **문서 상태 (Status)** | `Implemented` |
 | **문서 버전 (Version)** | `v0.6.0` |
 | **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/0_development/fdr/ & tools/analyze_flight_log.py` |
