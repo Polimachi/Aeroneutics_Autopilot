@@ -177,10 +177,13 @@ local function send_zero_pulse(inst)
     })
 end
 
-function align_master.release_channels(self, reason)
+function align_master.release_channels(self, reason, save_profile)
     local inst = (type(self) == "table" and self.state) and self or active_session
     if not inst then return end
-    local raw_reason = (type(self) == "string" and self) or reason
+    local is_str_call = (type(self) == "string")
+    local raw_reason = is_str_call and self or reason
+    local save_flag = save_profile
+    if is_str_call then save_flag = reason end
     local close_reason = normalize_close_reason(raw_reason, "COMPLETE")
     local station = inst.station or get_station_cfg(inst.cfg)
     send_pkt(inst, inst.cmd_ch, "MSG_CALIBRATION_CLOSE", {
@@ -188,7 +191,7 @@ function align_master.release_channels(self, reason)
         bayId = station.bayId or 1,
         action = "CLOSE_SESSION",
         reason = close_reason,
-        saveProfile = true
+        saveProfile = (save_flag ~= false)
     })
     modem_close(inst.modem, inst.cmd_ch)
     modem_close(inst.modem, inst.telem_ch)
@@ -609,7 +612,7 @@ function align_master.handle_remote_cmd(self, pkt, cfg, modem, now_ms)
     if req.action == "RELEASE_SESSION" then
         local close_reason = normalize_close_reason(req.reason, req.saveProfile == false and "MANUAL" or "COMPLETE")
         local out = emit_remote_status(inst, eff_modem, inst.telem_ch, req, "RELEASED", req.reason, t_ms)
-        align_master.release_channels(inst, close_reason)
+        align_master.release_channels(inst, close_reason, req.saveProfile)
         return inst, out
     end
     local handler = REMOTE_ALIGN_HANDLERS[req.action]

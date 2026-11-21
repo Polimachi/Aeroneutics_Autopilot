@@ -532,4 +532,55 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         assert_eq(m2.state, "STANDBY")
         assert_true(mockModem.isOpen(101), "STANDBY daemon must re-open cmd_ch=101")
     end)
+
+    it("forwards saveProfile=false and preserves default saveProfile=true on RELEASE_SESSION", function()
+        local mockModem = mock.modem()
+        local stationCfg = {
+            station = { stationId = "HANGAR_BAY_01", bayId = 1, baseHangarChannel = 101 },
+            safety = { tiltAbortDeg = 12.0, tiltWarnDeg = 8.0, watchdogTimeoutMs = 5000 },
+        }
+
+        local function find_close_pkt(tx_list)
+            for _, tx in ipairs(tx_list) do
+                if tx.pkt and tx.pkt.type == "MSG_CALIBRATION_CLOSE" then
+                    return tx.pkt
+                end
+            end
+            return nil
+        end
+
+        -- Case 1: Explicit saveProfile = false -> MSG_CALIBRATION_CLOSE carries saveProfile = false, reason = "MANUAL"
+        local m_rollback = align_master.handle_remote_cmd(nil, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 1, time = 1000,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "BIND_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1000)
+        mockModem._transmitted = {}
+        align_master.handle_remote_cmd(m_rollback, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 2, time = 1100,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "RELEASE_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2, saveProfile = false },
+        }, stationCfg, mockModem, 1100)
+        local close_rollback = find_close_pkt(mockModem._transmitted)
+        assert_not_nil(close_rollback)
+        assert_eq(close_rollback.payload.saveProfile, false)
+        assert_eq(close_rollback.payload.reason, "MANUAL")
+
+        -- Case 2: Default RELEASE_SESSION (saveProfile omitted) -> saveProfile = true, reason = "COMPLETE"
+        local m_default = align_master.handle_remote_cmd(nil, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 3, time = 1200,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "BIND_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1200)
+        mockModem._transmitted = {}
+        align_master.handle_remote_cmd(m_default, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 4, time = 1300,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "RELEASE_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1300)
+        local close_default = find_close_pkt(mockModem._transmitted)
+        assert_not_nil(close_default)
+        assert_eq(close_default.payload.saveProfile, true)
+        assert_eq(close_default.payload.reason, "COMPLETE")
+    end)
 end)
