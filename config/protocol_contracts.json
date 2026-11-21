@@ -248,7 +248,8 @@
         "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
         "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
         "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
-        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
+        "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
       ],
       "channelMatchers": [
         {
@@ -270,6 +271,10 @@
           "offset": 9
         },
         "MSG_EMERGENCY_ALERT": {
+          "kind": "aircraft_offset",
+          "offset": 9
+        },
+        "MSG_FDR_REMOTE_CMD": {
           "kind": "aircraft_offset",
           "offset": 9
         }
@@ -336,7 +341,42 @@
           "specs": [
             "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
             "docs/specs/2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md",
-            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_FDR_REMOTE_CMD": {
+          "diagramRequired": true,
+          "requiredKeys": [
+            "action",
+            "targetAircraftIndexN",
+            "source"
+          ],
+          "optionalKeys": [
+            "targetDomainId",
+            "recordMode",
+            "autoStartLogging",
+            "reason"
+          ],
+          "enums": {
+            "action": [
+              "BIND_AIRCRAFT",
+              "SET_MODE",
+              "DUMP_NOW",
+              "EXPORT_NOW",
+              "ROLLOVER_NOW",
+              "CLEAR_BUFFER"
+            ]
+          },
+          "numericBounds": {
+            "targetAircraftIndexN": [
+              1,
+              1000
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/fdr/FDR_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         }
       },
@@ -498,7 +538,8 @@
       "specs": [
         "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
         "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
-        "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md"
+        "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
+        "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
       ],
       "channelMatchers": [
         {
@@ -564,7 +605,8 @@
           },
           "specs": [
             "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
-            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         },
         "MSG_CALIB_BAY_BIND": {
@@ -679,7 +721,8 @@
           "specs": [
             "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
             "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
-            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         },
         "MSG_PBIT_REPORT": {
@@ -705,7 +748,8 @@
           "specs": [
             "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
             "docs/specs/1_control/tca/TCA_PROGRAM_SPECIFICATION.md",
-            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         },
         "MSG_CALIB_ACK": {
@@ -722,7 +766,8 @@
           },
           "specs": [
             "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
-            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         },
         "MSG_CALIBRATION_CLOSE": {
@@ -762,7 +807,84 @@
           },
           "specs": [
             "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
-            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_ALIGN_REMOTE_CMD": {
+          "diagramRequired": true,
+          "requiredKeys": [
+            "action",
+            "stationId",
+            "bayId",
+            "aircraftIndexN"
+          ],
+          "optionalKeys": [
+            "targetCraftDomain",
+            "baseHangarChannel",
+            "reason",
+            "saveProfile",
+            "source"
+          ],
+          "enums": {
+            "action": [
+              "BIND_SESSION",
+              "START_PULSE",
+              "PAUSE_SESSION",
+              "RETRY_STEP",
+              "APPROVE_SYNC",
+              "ABORT_SESSION",
+              "RELEASE_SESSION"
+            ]
+          },
+          "numericBounds": {
+            "bayId": [
+              1,
+              10
+            ],
+            "aircraftIndexN": [
+              1,
+              1000
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
+          ]
+        },
+        "MSG_ALIGN_REMOTE_STATUS": {
+          "diagramRequired": true,
+          "requiredKeys": [
+            "stationId",
+            "bayId",
+            "aircraftIndexN",
+            "fsmState",
+            "status"
+          ],
+          "optionalKeys": [
+            "targetCraftDomain",
+            "baseHangarChannel",
+            "craftBaseChannel",
+            "activeThruster",
+            "controllabilityStatus",
+            "confidenceR2",
+            "reason"
+          ],
+          "enums": {
+            "status": [
+              "SESSION_STARTED",
+              "PULSE_STARTED",
+              "PAUSED",
+              "RETRYING",
+              "SYNCING",
+              "ABORTED",
+              "RELEASED",
+              "REJECTED"
+            ]
+          },
+          "specs": [
+            "docs/specs/0_development/alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         }
       },
@@ -1279,7 +1401,8 @@
       "specs": [
         "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
         "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
-        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+        "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
+        "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
       ],
       "channelMatchers": [
         {
@@ -1311,7 +1434,8 @@
           },
           "specs": [
             "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
-            "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md"
+            "docs/specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         },
         "MSG_MISSION_CMD": {
@@ -1365,7 +1489,8 @@
             ]
           },
           "specs": [
-            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md"
+            "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         },
         "MSG_MFD_STATE": {
@@ -1385,7 +1510,8 @@
           ],
           "specs": [
             "docs/specs/3_planning/amm/AMM_PROGRAM_SPECIFICATION.md",
-            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md"
+            "docs/specs/1_control/vas/VAS_PROGRAM_SPECIFICATION.md",
+            "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
           ]
         }
       },

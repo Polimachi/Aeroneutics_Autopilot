@@ -1,4 +1,4 @@
-"""Unit and end-to-end tests for tools/verify_all_specs.py (18 specs & Rule 10)."""
+"""Unit and end-to-end tests for tools/verify_all_specs.py (19 specs & Rule 10)."""
 from __future__ import annotations
 
 import contextlib
@@ -16,6 +16,7 @@ import tools.verify_all_specs as vas
 
 MASTER_ICD_REL = "docs/system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md"
 EDITOR_SPEC_REL = "docs/specs/3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md"
+POCKET_PDA_SPEC_REL = "docs/specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md"
 
 MINIMAL_SPEC_TEMPLATE = """# Synthetic Specification
 
@@ -51,13 +52,15 @@ def _build_synthetic_suite(root: Path, overrides: dict[str, str] | None = None) 
 
 
 class TestVerifyAllSpecsLists(unittest.TestCase):
-    def test_spec_lists_contain_18_active_specs_including_editor(self) -> None:
-        self.assertEqual(len(vas.SPEC_FILES), 18)
-        self.assertEqual(len(vas.REVISION_HISTORY_SPECS), 18)
-        self.assertEqual(len(set(vas.SPEC_FILES)), 18)
+    def test_spec_lists_contain_19_active_specs_including_editor_and_pocket_pda(self) -> None:
+        self.assertEqual(len(vas.SPEC_FILES), 19)
+        self.assertEqual(len(vas.REVISION_HISTORY_SPECS), 19)
+        self.assertEqual(len(set(vas.SPEC_FILES)), 19)
         self.assertEqual(set(vas.SPEC_FILES), set(vas.REVISION_HISTORY_SPECS))
         self.assertIn(EDITOR_SPEC_REL, vas.SPEC_FILES)
         self.assertIn(EDITOR_SPEC_REL, vas.REVISION_HISTORY_SPECS)
+        self.assertIn(POCKET_PDA_SPEC_REL, vas.SPEC_FILES)
+        self.assertIn(POCKET_PDA_SPEC_REL, vas.REVISION_HISTORY_SPECS)
 
 
 class TestRule10InlinePeerVersionBadges(unittest.TestCase):
@@ -194,7 +197,7 @@ class TestVerifyAllEndToEnd(unittest.TestCase):
             with contextlib.redirect_stdout(buf):
                 rc = vas.verify_all(root, check_readmes=False)
             self.assertEqual(rc, 0, buf.getvalue())
-            self.assertIn("ALL 18 SPECS 100% CLEAN (0 Errors, 0 Warnings)", buf.getvalue())
+            self.assertIn("ALL 19 SPECS 100% CLEAN (0 Errors, 0 Warnings)", buf.getvalue())
 
     def test_verify_all_fails_when_inline_peer_badge_present(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

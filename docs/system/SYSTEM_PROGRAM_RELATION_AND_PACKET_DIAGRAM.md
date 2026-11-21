@@ -6,8 +6,8 @@
 | 항목 | 내용 |
 | :--- | :--- |
 | **문서 상태 (Status)** | `Approved` |
-| **문서 버전 (Version)** | `v2.22.1` |
-| **최종 수정일 (Date)** | `2026-11-20` |
+| **문서 버전 (Version)** | `v2.23.0` |
+| **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/` |
 | **주관 도메인 (Domain)** | 시스템 프로그램 관계망 및 채널 토폴로지 구조도 (Architecture Map) |
 
@@ -16,6 +16,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.23.0` | `2026-11-21` | **`TASK-302` (`R1`–`R5`) `Pocket PDA` 노드·관계망·`MSG_FDR_REMOTE_CMD` / `MSG_ALIGN_REMOTE_CMD` / `MSG_ALIGN_REMOTE_STATUS` 반영 (`Approved`)**: ① `연관 규격서` 및 `§5.1` 채널 매핑 표에 `Pocket PDA` 추가, ② `§2` 아키텍처 다이어그램에 `Pocket PDA`(`Base+0/+2/+3/+8/+9`, `CH 50000/50004`, $Base_{\text{hangar}}+0/+1$) 연결 추가, ③ `§3` 패킷 매트릭스에 `[I-2]` `MSG_FDR_REMOTE_CMD` 및 `[I-4]` `MSG_ALIGN_REMOTE_CMD`/`MSG_ALIGN_REMOTE_STATUS` 등재 및 `ICD v1.40.0` 동기화 | `TASK-302` 휴대용 Pocket PDA 원격 C2·지상 콘솔 링크·비상 덤프 아키텍처 정합화 |
 | `v2.22.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지, 이력 롤업 및 `R4` 시퀀스 정합 (`Approved`)**: 상단 `연관 규격서` 버전 배지 제거·버전 SSOT를 각 규격서 헤더 및 마스터 ICD `§5.1`로 일원화, `§4.3` 활주로 이탈 시퀀스의 구 `MSG_ATC_RUNWAY_CLEAR` 제거 및 `MSG_RUNWAY_VACATED` (`CH 50212`)·`MSG_ATC_FACILITY_UPDATE` (`CH 50202`) 정합, 미구현 Tower ATC/지상 활주 패킷(`MSG_ATC_HANDOFF_CLEARANCE`, `MSG_TAXI_CMD`) `[DEFERRED: TASK-108]` 표기 및 `v2.7.0 ~ v2.19.0` 1행 롤업 | `TASK-019` 사양 경량화, 버전 SSOT 일원화 및 `R4` 드리프트 해소 (`Approved` 유지) |
 | `v2.22.0` | `2026-11-19` | **`TASK-017`·`TASK-018` §3 패킷 매트릭스 정합 및 `Approved` 사양서 8종 배지 동기화 (`Approved`)**: ① `MSG_GPS_STATUS_REQ` 페이로드를 실제 계약 `queryType`으로 정정 (`reqType`, `replyChannel` `[DEPRECATED]`), ② `MSG_ATC_APPROACH_REQ`, `MSG_ATC_SECTOR_HANDOFF_REQ`, `MSG_ATC_SECTOR_HANDOFF_ACK`, `MSG_GAC_APPROACH_CLEARANCE` (`status` `"DIVERT"`, `divertChannel`), `MSG_ABORT_APPROACH` 계약 필드 정렬 및 유령 키 5종(`currentFsmState`, `emergencyAction` 등) `[DEPRECATED]` 표기, ③ 마스터 ICD(`v1.39.0`) 및 구현·설정 변경 8종 사양서(`AMM v2.7.0`, `FCP v2.6.0`, `VAS v1.26.0`, `TCA v1.15.0`, `Installer v1.3.0`, `FDR v0.5.0`, `LANDING_PAD v2.6.0`, `RUNWAY v1.13.0`) 참조 동기화 | `TASK-016` 감사 후속 와이어 계약 SSOT 및 다이어그램 1:1 정합 확보 |
 | `v2.21.0` | `2026-11-18` | **`TASK-136`·`TASK-131`·`TASK-128` 패킷 매트릭스(`MSG_PBIT_REQ`, `MSG_PBIT_REPORT`, `MSG_NAV_QUALITY`) 및 배지 동기화 (`Approved`)**: ① `[I-4]` `MSG_CALIB_PULSE` (`pbitWiggle`/`pulseRatio`), `MSG_PROFILE_SYNC` (`peripheralManifest`), `MSG_PBIT_REQ`/`MSG_PBIT_REPORT` (`Base+8`/`Base+2`) 반영, ② `[I-7]` `MSG_GPS_RESPONSE` (`navQuality`, `consecutiveFailures`) 및 `MSG_NAV_QUALITY` (`Base+5`/`Base+2`/`60002`) 등재, ③ 마스터 ICD(`v1.38.0`) 및 6대 서브시스템(`Alignment v2.9.0`, `VAS v1.25.0`, `TCA v1.14.0`, `AMM v2.6.0`, `GPS v2.4.0`, `FCP v2.5.0`) 배지 동기화 | `TASK-136`·`131`·`128` 전역 통신 토폴로지 정합 동기화 |
@@ -41,6 +42,7 @@
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../specs/0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../specs/0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서)
 > - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔 규격서)
+> - [POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) (Pocket PDA 휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말 규격서)
 
 ---
 
@@ -66,9 +68,10 @@ flowchart TD
     %% ==========================================
     %% Domain 1: Ground Control Station (GCS)
     %% ==========================================
-    subgraph DOMAIN_GCS["[인프라] GCS 지상 관제 센터"]
+    subgraph DOMAIN_GCS["[인프라] GCS 지상 관제 센터 & 휴대 단말"]
         GCS_CHAN["GCS 채널 관리자<br/>(channel_manager.lua)<br/>* CH 50000 게이트웨이<br/>* 10000~49999 연속 블록 배정 & 영속 리스"]
         GCS_C2["GCS 비행 지휘 콘솔<br/>(gcs_terminal.lua)<br/>* 원격 C2 / 미션 제어 / Base+9 비상 E-Stop<br/>* CH 50003·50004·60003 & ws:// Live Bridge(옵션)"]
+        POCKET_PDA["Pocket PDA 휴대 단말<br/>(pocket_pda/main.lua, 26x20)<br/>* Base+0/+2/+3/+8/+9 & Base_hangar+0/+1<br/>* [X] E_STOP+FDR Dump & Alignment 원격 제어"]
     end
 
     %% ==========================================
@@ -123,6 +126,9 @@ flowchart TD
     AMM <==>|"CH 50000<br/>[I-8] 부트스트랩 (요청/배정)"| GCS_CHAN
     GCS_C2 <==>|"Base + 0<br/>[I-6] 원격 C2·미션 제어 (MSG_OPERATOR_CMD / MSG_MISSION_ACK)"| AMM
     GCS_C2 -.->|"Base + 9<br/>[I-2] 하드 비상차단 직결 (E_STOP)"| CORE
+    POCKET_PDA <==>|"Base + 0 / Base + 3<br/>[I-6] 휴대 원격 C2(LAND_NEAREST/RTB) & HUD"| AMM
+    POCKET_PDA -.->|"Base + 9<br/>[I-2] 단일키 E_STOP + MSG_FDR_REMOTE_CMD"| CORE
+    POCKET_PDA <==>|"Base_hangar + 0/+1<br/>[I-4] MSG_ALIGN_REMOTE_CMD / STATUS"| ALIGNMENT
 
     %% Connections - GPS (External terminates at AMM)
     AMM -.->|"CH 60001<br/>[I-7] 측위 핑 브로드캐스트 (고도 주입)"| GPS_SWARM
@@ -253,7 +259,8 @@ flowchart TD
 | **I-1** | `MSG_FLIGHT_TELEMETRY` | `VAS` (Node 01) | `FCP` (Node 04)<br>`AMM` (Node 03)<br>`Alignment` (Node 05)<br>`FDR` *(수신 전용)* | `Base + 2` (비행)<br>$Base_{\text{hangar}} + 1$ (교정) | 20Hz (50ms) | `attitude` (`P/R/Y/heading`), `angularRates` (P/R/Y), `dynamics` (altY, vSpeed, velocity `{vx,vy,vz}`), `fuel`, `dynamicLoad`, `controlState`, `activeSource` (`"FCP"`/`"MFD_ACRO"`/`"EMERGENCY_DIRECT"`), `sensorOk`, `sensorHealth`, `actuatorHealth` (`{tap, asa, allOk}`), 선택(`telemetryDiag=true`): `satFlags`, `diag` |
 | **I-2** | `MSG_ATTITUDE_CMD` | `FCP` (Node 04)<br>`Cockpit MFD` (급기동 시) | `VAS` (Node 01) | `Base + 1`<br>(`CH_FLIGHT_GUIDANCE`, 순수 유도 전용) | 20Hz (50ms) | `source` (`"FCP"`/`"MFD_DIRECT"`), `arm`, `flightActive`, `flightMode`, `commandType` (`"QUATERNION_RATE"` / `"RATE_COMMAND"`; `"ATTITUDE_ANGLE"` `[DEPRECATED]`), `targetQuaternion`, `targetAngularRates`, `collectiveThrust`, `flapTarget`, `acroActive`, `translationBias` (`{surge, sway}`; `angleTargets`, `rateTargets`, `targetClimbRate`, `targetThrottle`, `translationBias.heave` `[DEPRECATED]`) |
 | **I-2** | `MSG_EMERGENCY_ALERT` | `VAS` (Node 01) | `AMM` (Node 03)<br>`FCP` (Node 04)<br>`MFD`, `GCS` | `Base + 9`<br>(`CH_EMERGENCY_CORE`, 구 `Base+1` `[DEPRECATED]`) | 공중 셧다운 시 즉시 | `reason` (사유 문자열), `isAirborne` (`true`), `fsmState` (발생 시점 FSM), `altitude` (발생 시점 CoM 고도) |
-| **I-2** | `MSG_EMERGENCY_OVERRIDE` | `AMM` (Node 03)<br>`Cockpit MFD`<br>`GCS Console` | `VAS` (Node 01) | `Base + 9`<br>(`CH_EMERGENCY_CORE`, 구 `Base+1` `[DEPRECATED]`) | 하드 킬스위치 발동 시 | `action` (`"E_STOP"` 하드 비상차단), `authKey` (`"ESTOP_CONFIRM_KEY"`), `source` (`"AMM"`/`"MFD"`/`"GCS"`). *(비상착륙/긴급홀드는 `AMM` `Base+0` 수신 $\to$ `Base+4` `FCP` 경유)* |
+| **I-2** | `MSG_EMERGENCY_OVERRIDE` | `AMM` (Node 03)<br>`Cockpit MFD`<br>`GCS Console`<br>`Pocket PDA` | `VAS` (Node 01) | `Base + 9`<br>(`CH_EMERGENCY_CORE`, 구 `Base+1` `[DEPRECATED]`) | 하드 킬스위치 발동 시 | `action` (`"E_STOP"` 하드 비상차단), `authKey` (`"ESTOP_CONFIRM_KEY"`), `source` (`"AMM"`/`"MFD"`/`"GCS"`/`"POCKET_PDA"`). *(비상착륙/긴급홀드는 `AMM` `Base+0` 수신 $\to$ `Base+4` `FCP` 경유)* |
+| **I-2** | `MSG_FDR_REMOTE_CMD` | `Pocket PDA` | `FDR` *(수신 전용 `0 tx`)* | `Base + 9`<br>(`CH_EMERGENCY_CORE`) | `[X]` 덤프 또는 원격 제어 시 | `action` (`"BIND_AIRCRAFT"`/`"SET_MODE"`/`"DUMP_NOW"`/`"EXPORT_NOW"`/`"ROLLOVER_NOW"`/`"CLEAR_BUFFER"`), `targetAircraftIndexN` ($1 \sim 1000$), `source`, 선택: `targetDomainId`, `recordMode`, `autoStartLogging`, `reason` |
 | **I-3** | `MSG_THRUST_CMD` | `VAS` (Node 01) | `TCA 클러스터` (Node 02-xx) | `Base + 10`<br>(`CH_THRUST_ACTUATION`, 구 `Base+6` `[DEPRECATED]`) | 20Hz (50ms)<br>*(폐루프 검증 PASS)* | `watchdogSeq`, `controlState` (`DISARMED`, `ARMING`, `IDLE_ARMED`, `NORMAL`, `CALIBRATION`, `FAILSAFE_HOLD`, `EMERGENCY_LAND`, `E_STOP`), `outputs` (`[groupId] = 0~15` \| `{ thrust, gimbalX, gimbalY }`) |
 | **I-3** | `MSG_ACTUATOR_STATUS` | `TCA 클러스터` (Node 02-xx) | `VAS` (Node 01) | `Base + 10`<br>(`CH_THRUST_ACTUATION`, 구 `Base+6` `[DEPRECATED]`) | 이벤트 발생 시 즉시<br>*(폐루프 검증 PASS)* | `groupId`, `interactionMode` (`mode` `[DEPRECATED]`), `appliedSignal`, `appliedRatio`, `appliedGimbal`, `gimbalSaturated`, `isSaturated`, `activeCount`, `totalCount`, `healthStatus` (`REDSTONE_NOMINAL`/`API_NOMINAL` 등) |
 | **I-3** / **I-4** | `MSG_ACTUATOR_DISCOVER_REQ` | `VAS` (Node 01)<br>`Alignment` (Node 05) | `TCA 클러스터` (Node 02-xx) | `Base + 10` /<br>$Base_{\text{hangar}} + 3$ | 부팅/Arming/교정 전 1회<br>*(폐루프 검증 PASS)* | `targetGroup` (`"ALL"` 또는 특정 `groupId`), `replyChannel` (선택, 예: `104` / $Base_{\text{hangar}}+3$) |
@@ -267,8 +274,10 @@ flowchart TD
 | **I-4** | `MSG_CALIB_ACK` | `VAS` (Node 01) | `Alignment` (Node 05) | $Base_{\text{hangar}} + 1$<br>(`CH_CALIBRATION_TELEM`) | 프로파일 반영 직후 1회 | `profileId` (수신 반영 ID), `status` (`"ACCEPTED"` / `"REJECTED"`) |
 | **I-4** | `MSG_CALIBRATION_CLOSE` | `Alignment` (Node 05) | `VAS` (Node 01) | $Base_{\text{hangar}} + 0$<br>(`CH_CALIBRATION_CMD`) | 교정 세션 종료 시 | `bayId`, `action` (`"CLOSE_SESSION"`), `saveProfile` (선택, boolean), `reason` |
 | **I-4** | `MSG_CALIBRATION_CLOSE_ACK` | `VAS` (Node 01) | `Alignment` (Node 05) | $Base_{\text{hangar}} + 1$<br>(`CH_CALIBRATION_TELEM`) | 세션 종료 즉시 | `bayId`, `status` (`"CLOSED"`) *(구 `currentFsmState` `[DEPRECATED]`)* |
-| **I-4** | `MSG_PBIT_REQ` | `AMM` (Node 03) / `GCS` | `VAS` (Node 01) | `Base + 8` / `Base + 1` | 이륙 전 자가진단 시 | `requestId`, `source`, 선택: `runWiggle`, `busRttMs`, `energyFuel`, `channelConflict`, `targetThrusterId` |
-| **I-4** | `MSG_PBIT_REPORT` | `VAS` (Node 01) | `AMM` (Node 03) / `MFD` | `Base + 2` / `Base + 8` | PBIT 평가 완료 즉시 | `requestId`, `overallStatus` (`PASS`/`WARN`/`FAIL`), `takeoffPermitted`, `checks` (`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`), 선택: `contraptionState`, `recalibrationRequired`, `summaryReason`, `timestampMs` |
+| **I-4** | `MSG_PBIT_REQ` | `AMM` (Node 03) / `GCS` / `Pocket PDA` | `VAS` (Node 01) | `Base + 8` / `Base + 1` | 이륙 전 자가진단 시 | `requestId`, `source`, 선택: `runWiggle`, `busRttMs`, `energyFuel`, `channelConflict`, `targetThrusterId` |
+| **I-4** | `MSG_PBIT_REPORT` | `VAS` (Node 01) | `AMM` (Node 03) / `MFD` / `Pocket PDA` | `Base + 2` / `Base + 8` | PBIT 평가 완료 즉시 | `requestId`, `overallStatus` (`PASS`/`WARN`/`FAIL`), `takeoffPermitted`, `checks` (`busRtt`, `inertiaProfile`, `actuatorWiggle`, `energyFuel`, `channelConflict`), 선택: `contraptionState`, `recalibrationRequired`, `summaryReason`, `timestampMs` |
+| **I-4** | `MSG_ALIGN_REMOTE_CMD` | `Pocket PDA` | `Alignment` (Node 05) | $Base_{\text{hangar}} + 0$<br>(`CH_CALIBRATION_CMD`) | 원격 교정 세션 제어 시 | `action` (`"BIND_SESSION"`/`"START_PULSE"`/`"PAUSE_SESSION"`/`"RETRY_STEP"`/`"APPROVE_SYNC"`/`"ABORT_SESSION"`/`"RELEASE_SESSION"`), `stationId`, `bayId` (1~10), `aircraftIndexN` (1~1000), 선택: `targetCraftDomain`, `baseHangarChannel`, `reason`, `saveProfile`, `source` |
+| **I-4** | `MSG_ALIGN_REMOTE_STATUS` | `Alignment` (Node 05) | `Pocket PDA` | $Base_{\text{hangar}} + 1$<br>(`CH_CALIBRATION_TELEM`) | 원격 명령 처리 즉시 | `stationId`, `bayId`, `aircraftIndexN`, `fsmState`, `status` (`"SESSION_STARTED"`/`"PULSE_STARTED"`/`"PAUSED"`/`"RETRYING"`/`"SYNCING"`/`"ABORTED"`/`"RELEASED"`/`"REJECTED"`), 선택: `targetCraftDomain`, `baseHangarChannel`, `craftBaseChannel`, `activeThruster`, `controllabilityStatus`, `confidenceR2`, `reason` |
 | **I-5** | `MSG_FACILITY_BEACON` | `GAC Node` (대표 송신) | `AMM` (Node 03) | `50003` / $Base_{\text{sec}} + 2$<br>(`CH_FACILITY_BEACON` / `CH_SECTOR_BEACON`) | 1Hz 주기 브로드캐스트 | `sectorId`, `gacChannel`, `position` (선택), `facilitiesSummary` (`totalLandingPads`, `freeLandingPads`, `totalRunways`, `freeRunways`, `totalDockingArms`, `freeDockingArms`, `maxSupportWeight`, `maxSupportRadius`), `surfaceWind`, `mobility`, `status`, `facilities[]` (선택) |
 | **I-5** | `MSG_ATC_APPROACH_REQ` | `AMM` (Node 03) | `Tower ATC Node` | `50001`<br>(`CH_ATC_COMM`) | 광역 진입 시 (또는 재요청) | `aircraftId`, `targetFacilityId`, `facilityType` (`LANDING_PAD`/`RUNWAY`/`DOCKING_ARM`) *(구 `targetSector`, `estimatedArrivalTime`, `retryCount` `[DEPRECATED]`)* |
 | **I-5** | `MSG_ATC_SECTOR_HANDOFF_REQ` | `Tower ATC Node` | `GAC Node` | `50002`<br>(`CH_ATC_FACILITY`) | 광역 진입 협상 | `sectorId`, `aircraftId`, `airframeType`, `craftWeight`, `craftRadius`, 선택: `preferredFacilityId`, `isEmergency` *(구 `eta` `[DEPRECATED]`)* |
@@ -290,7 +299,7 @@ flowchart TD
 | **I-5** | `MSG_ATC_DEPARTURE_CLEARANCE`| `Tower ATC Node` | `AMM` (Node 03) | `50001`<br>(`CH_ATC_COMM`) | 공항 광역 이륙/SID 인가 | `aircraftId`, `facilityId`, `assignedSidHeading`, `initialClimbAltitude`, `clearanceStatus` (`"CLEARED"`) |
 | **I-5** | `MSG_DOCK_CAPTURE_STAGE` | `Docking Arm Node` | `AMM` (Node 03) | `CH Base + 5` / 전술채널 | 도킹 단계별 전이 시 | `facilityId`, `stage` (`SOFT_LATCH`, `HARD_LOCKED`, `RETRACTING`, `BERTHED`, `RELEASED`), `lockPinEngaged` |
 | **I-5** | `MSG_UMBILICAL_STATUS` | `Docking Arm Node` | `AMM` (Node 03) | `CH Base + 5` | 정박 후 1Hz 주기 | `facilityId`, `umbilicalEngaged`, `berthLocationSecured`, `highSpeedDataLink`, `fuelService`, `powerRecharge` |
-| **I-6** | `MSG_OPERATOR_CMD` | `Cockpit MFD`<br>`GCS Console` | `AMM` (Node 03)<br>*(구 `AMM -> FCP` `[DEPRECATED]`)* | `Base + 0`<br>(`CH_OPERATOR_C2`) | 버튼/명령/스텝 전이 시 | `authority` (`PILOT_PRIMARY`/`GCS_OVERRIDE`), `command`, `flightMode` (`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `LANDING`, `DOCKING`), `params` (`targetWaypoint`, `targetAlt`, `targetSpeed`, `designatedFacilityId`, `headingMode`, `fixedHeading`, `poiTarget`, `loiterRadius`, `loiterDirection`). *(구 `emergencyAction` `[DEPRECATED]`, 구 `AMM -> FCP` `MSG_OPERATOR_CMD` `[DEPRECATED]`)* |
+| **I-6** | `MSG_OPERATOR_CMD` | `Cockpit MFD`<br>`GCS Console`<br>`Pocket PDA` | `AMM` (Node 03)<br>*(구 `AMM -> FCP` `[DEPRECATED]`)* | `Base + 0`<br>(`CH_OPERATOR_C2`) | 버튼/명령/스텝 전이 시 | `authority` (`PILOT_PRIMARY`/`GCS_OVERRIDE`), `command` (`LAND_NEAREST`/`RTB` 포함), `flightMode` (`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `LANDING`, `DOCKING`), `params` (`targetWaypoint`, `targetAlt`, `targetSpeed`, `designatedFacilityId`, `headingMode`, `fixedHeading`, `poiTarget`, `loiterRadius`, `loiterDirection`). *(구 `emergencyAction` `[DEPRECATED]`, 구 `AMM -> FCP` `MSG_OPERATOR_CMD` `[DEPRECATED]`)* |
 | **I-6** | `MSG_MISSION_CMD` | `GCS Console` | `AMM` (Node 03) | `Base + 0`<br>(`CH_OPERATOR_C2`) | 원격 미션 제어 시 | `action` (`"LOAD"`/`"RUN"`/`"STOP"`/`"PAUSE"`/`"RESUME"`/`"NEXT"`/`"CONFIRM"`), `missionName`, `executionMode` (`"SINGLE"`/`"REPEAT"`), `forceRestart`, `missionData`, `saveToDisk` |
 | **I-6** | `MSG_MISSION_ACK` | `AMM` (Node 03) | `GCS Console` | `Base + 0`<br>(`CH_OPERATOR_C2`) | 요청 수신 즉시 (1:1) | `action`, `status` (`"ACCEPTED"`/`"BUSY_REJECTED"`/`"FILE_NOT_FOUND"`/`"SCHEMA_INVALID"`/`"DEFERRED_ACTION_UNSUPPORTED"`/`"PRECONDITION_FAILED"`/`"INVALID_CMD"`), `missionId`, `missionState`, `activeIndex`, `totalCheckpoints` |
 | **I-6** | `MSG_MFD_STATE` | `AMM` (Node 03, 평시 5Hz; `MFD_ACRO`/`FAILSAFE` 양보 + `300ms` 히스테리시스)<br>`VAS` (ACRO 20Hz, `acroTimeoutMs=250ms`) | `Cockpit MFD` / `GCS` | `Base + 3`<br>(`CH_MFD_STATE`) | 평시 5Hz (`AMM`) / ACRO 20Hz (`VAS`) | `source` (`"AMM_INTEGRATED"`/`"CORE_ACRO_TAKEOVER"`), `controlState`, `fsmState`, `flightMode`, `attitude`, `angularRates`, `dynamics`, `nav` (`AMM` 평시), `fuel`, `dynamicLoad`, `sensorOk`, `sensorHealth`, `actuatorHealth` (`{tap, asa, allOk}`) |
@@ -668,6 +677,7 @@ sequenceDiagram
 | :--- | :--- | :--- | :---: | :---: | :---: | :--- |
 | **GCS 채널 관리자** | `channel_manager.lua` | 지상 관제 | `50000` | `50000` | 무선 모뎀 (Ender) | 기체별 고유 채널 블록($N$, $Base = 10000 + (N - 1) \times 40$, $BW=40$ 고정, $N=1\sim 1000$, 구 $BW=20$ [DEPRECATED]) 배정, 4인자 블록 충돌 검사, `"ASSIGNED"`/`"REASSIGNED"`/`"DENIED"`/`"FAILED"`, 영속 리스 관리 |
 | **GCS 비행 콘솔** | `gcs_terminal.lua` | 지상 관제 | `Base + 0`, `Base + 9` (`E_STOP`) | `Base + 0`, `Base + 3`, `50003`, `50004`, `60003`, `Base + 2` (옵션), `Base + 9` (옵션) | 무선 모뎀 (Ender) & `http.websocket` (`ws://127.0.0.1:8765`, 옵션) | 다중 기체 동시 모니터링(`Base+3`), 시설 비콘(`50003`)·미션 ACK(`50004`)·GPS 하트비트(`60003`) 수집, 조종사 C2 오버라이드, 원격 미션 제어(`MSG_MISSION_CMD`/`ACK`), WebSocket 브리지 중계, 하드 킬스위치(`E_STOP` on `Base+9`, `OFFSET_ESTOP = 9`) |
+| **Pocket PDA 휴대 단말** | `pocket_pda/main.lua`<br>[POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../specs/0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) | 휴대 지상 관제 | `Base + 0`, `Base + 8`, `Base + 9` (`E_STOP`+`FDR`), $Base_{\text{hangar}}+0$ | `Base + 0`, `Base + 2`, `Base + 3`, `Base + 8`, `Base + 9`, $Base_{\text{hangar}}+1$, `50000`, `50004` | Pocket Computer (`26×20`) & 무선/Ender 모뎀 | 3-탭 HUD/ALIGN/FDR 콘솔, `senderDistance` RSSI 등급, `[X]` 단일키 `E_STOP`+`FDR` 즉시 덤프, `LAND_NEAREST`/`RTB`, `Alignment`/`FDR` 원격 제어 |
 | **GPS 중앙 연산 서버** | `gps/server.lua` | 고정밀 GPS | `Base + 5`, `60004` | `60002`, `60003`, `60004` | 무선 모뎀 (Ender) & 유선 모니터 | 4+ 노드 거리 취합, 2D WLS/가우스-뉴턴 조기 연산($\le 50\text{ms}$), Advanced Monitor 4탭 터치 GCS 및 자동 피팅 레이더 |
 | **GPS 스웜 노드 군** | `gps/node.lua` (#01~#K)| 고정밀 GPS | `60003`, `60004` | `60001`, `60004` | 무선 모뎀 (Ender) | 3초 핫키 부팅, 핑 수신 즉시 3D 거리 보고(`MSG_GPS_NODE_REPORT`), 경량 콘솔 로깅 데몬 |
 | **GPS 클라이언트 API** | `gps/client.lua` | 고정밀 GPS | `60001` | `Base + 5` (지정 채널) | 무선 모뎀 (Ender) | 하이브리드 측위 API: 동기식 `locate()`(500ms, 1회 재전송) + 20Hz 비동기 `request()`/`poll()` |

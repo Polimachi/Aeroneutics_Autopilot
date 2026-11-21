@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.7.1` |
-| **최종 수정일 (Date)** | `2026-11-20` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.8.0` |
+| **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/3_planning/amm/` |
 | **주관 도메인 (Domain)** | 임무 계획, 외부 인프라 게이트웨이, 항법·궤적 생성 및 조종석 통합 단말 (AMM / Node 03) |
 
@@ -20,6 +20,7 @@
 > - [GAC_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gac/GAC_PROGRAM_SPECIFICATION_AND_ICD.md) (지상 구역 관제사)
 > - [GPS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gps/GPS_PROGRAM_SPECIFICATION_AND_ICD.md) (고정밀 GPS)
 > - [GCS_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/gcs/GCS_PROGRAM_SPECIFICATION_AND_ICD.md) (GCS 채널 관리자 및 관제 콘솔)
+> - [POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) (휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말)
 > - [RUNWAY_SPECIFICATION_AND_ICD.md](../../0_infra/runway/RUNWAY_SPECIFICATION_AND_ICD.md) (활주로 규격서)
 > - [LANDING_PAD_SPECIFICATION_AND_ICD.md](../../0_infra/landing_pad/LANDING_PAD_SPECIFICATION_AND_ICD.md) (착륙패드 규격서)
 > - [DOCKING_ARM_SPECIFICATION_AND_ICD.md](../../0_infra/docking_arm/DOCKING_ARM_SPECIFICATION_AND_ICD.md) (도킹암 규격서)
@@ -30,6 +31,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.8.0` | `2026-11-21` | **`TASK-302` (`R3`) `c2_arbiter` 원격 `LAND_NEAREST` 최근접 빈 시설 해석·`EMERGENCY_LAND` 폴백 및 `RTB` 별칭 추가 (`Implemented` $\to$ `Approved`)**: ① `Base+0` `MSG_OPERATOR_CMD` (`authority = "GCS_OVERRIDE"`)에서 `command = "LAND_NEAREST"` 수신 시 `facility_client.find_nearest_free_landing_facility`로 현 위치 기준 최근접 `FREE` 착륙패드/활주로를 선별하여 `LANDING` 목표(`designatedFacilityId`, `targetPos`, `targetAlt`)로 설정(가용 시설 부재 시 즉시 `EMERGENCY_LAND` 폴백), ② `command = "RTB"`를 `"RTH"` (`FAILSAFE_RTH`) 동일 별칭으로 지원, ③ `POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md` 연관 문서 링크 추가 | `TASK-302` Pocket PDA `[L]`/`[R]` 원격 전술 지휘 연동 (`src/3_planning/amm/modules/c2_arbiter.lua` 반영 후 `Implemented` 승격 예정) |
 | `v2.7.1` | `2026-11-20` | **`TASK-019` 제자리 `Extract` 경량화, 피어 버전 배지 폐지, `uiFrequencyHz` 정합 및 이력 롤업 (코드 무변경)**: `§4` 패킷 코드 덤프를 AMM 와이어 매트릭스·마스터 ICD `§3` 참조로 치환(46종/47매핑 `MSG_*`·`[DEPRECATED]`·게이트웨이/중재 규칙 보존), `연관 문서`·`§9.1` 피어 버전 배지 제거, `§10.2` `"uiFrequencyHz": 5` 정합 반영 및 `v1.0.0 ~ v2.3.0` 1행 롤업 | `TASK-019` 사양 경량화, 버전 SSOT 일원화 및 설정 드리프트 해소 (`Implemented` 유지) |
 | `v2.7.0` | `2026-11-19` | **`TASK-017`·`TASK-018` 프로토콜 계약 정합·`PBIT`/`DIVERT` 규칙 확정·미사용 RX/설정 키 제거 (`Implemented` $\to$ `Approved`)**: ① `MSG_PBIT_REPORT` 이륙 인터록을 `overallStatus == "FAIL"` 또는 개별 `checks` `"FAIL"` 기반으로 단일화(`WARN`은 이륙 허용, `R2`), ② `MSG_GAC_APPROACH_CLEARANCE` `status == "DIVERT"` + `divertChannel` 수신 시 섹터 채널 자동 전환(`R3`)·`MSG_FACILITY_BEACON.facilitiesSummary` 인벤토리 색인·`MSG_BLOCK_ASSIGN.reassignedFrom`/`MSG_CHANNEL_PROBE_ACK.{existingDomain,responderStatus}` 소비 및 표준 `MSG_RUNWAY_TOUCHDOWN`/`MSG_RUNWAY_VACATED` 빌더 정합화, ③ 미사용 `MSG_OPERATOR_CMD.emergencyAction` 및 `Base+5` 구형 RX 14종 제거(`MSG_DOCK_CAPTURE_STAGE`, `MSG_UMBILICAL_STATUS`만 유지), ④ `config/amm_config.json` 미소비 `trajectory.docking.{maxHorizToleranceM, maxVertToleranceM, maxHeadingToleranceDeg}` `[DEPRECATED]` 제거 및 `channels.runwayDirectoryChannel` 정정, `MSG_GAC_DEPARTURE_REQ` 명시화, ⑤ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `FCP v2.6.0`, `VAS v1.26.0`, `RUNWAY v1.13.0`, `LANDING_PAD v2.6.0`) 동기화 | `TASK-016` 감사 후속 계약 정합화 및 죽은 RX/설정 키 제거 (`src/3_planning/amm/` 반영 후 `Implemented` 승격 예정) |
 | `v2.6.0` | `2026-11-18` | **`TASK-131` 비행 전 PBIT 게이트 및 `TASK-128` GPS 품질(`MSG_NAV_QUALITY`) 연동 반영 (`Implemented` $\to$ `Approved`)**: ① `[I-4]` `Base+8` `MSG_PBIT_REQ` 송출·`Base+2`/`Base+8` `MSG_PBIT_REPORT` 수신 및 `pbit` CLI 명령 추가, ② `ACT_TKL_*` 이륙 프리미티브에 `requirePbit` / `takeoffPermitted == false` 기반 `PBIT_TAKEOFF_INTERLOCK` 게이트 적용, ③ `[I-7]` `MSG_GPS_RESPONSE` 선택 필드(`navQuality`, `consecutiveFailures`) 및 `MSG_NAV_QUALITY` 수신 연동으로 `nav_engine` DR 두절 판정 정합화, ④ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `VAS v1.25.0`, `FCP v2.5.0`, `GPS v2.4.0`) 동기화 | `TASK-131` 이륙 전 자가진단 안전 게이트 및 `TASK-128` GPS 성상 품질 추적 규격화 (`src/3_planning/amm/` 반영 후 `Implemented` 승격 예정) |
@@ -236,7 +238,7 @@ AMM은 기체 전용 40채널 블록(Zone 1/3)과 외부 인프라 대역을 모
 
 ### 4.2 AMM 게이트웨이·중재·시퀀스 규칙 (AMM Gateway, Arbiter & Sequence Rules)
 
-- **`[I-6]` `Base+0` 단일 C2 및 `MSG_MISSION_CMD`**: `c2_arbiter`는 `GCS_OVERRIDE` > `PILOT_PRIMARY` 우선순위로 `MSG_OPERATOR_CMD`를 중재해 `Base+4` (`MSG_TRAJECTORY_SETPOINT`)로만 하달하며, 레거시 `AMM -> FCP` `MSG_OPERATOR_CMD`와 `emergencyAction [DEPRECATED]`를 거부합니다. `MSG_MISSION_CMD`(`"LOAD"|"RUN"|"STOP"|"PAUSE"|"RESUME"|"NEXT"|"CONFIRM"`)는 인라인 `missionData` 적재(`saveToDisk`)와 동적 사전조건 결과를 `MSG_MISSION_ACK`(`ACCEPTED`/`BUSY_REJECTED`/`FILE_NOT_FOUND`/`SCHEMA_INVALID`/`DEFERRED_ACTION_UNSUPPORTED`/`PRECONDITION_FAILED`/`INVALID_CMD`)로 회신합니다.
+- **`[I-6]` `Base+0` 단일 C2 및 `MSG_MISSION_CMD`**: `c2_arbiter`는 `GCS_OVERRIDE` > `PILOT_PRIMARY` 우선순위로 `MSG_OPERATOR_CMD`를 중재해 `Base+4` (`MSG_TRAJECTORY_SETPOINT`)로만 하달하며, 레거시 `AMM -> FCP` `MSG_OPERATOR_CMD`와 `emergencyAction [DEPRECATED]`를 거부합니다. `Pocket PDA`/`GCS`의 `command == "LAND_NEAREST"`(`R3`)는 `facility_client.find_nearest_free_landing_facility`로 최근접 `FREE` 착륙 시설(`LANDING`)을 해석하며, 가용 시설 부재 시 즉시 `EMERGENCY_LAND`로 폴백하고 `command == "RTB"`는 `"RTH"` (`FAILSAFE_RTH`) 별칭으로 처리합니다. `MSG_MISSION_CMD`(`"LOAD"|"RUN"|"STOP"|"PAUSE"|"RESUME"|"NEXT"|"CONFIRM"`)는 인라인 `missionData` 적재(`saveToDisk`)와 동적 사전조건 결과를 `MSG_MISSION_ACK`(`ACCEPTED`/`BUSY_REJECTED`/`FILE_NOT_FOUND`/`SCHEMA_INVALID`/`DEFERRED_ACTION_UNSUPPORTED`/`PRECONDITION_FAILED`/`INVALID_CMD`)로 회신합니다.
 - **`[I-11]`/`[I-5]` `Zone 3` 및 `BASE_PLUS_5_INFRA_RESPONSES`**: `Base+20..39`는 `ACT_PAY_*`·훅 활성 중에만 동적 개방합니다. `Base+5`는 `BASE_PLUS_5_INFRA_RESPONSES` 15종 허용 목록만 수락하고 구형 RX 14종(`MSG_DOCKING_STATUS` 등 `[DEPRECATED]`)을 제거해 도킹은 `MSG_DOCK_CAPTURE_STAGE`·`MSG_UMBILICAL_STATUS`만 유지합니다(`stage == "HARD_LOCKED"` 시 즉시 `arm = false, flightActive = false`).
 - **`[I-4]`/`[I-2]` PBIT 인터록 (`R2`) 및 `Base+8`/`Base+9`**: `Base+8` `MSG_PBIT_REQ` 송출 후 `Base+2`/`Base+8` `MSG_PBIT_REPORT`에서 `overallStatus == "FAIL"`·`checks[*].status == "FAIL"` 또는 `takeoffPermitted == false`이면 `ACT_TKL_*` 이륙을 `PBIT_TAKEOFF_INTERLOCK`으로 차단합니다(`overallStatus == "WARN"`은 허용). `E_STOP`(`authKey = "ESTOP_CONFIRM_KEY"`) 및 `MSG_EMERGENCY_ALERT`는 `Base+9`에 직결합니다.
 - **`[I-5]` `DIVERT` 자동 전환 (`R3`) 및 전술 유도**: `CH 50003` `MSG_FACILITY_BEACON.facilitiesSummary`/`facilities[]` 및 `CH 50004`를 상시 색인하고, `MSG_GAC_APPROACH_CLEARANCE` `status == "DIVERT"` + `divertChannel` 수신 시 `gacChannel`을 전환합니다. $Base_{\text{sec}}+10+\text{Idx}$(`MSG_FACILITY_STATIC_GUIDE`/`DYNAMIC_GUIDE`) 소비 및 `MSG_TOUCHDOWN_COMPLETE`·`MSG_RUNWAY_TOUCHDOWN`·`MSG_RUNWAY_VACATED` 송출을 수행합니다.
@@ -535,7 +537,8 @@ flowchart TD
 ### 8.1 GCS 원격 지령 감청 및 원격 미션 제어 (`Base + 0` $\to$ `trajectory_generator` $\to$ `Base + 4`)
 1. **`MSG_OPERATOR_CMD` (`authority == "GCS_OVERRIDE"`) 수신 시**:
    - `c2_arbiter`는 내부 미션 시퀀서(`mission_engine` 및 `waypoint_queue`)를 즉시 **`SUSPENDED`**로 전환하고, 권한을 `GCS_OVERRIDE`로 잠급니다.
-   - GCS가 요청한 기동(`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `RTH`, `HOVER_HOLD`, `EMERGENCY_LAND`, `ABORT`)을 `AMM` 내부 `trajectory_generator`에 즉시 반영하고, `Base + 4` (`[I-12]`, `MSG_TRAJECTORY_SETPOINT`)를 통해 `arm`/`flightActive`/`flightMode`/3D 세트포인트만 `FCP`로 하달합니다(하드 킬스위치 `E_STOP`은 `Base + 9` 직결).
+   - GCS/Pocket PDA가 요청한 기동(`TAKEOFF`, `CRUISE`, `LOITER`, `POI_HOLD`, `APPROACH_LAND`, `LAND_NEAREST`, `RTH`, `RTB`, `HOVER_HOLD`, `EMERGENCY_LAND`, `ABORT`)을 `AMM` 내부 `trajectory_generator`에 즉시 반영하고, `Base + 4` (`[I-12]`, `MSG_TRAJECTORY_SETPOINT`)를 통해 `arm`/`flightActive`/`flightMode`/3D 세트포인트만 `FCP`로 하달합니다(하드 킬스위치 `E_STOP`은 `Base + 9` 직결).
+   - `command == "LAND_NEAREST"` 수신 시에는 현 기체 항법 위치(`lastMfd.navigation.currentPos` / `latest_telem` / `params.targetPos` / `homePos`) 기준으로 `facility_client.find_nearest_free_landing_facility`를 조회해 최근접 `FREE` 착륙 패드/활주로(`flightMode = "LANDING"`, `designatedFacilityId = best.facilityId`)를 설정하며, 가용 시설이 없으면 즉시 `flightMode = "EMERGENCY_LAND"`로 폴백합니다. `command == "RTB"`는 `"RTH"` (`flightMode = "FAILSAFE_RTH"`)와 동일하게 처리합니다.
    - 화면 17행 배너에 `[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]`를 표시합니다.
 2. **`MSG_MISSION_CMD` 수신 시**:
    - `action == "LOAD"`: 이미 `EN_ROUTE` 상태이고 `forceRestart ~= true`이면 `status = "BUSY_REJECTED"`를 회신합니다. 그 외에는 `payload.missionData` 테이블을 `v2.0.0` 스키마 검증기로 검증하고(누락/스키마 오류 `"SCHEMA_INVALID"`, 예약 액션 포함 `"DEFERRED_ACTION_UNSUPPORTED"`), `saveToDisk ~= false`이면 `/missions/<missionId>.json`으로 원자적 저장한 뒤 `mission_engine:load_table`에 적재하고 `status = "ACCEPTED"` (`IDLE`)를 회신합니다.

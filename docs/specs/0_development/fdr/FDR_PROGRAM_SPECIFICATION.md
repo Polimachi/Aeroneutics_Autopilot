@@ -6,9 +6,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v0.5.1` |
-| **최종 수정일 (Date)** | `2026-11-20` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v0.6.0` |
+| **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/0_development/fdr/ & tools/analyze_flight_log.py` |
 | **주관 도메인 (Domain)** | 지상 상주형 실환경 비행 동역학 식별·계측 및 PID/트림 프로파일 튜닝 콘솔 (FDR / In-Flight Aligner) |
 
@@ -16,6 +16,7 @@
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
 > - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
 > - [ALIGNMENT_PROGRAM_SPECIFICATION.md](../alignment/ALIGNMENT_PROGRAM_SPECIFICATION.md) (격납고 지상 교정 콘솔)
+> - [POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) (휴대용 원격 관제·지상 콘솔 링크 단말)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서)
 > - [ASA_PROGRAM_SPECIFICATION.md](../../1_control/asa/ASA_PROGRAM_SPECIFICATION.md) (ASA 공력 조종면 규격서)
@@ -28,6 +29,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v0.6.0` | `2026-11-21` | **`TASK-302` (`R1`, `R2`) `Base+9` `MSG_FDR_REMOTE_CMD` 패시브 원격 제어 수용 (`Implemented` $\to$ `Approved`)**: ① `STANDBY`/`PAUSED`/`LOGGING`/`DISK_FULL` 전 모드에서 `Base+9` (`CH_EMERGENCY_CORE`) `MSG_FDR_REMOTE_CMD` (`BIND_AIRCRAFT`, `SET_MODE`, `DUMP_NOW`, `EXPORT_NOW`, `ROLLOVER_NOW`, `CLEAR_BUFFER`)를 `LOGGING` 게이트 이전 단계에서 패시브 처리, ② `DUMP_NOW` 수신 시 `RING_BUFFER`/`PAUSED`/기존 `estopFlushed` 여부와 무관하게 `trigger_manual_dump` 즉시 실행, ③ `modem.transmit == 0` 무송신 불변식 유지 및 `POCKET_PDA` 연관 링크 추가 | `TASK-302` Pocket PDA `[X]` `E_STOP`+덤프 동시 트리거 및 원격 FDR 제어 연동 (`src/0_development/fdr/main.lua` 반영 후 `Implemented` 승격 예정) |
 | `v0.5.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연관 문서` 목록의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v0.5.0` | `2026-11-19` | **`TASK-018` 미소비 설정 키 3종 스키마 제거 (`Implemented` $\to$ `Approved`)**: ① `config/fdr_config.json`에서 런타임 미소비 유령 설정 키(`bandwidth`, `export.timeoutSec`, `debug`)를 제거하고 Zero-Fallback `[DEPRECATED]` 주석 추가, ② §7.2 헤드리스 구동 기준을 CLI `--headless` 인자 중심으로 정정, ③ 연관 배지(`ICD v1.39.0`, `Diagram v2.22.0`, `VAS v1.26.0`, `TCA v1.15.0`, `FCP v2.6.0`, `AMM v2.7.0`) 동기화 | `TASK-016` 감사(`E-L3-04`) 후속 미소비 설정 키 정리 (`src/0_development/fdr/config/fdr_config.json` 반영 후 `Implemented` 승격 예정) |
 | `v0.4.0` | 2026-11-16 | **`TASK-125` 40채널 비상 코어(`Base+9`) 패시브 감청 추가 (`Implemented` $\to$ `Approved`)**: ① 패시브 감청 채널 목록에 `Base+9` (`CH_EMERGENCY_CORE`: `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT`) 필수 추가, ② `Base+1` (`CH_FLIGHT_GUIDANCE`)을 순수 `MSG_ATTITUDE_CMD` 전용으로 갱신, ③ 연관 문서 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `Alignment v2.8.0`, `VAS v1.23.0`, `FCP v2.3.0`, `AMM v2.2.0`) 동기화 | `TASK-125` 유도/비상 버스 분리에 따른 FDR 비상 엣지 감청 정합화 (`src/0_development/fdr/` 반영 후 `Implemented` 승격 예정) |
@@ -78,7 +80,7 @@ flowchart LR
 | 오프셋 | 채널명 (`ICD`) | 필수 여부 | `fdr_config.json` 토글 (기본값) | 감청 패킷 타입 (`type`) | 주요 분석 및 프로필 산출 용도 |
 | :---: | :--- | :---: | :--- | :--- | :--- |
 | **`Base + 1`** | `CH_FLIGHT_GUIDANCE` (`[I-2]`) | **필수** | 상시 활성 | `MSG_ATTITUDE_CMD` *(순수 유도 전용)* | 목표 쿼터니언/각속도/집합추력 지령, `ACRO` 전환 |
-| **`Base + 9`** | `CH_EMERGENCY_CORE` (`[I-2]`) | **필수** | 상시 활성 | `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT` | `E_STOP` 비상 정지 엣지 및 공중 비상 셧다운 경보 감청 |
+| **`Base + 9`** | `CH_EMERGENCY_CORE` (`[I-2]`) | **필수** | 상시 활성 | `MSG_EMERGENCY_OVERRIDE`, `MSG_EMERGENCY_ALERT`, `MSG_FDR_REMOTE_CMD` | `E_STOP` 비상 정지 엣지, 공중 비상 셧다운 경보 및 `Pocket PDA` 단방향 원격 제어 (`0 tx` 무응답) |
 | **`Base + 2`** | `CH_TELEMETRY` (`[I-1]`) | **필수** | 상시 활성 | `MSG_FLIGHT_TELEMETRY` | 실제 자세/각속도/속도/고도, `dynamicLoad`, `controlState`, 선택 `diag` |
 | **`Base + 10`** | `CH_THRUST_ACTUATION` (`[I-3]`) | **필수** | 상시 활성 | `MSG_THRUST_CMD`, `MSG_ACTUATOR_STATUS` | 추력기 그룹별 분배율, `ADVANCED_VTOL` 짐벌 각도, `isSaturated`/`gimbalSaturated` |
 | **`Base + 11`** | `CH_SURFACE_ACTUATION` (`[I-10]`) | 선택 | `tapOptions.aero = true` | `MSG_AERO_CMD`, `MSG_AERO_STATUS` | 공력 조종면(`AIL`/`ELEV`/`RUDD`/`FLAP`) 타각, 동압 스케줄링, 타각 포화/`isJammed` |
@@ -93,6 +95,17 @@ flowchart LR
 2. `lockedDomainId == "*"`이거나 `pkt.domainId == lockedDomainId`
 3. `type(pkt.type) == "string"` 및 `type(pkt.payload) == "table"`
 4. 채널 오프셋별 허용 `msgType` 매칭 (`tapOptions.includeControlEvents == false` 시 `MSG_CHANNEL_REBIND*` 등 비계측 패킷 제외)
+
+### 2.4 원격 패시브 제어 명령 (`MSG_FDR_REMOTE_CMD` on `Base + 9`, `0 tx` 불변식)
+`FDR`은 `modem.transmit(...)`을 **0회**만 유지하는 수신 전용 불변식(`R1`, `R2`)을 준수한 채, `handle_modem_frame` 진입 최상단(`if state.mode ~= "LOGGING"` 검사 이전)에서 현재 바인딩된 `state.tap.baseChannel + 9`의 `MSG_FDR_REMOTE_CMD`를 `STANDBY`, `PAUSED`, `LOGGING`, `DISK_FULL` 모든 상태에서 수락합니다(RF 회신 없음):
+- **필수 필드**: `action`, `targetAircraftIndexN` ($1 \sim 1000$), `source` (`"POCKET_PDA"` 등). 선택 필드: `targetDomainId`, `recordMode`, `autoStartLogging`, `reason`.
+- **지원 액션 6종**:
+  - `"BIND_AIRCRAFT"`: `targetAircraftIndexN` 및 `targetDomainId`로 동적 재바인딩(`oldBase+9` 등 구 채널 닫기, `newBase+9` 등 개방). `autoStartLogging == true` 시 즉시 `LOGGING` 개시.
+  - `"SET_MODE"`: `recordMode` (`"LOGGING"` | `"STANDBY"` | `"PAUSED"`)로 기록 상태 전환.
+  - `"DUMP_NOW"`: `RING_BUFFER`, `PAUSED`, 또는 이미 `estopFlushed == true` 상태에서도 즉시 `trigger_manual_dump(state)`를 실행해 JSONL 디스크 플러시 수행 (`Pocket PDA` `[X]` `E_STOP` 동시 트리거 지원).
+  - `"EXPORT_NOW"`: `cloud_exporter` 외부 반출 실행.
+  - `"ROLLOVER_NOW"`: `STREAMING` 파트 수동 분할 롤오버.
+  - `"CLEAR_BUFFER"`: 링버퍼/`estopFlushed`/`DISK_FULL` 상태 리셋.
 
 ---
 

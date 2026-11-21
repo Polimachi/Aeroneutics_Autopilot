@@ -5,15 +5,16 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v1.4.1` |
-| **최종 수정일 (Date)** | `2026-11-20` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v1.5.0` |
+| **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/0_infra/gcs/` |
 | **주관 도메인 (Domain)** | 지상 인프라 및 전역 무선 채널 관리 (GCS / Node 08) |
 
 > **참조 문서**: 
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
 > - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
+> - [POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) (휴대용 원격 관제·지상 콘솔 링크·비상 E_STOP 단말)
 > - [AMM_PROGRAM_SPECIFICATION.md](../../3_planning/amm/AMM_PROGRAM_SPECIFICATION.md) (임무 관리자 및 조종석 단말)
 > - [AMM_MISSION_EDITOR_SPECIFICATION.md](../../3_planning/amm/AMM_MISSION_EDITOR_SPECIFICATION.md) (외부 웹 GUI 미션 에디터)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (외루프 유도)
@@ -24,6 +25,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v1.5.0` | `2026-11-21` | **`TASK-302` `Pocket PDA` 공존 운용(`CH 50000`/`CH 50004` 스누핑, `GCS_OVERRIDE` C2 및 `Base+9` `E_STOP` 공유) 규격 반영 (`Implemented` $\to$ `Approved`)**: ① `CH 50000` (`MSG_BLOCK_ASSIGN`) 및 `CH 50004` (`MSG_MISSION_ACK`) 대역에서 `Pocket PDA`의 패시브 편대 발견·상태 스누핑 공존 규약 명문화, ② `Base+0` `MSG_OPERATOR_CMD` (`authority = "GCS_OVERRIDE"`, `LAND_NEAREST`/`RTB` 포함) 및 `Base+9` `MSG_EMERGENCY_OVERRIDE` (`E_STOP`) 공동 관제 주체 정합화 및 연관 링크 추가 | `TASK-302` 고정형 `GCS` 콘솔과 휴대용 `Pocket PDA` 간 채널 공존 및 원격 C2 권한 정합화 |
 | `v1.4.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `참조 문서` 목록의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v1.4.0` | `2026-11-18` | **`TASK-405` `--lan` 브리지 바인딩 및 `TASK-406` `CH 60003` GPS 하트비트·`gacNode` 무게중심·`60s` `OFFLINE` TTL 규격 추가 (`Implemented` $\to$ `Approved`)**: ① `channels.gpsHeartbeatChannel` (`60003`) 상시 청취로 `MSG_GPS_NODE_HEARTBEAT` 수신 및 WebSocket `GPS_NODES_SYNC` 중계, ② `WORLD_PRESET_SYNC`에 `gacNode` 요약(명시적 `position` 우선, 부재 시 `facilities[]` 무게중심 자동 산출) 첨부, ③ `60,000ms` 무신호 시 GPS/비행체 노드를 삭제 대신 `OFFLINE`/`STALE` 상태로 표기 및 `purge_offline_gps_nodes()` 제공, ④ 호스트 브리지 `tools/gcs_live_bridge.py`에 `--lan`(`0.0.0.0` 바인딩 및 LAN 접속 URL 안내) 옵션 추가 및 연관 배지(`AMM v2.5.0`, `FCP v2.4.0`, `VAS v1.24.0`, `ICD v1.36.0`, `Diagram v2.20.0`, `Editor v0.6.0`) 동기화 | `TASK-405` LAN 사설망 Live Bridge 접속 및 `TASK-406` 실시간 GPS/GAC 노드 관제·`60s` TTL 연동 |
 | `v1.3.0` | `2026-11-16` | **`TASK-125` 40채널 블록 개편 및 채널 관리자 결함 해소 (`Implemented`)**: ① `OFFSET_ESTOP = 9` (`Base+9` `CH_EMERGENCY_CORE` `E_STOP` 직결 송출, `Base+1` 분리), ② `BW = 40` 고정 계약(`requestedBandwidth ~= 40` 시 `"DENIED"`), ③ `MSG_BLOCK_REQUEST` 선택 필드(`preferredBase`, `conflictBase`) 및 `MSG_BLOCK_ASSIGN.status` 표준 열거형(`"ASSIGNED"` \| `"REASSIGNED"` \| `"DENIED"` \| `"FAILED"`), 영속 리스 필드(`leaseState`, `reassignedFrom`, `reason`, `lastSeenMs`) 추가, ④ 4인자 블록 충돌 검사(`checkCollision(baseA, 40, baseB, 40)`) 정합 및 연관 배지(`ICD v1.35.0`, `Diagram v2.19.0`, `AMM v2.4.0`, `FCP v2.3.0`, `VAS v1.23.0`) 동기화 | `TASK-125` GCS 대역폭 검증·충돌 재할당·리스 영속화·E_STOP 채널 분리 반영 및 `TASK-404` 통합 |
@@ -107,23 +109,27 @@
 
 ### 3.1 원격 C2 오버라이드 (`MSG_OPERATOR_CMD`, Base + 0)
 - **발신 채널**: 관제 대상 기체의 `Base + 0`
+- **발신 주체**: 고정형 `GCS` 콘솔 및 휴대용 `Pocket PDA` (`payload.authority = "GCS_OVERRIDE"` 공유; `Pocket PDA`는 `params.source = "POCKET_PDA"`로 발신 단말 구분)
 - **수신자**: 기체 온보드 `AMM` (Node 03, `c2_arbiter` 중재 후 `Base + 4`로 `FCP` 하달)
 - **페이로드 구조**:
   - `targetCraft`: 대상 기체 `domainId` (선택)
   - `authority`: `"GCS_OVERRIDE"` 고정
-  - `command`: `"ARM"` | `"DISARM"` | `"TAKEOFF"` | `"CRUISE"` | `"LOITER"` | `"POI_HOLD"` | `"LANDING"` | `"DOCKING"`
-  - `flightMode`: 목표 비행 모드 문자열 (예: `"AUTO_NAV"`, `"CRUISE_HOLD"`)
-  - `params`: 세부 매개변수 (목표 고도, 속도, 좌표 등)
+  - `command`: `"ARM"` | `"DISARM"` | `"TAKEOFF"` | `"CRUISE"` | `"LOITER"` | `"POI_HOLD"` | `"HOLD"` | `"RTH"` | `"RTB"` | `"LAND_NEAREST"` | `"LANDING"` | `"DOCKING"`
+  - `flightMode`: 목표 비행 모드 문자열 (예: `"AUTO_NAV"`, `"CRUISE_HOLD"`, `"HOVER_HOLD"`, `"FAILSAFE_RTH"`, `"LANDING"`)
+  - `params`: 세부 매개변수 (목표 고도, 속도, 좌표, `facilityTypeFilter` 등)
   - `emergencyAction` `[DEPRECATED]`: 구버전 비상 액션 필드(제거됨; `RTH`/`HOVER_HOLD`/`EMERGENCY_LAND`는 `command`/`flightMode`로 단일 전달)
 
 ### 3.2 하드 비상차단 직결 지령 (`MSG_EMERGENCY_OVERRIDE`, Base + 9 / `OFFSET_ESTOP = 9`)
 - **발신 채널**: 관제 대상 기체의 **`Base + 9` (`CH_EMERGENCY_CORE`, `OFFSET_ESTOP = 9`, 구 `Base + 1` `[DEPRECATED]`)**
 - **수신자**: 기체 온보드 `VAS` (Node 01) 직결 (`AMM` 및 `FCP` 바이패스)
 - **페이로드 구조**:
-  - `source`: `"GCS"`
+  - `source`: `"GCS"` (또는 휴대 단말 `"POCKET_PDA"`)
   - `action`: `"E_STOP"`
-  - `reason`: 사유 문자열 (예: `"OPERATOR_HARD_STOP"`)
+  - `reason`: 사유 문자열 (예: `"OPERATOR_HARD_STOP"`, `"PDA_OPERATOR_ESTOP"`)
   - `authKey`: `"ESTOP_CONFIRM_KEY"` (인증 토큰)
+
+### 3.3 `Pocket PDA`와의 RF 채널 공존 운용 규약
+- **`CH 50000` (`MSG_BLOCK_ASSIGN`) & `CH 50004` (`MSG_MISSION_ACK`) 패시브 스누핑**: `GCS`가 `CH 50000`에 송출하는 `MSG_BLOCK_ASSIGN` 응답과 `AMM`이 `CH 50004`로 송출하는 `MSG_MISSION_ACK`를 `Pocket PDA`가 읽기 전용(Non-transmitting)으로 동시 청취하여 편대 기체 블록 매핑을 자동 발견합니다. `Pocket PDA`는 `CH 50000`에 `MSG_BLOCK_REQUEST`/`MSG_BLOCK_ASSIGN`을 송출하지 않으므로 `GCS` 채널 관리자의 블록 할당 상태와 충돌하지 않습니다.
 
 ---
 

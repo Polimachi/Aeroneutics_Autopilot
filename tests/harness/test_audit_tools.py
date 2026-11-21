@@ -27,7 +27,7 @@ class TestAuditTools(unittest.TestCase):
         self.assertFalse(sub_map["0_infra/docking_arm"]["code_present"])
         self.assertTrue(sub_map["0_infra/docking_arm"]["spec_only"])
         self.assertGreaterEqual(len(reg["modules"]), 139)
-        self.assertEqual(len(reg["specs"]), 18)
+        self.assertEqual(len(reg["specs"]), 19)
         self.assertGreater(len(reg["packets"]), 0)
 
     def test_static_analysis_extracts_functions_and_field_consumption(self) -> None:
@@ -88,7 +88,7 @@ class TestAuditTools(unittest.TestCase):
         from tools.audit.split_analysis import analyze_splits
 
         specs_res = analyze_specs(REPO_ROOT)
-        self.assertEqual(len(specs_res["documents"]), 18)
+        self.assertEqual(len(specs_res["documents"]), 19)
         self.assertIn("pairwise_overlap", specs_res)
         self.assertIn("cochange", specs_res)
 

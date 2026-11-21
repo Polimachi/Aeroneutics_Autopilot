@@ -5,9 +5,9 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| **문서 상태 (Status)** | `Implemented` |
-| **문서 버전 (Version)** | `v2.9.1` |
-| **최종 수정일 (Date)** | `2026-11-20` |
+| **문서 상태 (Status)** | `Approved` |
+| **문서 버전 (Version)** | `v2.10.0` |
+| **최종 수정일 (Date)** | `2026-11-21` |
 | **구현 코드 (Source)** | `src/0_development/alignment/` |
 | **주관 도메인 (Domain)** | 지상 격납고 동역학 프로파일러 및 시스템 식별 (Alignment / Hangar Console) |
 
@@ -15,6 +15,7 @@
 > - [AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md](../../../system/AUTONOMOUS_FLIGHT_SYSTEM_ARCHITECTURE_AND_ICD.md) (마스터 ICD)
 > - [SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md](../../../system/SYSTEM_PROGRAM_RELATION_AND_PACKET_DIAGRAM.md) (전체 구조도)
 > - [OTA_PROGRAM_SPECIFICATION.md](../ota/OTA_PROGRAM_SPECIFICATION.md) (격납고 무선 OTA 배포 서버)
+> - [POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md](../../0_infra/pocket_pda/POCKET_PDA_PROGRAM_SPECIFICATION_AND_ICD.md) (휴대용 원격 관제·지상 콘솔 링크 단말)
 > - [VAS_PROGRAM_SPECIFICATION.md](../../1_control/vas/VAS_PROGRAM_SPECIFICATION.md) (비행 제어 코어)
 > - [FCP_PROGRAM_SPECIFICATION.md](../../2_guidance/fcp/FCP_PROGRAM_SPECIFICATION.md) (FCP 비행 제어 규격서)
 > - [TCA_PROGRAM_SPECIFICATION.md](../../1_control/tca/TCA_PROGRAM_SPECIFICATION.md) (TCA 클러스터 규격서)
@@ -26,6 +27,7 @@
 
 | 버전 | 개정 일자 | 개정 요약 | 개정 사유 |
 | :---: | :---: | :--- | :--- |
+| `v2.10.0` | `2026-11-21` | **`TASK-302` (`R4`) `Pocket PDA` 원격 교정 세션 제어(`MSG_ALIGN_REMOTE_CMD` / `MSG_ALIGN_REMOTE_STATUS`) 규격 추가 (`Implemented` $\to$ `Approved`)**: ① $Base_{\text{hangar}}+0$ 원격 세션 제어 명령(`BIND_SESSION`, `START_PULSE`, `PAUSE_SESSION`, `RETRY_STEP`, `APPROVE_SYNC`, `ABORT_SESSION`, `RELEASE_SESSION`) 및 $Base_{\text{hangar}}+1$ 상태 응답(`MSG_ALIGN_REMOTE_STATUS`) 신설, ② `STANDBY` 데몬 루프에서 $Base_{\text{hangar}}+0$ 수신 대기 유지(`release_channels` 세션 종료 해제는 기존 유지), ③ §10.8 스키마 및 `POCKET_PDA` 연관 링크 추가 | `TASK-302` 휴대용 Pocket PDA 원격 격납고 교정 제어 연동 (`src/0_development/alignment/` 반영 후 `Implemented` 승격 예정) |
 | `v2.9.1` | `2026-11-20` | **`TASK-019` 인라인 피어 버전 배지 폐지 (문서 메타데이터 전용, 코드 무변경)**: 상단 `연관 문서` 및 하단 푸터의 타 규격서 버전 배지 제거·문서 버전 SSOT를 본 문서 헤더 메타데이터 표 및 마스터 ICD `§5.1`로 일원화 | `TASK-019` 사양서 간 연쇄 버전 배지 동기화 비용 제거 (`Implemented` 유지) |
 | `v2.9.0` | `2026-11-18` | **`TASK-136` 기체 토폴로지 매니페스트(`peripheralManifest` / `peripheral_manifest.json`) 계약 신설 (`Implemented` $\to$ `Approved`)**: ① 교정 완료 시 추력기 수·그룹·건조질량·조종면·센서 역할 지문을 해시화한 `peripheralManifest` 생성 및 로컬 `/alignment/peripheral_manifest.json` 저장·`MSG_PROFILE_SYNC` 내 선택 필드 첨부 명세, ② 재조립 시 추력기 개수 일치 및 건조질량 편차 `<= 5%` 조건에서 동적 리바인딩 허용 / 불일치 시 `recalibrationRequired = true` 강제 규약 추가, ③ 연관 배지(`ICD v1.38.0`, `Diagram v2.21.0`, `VAS v1.25.0`, `TCA v1.14.0`) 동기화 | `TASK-136` 블록화 재조립 기체 물리 변화 검출 및 재교정 인터록 지원 (`src/0_development/alignment/` 반영 후 `Implemented` 승격 예정) |
 | `v2.8.0` | `2026-11-16` | **`TASK-125` `MSG_CALIBRATION_INIT` 송신 채널 `Base+8` (`CH_CALIBRATION_INIT`) 이관 (`Implemented` $\to$ `Approved`)**: ① `MSG_CALIBRATION_INIT` 송신 대상 채널을 `Base+0` (`CH_OPERATOR_C2`)에서 **`Base+8` (`CH_CALIBRATION_INIT`)**로 변경(`AMM` 프로브/C2 채널과의 경합 분리, 구 `Base+0` `[DEPRECATED]`), ② §1/§2/§3/§5/§10 다이어그램·매핑·의사코드 및 연관 배지(`ICD v1.33.0`, `Diagram v2.17.0`, `VAS v1.23.0`, `FCP v2.3.0`) 동기화 | `TASK-125` C2/교정 채널 경합 분리 (`src/0_development/alignment/` 반영 후 `Implemented` 승격 예정) |
@@ -122,7 +124,9 @@ flowchart TD
 | **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Align $\rightarrow$ TCA | `MSG_CALIB_PULSE` | 3단 미세 시험 펄스(신호 4, 8, 12, 지속 300ms) 인가 |
 | **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Align $\rightarrow$ VAS | `MSG_PROFILE_SYNC` | OLS 회귀 6-DoF 프로파일 동기화 및 비행 복귀 |
 | **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Align $\rightarrow$ VAS | `MSG_CALIBRATION_CLOSE` | 교정 세션 종료 및 베이 채널 해제 지령 |
+| **$Base_{\text{hangar}} + 0$** | `CH_CALIBRATION_CMD` | Pocket PDA $\rightarrow$ Align | `MSG_ALIGN_REMOTE_CMD` | 원격 교정 세션 전 생명주기 제어 (`BIND_SESSION` ~ `RELEASE_SESSION`) |
 | **$Base_{\text{hangar}} + 1$** | `CH_CALIBRATION_TELEM` | VAS $\rightarrow$ Align | `MSG_CALIBRATION_INIT_ACK` | 바인딩 수락 및 베이 채널 개방 완료 회신 |
+| **$Base_{\text{hangar}} + 1$** | `CH_CALIBRATION_TELEM` | Align $\rightarrow$ Pocket PDA | `MSG_ALIGN_REMOTE_STATUS` | 원격 교정 세션 상태·진행 추진기·$R^2$·권능 판정 회신 |
 | **$Base_{\text{hangar}} + 1$** | `CH_CALIBRATION_TELEM` | VAS $\rightarrow$ Align | `MSG_FLIGHT_TELEMETRY` | 20Hz(50ms) 시계열 사다리꼴 충격량 적분 수신 (구버전 `1002`, `Base+2` [DEPRECATED]) |
 | **$Base_{\text{hangar}} + 1$** | `CH_CALIBRATION_TELEM` | VAS $\rightarrow$ Align | `MSG_CALIB_ACK` | 동역학 프로파일 영구저장 및 반영 완료 회신 |
 | **$Base_{\text{hangar}} + 1$** | `CH_CALIBRATION_TELEM` | VAS $\rightarrow$ Align | `MSG_CALIBRATION_CLOSE_ACK` | 세션 종료 및 채널 해제 완료 회신 |
@@ -133,8 +137,8 @@ flowchart TD
 | **$Base_{\text{hangar}} + 6 \sim 9$**| `CH_RESERVED_06~09` | 예비 | - | **격납고 내부 확장 예비 대역 (총 4개 채널 예비 확보)** |
 
 > [!IMPORTANT]
-> **전역 채널 완전 해제 원칙 (Strict Channel Release Rule)**:  
-> Alignment은 비행체 시험 세션(`HANDSHAKE` ~ `SYNCING`/`ABORTING`) 동안에만 해당 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 개방하며, 정상 완료 또는 비상 중단 시 즉각 기체에 `MSG_CALIBRATION_CLOSE`를 발송하고 콘솔 모뎀에서도 `modem.close()`를 호출하여 채널을 완전히 해제합니다. 기체 전용 채널을 점유한 채로 대기하지 않습니다.
+> **전역 채널 완전 해제 원칙 및 원격 세션 수신 대기 (`Strict Channel Release Rule & Remote Daemon`)**:  
+> Alignment은 비행체 시험 세션(`HANDSHAKE` ~ `SYNCING`/`ABORTING`) 동안에만 해당 베이 채널($Base_{\text{hangar}}+0, +1, +3$)을 개방하며, 정상 완료 또는 비상 중단 시 즉각 기체에 `MSG_CALIBRATION_CLOSE`를 발송하고 `align_master.release_channels()`로 세션 채널을 완전히 해제합니다. 기체 전용 채널(`Base+*`)을 점유한 채로 대기하지 않으며, 상주 데몬(`main.lua`)은 `STANDBY` 상태에서만 `Pocket PDA` 원격 `BIND_SESSION` 수신을 위해 $Base_{\text{hangar}}+0$을 재개방 대기합니다.
 
 ---
 
@@ -832,6 +836,48 @@ VAS가 `MSG_PROFILE_SYNC`를 수신하여 로컬 파일(`config/thrusters.json`)
     payload = {
         bayId = 1,
         status = "CLOSED"
+    }
+}
+```
+
+### 10.8 Pocket PDA 원격 교정 세션 제어 및 상태 응답 (`MSG_ALIGN_REMOTE_CMD / _STATUS`, CH: Base_hangar+0 / Base_hangar+1)
+`Pocket PDA`는 $Base_{\text{hangar}} + 0$으로 `MSG_ALIGN_REMOTE_CMD`를 송출해 `align_master.handle_remote_cmd`를 구동하며, `Alignment`는 $Base_{\text{hangar}} + 1$로 `MSG_ALIGN_REMOTE_STATUS`를 회신합니다(세션 해제 `RELEASE_SESSION` 시에는 상태 회신 송출 직후 `release_channels` 호출):
+
+```lua
+-- 1. Pocket PDA -> Alignment (Base_hangar+0)
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_02",
+    seq = 120,
+    type = "MSG_ALIGN_REMOTE_CMD",
+    time = 1732170000000,
+    payload = {
+        action = "BIND_SESSION", -- "BIND_SESSION"|"START_PULSE"|"PAUSE_SESSION"|"RETRY_STEP"|"APPROVE_SYNC"|"ABORT_SESSION"|"RELEASE_SESSION"
+        stationId = "HANGAR_BAY_01",
+        bayId = 1,
+        aircraftIndexN = 2,
+        targetCraftDomain = "AIRCRAFT_02",
+        baseHangarChannel = 101,
+        source = "POCKET_PDA"
+    }
+}
+
+-- 2. Alignment -> Pocket PDA (Base_hangar+1)
+{
+    ver = "1.9.5",
+    domainId = "AIRCRAFT_02",
+    seq = 121,
+    type = "MSG_ALIGN_REMOTE_STATUS",
+    time = 1732170000040,
+    payload = {
+        stationId = "HANGAR_BAY_01",
+        bayId = 1,
+        aircraftIndexN = 2,
+        fsmState = "TUNING",
+        status = "SESSION_STARTED", -- "SESSION_STARTED"|"PULSE_STARTED"|"PAUSED"|"RETRYING"|"SYNCING"|"ABORTED"|"RELEASED"|"REJECTED"
+        targetCraftDomain = "AIRCRAFT_02",
+        baseHangarChannel = 101,
+        craftBaseChannel = 10040
     }
 }
 ```
