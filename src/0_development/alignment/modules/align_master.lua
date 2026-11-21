@@ -154,10 +154,34 @@ function align_master.get_state(self)
     return inst and inst.state or "STANDBY"
 end
 
+local VALID_CLOSE_REASONS = {
+    COMPLETE = true,
+    MANUAL = true,
+    CALIBRATION_FINISHED = true,
+}
+
+local function normalize_close_reason(reason_str, fallback_reason)
+    if VALID_CLOSE_REASONS[reason_str] then
+        return reason_str
+    end
+    return fallback_reason or "MANUAL"
+end
+
+local function send_zero_pulse(inst)
+    send_pkt(inst, inst.cmd_ch, "MSG_CALIB_PULSE", {
+        targetThrusterId = (inst.actuators and inst.actuators[inst.actuator_idx]) or "ALL",
+        stepIndex = 1,
+        pulseLevel = 0,
+        pulseDurationMs = 0,
+        safetyMaxTiltDeg = 12.0,
+    })
+end
+
 function align_master.release_channels(self, reason)
     local inst = (type(self) == "table" and self.state) and self or active_session
     if not inst then return end
-    local close_reason = (type(self) == "string" and self) or reason or "COMPLETE"
+    local raw_reason = (type(self) == "string" and self) or reason
+    local close_reason = normalize_close_reason(raw_reason, "COMPLETE")
     local station = inst.station or get_station_cfg(inst.cfg)
     send_pkt(inst, inst.cmd_ch, "MSG_CALIBRATION_CLOSE", {
         stationId = station.stationId or "HANGAR_BAY_01",
@@ -407,10 +431,7 @@ function align_master.step_fsm(self, event, now_ms)
 
     if event.type == "ABORT" or inst.state == "ABORTING" then
         inst.state = "ABORTING"
-        send_pkt(inst, inst.cmd_ch, "MSG_CALIB_PULSE", {
-            targetThrusterId = (inst.actuators and inst.actuators[inst.actuator_idx]) or "ALL",
-            stepIndex = 0, pulseLevel = 0, pulseDurationMs = 0, safetyMaxTiltDeg = 12.0
-        })
+        send_zero_pulse(inst)
         local station = inst.station or get_station_cfg(inst.cfg)
         send_pkt(inst, inst.cmd_ch, "MSG_CALIB_START", {
             action = "ABORT_CALIBRATION",
@@ -418,7 +439,7 @@ function align_master.step_fsm(self, event, now_ms)
             targetThruster = "ALL",
             timeoutSec = 0
         })
-        align_master.release_channels(inst, event.reason or "ABORT")
+        align_master.release_channels(inst, normalize_close_reason(event.reason, "MANUAL"))
         return
     end
 
@@ -501,10 +522,7 @@ local REMOTE_ALIGN_HANDLERS = {
     end,
     PAUSE_SESSION = function(inst, req, _t_ms)
         if inst.state == "INTEGRATING" then
-            send_pkt(inst, inst.cmd_ch, "MSG_CALIB_PULSE", {
-                targetThrusterId = (inst.actuators and inst.actuators[inst.actuator_idx]) or "ALL",
-                stepIndex = 0, pulseLevel = 0, pulseDurationMs = 0, safetyMaxTiltDeg = 12.0,
-            })
+            send_zero_pulse(inst)
         end
         inst.state = "ANOMALY_PAUSE"
         return "PAUSED", req.reason
@@ -528,7 +546,7 @@ local REMOTE_ALIGN_HANDLERS = {
         return "SYNCING", nil
     end,
     ABORT_SESSION = function(inst, req, t_ms)
-        align_master.step_fsm(inst, { type = "ABORT", reason = req.reason or "ABORT" }, t_ms)
+        align_master.step_fsm(inst, { type = "ABORT", reason = normalize_close_reason(req.reason, "MANUAL") }, t_ms)
         return "ABORTED", req.reason
     end,
 }
@@ -589,8 +607,7 @@ function align_master.handle_remote_cmd(self, pkt, cfg, modem, now_ms)
         return inst, emit_remote_status(inst, eff_modem, telem_ch, req, "REJECTED", "NO_ACTIVE_SESSION", t_ms)
     end
     if req.action == "RELEASE_SESSION" then
-        local close_reason = (req.reason == "COMPLETE" or req.reason == "MANUAL" or req.reason == "CALIBRATION_FINISHED")
-            and req.reason or (req.saveProfile == false and "MANUAL" or "COMPLETE")
+        local close_reason = normalize_close_reason(req.reason, req.saveProfile == false and "MANUAL" or "COMPLETE")
         local out = emit_remote_status(inst, eff_modem, inst.telem_ch, req, "RELEASED", req.reason, t_ms)
         align_master.release_channels(inst, close_reason)
         return inst, out

@@ -99,6 +99,25 @@ function remote_link_controller.init(cfg)
     }
 end
 
+local function non_wild_domain(dom)
+    return (type(dom) == "string" and dom ~= "" and dom ~= "*") and dom or nil
+end
+
+local function resolve_align_target(net_ctx, aln, action, o)
+    local craft_n
+    if action == "BIND_SESSION" then
+        craft_n = o.aircraftIndexN or net_ctx.aircraftIndexN or (aln and aln.aircraftIndexN) or 1
+    else
+        craft_n = o.aircraftIndexN or (aln and aln.aircraftIndexN) or net_ctx.aircraftIndexN or 1
+    end
+    local ctx_dom = (craft_n == net_ctx.aircraftIndexN) and non_wild_domain(net_ctx.targetDomainId) or nil
+    local active_aln_dom = (aln and aln.aircraftIndexN == craft_n and (action ~= "BIND_SESSION" or aln.fsmState ~= "STANDBY"))
+        and non_wild_domain(aln.targetCraftDomain) or nil
+    local raw_dom = non_wild_domain(o.targetCraftDomain) or active_aln_dom or ctx_dom
+    local target_dom = raw_dom or pda_network.default_domain_for_index(craft_n)
+    return craft_n, target_dom
+end
+
 --- Transmit MSG_ALIGN_REMOTE_CMD on Base_hangar+0 (reply Base_hangar+1).
 function remote_link_controller.send_align_cmd(net_ctx, link_state, action, opts, now_ms)
     if type(net_ctx) ~= "table" or not net_ctx.modem then
@@ -113,15 +132,12 @@ function remote_link_controller.send_align_cmd(net_ctx, link_state, action, opts
     local hangar_base, b_err = pda_network.compute_hangar_base(bay_id)
     if not hangar_base then return false, b_err end
 
-    local craft_n = o.aircraftIndexN or net_ctx.aircraftIndexN or (aln and aln.aircraftIndexN) or 1
+    local craft_n, target_dom = resolve_align_target(net_ctx, aln, action, o)
     local _, c_err = pda_network.compute_craft_base(craft_n)
     if c_err then return false, c_err end
 
     local prefix = (type(link_state) == "table" and link_state.stationIdPrefix) or "HANGAR_BAY_"
     local station_id = o.stationId or (aln and aln.bayId == bay_id and aln.stationId) or string.format("%s%02d", prefix, bay_id)
-    local raw_dom = o.targetCraftDomain or net_ctx.targetDomainId
-    local target_dom = (type(raw_dom) == "string" and raw_dom ~= "" and raw_dom ~= "*")
-        and raw_dom or pda_network.default_domain_for_index(craft_n)
 
     local payload = {
         action = action,
@@ -206,17 +222,48 @@ function remote_link_controller.ingest_align_packet(link_state, channel, pkt, no
     return false
 end
 
-local function update_fdr_link_state(fdr, action, target_n, new_base, opts, now_ms)
+local function update_fdr_link_state(fdr, action, target_n, new_base, target_dom, opts, now_ms)
     if not fdr then return end
     if action == "BIND_AIRCRAFT" then
         fdr.boundIndexN = target_n
         fdr.boundBaseChannel = new_base
+        fdr.boundDomainId = target_dom
         if opts.autoStartLogging == true then fdr.mode = "LOGGING" end
     elseif action == "SET_MODE" then
         fdr.mode = opts.recordMode
     end
     fdr.lastCmd = action
     fdr.lastCmdMs = get_time_ms(now_ms)
+end
+
+local function resolve_fdr_target_domain(net_ctx, fdr, action, target_n, o)
+    if type(o.targetDomainId) == "string" and o.targetDomainId ~= "" then
+        return o.targetDomainId
+    end
+    if action == "BIND_AIRCRAFT" then
+        if target_n == net_ctx.aircraftIndexN and net_ctx.autoDomain == false then
+            return non_wild_domain(net_ctx.targetDomainId) or "*"
+        end
+        return "*"
+    end
+    if target_n == net_ctx.aircraftIndexN then
+        return non_wild_domain(net_ctx.targetDomainId) or pda_network.default_domain_for_index(target_n)
+    end
+    local bound_dom = (fdr and fdr.boundIndexN == target_n) and non_wild_domain(fdr.boundDomainId) or nil
+    return bound_dom or pda_network.default_domain_for_index(target_n)
+end
+
+local function resolve_fdr_channel_domain(ch, net_ctx, fdr, bound_base, new_base, target_n, target_dom)
+    local new_env_dom = non_wild_domain(target_dom) or pda_network.default_domain_for_index(target_n)
+    if ch == (net_ctx.baseChannel + 9) and ch ~= (new_base + 9) then
+        return non_wild_domain(net_ctx.targetDomainId) or pda_network.default_domain_for_index(net_ctx.aircraftIndexN)
+    end
+    if bound_base and ch == (bound_base + 9) and ch ~= (new_base + 9) then
+        local bound_dom = (fdr and non_wild_domain(fdr.boundDomainId))
+            or (fdr and fdr.boundIndexN and pda_network.default_domain_for_index(fdr.boundIndexN))
+        return bound_dom or new_env_dom
+    end
+    return new_env_dom
 end
 
 --- Transmit passive one-way MSG_FDR_REMOTE_CMD on Base+9 (and dual-target when bound differs).
@@ -238,24 +285,27 @@ function remote_link_controller.send_fdr_cmd(net_ctx, link_state, action, opts, 
         return false, "ERR_INVALID_FDR_MODE"
     end
 
+    local target_dom = resolve_fdr_target_domain(net_ctx, fdr, action, target_n, o)
     local payload = {
         action = action,
         targetAircraftIndexN = target_n,
         source = o.source or "POCKET_PDA",
-        targetDomainId = o.targetDomainId or net_ctx.targetDomainId,
+        targetDomainId = target_dom,
         reason = o.reason or "PDA_REMOTE_CMD",
         recordMode = o.recordMode,
     }
     if o.autoStartLogging ~= nil then payload.autoStartLogging = (o.autoStartLogging == true) end
 
+    local bound_base = (fdr and fdr.boundBaseChannel) or pda_network.compute_craft_base(fdr and fdr.boundIndexN)
     local sent_any = false
     for _, ch in ipairs(build_fdr_targets(net_ctx, link_state, action, new_base)) do
-        if pda_network.transmit_raw_channel(net_ctx, ch, ch, "MSG_FDR_REMOTE_CMD", payload, nil, now_ms) then
+        local env_dom = resolve_fdr_channel_domain(ch, net_ctx, fdr, bound_base, new_base, target_n, target_dom)
+        if pda_network.transmit_raw_channel(net_ctx, ch, ch, "MSG_FDR_REMOTE_CMD", payload, env_dom, now_ms) then
             sent_any = true
         end
     end
     if not sent_any then return false, "ERR_TX_FAILED" end
-    update_fdr_link_state(fdr, action, target_n, new_base, o, now_ms)
+    update_fdr_link_state(fdr, action, target_n, new_base, target_dom, o, now_ms)
     return true, nil
 end
 

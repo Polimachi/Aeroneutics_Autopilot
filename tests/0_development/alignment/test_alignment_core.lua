@@ -421,7 +421,7 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         assert_eq(master.state, "INTEGRATING")
         assert_eq(st_pulse.payload.status, "PULSE_STARTED")
 
-        -- 3. PAUSE_SESSION -> ANOMALY_PAUSE, then RETRY_STEP -> INTEGRATING
+        -- 3. PAUSE_SESSION -> ANOMALY_PAUSE (with contract-valid stepIndex in [1..9]), then RETRY_STEP -> INTEGRATING
         mockModem._transmitted = {}
         local _, st_pause = align_master.handle_remote_cmd(master, {
             ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 3, time = 1200,
@@ -430,6 +430,15 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         }, stationCfg, mockModem, 1200)
         assert_eq(master.state, "ANOMALY_PAUSE")
         assert_eq(st_pause.payload.status, "PAUSED")
+        local saw_pause_pulse = false
+        for _, tx in ipairs(mockModem._transmitted) do
+            if tx.pkt and tx.pkt.type == "MSG_CALIB_PULSE" then
+                saw_pause_pulse = true
+                assert_true(tx.pkt.payload.stepIndex >= 1 and tx.pkt.payload.stepIndex <= 9, "PAUSE stepIndex must be in [1..9]")
+                assert_eq(tx.pkt.payload.pulseLevel, 0)
+            end
+        end
+        assert_true(saw_pause_pulse)
 
         local _, st_retry = align_master.handle_remote_cmd(master, {
             ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 4, time = 1300,
@@ -476,12 +485,13 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         }, stationCfg, mockModem, 1600)
         assert_eq(st_rej.payload.status, "REJECTED")
 
-        -- 7. ABORT_SESSION closes channels, emits ABORTED on 102, and alignment/main.lua keeps 101 open in STANDBY
+        -- 7. ABORT_SESSION closes channels with valid MSG_CALIBRATION_CLOSE.reason, emits ABORTED on 102, and alignment/main.lua keeps 101 open in STANDBY
         align_master.handle_remote_cmd(master, {
             ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 8, time = 1700,
             type = "MSG_ALIGN_REMOTE_CMD",
             payload = { action = "BIND_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
         }, stationCfg, mockModem, 1700)
+        mockModem._transmitted = {}
         local _, st_abt = align_master.handle_remote_cmd(master, {
             ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 9, time = 1800,
             type = "MSG_ALIGN_REMOTE_CMD",
@@ -489,7 +499,21 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         }, stationCfg, mockModem, 1800)
         assert_eq(master.state, "STANDBY")
         assert_eq(st_abt.payload.status, "ABORTED")
+        assert_eq(st_abt.payload.reason, "PDA_ABORT")
         assert_false(mockModem.isOpen(101))
+        local valid_close = { COMPLETE = true, MANUAL = true, CALIBRATION_FINISHED = true }
+        local saw_abt_pulse, saw_abt_close = false, false
+        for _, tx in ipairs(mockModem._transmitted) do
+            if tx.pkt and tx.pkt.type == "MSG_CALIB_PULSE" then
+                saw_abt_pulse = true
+                assert_true(tx.pkt.payload.stepIndex >= 1 and tx.pkt.payload.stepIndex <= 9, "ABORT stepIndex must be in [1..9]")
+            elseif tx.pkt and tx.pkt.type == "MSG_CALIBRATION_CLOSE" then
+                saw_abt_close = true
+                assert_true(valid_close[tx.pkt.payload.reason], "MSG_CALIBRATION_CLOSE.reason must be valid enum, got " .. tostring(tx.pkt.payload.reason))
+            end
+        end
+        assert_true(saw_abt_pulse)
+        assert_true(saw_abt_close)
 
         local align_main = require("main")
         assert_not_nil(align_main.handle_modem_message)

@@ -265,4 +265,64 @@ describe("Pocket PDA remote Alignment and FDR link controller", function()
         local bad_mode_ok = remote_link_controller.send_fdr_cmd(net_ctx, link_state, "SET_MODE", { recordMode = "BOGUS" }, 5300)
         assert_false(bad_mode_ok)
     end)
+
+    it("isolates cross-aircraft domain bindings on send_align_cmd and send_fdr_cmd", function()
+        local modem = mock.modem({ wireless = true })
+        local cfg = make_cfg()
+        local net_ctx = pda_network.init(cfg, modem)
+        local link_state = remote_link_controller.init(cfg)
+
+        -- 1. Cross-aircraft send_align_cmd for N=2 while HUD net_ctx is on N=1 (AIRCRAFT_01)
+        assert_true(remote_link_controller.send_align_cmd(net_ctx, link_state, "BIND_SESSION", {
+            bayId = 1,
+            aircraftIndexN = 2,
+        }, 6000))
+        local tx_bind_n2 = modem._transmitted[#modem._transmitted]
+        assert_eq(tx_bind_n2.pkt.domainId, "AIRCRAFT_02")
+        assert_eq(tx_bind_n2.pkt.payload.targetCraftDomain, "AIRCRAFT_02")
+        assert_eq(link_state.alignment.aircraftIndexN, 2)
+
+        -- Bind explicit custom domain FALCON_02, then switch HUD to N=3; non-BIND action must keep N=2 / FALCON_02
+        assert_true(remote_link_controller.send_align_cmd(net_ctx, link_state, "BIND_SESSION", {
+            bayId = 1,
+            aircraftIndexN = 2,
+            targetCraftDomain = "FALCON_02",
+        }, 6050))
+        assert_true(pda_network.rebind_aircraft(net_ctx, 3, "AIRCRAFT_03"))
+        assert_true(remote_link_controller.send_align_cmd(net_ctx, link_state, "START_PULSE", {}, 6100))
+        local tx_pulse = modem._transmitted[#modem._transmitted]
+        assert_eq(tx_pulse.pkt.payload.aircraftIndexN, 2)
+        assert_eq(tx_pulse.pkt.payload.targetCraftDomain, "FALCON_02")
+        assert_eq(tx_pulse.pkt.domainId, "FALCON_02")
+
+        -- 2. Cross-aircraft FDR BIND_AIRCRAFT to N=4 with omitted targetDomainId while HUD is on N=1 -> sends "*"
+        local net_hud1 = pda_network.init(cfg, modem)
+        local link_fdr = remote_link_controller.init(cfg)
+        modem._transmitted = {}
+        assert_true(remote_link_controller.send_fdr_cmd(net_hud1, link_fdr, "BIND_AIRCRAFT", {
+            targetAircraftIndexN = 4,
+        }, 6200))
+        assert_eq(#modem._transmitted, 2)
+        assert_eq(modem._transmitted[1].tx, 10009)
+        assert_eq(modem._transmitted[2].tx, 10129)
+        assert_eq(modem._transmitted[1].pkt.payload.targetDomainId, "*")
+        assert_eq(modem._transmitted[2].pkt.payload.targetDomainId, "*")
+        assert_eq(modem._transmitted[2].pkt.domainId, "AIRCRAFT_04")
+
+        -- Same-aircraft BIND_AIRCRAFT when autoDomain = true also sends "*", whereas locked autoDomain = false keeps locked domain
+        net_hud1.autoDomain = true
+        modem._transmitted = {}
+        assert_true(remote_link_controller.send_fdr_cmd(net_hud1, link_fdr, "BIND_AIRCRAFT", {
+            targetAircraftIndexN = 1,
+        }, 6300))
+        assert_eq(modem._transmitted[1].pkt.payload.targetDomainId, "*")
+
+        net_hud1.autoDomain = false
+        net_hud1.targetDomainId = "FALCON_01"
+        modem._transmitted = {}
+        assert_true(remote_link_controller.send_fdr_cmd(net_hud1, link_fdr, "BIND_AIRCRAFT", {
+            targetAircraftIndexN = 1,
+        }, 6400))
+        assert_eq(modem._transmitted[1].pkt.payload.targetDomainId, "FALCON_01")
+    end)
 end)
