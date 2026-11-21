@@ -744,4 +744,86 @@ describe("AMM C2 Arbiter (c2_arbiter), Authority Switching & Queue FSM", functio
         assert_eq(err_em_hold, "ACRO_RECOVERY_HOLD")
         assert_true(arb:can_transmit_mfd(3300))
     end)
+
+    it("resolves nearest FREE landing facility on GCS_OVERRIDE LAND_NEAREST, falls back to EMERGENCY_LAND, and maps RTB to FAILSAFE_RTH (TASK-302)", function()
+        local facility_client = require("facility_client")
+        local mission_engine = require("mission_engine")
+        local q, net, arb = create_fixture()
+        local fac = facility_client.init({ domainId = "AIRCRAFT_01" })
+        local eng = mission_engine.new({ net = net, fac = fac, config = { baseChannel = 10000 } })
+        arb:set_engine(eng)
+
+        -- Seed craft current position near (100, 120, 50)
+        arb:handle_flight_telemetry({
+            payload = {
+                controlState = "CRUISE",
+                activeSource = "FCP",
+                navigation = { currentPos = { x = 100, y = 120, z = 50 } },
+            },
+        }, 1000)
+
+        -- Populate beacons: PAD_01 far FREE, PAD_02 nearest FREE, PAD_03 closest but OCCUPIED
+        facility_client.update_beacons(fac, {
+            sectorId = "SECTOR_01",
+            facilities = {
+                { facilityId = "PAD_01", facilityType = "LANDING_PAD", status = "FREE", position = { x = 500, y = 64, z = 500 } },
+                { facilityId = "PAD_02", facilityType = "LANDING_PAD", status = "FREE", position = { x = 80, y = 72, z = 60 } },
+                { facilityId = "PAD_03", facilityType = "LANDING_PAD", status = "OCCUPIED", position = { x = 98, y = 64, z = 52 } },
+            },
+        }, 1050)
+
+        arb:handle_gcs_packet({
+            ver = "1.9.5",
+            type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "GCS_OVERRIDE",
+                command = "LAND_NEAREST",
+                flightMode = "LANDING",
+                params = { source = "POCKET_PDA", facilityTypeFilter = "ANY" },
+            },
+        }, 1100)
+
+        local g_land = arb:get_effective_goal()
+        assert_eq(g_land.flightMode, "LANDING")
+        assert_eq(g_land.facilityId, "PAD_02")
+        assert_eq(g_land.designatedFacilityId, "PAD_02")
+        assert_eq(g_land.targetPos.x, 80)
+        assert_eq(g_land.targetPos.z, 60)
+        assert_eq(g_land.targetAlt, 72)
+        assert_true(g_land.arm)
+        assert_true(g_land.flightActive)
+
+        -- RTB maps to FAILSAFE_RTH
+        arb:handle_gcs_packet({
+            ver = "1.9.5",
+            type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "GCS_OVERRIDE",
+                command = "RTB",
+                params = { source = "POCKET_PDA" },
+            },
+        }, 1200)
+        local g_rtb = arb:get_effective_goal()
+        assert_eq(g_rtb.flightMode, "FAILSAFE_RTH")
+        assert_true(g_rtb.arm)
+        assert_true(g_rtb.flightActive)
+
+        -- LAND_NEAREST falls back to EMERGENCY_LAND when no FREE beacon exists
+        fac.beacons = {
+            PAD_03 = { facilityId = "PAD_03", facilityType = "LANDING_PAD", status = "OCCUPIED", position = { x = 98, y = 64, z = 52 } },
+        }
+        arb:handle_gcs_packet({
+            ver = "1.9.5",
+            type = "MSG_OPERATOR_CMD",
+            payload = {
+                authority = "GCS_OVERRIDE",
+                command = "LAND_NEAREST",
+                params = { source = "POCKET_PDA" },
+            },
+        }, 1300)
+        local g_fb = arb:get_effective_goal()
+        assert_eq(g_fb.flightMode, "EMERGENCY_LAND")
+        assert_true(g_fb.arm)
+        assert_true(g_fb.flightActive)
+    end)
 end)

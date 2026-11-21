@@ -292,4 +292,105 @@ describe("FDR main daemon lifecycle and keybindings", function()
         assert_not_nil(pInfo)
         assert_true(string.find(pInfo.filePath, "CRAFT_N1_1794700000123_part001%.jsonl", 1, false) ~= nil)
     end)
+
+    it("handles MSG_FDR_REMOTE_CMD on Base+9 across STANDBY/PAUSED/LOGGING with 0 modem.transmit calls (TASK-302)", function()
+        local apis = make_mock_apis({ ["/"] = 500000, ["/disk"] = 200000 })
+        local cfg = make_cfg("RING_BUFFER")
+        cfg.autoStartOnBoot = false
+        local st = fdr_main.init(cfg, apis)
+        assert_eq(st.mode, "STANDBY")
+        assert_true(apis.modem.isOpen(10009))
+
+        -- 1. SET_MODE STANDBY -> LOGGING
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 1, time = 1000,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = {
+                action = "SET_MODE",
+                targetAircraftIndexN = 1,
+                source = "POCKET_PDA",
+                recordMode = "LOGGING",
+                reason = "REMOTE_START",
+            },
+        }))
+        assert_eq(st.mode, "LOGGING")
+        assert_eq(apis.modem._getTxCount(), 0)
+
+        -- Ingest telemetry frame into ring buffer
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10002, 10002, {
+            ver = "1.9.5", domainId = "CRAFT_01", seq = 2, time = 1050,
+            type = "MSG_FLIGHT_TELEMETRY",
+            payload = { controlState = "NORMAL", sensorOk = true },
+        }))
+        assert_eq(st.framesWritten, 1)
+
+        -- 2. SET_MODE LOGGING -> PAUSED, then force DUMP_NOW even with estopFlushed = true
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 3, time = 1100,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = { action = "SET_MODE", targetAircraftIndexN = 1, source = "POCKET_PDA", recordMode = "PAUSED" },
+        }))
+        assert_eq(st.mode, "PAUSED")
+
+        st.estopFlushed = true
+        st.lastSessionManifest = nil
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 4, time = 1200,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = { action = "DUMP_NOW", targetAircraftIndexN = 1, source = "POCKET_PDA", reason = "PDA_ESTOP_DUMP" },
+        }))
+        assert_not_nil(st.lastSessionManifest)
+        assert_eq(st.lastSessionManifest.frameCount, 1)
+        assert_eq(apis.modem._getTxCount(), 0)
+
+        -- 3. EXPORT_NOW uploads session with 0 modem tx
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 5, time = 1250,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = { action = "EXPORT_NOW", targetAircraftIndexN = 1, source = "POCKET_PDA" },
+        }))
+        assert_true(#apis._posts >= 1)
+        assert_eq(apis.modem._getTxCount(), 0)
+
+        -- 4. BIND_AIRCRAFT N=1 -> N=2 (10049) with autoStartLogging = true
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 6, time = 1300,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = {
+                action = "BIND_AIRCRAFT",
+                targetAircraftIndexN = 2,
+                targetDomainId = "CRAFT_02",
+                autoStartLogging = true,
+                source = "POCKET_PDA",
+                reason = "PDA_REMOTE_REBIND",
+            },
+        }))
+        assert_eq(st.tap.aircraftIndexN, 2)
+        assert_eq(st.tap.baseChannel, 10040)
+        assert_eq(st.tap.lockedDomainId, "CRAFT_02")
+        assert_eq(st.mode, "LOGGING")
+        assert_false(apis.modem.isOpen(10009))
+        assert_true(apis.modem.isOpen(10049))
+
+        -- 5. CLEAR_BUFFER resets ring & latch
+        st.estopFlushed = true
+        assert_true(fdr_main.handle_event(st, "modem_message", "top", 10049, 10049, {
+            ver = "1.9.5", domainId = "CRAFT_02", seq = 7, time = 1350,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = { action = "CLEAR_BUFFER", targetAircraftIndexN = 2, source = "POCKET_PDA" },
+        }))
+        assert_false(st.estopFlushed)
+        assert_eq(apis.modem._getTxCount(), 0)
+
+        -- 6. ROLLOVER_NOW in STREAMING mode rolls over active part
+        local stStream = fdr_main.init(make_cfg("STREAMING"), apis)
+        assert_eq(stStream.stream.partIndex, 1)
+        assert_true(fdr_main.handle_event(stStream, "modem_message", "top", 10009, 10009, {
+            ver = "1.9.5", domainId = "AIRCRAFT_01", seq = 8, time = 1400,
+            type = "MSG_FDR_REMOTE_CMD",
+            payload = { action = "ROLLOVER_NOW", targetAircraftIndexN = 1, source = "POCKET_PDA", reason = "SPLIT" },
+        }))
+        assert_eq(stStream.stream.partIndex, 2)
+        assert_eq(apis.modem._getTxCount(), 0)
+    end)
 end)

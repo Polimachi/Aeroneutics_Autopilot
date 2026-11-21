@@ -145,17 +145,20 @@ local function accept_or_lock_craft_domain(net_ctx, pkt)
     if type(net_ctx) ~= "table" then
         return true
     end
-    local pkt_dom = (type(pkt.domainId) == "string" and pkt.domainId ~= "") and pkt.domainId or nil
+    local pkt_dom = (type(pkt.domainId) == "string" and pkt.domainId ~= "" and pkt.domainId ~= "*")
+        and pkt.domainId or nil
     if net_ctx.autoDomain == true then
-        if pkt_dom and pkt_dom ~= "*" then
+        if pkt_dom then
             net_ctx.targetDomainId = pkt_dom
             net_ctx.autoDomain = false
         end
         return true
     end
     local target = net_ctx.targetDomainId
-    if type(target) == "string" and target ~= "" and target ~= "*" and pkt_dom and pkt_dom ~= target then
-        return false
+    if type(target) == "string" and target ~= "" and target ~= "*" then
+        if not pkt_dom or pkt_dom ~= target then
+            return false
+        end
     end
     return true
 end
@@ -182,9 +185,14 @@ local function apply_dynamics(hud, dyn)
     if is_finite_number(dyn.groundSpeed) then
         hud.groundSpeed = dyn.groundSpeed
     elseif type(dyn.velocity) == "table" then
-        local vx = tonumber(dyn.velocity.vx) or 0.0
-        local vz = tonumber(dyn.velocity.vz) or 0.0
-        hud.groundSpeed = math.sqrt(vx * vx + vz * vz)
+        local vx = tonumber(dyn.velocity.vx)
+        local vz = tonumber(dyn.velocity.vz)
+        vx = is_finite_number(vx) and vx or 0.0
+        vz = is_finite_number(vz) and vz or 0.0
+        local spd = math.sqrt(vx * vx + vz * vz)
+        if is_finite_number(spd) then
+            hud.groundSpeed = spd
+        end
     end
 end
 
@@ -219,9 +227,13 @@ local function record_craft_telemetry_rx(hud, net_ctx, base, pkt, distance_m, ts
 
     local n = (type(net_ctx) == "table" and net_ctx.aircraftIndexN)
         or (math.floor((base - CRAFT_BASE_MIN) / CRAFT_BANDWIDTH) + 1)
-    local domain_id = (type(pkt.domainId) == "string" and pkt.domainId ~= "") and pkt.domainId
-        or (type(net_ctx) == "table" and net_ctx.targetDomainId)
-        or string.format("AIRCRAFT_%02d", n)
+    local pkt_dom = (type(pkt.domainId) == "string" and pkt.domainId ~= "" and pkt.domainId ~= "*")
+        and pkt.domainId or nil
+    local ctx_dom = (type(net_ctx) == "table" and type(net_ctx.targetDomainId) == "string"
+        and net_ctx.targetDomainId ~= "" and net_ctx.targetDomainId ~= "*")
+        and net_ctx.targetDomainId or nil
+    local existing = hud.discoveredCrafts and hud.discoveredCrafts[n]
+    local domain_id = pkt_dom or ctx_dom or (existing and existing.domainId) or string.format("AIRCRAFT_%02d", n)
     register_discovered_craft(hud, n, domain_id, base, ts)
 end
 
@@ -236,7 +248,7 @@ local function handle_block_assign(hud, net_ctx, channel, p, ts)
         and base_ch <= CRAFT_BASE_MAX and ((base_ch - CRAFT_BASE_MIN) % CRAFT_BANDWIDTH) == 0 then
         local n = math.floor((base_ch - CRAFT_BASE_MIN) / CRAFT_BANDWIDTH) + 1
         local existing = hud.discoveredCrafts[n]
-        local dom = (type(p.domainId) == "string" and p.domainId ~= "") and p.domainId
+        local dom = (type(p.domainId) == "string" and p.domainId ~= "" and p.domainId ~= "*") and p.domainId
             or (existing and existing.domainId)
             or string.format("AIRCRAFT_%02d", n)
         register_discovered_craft(hud, n, dom, base_ch, ts)
@@ -325,8 +337,9 @@ function telemetry_hud_state.update_link_timeouts(hud, now_ms)
     local age_ms = is_finite_number(hud.lastTelemMs) and math.max(0, ts - hud.lastTelemMs) or nil
     hud.linkQuality = telemetry_hud_state.classify_link_quality(hud.lastDistanceM, age_ms, hud.cfg)
 
-    local lq = (type(hud.cfg.linkQuality) == "table") and hud.cfg.linkQuality or {}
-    local stale_ms = lq.nodeStaleMs or hud.cfg.nodeTimeoutMs or 3000
+    local cfg = (type(hud.cfg) == "table") and hud.cfg or {}
+    local lq = (type(cfg.linkQuality) == "table") and cfg.linkQuality or {}
+    local stale_ms = lq.nodeStaleMs or cfg.nodeTimeoutMs or 3000
     for _, node in pairs(hud.nodes or {}) do
         if type(node) == "table" and node.online then
             if not is_finite_number(node.lastSeenMs) or (ts - node.lastSeenMs) > stale_ms then

@@ -88,18 +88,7 @@ local function get_station_cfg(cfg)
     return (cfg and cfg.station) or cfg or {}
 end
 
-function align_master.init_bay_session(cfg, domain_id, craft_base_ch, modem, now_ms)
-    local self = setmetatable({}, align_master)
-    self.cfg = cfg or {}
-    local station = get_station_cfg(self.cfg)
-    self.station = station
-    self.domain_id = domain_id or "AIRCRAFT_01"
-    self.craft_base_ch = craft_base_ch or parse_domain_craft_base(self.domain_id) or CRAFT_BASE_MIN
-    self.modem = modem
-    local base = station.baseHangarChannel or (station.bayId and align_master.compute_hangar_base(station.bayId)) or HANGAR_BASE_MIN
-    self.cmd_ch = base + 0
-    self.telem_ch = base + 1
-    self.tap_ch = base + 3
+local function reset_session_state(self, now_ms)
     self.seq = 0
     self.actuators = {}
     self.actuator_idx = 1
@@ -122,6 +111,22 @@ function align_master.init_bay_session(cfg, domain_id, craft_base_ch, modem, now
     self.checker = controllability_checker
     self.state_entered_ms = now_ms or epoch_ms()
     self.pulse_start_ms = self.state_entered_ms
+end
+
+local function init_session_into(self, cfg, domain_id, craft_base_ch, modem, now_ms)
+    if self.modem and self.cmd_ch then modem_close(self.modem, self.cmd_ch) end
+    if self.modem and self.telem_ch then modem_close(self.modem, self.telem_ch) end
+    if self.modem and self.tap_ch then modem_close(self.modem, self.tap_ch) end
+
+    self.cfg = cfg or {}
+    local station = get_station_cfg(self.cfg)
+    self.station = station
+    self.domain_id = domain_id or "AIRCRAFT_01"
+    self.craft_base_ch = craft_base_ch or parse_domain_craft_base(self.domain_id) or CRAFT_BASE_MIN
+    self.modem = modem
+    local base = station.baseHangarChannel or (station.bayId and align_master.compute_hangar_base(station.bayId)) or HANGAR_BASE_MIN
+    self.cmd_ch, self.telem_ch, self.tap_ch = base + 0, base + 1, base + 3
+    reset_session_state(self, now_ms)
 
     modem_open(self.modem, self.cmd_ch)
     modem_open(self.modem, self.telem_ch)
@@ -137,6 +142,11 @@ function align_master.init_bay_session(cfg, domain_id, craft_base_ch, modem, now
     })
     active_session = self
     return self
+end
+
+function align_master.init_bay_session(cfg, domain_id, craft_base_ch, modem, now_ms)
+    local self = setmetatable({}, align_master)
+    return init_session_into(self, cfg, domain_id, craft_base_ch, modem, now_ms)
 end
 
 function align_master.get_state(self)
@@ -425,6 +435,172 @@ function align_master.step_fsm(self, event, now_ms)
     elseif inst.state == "SYNC_APPROVAL" or inst.state == "SYNCING" then
         handle_approval_and_sync(inst, event)
     end
+end
+
+local function build_remote_status_pkt(inst, meta, status_str, reason_str, t_ms)
+    local seq_num = 1
+    if inst then
+        inst.seq = (inst.seq or 0) + 1
+        seq_num = inst.seq
+    end
+    local idx = inst and inst.actuator_idx or 1
+    local thr = inst and inst.actuators and inst.actuators[idx] or nil
+    local eval_res = inst and inst.eval_result or nil
+    local reg = inst and inst.last_regression or nil
+    local payload = {
+        stationId = meta.stationId,
+        bayId = meta.bayId,
+        aircraftIndexN = meta.aircraftIndexN,
+        fsmState = (inst and inst.state) or "STANDBY",
+        status = status_str,
+        targetCraftDomain = meta.targetCraftDomain,
+        baseHangarChannel = meta.baseHangarChannel,
+        craftBaseChannel = meta.craftBaseChannel,
+    }
+    if type(thr) == "string" then payload.activeThruster = thr end
+    if eval_res and type(eval_res.status) == "string" then payload.controllabilityStatus = eval_res.status end
+    if reg and type(reg.confidenceR2) == "number" then payload.confidenceR2 = reg.confidenceR2 end
+    if reason_str ~= nil then payload.reason = reason_str end
+    return {
+        ver = "1.9.5",
+        domainId = meta.targetCraftDomain or "AIRCRAFT_01",
+        seq = seq_num,
+        type = "MSG_ALIGN_REMOTE_STATUS",
+        time = t_ms,
+        payload = payload,
+    }
+end
+
+local function emit_remote_status(inst, m_obj, telem_ch, meta, status_str, reason_str, t_ms)
+    local out = build_remote_status_pkt(inst, meta, status_str, reason_str, t_ms)
+    modem_transmit(m_obj, telem_ch, telem_ch, out)
+    return out
+end
+
+local function make_session_cfg(eff_cfg, req, hangar_base)
+    local merged = {}
+    for k, v in pairs(eff_cfg or {}) do
+        merged[k] = v
+    end
+    local st = {}
+    for k, v in pairs(get_station_cfg(eff_cfg)) do
+        st[k] = v
+    end
+    st.stationId = req.stationId
+    st.bayId = req.bayId
+    st.baseHangarChannel = hangar_base
+    merged.station = st
+    return merged
+end
+
+local REMOTE_ALIGN_HANDLERS = {
+    START_PULSE = function(inst, _req, t_ms)
+        if inst.state ~= "DISCOVERY" then return "REJECTED", "INVALID_STATE_" .. tostring(inst.state) end
+        align_master.step_fsm(inst, { type = "START_PULSE_SEQUENCE" }, t_ms)
+        return "PULSE_STARTED", nil
+    end,
+    PAUSE_SESSION = function(inst, req, _t_ms)
+        if inst.state == "INTEGRATING" then
+            send_pkt(inst, inst.cmd_ch, "MSG_CALIB_PULSE", {
+                targetThrusterId = (inst.actuators and inst.actuators[inst.actuator_idx]) or "ALL",
+                stepIndex = 0, pulseLevel = 0, pulseDurationMs = 0, safetyMaxTiltDeg = 12.0,
+            })
+        end
+        inst.state = "ANOMALY_PAUSE"
+        return "PAUSED", req.reason
+    end,
+    RETRY_STEP = function(inst, _req, t_ms)
+        if inst.state ~= "ANOMALY_PAUSE" and inst.state ~= "INTEGRATING" and inst.state ~= "SETTLING" then
+            return "REJECTED", "INVALID_STATE_" .. tostring(inst.state)
+        end
+        if not inst.actuators or #inst.actuators == 0 then
+            inst.actuators = { "THR_MAIN_L" }
+            inst.actuator_idx = 1
+        end
+        inst.state = "ANOMALY_PAUSE"
+        align_master.step_fsm(inst, { type = "RETRY" }, t_ms)
+        return "RETRYING", nil
+    end,
+    APPROVE_SYNC = function(inst, req, t_ms)
+        if inst.state ~= "SYNC_APPROVAL" then return "REJECTED", "INVALID_STATE_" .. tostring(inst.state) end
+        if not (inst.eval_result and inst.eval_result.passed) then return "REJECTED", "AUTHORITY_NOT_PASSED" end
+        align_master.step_fsm(inst, { type = "USER_APPROVE", saveProfile = req.saveProfile }, t_ms)
+        return "SYNCING", nil
+    end,
+    ABORT_SESSION = function(inst, req, t_ms)
+        align_master.step_fsm(inst, { type = "ABORT", reason = req.reason or "ABORT" }, t_ms)
+        return "ABORTED", req.reason
+    end,
+}
+
+local function extract_remote_req(pkt, eff_cfg)
+    local p = pkt.payload
+    local station = get_station_cfg(eff_cfg)
+    local bay_id = p.bayId
+    local aircraft_n = p.aircraftIndexN
+    local hangar_base = align_master.compute_hangar_base(bay_id) or p.baseHangarChannel or station.baseHangarChannel or HANGAR_BASE_MIN
+    local craft_base = align_master.compute_craft_base(aircraft_n)
+    local raw_dom = p.targetCraftDomain
+    local dom = (type(raw_dom) == "string" and raw_dom ~= "" and raw_dom ~= "*") and raw_dom
+        or (aircraft_n and string.format("AIRCRAFT_%02d", math.floor(tonumber(aircraft_n) or 1)))
+        or "AIRCRAFT_01"
+    local station_id = (type(p.stationId) == "string" and p.stationId ~= "") and p.stationId
+        or station.stationId or string.format("HANGAR_BAY_%02d", tonumber(bay_id) or 1)
+    return {
+        action = p.action,
+        stationId = station_id,
+        bayId = bay_id,
+        aircraftIndexN = aircraft_n,
+        targetCraftDomain = dom,
+        baseHangarChannel = hangar_base,
+        craftBaseChannel = craft_base,
+        reason = p.reason,
+        saveProfile = p.saveProfile,
+        source = p.source,
+    }
+end
+
+--- Handle incoming MSG_ALIGN_REMOTE_CMD on Base_hangar+0 and transmit MSG_ALIGN_REMOTE_STATUS on Base_hangar+1.
+function align_master.handle_remote_cmd(self, pkt, cfg, modem, now_ms)
+    if type(pkt) ~= "table" or pkt.ver ~= "1.9.5" or pkt.type ~= "MSG_ALIGN_REMOTE_CMD" or type(pkt.payload) ~= "table" then
+        return self, nil
+    end
+    local inst = (type(self) == "table" and self.state) and self or nil
+    local eff_cfg = cfg or (inst and inst.cfg) or {}
+    local eff_modem = modem or (inst and inst.modem)
+    local t_ms = now_ms or epoch_ms()
+    local req = extract_remote_req(pkt, eff_cfg)
+    local telem_ch = (req.baseHangarChannel or HANGAR_BASE_MIN) + 1
+
+    local valid_bay = type(req.bayId) == "number" and math.floor(req.bayId) == req.bayId and req.bayId >= 1 and req.bayId <= 10
+    if not valid_bay or not req.craftBaseChannel then
+        return inst, emit_remote_status(inst, eff_modem, telem_ch, req, "REJECTED", "INVALID_REMOTE_PARAMS", t_ms)
+    end
+    if req.source ~= nil and type(req.source) ~= "string" then
+        return inst, emit_remote_status(inst, eff_modem, telem_ch, req, "REJECTED", "INVALID_SOURCE", t_ms)
+    end
+
+    if req.action == "BIND_SESSION" then
+        local mcfg = make_session_cfg(eff_cfg, req, req.baseHangarChannel)
+        inst = init_session_into(inst or setmetatable({}, align_master), mcfg, req.targetCraftDomain, req.craftBaseChannel, eff_modem, t_ms)
+        return inst, emit_remote_status(inst, eff_modem, inst.telem_ch, req, "SESSION_STARTED", req.reason, t_ms)
+    end
+    if not inst or inst.state == "STANDBY" then
+        return inst, emit_remote_status(inst, eff_modem, telem_ch, req, "REJECTED", "NO_ACTIVE_SESSION", t_ms)
+    end
+    if req.action == "RELEASE_SESSION" then
+        local close_reason = (req.reason == "COMPLETE" or req.reason == "MANUAL" or req.reason == "CALIBRATION_FINISHED")
+            and req.reason or (req.saveProfile == false and "MANUAL" or "COMPLETE")
+        local out = emit_remote_status(inst, eff_modem, inst.telem_ch, req, "RELEASED", req.reason, t_ms)
+        align_master.release_channels(inst, close_reason)
+        return inst, out
+    end
+    local handler = REMOTE_ALIGN_HANDLERS[req.action]
+    if not handler then
+        return inst, emit_remote_status(inst, eff_modem, inst.telem_ch, req, "REJECTED", "UNKNOWN_ACTION", t_ms)
+    end
+    local status_str, reason_str = handler(inst, req, t_ms)
+    return inst, emit_remote_status(inst, eff_modem, inst.telem_ch, req, status_str, reason_str, t_ms)
 end
 
 align_master.build_profile_payload = build_profile_payload

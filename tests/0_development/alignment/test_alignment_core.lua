@@ -376,4 +376,136 @@ describe("align_master full FSM lifecycle and safety config (DEV-HIGH-01)", func
         assert_not_nil(payload.peripheralManifest)
         assert_eq(payload.peripheralManifest.domainId, "AIRCRAFT_01")
     end)
+
+    it("handles MSG_ALIGN_REMOTE_CMD full lifecycle and emits MSG_ALIGN_REMOTE_STATUS on Base_hangar+1 (TASK-302)", function()
+        local mockModem = mock.modem()
+        local stationCfg = {
+            station = { stationId = "HANGAR_BAY_01", bayId = 1, baseHangarChannel = 101 },
+            safety = { tiltAbortDeg = 12.0, tiltWarnDeg = 8.0, watchdogTimeoutMs = 5000 },
+        }
+
+        -- 1. BIND_SESSION for N=2 from STANDBY (nil master) -> sends MSG_CALIBRATION_INIT to 10048 & status on 102
+        local master, st1 = align_master.handle_remote_cmd(nil, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 1, time = 1000,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = {
+                action = "BIND_SESSION",
+                stationId = "HANGAR_BAY_01",
+                bayId = 1,
+                aircraftIndexN = 2,
+                targetCraftDomain = "AIRCRAFT_02",
+                baseHangarChannel = 101,
+                source = "POCKET_PDA",
+            },
+        }, stationCfg, mockModem, 1000)
+        assert_not_nil(master)
+        assert_eq(master.state, "TUNING")
+        assert_eq(master.craft_base_ch, 10040)
+        assert_not_nil(st1)
+        assert_eq(st1.type, "MSG_ALIGN_REMOTE_STATUS")
+        assert_eq(st1.payload.status, "SESSION_STARTED")
+        assert_eq(st1.payload.craftBaseChannel, 10040)
+        assert_eq(mockModem._transmitted[1].tx, 10048)
+        assert_eq(mockModem._transmitted[1].pkt.type, "MSG_CALIBRATION_INIT")
+        assert_eq(mockModem._transmitted[2].tx, 102)
+        assert_eq(mockModem._transmitted[2].pkt.type, "MSG_ALIGN_REMOTE_STATUS")
+
+        -- 2. Move to DISCOVERY and trigger START_PULSE remotely
+        master.state = "DISCOVERY"
+        mockModem._transmitted = {}
+        local _, st_pulse = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 2, time = 1100,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "START_PULSE", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1100)
+        assert_eq(master.state, "INTEGRATING")
+        assert_eq(st_pulse.payload.status, "PULSE_STARTED")
+
+        -- 3. PAUSE_SESSION -> ANOMALY_PAUSE, then RETRY_STEP -> INTEGRATING
+        mockModem._transmitted = {}
+        local _, st_pause = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 3, time = 1200,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "PAUSE_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2, reason = "OP_HOLD" },
+        }, stationCfg, mockModem, 1200)
+        assert_eq(master.state, "ANOMALY_PAUSE")
+        assert_eq(st_pause.payload.status, "PAUSED")
+
+        local _, st_retry = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 4, time = 1300,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "RETRY_STEP", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1300)
+        assert_eq(master.state, "INTEGRATING")
+        assert_eq(st_retry.payload.status, "RETRYING")
+
+        -- 4. APPROVE_SYNC in SYNC_APPROVAL -> SYNCING
+        master.state = "SYNC_APPROVAL"
+        master.eval_result = { status = "FULL_6DOF_PASS", passed = true }
+        mockModem._transmitted = {}
+        local _, st_sync = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 5, time = 1400,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "APPROVE_SYNC", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2, saveProfile = true },
+        }, stationCfg, mockModem, 1400)
+        assert_eq(master.state, "SYNCING")
+        assert_eq(st_sync.payload.status, "SYNCING")
+        assert_eq(mockModem._transmitted[1].tx, 101)
+        assert_eq(mockModem._transmitted[1].pkt.type, "MSG_PROFILE_SYNC")
+        assert_eq(mockModem._transmitted[2].tx, 102)
+        assert_eq(mockModem._transmitted[2].pkt.type, "MSG_ALIGN_REMOTE_STATUS")
+
+        -- 5. RELEASE_SESSION emits RELEASED on 102 then closes 101/102/104
+        mockModem._transmitted = {}
+        local _, st_rel = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 6, time = 1500,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "RELEASE_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1500)
+        assert_eq(master.state, "STANDBY")
+        assert_eq(st_rel.payload.status, "RELEASED")
+        assert_false(mockModem.isOpen(101))
+        assert_false(mockModem.isOpen(102))
+        assert_false(mockModem.isOpen(104))
+
+        -- 6. START_PULSE while STANDBY -> REJECTED
+        local _, st_rej = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 7, time = 1600,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "START_PULSE", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1600)
+        assert_eq(st_rej.payload.status, "REJECTED")
+
+        -- 7. ABORT_SESSION closes channels, emits ABORTED on 102, and alignment/main.lua keeps 101 open in STANDBY
+        align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 8, time = 1700,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "BIND_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2 },
+        }, stationCfg, mockModem, 1700)
+        local _, st_abt = align_master.handle_remote_cmd(master, {
+            ver = "1.9.5", domainId = "AIRCRAFT_02", seq = 9, time = 1800,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "ABORT_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 2, reason = "PDA_ABORT" },
+        }, stationCfg, mockModem, 1800)
+        assert_eq(master.state, "STANDBY")
+        assert_eq(st_abt.payload.status, "ABORTED")
+        assert_false(mockModem.isOpen(101))
+
+        local align_main = require("main")
+        assert_not_nil(align_main.handle_modem_message)
+        local m2 = align_main.handle_modem_message(master, 101, {
+            ver = "1.9.5", domainId = "AIRCRAFT_03", seq = 10, time = 1900,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "BIND_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 3 },
+        }, stationCfg, mockModem, 1900)
+        assert_eq(m2.state, "TUNING")
+        assert_eq(m2.craft_base_ch, 10080)
+        align_main.handle_modem_message(m2, 101, {
+            ver = "1.9.5", domainId = "AIRCRAFT_03", seq = 11, time = 2000,
+            type = "MSG_ALIGN_REMOTE_CMD",
+            payload = { action = "RELEASE_SESSION", stationId = "HANGAR_BAY_01", bayId = 1, aircraftIndexN = 3 },
+        }, stationCfg, mockModem, 2000)
+        assert_eq(m2.state, "STANDBY")
+        assert_true(mockModem.isOpen(101), "STANDBY daemon must re-open cmd_ch=101")
+    end)
 end)

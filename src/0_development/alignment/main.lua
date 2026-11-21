@@ -54,36 +54,60 @@ local function handle_key_action(master, key_char)
     return true
 end
 
+local function ensure_standby_cmd_open(master, cfg, modem)
+    if not modem or type(modem.open) ~= "function" then return end
+    if master and master.state ~= "STANDBY" then return end
+    local base = (cfg and cfg.station and cfg.station.baseHangarChannel) or 101
+    local ch = (master and master.cmd_ch) or base
+    local ok = pcall(modem.open, ch)
+    if not ok then pcall(modem.open, modem, ch) end
+end
+
+function main.handle_modem_message(master, channel, pkt, cfg, modem, now_ms)
+    local base = (cfg and cfg.station and cfg.station.baseHangarChannel) or 101
+    local cmd_ch = (master and master.cmd_ch) or base
+    if channel == cmd_ch and type(pkt) == "table" and pkt.type == "MSG_ALIGN_REMOTE_CMD" then
+        master = align_master.handle_remote_cmd(master, pkt, cfg, modem, now_ms) or master
+    elseif master then
+        align_master.step_fsm(master, { type = "PACKET", channel = channel, packet = pkt }, now_ms)
+    end
+    ensure_standby_cmd_open(master, cfg, modem)
+    return master
+end
+
 function main.run()
     local cfg = load_config()
     local modem = (peripheral and peripheral.find and peripheral.find("modem")) or nil
     local mon = (peripheral and peripheral.find and peripheral.find("monitor")) or nil
     local display = mon or term
     local hud = hud_renderer.init(display)
-    
+
     local master = nil
     if modem then
         master = align_master.init_bay_session(cfg, "AIRCRAFT_01", align_master.compute_craft_base(1), modem, (os.epoch and os.epoch("utc")) or 0)
     end
-    
+
     hud:render_dashboard("STANDBY", { pitch = 0, roll = 0 }, "THR_MAIN_L", {})
-    
+
     local running = true
     local ui_timer = os.startTimer(0.1)
-    
+
     while running do
-        local ev, p1, _, _, p4 = os.pullEventRaw()
+        local ev, p1, p2, _, p4 = os.pullEventRaw()
         local now_ms = (os.epoch and os.epoch("utc")) or 0
         if ev == "timer" and p1 == ui_timer then
-            if master then align_master.step_fsm(master, { type = "TICK" }, now_ms) end
+            if master and master.state ~= "STANDBY" then
+                align_master.step_fsm(master, { type = "TICK" }, now_ms)
+            end
+            ensure_standby_cmd_open(master, cfg, modem)
             local st = master and align_master.get_state(master) or "STANDBY"
             local telem = (master and master.last_telem) or { pitch = 0, roll = 0 }
             local thr = (master and master.actuators and master.actuators[master.actuator_idx]) or "THR_MAIN_L"
             local reg = (master and master.last_regression) or {}
             hud:render_dashboard(st, telem, thr, reg)
             ui_timer = os.startTimer(0.1)
-        elseif ev == "modem_message" and master then
-            align_master.step_fsm(master, { type = "PACKET", channel = p1, packet = p4 }, now_ms)
+        elseif ev == "modem_message" then
+            master = main.handle_modem_message(master, p2, p4, cfg, modem, now_ms)
         elseif ev == "char" then
             running = handle_key_action(master, p1)
         elseif ev == "terminate" then
@@ -93,7 +117,7 @@ function main.run()
     end
 end
 
-if not _G.__HARNESS_HIL_MODE then
+if _G.describe == nil and not _G.__HARNESS_HIL_MODE then
     main.run()
 end
 

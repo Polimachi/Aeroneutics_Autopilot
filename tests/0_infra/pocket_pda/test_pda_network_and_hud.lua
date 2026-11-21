@@ -158,14 +158,79 @@ describe("Pocket PDA network router & channel management", function()
         assert_eq(bad_err, "ERR_AIRCRAFT_INDEX_RANGE")
         assert_eq(ctx.aircraftIndexN, 3)
 
-        assert_true(pda_network.close_channels(ctx))
+        local bad_bay0, bad_bay0_err = pda_network.rebind_hangar_bay(ctx, 0)
+        assert_false(bad_bay0)
+        assert_eq(bad_bay0_err, "ERR_HANGAR_BAY_RANGE")
+        assert_eq(ctx.hangarBayId, 2)
+
+        local bad_bay11, bad_bay11_err = pda_network.rebind_hangar_bay(ctx, 11)
+        assert_false(bad_bay11)
+        assert_eq(bad_bay11_err, "ERR_HANGAR_BAY_RANGE")
+        assert_eq(ctx.hangarBayId, 2)
+
+        local ok_cust, err_cust = pda_network.rebind_aircraft(ctx, 5, "CUSTOM_DOMAIN")
+        assert_true(ok_cust)
+        assert_nil(err_cust)
+        assert_eq(ctx.aircraftIndexN, 5)
+        assert_eq(ctx.baseChannel, 10160)
+        assert_eq(ctx.targetDomainId, "CUSTOM_DOMAIN")
+        assert_false(ctx.autoDomain)
+        assert_true(wireless_top.isOpen(10160))
         assert_false(wireless_top.isOpen(10080))
+
+        assert_true(pda_network.close_channels(ctx))
+        assert_false(wireless_top.isOpen(10160))
         assert_false(wireless_top.isOpen(112))
         assert_false(wireless_top.isOpen(50000))
 
         local no_modem_ok, no_modem_err = pda_network.open_channels({ modem = nil })
         assert_false(no_modem_ok)
         assert_eq(no_modem_err, "ERR_NO_MODEM")
+    end)
+
+    it("propagates modem open/close pcall failures without mutating openChannels", function()
+        local opened = {}
+        local fail_open = false
+        local fail_close = false
+        local flaky_modem = {
+            isWireless = function() return true end,
+            open = function(ch)
+                if fail_open and ch == 10002 then error("ERR_MODEM_OPEN_LIMIT") end
+                opened[ch] = true
+            end,
+            close = function(ch)
+                if fail_close and ch == 10002 then error("ERR_MODEM_CLOSE_FAIL") end
+                opened[ch] = nil
+            end,
+        }
+        local ctx = pda_network.init(make_cfg(), flaky_modem)
+
+        fail_open = true
+        local ok_open, err_open = pda_network.open_channels(ctx)
+        assert_false(ok_open)
+        assert_true(string.find(tostring(err_open), "ERR_MODEM_OPEN_LIMIT", 1, true) ~= nil)
+        assert_true(ctx.openChannels[10000])
+        assert_nil(ctx.openChannels[10002])
+
+        fail_open = false
+        assert_true(pda_network.open_channels(ctx))
+        assert_true(ctx.openChannels[10002])
+
+        fail_close = true
+        local ok_rebind, err_rebind = pda_network.rebind_aircraft(ctx, 2)
+        assert_false(ok_rebind)
+        assert_true(string.find(tostring(err_rebind), "ERR_MODEM_CLOSE_FAIL", 1, true) ~= nil)
+        assert_true(ctx.openChannels[10002])
+        assert_eq(ctx.aircraftIndexN, 1)
+
+        local ok_close, err_close = pda_network.close_channels(ctx)
+        assert_false(ok_close)
+        assert_true(string.find(tostring(err_close), "ERR_MODEM_CLOSE_FAIL", 1, true) ~= nil)
+        assert_true(ctx.openChannels[10002])
+
+        fail_close = false
+        assert_true(pda_network.close_channels(ctx))
+        assert_nil(ctx.openChannels[10002])
     end)
 
     it("transmits v1.9.5 envelopes to aircraft, hangar, and raw channels and parses envelopes", function()
@@ -415,5 +480,104 @@ describe("Pocket PDA telemetry HUD state & link quality classifier", function()
         assert_false(hud.nodes.VAS.online)
         assert_false(hud.nodes.AMM.online)
         assert_false(hud.nodes.GCS.online)
+    end)
+
+    it("handles MSG_MISSION_ACK, guards wildcard/nil domain, NaN velocity, nil cfg, and rejects mismatched PBIT/Alert/MFD domains", function()
+        local cfg = make_cfg({
+            defaults = {
+                aircraftIndexN = 1,
+                targetDomainId = "*",
+                hangarBayId = 1,
+                fdrBoundIndexN = 1,
+            },
+        })
+        local net_ctx = pda_network.init(cfg, mock.modem({ wireless = true }))
+        local hud = telemetry_hud_state.init(cfg)
+
+        -- MSG_FLIGHT_TELEMETRY with domainId = nil while wildcard autoDomain = true must not leak "*"
+        assert_true(telemetry_hud_state.ingest_packet(hud, net_ctx, 10002, {
+            ver = "1.9.5",
+            domainId = nil,
+            seq = 1,
+            type = "MSG_FLIGHT_TELEMETRY",
+            time = 1000,
+            payload = {
+                controlState = "NORMAL",
+                dynamics = { altitudeY = 50.0, velocity = { vx = 0 / 0, vz = 4.0 } },
+            },
+        }, 25.0, 1000))
+        assert_true(net_ctx.autoDomain)
+        assert_ne(net_ctx.discoveredDomainLeak, "*")
+        assert_eq(hud.discoveredCrafts[1].domainId, "AIRCRAFT_01")
+        assert_true(hud.groundSpeed == hud.groundSpeed, "NaN velocity must not poison groundSpeed")
+
+        -- Lock concrete domain via valid MFD packet
+        assert_true(telemetry_hud_state.ingest_packet(hud, net_ctx, 10003, {
+            ver = "1.9.5",
+            domainId = "FALCON_01",
+            seq = 2,
+            type = "MSG_MFD_STATE",
+            time = 1100,
+            payload = { source = "AMM_INTEGRATED", fsmState = "CRUISE", flightMode = "AUTO_NAV" },
+        }, 25.0, 1100))
+        assert_eq(net_ctx.targetDomainId, "FALCON_01")
+        assert_false(net_ctx.autoDomain)
+
+        -- Domain mismatch and nil domainId must be filtered on MFD, PBIT, and Alert once locked
+        assert_false(telemetry_hud_state.ingest_packet(hud, net_ctx, 10003, {
+            ver = "1.9.5",
+            domainId = "ROGUE_99",
+            seq = 3,
+            type = "MSG_MFD_STATE",
+            time = 1150,
+            payload = { fsmState = "E_STOP", flightMode = "FAILSAFE_RTH" },
+        }, 10.0, 1150))
+        assert_false(telemetry_hud_state.ingest_packet(hud, net_ctx, 10003, {
+            ver = "1.9.5",
+            domainId = nil,
+            seq = 4,
+            type = "MSG_MFD_STATE",
+            time = 1160,
+            payload = { fsmState = "E_STOP" },
+        }, 10.0, 1160))
+        assert_eq(hud.fsmState, "CRUISE")
+
+        assert_false(telemetry_hud_state.ingest_packet(hud, net_ctx, 10008, {
+            ver = "1.9.5",
+            domainId = "ROGUE_99",
+            seq = 5,
+            type = "MSG_PBIT_REPORT",
+            time = 1200,
+            payload = { requestId = "BAD", overallStatus = "FAIL", takeoffPermitted = false, checks = {} },
+        }, 10.0, 1200))
+        assert_nil(hud.lastPbitReport)
+
+        assert_false(telemetry_hud_state.ingest_packet(hud, net_ctx, 10009, {
+            ver = "1.9.5",
+            domainId = "ROGUE_99",
+            seq = 6,
+            type = "MSG_EMERGENCY_ALERT",
+            time = 1250,
+            payload = { reason = "SPOOF", isAirborne = true, fsmState = "EMERGENCY_LAND", altitude = 0 },
+        }, 10.0, 1250))
+        assert_nil(hud.lastAlert)
+
+        -- MSG_MISSION_ACK on 50004 marks AMM online and stores lastMissionAck
+        assert_true(telemetry_hud_state.ingest_packet(hud, net_ctx, 50004, {
+            ver = "1.9.5",
+            domainId = "FALCON_01",
+            seq = 7,
+            type = "MSG_MISSION_ACK",
+            time = 1300,
+            payload = { action = "RUN", status = "ACCEPTED", missionId = "PATROL_01" },
+        }, 30.0, 1300))
+        assert_not_nil(hud.lastMissionAck)
+        assert_eq(hud.lastMissionAck.status, "ACCEPTED")
+        assert_true(hud.nodes.AMM.online)
+
+        -- update_link_timeouts tolerates hud.cfg = nil
+        hud.cfg = nil
+        telemetry_hud_state.update_link_timeouts(hud, 5000)
+        assert_eq(hud.linkQuality.tier, "LOST")
     end)
 end)

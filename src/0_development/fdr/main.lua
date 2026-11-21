@@ -143,33 +143,6 @@ local function flush_on_estop(state, tMs)
     if ok and manifest then state.lastSessionManifest = manifest end
 end
 
-local function handle_modem_frame(state, channel, pkt)
-    if state.mode ~= "LOGGING" then return false end
-    local tMs = now_ms(state.apis)
-    local rec, _ = packet_tap.classify_packet(state.tap, channel, pkt, tMs)
-    if not rec then return false end
-    ring_buffer.push(state.ring, rec)
-    if state.cfg.recordMode == "STREAMING" and state.stream then
-        local ok, wErr = jsonl_dumper.append_frame(state.stream, rec, tMs, state.apis)
-        if not ok then
-            close_active_stream(state, wErr or "DISK_FULL")
-            state.mode = "DISK_FULL"
-            state.lastEventMsg = tostring(wErr or "ERR_DISK_FULL")
-            return true
-        end
-    end
-    state.framesWritten = state.framesWritten + 1
-    if packet_tap.is_estop_trigger(rec) then
-        if not state.estopFlushed and state.cfg.storage.autoFlushOnEstop ~= false then
-            flush_on_estop(state, tMs)
-        end
-    elseif rec.msgType == "MSG_FLIGHT_TELEMETRY" then
-        state.estopFlushed = false
-    end
-    state.uiDirty = true
-    return true
-end
-
 local function trigger_manual_dump(state)
     local tMs = now_ms(state.apis)
     if state.cfg.recordMode == "STREAMING" and state.stream then
@@ -208,6 +181,130 @@ local function trigger_export(state)
         state.lastExportResult = "ERR: " .. tostring(res and res.err or "FAIL")
     end
     return ok
+end
+
+local REMOTE_CMD_HANDLERS = {
+    BIND_AIRCRAFT = function(state, cmd)
+        if not packet_tap.compute_base(cmd.targetN) then return false end
+        if cmd.autoStart == true then state.mode = "LOGGING" end
+        local dom = (type(cmd.targetDomain) == "string" and cmd.targetDomain ~= "") and cmd.targetDomain or "*"
+        local ok = main.switch_aircraft(state, cmd.targetN, dom)
+        if not ok then return false end
+        if type(cmd.reason) == "string" and cmd.reason ~= "" then
+            state.lastEventMsg = "REMOTE BIND N=" .. tostring(cmd.targetN) .. " (" .. cmd.reason .. ")"
+        end
+        state.uiDirty = true
+        return true
+    end,
+    SET_MODE = function(state, cmd)
+        local m = cmd.recordMode
+        if m ~= "LOGGING" and m ~= "STANDBY" and m ~= "PAUSED" then return false end
+        if m == "LOGGING" then
+            state.mode = "LOGGING"
+            if not state.stream then open_active_stream(state) end
+        else
+            if m == "STANDBY" and state.stream then
+                close_active_stream(state, cmd.reason or "REMOTE_STANDBY")
+            end
+            state.mode = m
+        end
+        state.lastEventMsg = "REMOTE MODE " .. m
+        state.uiDirty = true
+        return true
+    end,
+    DUMP_NOW = function(state, cmd)
+        trigger_manual_dump(state)
+        if type(cmd.reason) == "string" and cmd.reason ~= "" then
+            state.lastEventMsg = tostring(state.lastEventMsg) .. " [" .. cmd.reason .. "]"
+        end
+        state.uiDirty = true
+        return true
+    end,
+    EXPORT_NOW = function(state, _cmd)
+        trigger_export(state)
+        state.uiDirty = true
+        return true
+    end,
+    ROLLOVER_NOW = function(state, cmd)
+        if state.stream then
+            jsonl_dumper.rollover_stream(state.stream, cmd.reason or "REMOTE_SPLIT", now_ms(state.apis), state.apis)
+            state.lastEventMsg = "REMOTE ROLLOVER"
+        else
+            state.lastEventMsg = "NO_ACTIVE_STREAM"
+        end
+        state.uiDirty = true
+        return true
+    end,
+    CLEAR_BUFFER = function(state, cmd)
+        ring_buffer.clear(state.ring)
+        state.tap.countsByOffset = { [1] = 0, [2] = 0, [4] = 0, [9] = 0, [10] = 0, [11] = 0 }
+        state.estopFlushed = false
+        if state.mode == "DISK_FULL" then
+            refresh_volumes(state)
+            if storage_pool.select_best_volume(state.volumes, state.cfg) then
+                state.mode = "STANDBY"
+            end
+        end
+        state.lastEventMsg = (type(cmd.reason) == "string" and cmd.reason ~= "") and ("CLEARED (" .. cmd.reason .. ")") or "CLEARED"
+        state.uiDirty = true
+        return true
+    end,
+}
+
+local function handle_fdr_remote_cmd(state, channel, pkt)
+    if not state or not state.tap or channel ~= (state.tap.baseChannel + 9) then return false end
+    if type(pkt) ~= "table" or pkt.ver ~= "1.9.5" or pkt.type ~= "MSG_FDR_REMOTE_CMD" or type(pkt.payload) ~= "table" then
+        return false
+    end
+    local p = pkt.payload
+    local cmd = {
+        action = p.action,
+        targetN = p.targetAircraftIndexN,
+        source = p.source,
+        targetDomain = p.targetDomainId,
+        recordMode = p.recordMode,
+        autoStart = p.autoStartLogging,
+        reason = p.reason,
+    }
+    if type(cmd.action) ~= "string" or type(cmd.source) ~= "string" or cmd.source == "" then
+        return false
+    end
+    if cmd.targetN ~= nil and not packet_tap.compute_base(cmd.targetN) then
+        return false
+    end
+    local handler = REMOTE_CMD_HANDLERS[cmd.action]
+    if not handler then return false end
+    return handler(state, cmd)
+end
+
+local function handle_modem_frame(state, channel, pkt)
+    if type(pkt) == "table" and pkt.type == "MSG_FDR_REMOTE_CMD" then
+        return handle_fdr_remote_cmd(state, channel, pkt)
+    end
+    if state.mode ~= "LOGGING" then return false end
+    local tMs = now_ms(state.apis)
+    local rec, _ = packet_tap.classify_packet(state.tap, channel, pkt, tMs)
+    if not rec then return false end
+    ring_buffer.push(state.ring, rec)
+    if state.cfg.recordMode == "STREAMING" and state.stream then
+        local ok, wErr = jsonl_dumper.append_frame(state.stream, rec, tMs, state.apis)
+        if not ok then
+            close_active_stream(state, wErr or "DISK_FULL")
+            state.mode = "DISK_FULL"
+            state.lastEventMsg = tostring(wErr or "ERR_DISK_FULL")
+            return true
+        end
+    end
+    state.framesWritten = state.framesWritten + 1
+    if packet_tap.is_estop_trigger(rec) then
+        if not state.estopFlushed and state.cfg.storage.autoFlushOnEstop ~= false then
+            flush_on_estop(state, tMs)
+        end
+    elseif rec.msgType == "MSG_FLIGHT_TELEMETRY" then
+        state.estopFlushed = false
+    end
+    state.uiDirty = true
+    return true
 end
 
 function main.shutdown(state, reason)

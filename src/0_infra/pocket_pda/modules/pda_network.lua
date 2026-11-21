@@ -36,15 +36,31 @@ local function get_time_ms(now_ms)
 end
 
 local function modem_open(m, ch)
-    if not m or type(m.open) ~= "function" then return end
-    local ok = pcall(m.open, ch)
-    if not ok then pcall(m.open, m, ch) end
+    if not m or type(m.open) ~= "function" then
+        return false, "ERR_MODEM_NO_OPEN"
+    end
+    local ok, res, res_err = pcall(m.open, ch)
+    if not ok then
+        return false, tostring(res or "ERR_MODEM_OPEN")
+    end
+    if res == false then
+        return false, tostring(res_err or "ERR_MODEM_OPEN")
+    end
+    return true, nil
 end
 
 local function modem_close(m, ch)
-    if not m or type(m.close) ~= "function" then return end
-    local ok = pcall(m.close, ch)
-    if not ok then pcall(m.close, m, ch) end
+    if not m or type(m.close) ~= "function" then
+        return false, "ERR_MODEM_NO_CLOSE"
+    end
+    local ok, res, res_err = pcall(m.close, ch)
+    if not ok then
+        return false, tostring(res or "ERR_MODEM_CLOSE")
+    end
+    if res == false then
+        return false, tostring(res_err or "ERR_MODEM_CLOSE")
+    end
+    return true, nil
 end
 
 local function modem_transmit(m, ch, reply_ch, pkt)
@@ -135,13 +151,13 @@ function pda_network.init(cfg, modem_override)
     end
 
     local raw_domain = defs.targetDomainId or c.defaultTargetDomainId
-    local target_domain = (type(raw_domain) == "string" and raw_domain ~= "")
-        and raw_domain or pda_network.default_domain_for_index(craft_n)
+    local has_dom = (type(raw_domain) == "string" and raw_domain ~= "" and raw_domain ~= "*")
+    local target_domain = has_dom and raw_domain or pda_network.default_domain_for_index(craft_n)
     local auto_domain
     if defs.autoDomain ~= nil then
         auto_domain = (defs.autoDomain == true)
     else
-        auto_domain = (raw_domain == nil or raw_domain == "" or raw_domain == "*")
+        auto_domain = not has_dom
     end
 
     return {
@@ -165,13 +181,20 @@ local function set_aircraft_channels(ctx, base_ch, should_open)
     for _, off in ipairs(pda_network.AIRCRAFT_OFFSETS) do
         local ch = base_ch + off
         if should_open then
-            if ctx.modem then modem_open(ctx.modem, ch) end
-            ctx.openChannels[ch] = true
+            if ctx.modem then
+                local ok, err = modem_open(ctx.modem, ch)
+                if not ok then return false, err end
+                ctx.openChannels[ch] = true
+            end
         else
-            if ctx.modem then modem_close(ctx.modem, ch) end
+            if ctx.modem then
+                local ok, err = modem_close(ctx.modem, ch)
+                if not ok then return false, err end
+            end
             ctx.openChannels[ch] = nil
         end
     end
+    return true, nil
 end
 
 function pda_network.open_channels(ctx)
@@ -179,7 +202,8 @@ function pda_network.open_channels(ctx)
         return false, "ERR_NO_MODEM"
     end
     ctx.openChannels = ctx.openChannels or {}
-    set_aircraft_channels(ctx, ctx.baseChannel, true)
+    local ok_air, err_air = set_aircraft_channels(ctx, ctx.baseChannel, true)
+    if not ok_air then return false, err_air end
 
     local static_channels = {
         ctx.hangarBaseChannel + 1,
@@ -187,25 +211,33 @@ function pda_network.open_channels(ctx)
         ctx.missionAckChannel or pda_network.CH_MISSION_ACK,
     }
     for _, ch in ipairs(static_channels) do
-        modem_open(ctx.modem, ch)
+        local ok_s, err_s = modem_open(ctx.modem, ch)
+        if not ok_s then return false, err_s end
         ctx.openChannels[ch] = true
     end
     return true, nil
 end
 
 function pda_network.close_channels(ctx)
-    if not ctx then return false end
+    if not ctx then return false, "ERR_NO_CONTEXT" end
     local to_close = {}
     for ch, is_open in pairs(ctx.openChannels or {}) do
         if is_open then
             to_close[#to_close + 1] = ch
         end
     end
+    if not ctx.modem then
+        for _, ch in ipairs(to_close) do
+            ctx.openChannels[ch] = nil
+        end
+        return false, "ERR_NO_MODEM"
+    end
     for _, ch in ipairs(to_close) do
-        if ctx.modem then modem_close(ctx.modem, ch) end
+        local ok, err = modem_close(ctx.modem, ch)
+        if not ok then return false, err end
         ctx.openChannels[ch] = nil
     end
-    return ctx.modem ~= nil
+    return true, nil
 end
 
 function pda_network.rebind_aircraft(ctx, new_n, domain_override)
@@ -218,17 +250,20 @@ function pda_network.rebind_aircraft(ctx, new_n, domain_override)
     ctx.openChannels = ctx.openChannels or {}
     local old_base = ctx.baseChannel
     if old_base and old_base ~= new_base then
-        set_aircraft_channels(ctx, old_base, false)
+        local ok_close, err_close = set_aircraft_channels(ctx, old_base, false)
+        if not ok_close then return false, err_close end
     end
-
-    ctx.aircraftIndexN = new_n
-    ctx.baseChannel = new_base
-    ctx.targetDomainId = domain_override or pda_network.default_domain_for_index(new_n)
-    ctx.autoDomain = (domain_override == nil or domain_override == "*")
 
     if ctx.modem then
-        set_aircraft_channels(ctx, new_base, true)
+        local ok_open, err_open = set_aircraft_channels(ctx, new_base, true)
+        if not ok_open then return false, err_open end
     end
+
+    local has_dom = (type(domain_override) == "string" and domain_override ~= "" and domain_override ~= "*")
+    ctx.aircraftIndexN = new_n
+    ctx.baseChannel = new_base
+    ctx.targetDomainId = has_dom and domain_override or pda_network.default_domain_for_index(new_n)
+    ctx.autoDomain = not has_dom
     return true, nil
 end
 
@@ -244,17 +279,21 @@ function pda_network.rebind_hangar_bay(ctx, new_bay_id)
     local new_telem = new_base + 1
 
     if old_telem and old_telem ~= new_telem then
-        if ctx.modem then modem_close(ctx.modem, old_telem) end
+        if ctx.modem then
+            local ok_close, err_close = modem_close(ctx.modem, old_telem)
+            if not ok_close then return false, err_close end
+        end
         ctx.openChannels[old_telem] = nil
+    end
+
+    if ctx.modem then
+        local ok_open, err_open = modem_open(ctx.modem, new_telem)
+        if not ok_open then return false, err_open end
+        ctx.openChannels[new_telem] = true
     end
 
     ctx.hangarBayId = new_bay_id
     ctx.hangarBaseChannel = new_base
-
-    if ctx.modem then
-        modem_open(ctx.modem, new_telem)
-        ctx.openChannels[new_telem] = true
-    end
     return true, nil
 end
 

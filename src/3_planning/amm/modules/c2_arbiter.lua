@@ -2,6 +2,7 @@
 -- AMM C2 Arbiter: Authority Switching, Queue FSM & Handover
 local mission_engine = require("mission_engine")
 local chattering_guard = require("chattering_guard")
+local facility_client = require("facility_client")
 
 local c2_arbiter = {}
 c2_arbiter.__index = c2_arbiter
@@ -72,6 +73,61 @@ function c2_arbiter:set_engine(engine)
     end
 end
 
+local function resolve_craft_pos(self, par)
+    local eng = self.engine
+    local mfd_pos = eng and eng.lastMfd and eng.lastMfd.navigation and eng.lastMfd.navigation.currentPos
+    local lat_mfd_pos = self.latest_mfd_payload and self.latest_mfd_payload.navigation and self.latest_mfd_payload.navigation.currentPos
+    local telem_pos = self.latest_telem and self.latest_telem.navigation and self.latest_telem.navigation.currentPos
+    return mfd_pos or lat_mfd_pos or telem_pos or par.targetPos or (eng and eng.homePos) or { x = 0, y = 64, z = 0 }
+end
+
+local function apply_land_nearest_goal(self, par)
+    local fac = (self.engine and self.engine.fac) or self.fac
+    local pos = resolve_craft_pos(self, par)
+    local best = fac and facility_client.find_nearest_free_landing_facility(fac, pos, par.facilityTypeFilter, par.maxRangeM) or nil
+    if best then
+        local bpos = best.position or {}
+        local tpos = (bpos.x and bpos.z) and { x = bpos.x, y = bpos.y, z = bpos.z } or par.targetPos
+        self.armed = true
+        self.emergencyGoal = {
+            flightMode = "LANDING",
+            arm = true,
+            flightActive = true,
+            facilityId = best.facilityId,
+            designatedFacilityId = best.facilityId,
+            targetPos = tpos,
+            targetAlt = bpos.y or par.targetAlt,
+            targetSpeed = par.targetSpeed,
+        }
+        return "[GCS OVERRIDE: LAND_NEAREST " .. tostring(best.facilityId) .. "]"
+    end
+    self.armed = true
+    self.emergencyGoal = {
+        flightMode = "EMERGENCY_LAND",
+        arm = true,
+        flightActive = true,
+        targetPos = par.targetPos or par.targetWaypoint,
+        targetAlt = par.targetAlt,
+        targetSpeed = par.targetSpeed,
+    }
+    return "[GCS OVERRIDE: EMERGENCY_LAND FALLBACK]"
+end
+
+local function resolve_override_flight_mode(p)
+    if p.command == "HOLD" or p.flightMode == "HOVER_HOLD" then
+        return "HOVER_HOLD"
+    elseif p.command == "RTH" or p.command == "RTB" or p.flightMode == "FAILSAFE_RTH" then
+        return "FAILSAFE_RTH"
+    elseif p.command == "LAND" or p.flightMode == "EMERGENCY_LAND" then
+        return "EMERGENCY_LAND"
+    elseif type(p.flightMode) == "string" and p.flightMode ~= "" then
+        return (p.flightMode == "IDLE") and "IDLE_ARMED" or p.flightMode
+    elseif type(p.command) == "string" and p.command ~= "" then
+        return (p.command == "IDLE") and "IDLE_ARMED" or p.command
+    end
+    return nil
+end
+
 function c2_arbiter:handle_gcs_packet(packet, now_ms)
     if not packet or type(packet.payload) ~= "table" then
         return
@@ -80,44 +136,34 @@ function c2_arbiter:handle_gcs_packet(packet, now_ms)
         return self:handle_mission_cmd(packet, now_ms)
     end
     local p = packet.payload
-    if p.authority == "GCS_OVERRIDE" then
-        self.authority = "GCS_OVERRIDE"
-        if self.engine then
-            self.engine.authority = "GCS_OVERRIDE"
-        end
-        if self.queue and self.queue.state == "EN_ROUTE" then
-            self.queue.state = "SUSPENDED"
-        end
-        if self.engine and self.engine.state == "EN_ROUTE" then
-            self.engine:pause()
-        end
-        local fm = nil
-        if p.command == "HOLD" or p.flightMode == "HOVER_HOLD" then
-            fm = "HOVER_HOLD"
-        elseif p.command == "RTH" or p.flightMode == "FAILSAFE_RTH" then
-            fm = "FAILSAFE_RTH"
-        elseif p.command == "LAND" or p.flightMode == "EMERGENCY_LAND" then
-            fm = "EMERGENCY_LAND"
-        elseif type(p.flightMode) == "string" and p.flightMode ~= "" then
-            fm = (p.flightMode == "IDLE") and "IDLE_ARMED" or p.flightMode
-        elseif type(p.command) == "string" and p.command ~= "" then
-            fm = (p.command == "IDLE") and "IDLE_ARMED" or p.command
-        end
-        if fm then
-            local par = type(p.params) == "table" and p.params or {}
-            local is_idle = (fm == "IDLE_ARMED")
-            self.emergencyGoal = {
-                flightMode = fm,
-                arm = not is_idle and true or (self.armed == true),
-                flightActive = not is_idle,
-                targetPos = par.targetPos or par.targetWaypoint,
-                targetAlt = par.targetAlt,
-                targetSpeed = par.targetSpeed,
-                designatedFacilityId = par.designatedFacilityId,
-            }
-        end
-        self.lastBanner = "[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]"
+    if p.authority ~= "GCS_OVERRIDE" then return end
+
+    self.authority = "GCS_OVERRIDE"
+    if self.engine then self.engine.authority = "GCS_OVERRIDE" end
+    if self.queue and self.queue.state == "EN_ROUTE" then self.queue.state = "SUSPENDED" end
+    if self.engine and self.engine.state == "EN_ROUTE" then self.engine:pause() end
+
+    local par = type(p.params) == "table" and p.params or {}
+    if p.command == "LAND_NEAREST" then
+        self.lastBanner = apply_land_nearest_goal(self, par)
+        return
     end
+    local fm = resolve_override_flight_mode(p)
+    if fm then
+        local is_idle = (fm == "IDLE_ARMED")
+        if p.command == "ARM" then self.armed = true
+        elseif p.command == "DISARM" then self.armed = false end
+        self.emergencyGoal = {
+            flightMode = fm,
+            arm = not is_idle and true or (self.armed == true),
+            flightActive = not is_idle,
+            targetPos = par.targetPos or par.targetWaypoint,
+            targetAlt = par.targetAlt,
+            targetSpeed = par.targetSpeed,
+            designatedFacilityId = par.designatedFacilityId,
+        }
+    end
+    self.lastBanner = "[GCS OVERRIDE ACTIVE - MISSION SUSPENDED]"
 end
 
 local LOAD_ERR_TO_ACK = {
